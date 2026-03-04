@@ -480,6 +480,10 @@ function SchModalComp({mode, initial, onSave, onClose}){
 }
 
 export default function OaDashboard(){
+  // 날짜 문자열 — 클라이언트에서만 계산 (하이드레이션 불일치 방지)
+  const dateStr = typeof window !== "undefined"
+    ? new Date().toLocaleDateString("ko-KR", {year:"numeric",month:"long",day:"numeric",weekday:"short"})
+    : "";
   const [sec,setSec]           = useState("home");
   const [metaTab,setMetaTab]   = useState("overview");
   const [campTab,setCampTab]   = useState("conversion");
