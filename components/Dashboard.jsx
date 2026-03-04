@@ -59,6 +59,8 @@ const LS_INV       = "oa_inv_v7";
 const LS_SCH       = "oa_sch_v7";
 const LS_MARGIN    = "oa_margin_v7"; // 마진 설정
 const LS_MARGINS   = "oa_margins_v7"; // 키워드별 마진
+const LS_ORDER_URL = "oa_order_url_v7"; // 발주임박 시트 URL
+const LS_INV_URL   = "oa_inv_url_v7";   // 재고원본 시트 URL
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // 유틸
@@ -398,6 +400,19 @@ export default function OaDashboard(){
   const [newKeyword, setNewKeyword]  = useState("");
   const [newMarginVal, setNewMarginVal] = useState("");
 
+  // 발주임박 시트 연동
+  const [orderUrl, setOrderUrl, orderUrlLoaded] = useLocal(LS_ORDER_URL, "");
+  const [orderRaw, setOrderRaw]   = useState([]);
+  const [orderStatus, setOrderStatus] = useState("idle");
+  const [orderModal, setOrderModal]   = useState(false);
+  const [orderInput, setOrderInput]   = useState("");
+
+  // 재고원본 시트 연동
+  const [invUrl, setInvUrl, invUrlLoaded] = useLocal(LS_INV_URL, "");
+  const [invSheetStatus, setInvSheetStatus] = useState("idle");
+  const [invUrlModal, setInvUrlModal] = useState(false);
+  const [invUrlInput, setInvUrlInput] = useState("");
+
   // 구글 시트 연동 상태
   const [sheetUrl,setSheetUrl, sheetUrlLoaded] = useLocal(LS_SHEET_URL, "");
   const [metaRaw,setMetaRaw]         = useState([]);   // 파싱된 원본 rows
@@ -417,6 +432,7 @@ export default function OaDashboard(){
   const eInv={name:"",sku:"",category:"",stock:"",ordered:"",reorder:"",sold30:""};
   const eSch={type:"공구",title:"",date:"",endDate:"",platform:"",note:"",status:"예정"};
   const [infF,setInfF]=useState(eInf);
+  const updateInfF = useCallback((key,val)=>setInfF(f=>({...f,[key]:val})),[]);
   const [invF,setInvF]=useState(eInv);
   const [schF,setSchF]=useState(eSch);
   const [insF,setInsF]=useState({id:null,name:"",reach:"",saves:"",clicks:"",conv:""});
@@ -465,6 +481,146 @@ export default function OaDashboard(){
     setSheetModal(false);
     if(url) fetchSheet(url);
   }
+
+  // ── 발주임박 시트 fetch ─────────────────────────────
+  async function fetchOrderSheet(url){
+    if(!url) return;
+    setOrderStatus("loading");
+    try{
+      let csvUrl = url;
+      const match = url.match(/\/spreadsheets\/d\/([a-zA-Z0-9_-]+)/);
+      if(match){
+        const id = match[1];
+        const gidMatch = url.match(/[#&?]gid=(\d+)/);
+        const gid = gidMatch ? gidMatch[1] : "0";
+        csvUrl = `https://docs.google.com/spreadsheets/d/${id}/export?format=csv&gid=${gid}`;
+      }
+      const res = await fetch(csvUrl);
+      if(!res.ok) throw new Error(`HTTP ${res.status}`);
+      const text = await res.text();
+      const rows = parseOrderCSV(text);
+      setOrderRaw(rows);
+      setOrderStatus("ok");
+    }catch(e){
+      setOrderStatus("error");
+    }
+  }
+
+  function parseOrderCSV(text){
+    const lines = text.trim().split("\n").map(l=>{
+      const res=[]; let cur="", inQ=false;
+      for(let i=0;i<l.length;i++){
+        if(l[i]==='"'){inQ=!inQ;}
+        else if(l[i]===","&&!inQ){res.push(cur.trim().replace(/^"|"$/g,""));cur="";}
+        else cur+=l[i];
+      }
+      res.push(cur.trim().replace(/^"|"$/g,""));
+      return res;
+    });
+    if(lines.length<2) return [];
+    // 헤더 자동 감지
+    const HINTS=["sku","상품","소진","판매","발주","임박"];
+    let startIdx=0;
+    for(let i=0;i<Math.min(lines.length,4);i++){
+      if(HINTS.some(h=>lines[i].join(",").toLowerCase().includes(h))){startIdx=i;break;}
+    }
+    // 헤더 정규화: 줄바꿈/공백 제거해서 매칭 쉽게
+    const headers = lines[startIdx].map(h=>h.trim().replace(/\n/g,"").replace(/\s+/g," "));
+    return lines.slice(startIdx+1).filter(l=>l.some(c=>c)).map(row=>{
+      const obj={};
+      headers.forEach((h,i)=>{ if(h) obj[h]=row[i]||""; });
+      return obj;
+    });
+  }
+
+  // 발주임박 URL 로드시 자동 fetch
+  useEffect(()=>{
+    if(orderUrlLoaded && orderUrl) fetchOrderSheet(orderUrl);
+  },[orderUrl, orderUrlLoaded]);
+
+  // ── 재고원본 시트 fetch ─────────────────────────
+  async function fetchInvSheet(url){
+    if(!url) return;
+    setInvSheetStatus("loading");
+    try{
+      let csvUrl = url;
+      const match = url.match(/\/spreadsheets\/d\/([a-zA-Z0-9_-]+)/);
+      if(match){
+        const id = match[1];
+        const gidMatch = url.match(/[#&?]gid=(\d+)/);
+        const gid = gidMatch ? gidMatch[1] : "0";
+        csvUrl = `https://docs.google.com/spreadsheets/d/${id}/export?format=csv&gid=${gid}`;
+      }
+      const res = await fetch(csvUrl);
+      if(!res.ok) throw new Error(`HTTP ${res.status}`);
+      const text = await res.text();
+      const parsed = parseInvSheetCSV(text);
+      if(parsed.length > 0){
+        setInv(parsed);
+        setInvSheetStatus("ok");
+      } else {
+        setInvSheetStatus("error");
+      }
+    }catch(e){ setInvSheetStatus("error"); }
+  }
+
+  function parseInvSheetCSV(text){
+    const lines = text.trim().split("\n").map(l=>{
+      const res=[]; let cur="", inQ=false;
+      for(let i=0;i<l.length;i++){
+        if(l[i]==='"'){inQ=!inQ;}
+        else if(l[i]===","&&!inQ){res.push(cur.trim());cur="";}
+        else cur+=l[i];
+      }
+      res.push(cur.trim());
+      return res;
+    });
+    // 헤더행 찾기
+    const HINTS=["구분","재고","sku","상품","판매"];
+    let startIdx=0;
+    for(let i=0;i<Math.min(lines.length,4);i++){
+      if(HINTS.some(h=>lines[i].join(",").toLowerCase().includes(h))){startIdx=i;break;}
+    }
+    const headers = lines[startIdx].map(h=>h.trim().replace(/\n/g," ").replace(/\s+/g," "));
+    const findCol = (...keys) => {
+      for(const k of keys){
+        const idx = headers.findIndex(h=>h.toLowerCase().includes(k.toLowerCase()));
+        if(idx>=0) return idx;
+      }
+      return -1;
+    };
+    // 재고원본 컬럼 매핑 (실제 헤더 기준)
+    const iName    = findCol("이미용,욕실","(이미용","욕실)");  // E열
+    const iStock   = findCol("재고");                           // F열 (첫번째 재고)
+    const iOrdered = findCol("생산중");                         // I열
+    const iReorder = findCol("예상발주");                       // J열
+    const iSold30  = findCol("28일평균판매","28일판매");
+    const iSold7   = findCol("1주평균판매","1주판매량");
+    const iGu1     = findCol("구분1");
+    const iSku     = findCol("구분2");
+
+    return lines.slice(startIdx+1).filter(l=>l.some(c=>c)).map((row,ri)=>{
+      const g = (i) => i>=0 ? (row[i]||"").trim() : "";
+      const n = (i) => { const v=g(i); return parseInt(v.replace(/,/g,""))||0; };
+      const name = g(iName);
+      if(!name) return null;
+      return {
+        id: Date.now()+ri,
+        name,
+        sku:      g(iSku)||g(iGu1)||"",
+        category: "기타",
+        stock:    n(iStock),
+        ordered:  n(iOrdered),
+        reorder:  n(iReorder)||Math.round(n(iSold7)*14),
+        sold30:   n(iSold30)||n(iSold7)*4,
+      };
+    }).filter(Boolean);
+  }
+
+  // 재고 URL 로드시 자동 fetch
+  useEffect(()=>{
+    if(invUrlLoaded && invUrl) fetchInvSheet(invUrl);
+  },[invUrl, invUrlLoaded]);
 
   // ── 메타 데이터 집계 ─────────────────────────────
   const hasSheet = metaStatus==="ok" && metaRaw.length>0;
@@ -566,7 +722,7 @@ export default function OaDashboard(){
     const adMargin = getAdMargin(ad.name, ad.campaign, margins, margin);
     const s=adScore(ad, adMargin); return !cutAds.includes(ad)&&s.issues.some(i=>i.label==="보류"||i.label==="보통");
   });
-  const totalAlerts    = overdueIns.length+dangerInv.length+overdueScheds.length+urgentScheds.length+cutAds.length+holdAds.length;
+  const totalAlerts    = overdueIns.length+dangerInv.length+overdueScheds.length+urgentScheds.length+cutAds.length+holdAds.length+orderRaw.length;
 
   // ── CRUD ────────────────────────────────────────
   function saveInf(){
@@ -617,6 +773,7 @@ export default function OaDashboard(){
             overdueIns.length>0&&`인사이트미입력 ${overdueIns.length}`,
             overdueScheds.length>0&&`기간초과 ${overdueScheds.length}`,
             urgentScheds.length>0&&`D-5임박 ${urgentScheds.length}`,
+            orderRaw.length>0&&`발주임박 ${orderRaw.length}`,
             cutAds.length>0&&`광고교체 ${cutAds.length}`,
             holdAds.length>0&&`광고보류 ${holdAds.length}`,
           ].filter(Boolean).join("  ·  ")||"처리할 항목이 없습니다"}
@@ -837,6 +994,117 @@ export default function OaDashboard(){
         </Card>
       )}
 
+      {/* 📦 발주임박 카드 */}
+      <Card>
+        <CardTitle title="📦 발주 임박 목록" sub={orderStatus==="ok"?`${orderRaw.length}개 상품`:"구글시트 연결 필요"}
+          action={
+            <div style={{display:"flex",gap:6}}>
+              {orderStatus==="ok"&&<Btn variant="sage" small onClick={()=>fetchOrderSheet(orderUrl)}>🔄</Btn>}
+              <Btn variant={orderStatus==="ok"?"neutral":"gold"} small onClick={()=>{setOrderInput(orderUrl);setOrderModal(true)}}>
+                {orderStatus==="ok"?"⚙️ 시트변경":"🔗 시트연결"}
+              </Btn>
+            </div>
+          }/>
+
+        {orderStatus==="idle"&&(
+          <div style={{textAlign:"center",padding:"28px 0",color:C.inkLt}}>
+            <div style={{fontSize:32,marginBottom:8}}>📋</div>
+            <div style={{fontSize:12,fontWeight:700,color:C.inkMid,marginBottom:8}}>발주임박목록 시트를 연결해주세요</div>
+            <div style={{fontSize:10,color:C.inkLt,marginBottom:14}}>구글시트 발주분석 파일의 📋발주임박목록 시트 URL</div>
+            <Btn onClick={()=>{setOrderInput("");setOrderModal(true)}}>🔗 지금 연결하기</Btn>
+          </div>
+        )}
+        {orderStatus==="loading"&&(
+          <div style={{textAlign:"center",padding:"24px",color:C.inkLt,fontSize:12}}>⏳ 불러오는 중...</div>
+        )}
+        {orderStatus==="error"&&(
+          <div style={{textAlign:"center",padding:"20px",color:C.bad,fontSize:11}}>
+            ❌ 시트 불러오기 실패 — 공유 설정(링크 있는 모든 사용자)을 확인해주세요
+            <br/><button onClick={()=>fetchOrderSheet(orderUrl)} style={{marginTop:8,padding:"5px 12px",borderRadius:6,border:`1px solid ${C.bad}`,background:"transparent",color:C.bad,fontSize:10,cursor:"pointer",fontFamily:"inherit"}}>다시 시도</button>
+          </div>
+        )}
+        {orderStatus==="ok"&&orderRaw.length===0&&(
+          <div style={{textAlign:"center",padding:"24px",color:C.inkLt,fontSize:11}}>✅ 현재 발주 임박 상품 없음</div>
+        )}
+        {orderStatus==="ok"&&orderRaw.length>0&&(
+          <div style={{overflowX:"auto"}}>
+            <table style={{width:"100%",borderCollapse:"collapse",fontSize:11,minWidth:520}}>
+              <thead><tr style={{borderBottom:`2px solid ${C.border}`}}>
+                {["SKU명","조정후발주일","합산7일평균","현재고소진","총재고소진","발주판단"].map(h=>(
+                  <th key={h} style={{padding:"8px 8px",textAlign:h==="SKU명"?"left":"right",
+                    color:C.inkLt,fontWeight:700,fontSize:9,whiteSpace:"nowrap"}}>{h}</th>
+                ))}
+              </tr></thead>
+              <tbody>{orderRaw.map((r,i)=>{
+                // 컬럼명 유연하게 읽기
+                // 헤더 정규화된 키로 매칭
+                const g=(...keys)=>{for(const k of keys){
+                  // 정확한 매칭
+                  if(r[k]!==undefined&&r[k]!=="") return r[k];
+                  // 줄바꿈 제거 후 매칭
+                  const rk=k.replace(/\n/g,"").replace(/\s+/g," ");
+                  const found=Object.keys(r).find(hk=>hk.replace(/\n/g,"").replace(/\s+/g," ")===rk);
+                  if(found&&r[found]!=="") return r[found];
+                }return "—";};
+                const name    = g("SKU명","상품명");
+                const minDate = g("최소발주일");
+                const adjDate = g("조정후발주일");
+                const orig    = g("원본1주평균");
+                const coupang = g("쿠팡7일평균");
+                const merged  = g("합산7일평균");
+                const exhaust = g("현재고소진(합산)","합산기준 현재고소진","총재고소진(합산)");
+                const judge   = g("발주판단");
+                const judgeColor = judge.includes("즉시")?C.bad:judge.includes("검토")?C.warn:judge.includes("모니터")?C.purple:C.good;
+                const judgeBg   = judge.includes("즉시")?"#FEF0F0":judge.includes("검토")?"#FFF8EC":judge.includes("모니터")?C.purpLt:C.goodLt;
+                if(!name||name==="—") return null;
+                return(
+                  <tr key={i} style={{borderBottom:`1px solid ${C.border}`}}
+                    onMouseEnter={e=>e.currentTarget.style.background=C.cream}
+                    onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
+                    <td style={{padding:"10px 8px",fontWeight:700,color:C.ink,fontSize:11,maxWidth:160,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{name}</td>
+                    <td style={{padding:"10px 8px",textAlign:"right",fontWeight:700,color:C.purple,fontSize:10,whiteSpace:"nowrap"}}>{adjDate}</td>
+                    <td style={{padding:"10px 8px",textAlign:"right",color:C.sage,fontWeight:800}}>{merged}</td>
+                    <td style={{padding:"10px 8px",textAlign:"right",color:C.inkMid,whiteSpace:"nowrap"}}>{exhaust}</td>
+                    <td style={{padding:"10px 8px",textAlign:"right",color:C.inkMid,whiteSpace:"nowrap"}}>
+                      {g("총재고소진(합산)","합산기준 총재고소진")}
+                    </td>
+                    <td style={{padding:"10px 8px",textAlign:"right"}}>
+                      {judge!=="—"&&<span style={{fontSize:10,fontWeight:700,padding:"3px 10px",borderRadius:20,
+                        color:judgeColor,background:judgeBg,border:`1px solid ${judgeColor}33`,whiteSpace:"nowrap"}}>{judge}</span>}
+                    </td>
+                  </tr>
+                );
+              })}</tbody>
+            </table>
+          </div>
+        )}
+      </Card>
+
+      {/* 발주임박 시트 연결 모달 */}
+      {orderModal&&(
+        <Modal title="📦 발주임박 시트 연결" onClose={()=>setOrderModal(false)} wide>
+          <div style={{background:C.sageLt,borderRadius:10,padding:"12px 14px",marginBottom:16,fontSize:11,color:C.sage,fontWeight:700}}>
+            💡 구글시트 발주분석 파일의 <b>📋발주임박목록</b> 시트 URL을 붙여넣으세요<br/>
+            <span style={{fontWeight:400,color:C.inkMid}}>시트 공유 설정 → "링크 있는 모든 사용자" → 뷰어 권한</span>
+          </div>
+          <div style={{fontSize:10,color:C.inkLt,marginBottom:6,fontWeight:700}}>URL 복사 방법</div>
+          <div style={{background:C.cream,borderRadius:8,padding:"10px 12px",fontSize:10,color:C.inkMid,marginBottom:14,lineHeight:1.8}}>
+            1. 구글시트에서 <b>📋발주임박목록</b> 시트 탭 클릭<br/>
+            2. 주소창 URL 전체 복사 (gid=숫자 포함)<br/>
+            3. 아래에 붙여넣기
+          </div>
+          <FR label="구글시트 URL">
+            <Inp value={orderInput} onChange={setOrderInput} placeholder="https://docs.google.com/spreadsheets/d/..."/>
+          </FR>
+          <Btn onClick={()=>{
+            const url=orderInput.trim();
+            setOrderUrl(url);
+            setOrderModal(false);
+            if(url) fetchOrderSheet(url);
+          }} style={{width:"100%",marginTop:8}}>🔗 연결하기</Btn>
+        </Modal>
+      )}
+
       {/* 마진 설정 모달 */}
       {marginModal&&(
         <Modal title="⚙️ 마진 설정" onClose={()=>setMarginModal(false)} wide>
@@ -942,7 +1210,7 @@ export default function OaDashboard(){
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   // 📣 메타광고
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  const MetaSection=()=>{
+  const MetaSection=useMemo(()=>{
     const d = metaAgg;
     const fmt=n=>n>=1000?`₩${Math.round(n/1000).toLocaleString()}K`:`₩${Math.round(n).toLocaleString()}`;
 
@@ -1300,7 +1568,7 @@ export default function OaDashboard(){
         )}
       </div>
     );
-  };
+  },[metaRaw, metaStatus, campTab, sheetUrl, sheetModal, margin, margins]);
 
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   // ✨ 인플루언서 (이전과 동일 구조)
@@ -1313,14 +1581,57 @@ export default function OaDashboard(){
     {label:"2차 활용가능",value:`${infs.filter(f=>{ const rs=reusableStatus(f); return rs.label.includes("활용가능"); }).length}명`,change:0,good:"high",icon:"♻️",note:"3개월 이내"},
     {label:"메타 활용",   value:`${infs.filter(f=>f.metaUsed).length}명`,change:0,good:"high",icon:"📣",note:"광고 소재 활용"},
   ];
-  const tierData=[
-    {name:"매크로",value:infs.filter(f=>f.tier==="매크로").length,color:C.rose},
-    {name:"미드",  value:infs.filter(f=>f.tier==="미드").length,  color:C.gold},
-    {name:"마이크로",value:infs.filter(f=>f.tier==="마이크로").length,color:C.sage},
-    {name:"나노",  value:infs.filter(f=>f.tier==="나노").length,  color:C.purple},
-  ].filter(d=>d.value>0);
+  // 인플루언서 모달 — 별도 컴포넌트로 분리해서 리렌더 차단
+  // InfModal
+  const InfModal = useCallback(()=>{
+    if(!infModal) return null;
+    const isEdit = infModal==="edit";
+    return(
+      <Modal title={isEdit?"✏️ 인플루언서 수정":"➕ 인플루언서 추가"} onClose={()=>setInfModal(null)}>
+        <FR label="이름(계정)"><Inp value={infF.name} onChange={v=>setInfF(f=>({...f,name:v}))} placeholder="@username"/></FR>
+        <FR label="티어"><Sel value={infF.tier} onChange={v=>setInfF(f=>({...f,tier:v}))} options={["매크로","미드","마이크로","나노"]}/></FR>
+        <FR label="팔로워"><Inp value={infF.followers} onChange={v=>setInfF(f=>({...f,followers:v}))} placeholder="예: 28K"/></FR>
+        <FR label="플랫폼"><Sel value={infF.platform} onChange={v=>setInfF(f=>({...f,platform:v}))} options={["인스타","유튜브","틱톡","블로그"]}/></FR>
+        <FR label="제품"><Inp value={infF.product} onChange={v=>setInfF(f=>({...f,product:v}))} placeholder="협찬 제품명"/></FR>
+        <FR label="발송 수량"><Inp type="number" value={infF.sent} onChange={v=>setInfF(f=>({...f,sent:v}))} placeholder="0"/></FR>
+        <FR label="게시 여부"><Sel value={String(infF.posted)} onChange={v=>setInfF(f=>({...f,posted:v==="true"||v==="1"?1:v==="false"||v==="0"?0:+v||0}))} options={["0","1"]}/></FR>
+        <FR label="게시일"><Inp type="date" value={infF.postedDate||""} onChange={v=>setInfF(f=>({...f,postedDate:v}))}/></FR>
+        <div style={{borderTop:`1px solid ${C.border}`,margin:"12px 0 8px",paddingTop:10}}>
+          <div style={{fontSize:11,fontWeight:800,color:C.ink,marginBottom:8}}>📹 콘텐츠 활용</div>
+          {[
+            {key:"videoReceived",label:"🎬 영상 수령 완료"},
+            {key:"reusable",label:"♻️ 2차 활용 가능 (게시일+3개월)"},
+            {key:"metaUsed",label:"📣 메타 광고 소재로 활용"},
+          ].map(({key,label})=>(
+            <label key={key} style={{display:"flex",alignItems:"center",gap:8,marginBottom:8,cursor:"pointer"}}>
+              <input type="checkbox" checked={!!infF[key]} onChange={e=>setInfF(f=>({...f,[key]:e.target.checked}))}
+                style={{width:15,height:15,accentColor:C.rose}}/>
+              <span style={{fontSize:11,color:C.ink}}>{label}</span>
+            </label>
+          ))}
+        </div>
+        <Btn onClick={()=>{
+          if(!infF.name) return;
+          if(isEdit){
+            setInfs(arr=>arr.map(x=>x.id===infF.id?{...infF,sent:+infF.sent||0,posted:+infF.posted||0}:x));
+          } else {
+            setInfs(arr=>[...arr,{...infF,id:Date.now(),sent:+infF.sent||0,posted:+infF.posted||0}]);
+          }
+          setInfModal(null);
+        }} style={{width:"100%",marginTop:4}}>{isEdit?"💾 저장":"➕ 추가"}</Btn>
+      </Modal>
+    );
+  // eslint-disable-next-line
+  },[infModal, infF]);
 
-  const InfluencerSection=()=>(
+  const InfluencerSection=useMemo(()=>{
+    const tierData=[
+      {name:"매크로",value:infs.filter(f=>f.tier==="매크로").length,color:C.rose},
+      {name:"미드",  value:infs.filter(f=>f.tier==="미드").length,  color:C.gold},
+      {name:"마이크로",value:infs.filter(f=>f.tier==="마이크로").length,color:C.sage},
+      {name:"나노",  value:infs.filter(f=>f.tier==="나노").length,  color:C.purple},
+    ].filter(d=>d.value>0);
+    return(
     <div style={{display:"flex",flexDirection:"column",gap:14}}>
       {overdueIns.length>0&&(
         <div style={{background:"#FFFBF0",border:`2px solid ${C.warn}66`,borderRadius:14,
@@ -1483,48 +1794,7 @@ export default function OaDashboard(){
         </div>
       </Card>
 
-      {infModal&&(
-        <Modal title={infModal==="add"?"인플루언서 추가":"인플루언서 수정"} onClose={()=>setInfModal(null)}>
-          <FR label="계정명 *"><Inp value={infF.name} onChange={v=>setInfF(f=>({...f,name:v}))} placeholder="@계정명"/></FR>
-          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:12}}>
-            <FR label="플랫폼"><Sel value={infF.platform} onChange={v=>setInfF(f=>({...f,platform:v}))} options={["인스타","유튜브","틱톡"]}/></FR>
-            <FR label="티어"><Sel value={infF.tier} onChange={v=>setInfF(f=>({...f,tier:v}))} options={["매크로","미드","마이크로","나노"]}/></FR>
-          </div>
-          <FR label="팔로워"><Inp value={infF.followers} onChange={v=>setInfF(f=>({...f,followers:v}))} placeholder="42K"/></FR>
-          <FR label="시딩 제품"><Inp value={infF.product} onChange={v=>setInfF(f=>({...f,product:v}))} placeholder="세럼 30ml"/></FR>
-          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:12}}>
-            <FR label="발송 수량"><Inp type="number" value={infF.sent} onChange={v=>setInfF(f=>({...f,sent:v}))} placeholder="0"/></FR>
-            <FR label="게시 확인 수"><Inp type="number" value={infF.posted} onChange={v=>setInfF(f=>({...f,posted:v}))} placeholder="0"/></FR>
-          </div>
-          <FR label="게시일 (D+7 자동 계산)">
-            <Inp type="date" value={infF.postedDate||""} onChange={v=>setInfF(f=>({...f,postedDate:v}))}/>
-          </FR>
-          <div style={{borderTop:`1px solid ${C.border}`,paddingTop:12,marginTop:4,marginBottom:12}}>
-            <div style={{fontSize:11,fontWeight:800,color:C.ink,marginBottom:10}}>📹 콘텐츠 활용</div>
-            <div style={{display:"flex",flexDirection:"column",gap:8}}>
-              {[
-                {key:"videoReceived", label:"🎬 영상 수령 완료"},
-                {key:"reusable",      label:"♻️ 2차 활용 가능 (게시일+3개월)"},
-                {key:"metaUsed",      label:"📣 메타 광고 소재로 활용"},
-              ].map(({key,label})=>(
-                <label key={key} style={{display:"flex",alignItems:"center",gap:10,cursor:"pointer",
-                  padding:"8px 12px",borderRadius:9,border:`1px solid ${infF[key]?C.rose+"55":C.border}`,
-                  background:infF[key]?C.blush:C.cream,transition:"all 0.15s"}}>
-                  <div onClick={()=>setInfF(f=>({...f,[key]:!f[key]}))}
-                    style={{width:18,height:18,borderRadius:5,flexShrink:0,cursor:"pointer",
-                      background:infF[key]?C.rose:C.white,border:`2px solid ${infF[key]?C.rose:C.border}`,
-                      display:"flex",alignItems:"center",justifyContent:"center"}}>
-                    {infF[key]&&<span style={{color:C.white,fontSize:11,fontWeight:900}}>✓</span>}
-                  </div>
-                  <span style={{fontSize:11,fontWeight:600,color:infF[key]?C.rose:C.inkMid}}
-                    onClick={()=>setInfF(f=>({...f,[key]:!f[key]}))}>{label}</span>
-                </label>
-              ))}
-            </div>
-          </div>
-          <Btn onClick={saveInf} style={{width:"100%",marginTop:8}}>💾 저장</Btn>
-        </Modal>
-      )}
+      <InfModal/>
       {insModal&&(
         <Modal title="📊 인사이트 기록" onClose={()=>setInsModal(null)}>
           <div style={{fontSize:11,color:C.rose,fontWeight:700,marginBottom:16,background:C.blush,padding:"8px 12px",borderRadius:8}}>
@@ -1536,8 +1806,8 @@ export default function OaDashboard(){
         </Modal>
       )}
     </div>
-  );
-
+    );
+  },[infs, infModal, infF, insModal, insF, overdueIns]);
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   // 📦 재고 + 📅 스케줄 (이전 v5와 동일)
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -1589,7 +1859,7 @@ export default function OaDashboard(){
     }).filter(r=>r.name);
   }
 
-  const InventorySection=()=>{
+  const InventorySection=useMemo(()=>{
     const [uploadMsg,setUploadMsg]=useState("");
     function handleInvFile(e){
       const file=e.target.files[0]; if(!file)return;
@@ -1607,24 +1877,65 @@ export default function OaDashboard(){
     }
     return(
     <div style={{display:"flex",flexDirection:"column",gap:14}}>
-      {/* 업로드 배너 */}
+      {/* 구글시트 연결 배너 */}
       <div style={{display:"flex",alignItems:"center",gap:10,padding:"12px 16px",
-        background:C.white,border:`1px solid ${C.border}`,borderRadius:12,flexWrap:"wrap"}}>
-        <span style={{fontSize:13}}>📂</span>
+        background:C.white,border:`1px solid ${invSheetStatus==="ok"?C.good+"66":C.border}`,
+        borderRadius:12,flexWrap:"wrap"}}>
+        <span style={{fontSize:18}}>{invSheetStatus==="ok"?"🟢":"📋"}</span>
         <div style={{flex:1}}>
-          <div style={{fontSize:12,fontWeight:700,color:C.ink}}>재고 파일 업로드</div>
-          <div style={{fontSize:10,color:C.inkLt}}>CSV 또는 엑셀 양식을 업로드하면 재고가 한번에 업데이트돼요</div>
+          {invSheetStatus==="ok"
+            ? <div style={{fontSize:12,fontWeight:700,color:C.good}}>구글시트 연결됨 · {inv.length}개 상품 로드</div>
+            : <><div style={{fontSize:12,fontWeight:700,color:C.ink}}>구글시트 재고원본 연결</div>
+               <div style={{fontSize:10,color:C.inkLt}}>재고원본 시트 URL을 연결하면 자동으로 재고가 업데이트돼요</div></>
+          }
         </div>
+        {invSheetStatus==="loading"&&<span style={{fontSize:11,color:C.inkLt}}>⏳ 불러오는 중...</span>}
+        {invSheetStatus==="error"&&<span style={{fontSize:11,color:C.bad,fontWeight:700}}>❌ 연결 실패</span>}
+        {invSheetStatus==="ok"&&<Btn variant="sage" small onClick={()=>fetchInvSheet(invUrl)}>🔄</Btn>}
+        <Btn variant={invSheetStatus==="ok"?"neutral":"gold"} small
+          onClick={()=>{setInvUrlInput(invUrl);setInvUrlModal(true)}}>
+          {invSheetStatus==="ok"?"⚙️ 시트변경":"🔗 시트연결"}
+        </Btn>
+      </div>
+
+      {/* CSV 파일 업로드 (대안) */}
+      <div style={{display:"flex",alignItems:"center",gap:10,padding:"10px 14px",
+        background:C.cream,border:`1px dashed ${C.border}`,borderRadius:10,flexWrap:"wrap"}}>
+        <span style={{fontSize:12,color:C.inkLt}}>📂 또는 CSV 파일로 업로드</span>
         {uploadMsg&&<span style={{fontSize:11,fontWeight:700,
           color:uploadMsg.startsWith("✅")?C.good:C.bad}}>{uploadMsg}</span>}
-        <label style={{cursor:"pointer"}}>
+        <label style={{cursor:"pointer",marginLeft:"auto"}}>
           <input type="file" accept=".csv,.txt" onChange={handleInvFile} style={{display:"none"}}/>
-          <span style={{fontSize:11,fontWeight:700,padding:"7px 16px",borderRadius:8,
-            background:C.rose,color:C.white,boxShadow:`0 3px 10px ${C.rose}44`,whiteSpace:"nowrap"}}>
-            📤 파일 선택
+          <span style={{fontSize:10,fontWeight:700,padding:"5px 12px",borderRadius:8,
+            border:`1px solid ${C.border}`,background:C.white,color:C.inkMid,whiteSpace:"nowrap"}}>
+            파일 선택
           </span>
         </label>
       </div>
+
+      {/* 재고원본 시트 연결 모달 */}
+      {invUrlModal&&(
+        <Modal title="📋 재고원본 시트 연결" onClose={()=>setInvUrlModal(false)} wide>
+          <div style={{background:C.sageLt,borderRadius:10,padding:"12px 14px",marginBottom:16,fontSize:11,color:C.sage,fontWeight:700}}>
+            💡 구글시트 발주분석 파일의 <b>재고원본</b> 시트 URL을 붙여넣으세요<br/>
+            <span style={{fontWeight:400,color:C.inkMid}}>시트 공유 설정 → "링크 있는 모든 사용자" → 뷰어 권한</span>
+          </div>
+          <div style={{background:C.cream,borderRadius:8,padding:"10px 12px",fontSize:10,color:C.inkMid,marginBottom:14,lineHeight:1.8}}>
+            1. 구글시트에서 <b>재고원본</b> 시트 탭 클릭<br/>
+            2. 주소창 URL 전체 복사 (gid=숫자 포함)<br/>
+            3. 아래에 붙여넣기
+          </div>
+          <FR label="구글시트 URL">
+            <Inp value={invUrlInput} onChange={setInvUrlInput} placeholder="https://docs.google.com/spreadsheets/d/..."/>
+          </FR>
+          <Btn onClick={()=>{
+            const url=invUrlInput.trim();
+            setInvUrl(url);
+            setInvUrlModal(false);
+            if(url) fetchInvSheet(url);
+          }} style={{width:"100%",marginTop:8}}>🔗 연결하기</Btn>
+        </Modal>
+      )}
       {dangerInv.length>0&&(<div style={{background:"#FEF0F0",border:`1px solid ${C.bad}44`,borderRadius:12,padding:"12px 14px",display:"flex",gap:10}}><span style={{fontSize:18}}>🚨</span><div><div style={{fontSize:12,fontWeight:800,color:C.bad}}>즉시 발주 — {dangerInv.map(i=>i.name).join(", ")}</div><div style={{fontSize:10,color:C.inkMid,marginTop:2}}>가용 재고 7일치 미만</div></div></div>)}
       {cautionInv.length>0&&(<div style={{background:"#FFF8EC",border:`1px solid ${C.warn}44`,borderRadius:12,padding:"12px 14px",display:"flex",gap:10}}><span style={{fontSize:18}}>⚠️</span><div><div style={{fontSize:12,fontWeight:800,color:C.warn}}>주의 — {cautionInv.map(i=>i.name).join(", ")}</div><div style={{fontSize:10,color:C.inkMid,marginTop:2}}>14~21일 내 소진 예상</div></div></div>)}
       <KpiGrid items={invKpi} cols={6}/>
@@ -1711,11 +2022,11 @@ export default function OaDashboard(){
       )}
     </div>
   );
-  };
+  },[inv,invModal,invF,invSheetStatus,invUrl,invUrlModal,invUrlInput]);
 
   const upcoming=sch.filter(s=>s.status!=="완료").sort((a,b)=>new Date(a.date)-new Date(b.date));
   const done=sch.filter(s=>s.status==="완료");
-  const ScheduleSection=()=>(
+  const ScheduleSection=useMemo(()=>(
     <div style={{display:"flex",flexDirection:"column",gap:14}}>
       <div className="content-grid-3" style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:10}}>
         {["공구","시딩","광고","이벤트"].map(type=>{
@@ -1795,7 +2106,7 @@ export default function OaDashboard(){
         </Modal>
       )}
     </div>
-  );
+  ),[sch, schModal, schF, upcoming]);
 
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   // RENDER
@@ -1903,6 +2214,7 @@ export default function OaDashboard(){
           <div style={{margin:"0 12px 20px",padding:"12px",background:"#FFF8EC",
             border:`1px solid ${C.warn}33`,borderRadius:12}}>
             <div style={{fontSize:11,fontWeight:800,color:C.warn,marginBottom:6}}>🔔 확인 필요</div>
+            {orderStatus==="ok"&&orderRaw.length>0&&<div style={{fontSize:10,color:C.bad,fontWeight:700,marginBottom:3}}>📦 발주임박 {orderRaw.length}개</div>}
             {cutAds.length>0&&<div style={{fontSize:10,color:C.bad,fontWeight:700,marginBottom:3}}>🔴 광고교체 {cutAds.length}개</div>}
             {holdAds.length>0&&<div style={{fontSize:10,color:C.warn,marginBottom:3}}>🟡 광고보류 {holdAds.length}개</div>}
             {dangerInv.length>0&&<div style={{fontSize:10,color:C.inkMid,marginBottom:3}}>🚨 재고위험 {dangerInv.length}종</div>}
@@ -1937,10 +2249,10 @@ export default function OaDashboard(){
       <div className="oa-body">
         <main className="oa-main">
           {sec==="home"        && <HomeSection/>}
-          {sec==="meta"        && <MetaSection/>}
-          {sec==="influencer"  && <InfluencerSection/>}
-          {sec==="inventory"   && <InventorySection/>}
-          {sec==="schedule"    && <ScheduleSection/>}
+          {sec==="meta"        && {MetaSection}}
+          {sec==="influencer"  && {InfluencerSection}}
+          {sec==="inventory"   && {InventorySection}}
+          {sec==="schedule"    && {ScheduleSection}}
         </main>
       </div>
 
