@@ -1,5 +1,3 @@
-'use client'
-
 import { useState, useEffect, useCallback } from "react";
 import {
   AreaChart, Area, BarChart, Bar, LineChart, Line,
@@ -23,21 +21,21 @@ const C = {
 // 기본 로컬 데이터
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 const DEFAULT_INF = [
-  {id:1,name:"@glowwith_miso",  tier:"매크로",  followers:"284K",platform:"인스타",product:"세럼 30ml",   sent:10,posted:8, postedDate:"2025-03-01",reach:310000,saves:4200,clicks:1840,conv:92},
-  {id:2,name:"@beauty.harang",  tier:"미드",    followers:"98K", platform:"인스타",product:"선크림 SPF50",sent:15,posted:14,postedDate:"2025-03-02",reach:128000,saves:2100,clicks:920, conv:61},
-  {id:3,name:"@hanbiteok_vlog", tier:"마이크로",followers:"41K", platform:"유튜브",product:"세럼 50ml",   sent:5, posted:5, postedDate:"2025-03-02",reach:84000, saves:980, clicks:1240,conv:88},
-  {id:4,name:"@soomin_skinlog", tier:"마이크로",followers:"28K", platform:"틱톡",  product:"토너 패드",   sent:8, posted:6, postedDate:"2025-02-26",reach:null,  saves:null,clicks:null,conv:null},
-  {id:5,name:"@rosebloom.daily",tier:"나노",    followers:"12K", platform:"인스타",product:"립밤 세트",   sent:3, posted:2, postedDate:"2025-02-27",reach:null,  saves:null,clicks:null,conv:null},
-  {id:6,name:"@dailyglow_kr",   tier:"매크로",  followers:"156K",platform:"유튜브",product:"세럼 30ml",   sent:10,posted:0, postedDate:null,         reach:null,  saves:null,clicks:null,conv:null},
+  {id:1,name:"@glowwith_miso",  tier:"매크로",  followers:"284K",platform:"인스타",product:"세럼 30ml",   sent:10,posted:8, postedDate:"2025-03-01",reach:310000,saves:4200,clicks:1840,conv:92, videoReceived:true, reusable:true, metaUsed:true},
+  {id:2,name:"@beauty.harang",  tier:"미드",    followers:"98K", platform:"인스타",product:"선크림 SPF50",sent:15,posted:14,postedDate:"2025-03-02",reach:128000,saves:2100,clicks:920, conv:61, videoReceived:true, reusable:true, metaUsed:false},
+  {id:3,name:"@hanbiteok_vlog", tier:"마이크로",followers:"41K", platform:"유튜브",product:"세럼 50ml",   sent:5, posted:5, postedDate:"2025-03-02",reach:84000, saves:980, clicks:1240,conv:88, videoReceived:false,reusable:false,metaUsed:false},
+  {id:4,name:"@soomin_skinlog", tier:"마이크로",followers:"28K", platform:"틱톡",  product:"토너 패드",   sent:8, posted:6, postedDate:"2025-02-26",reach:null,  saves:null,clicks:null,conv:null,videoReceived:false,reusable:false,metaUsed:false},
+  {id:5,name:"@rosebloom.daily",tier:"나노",    followers:"12K", platform:"인스타",product:"립밤 세트",   sent:3, posted:2, postedDate:"2025-02-27",reach:null,  saves:null,clicks:null,conv:null,videoReceived:false,reusable:false,metaUsed:false},
+  {id:6,name:"@dailyglow_kr",   tier:"매크로",  followers:"156K",platform:"유튜브",product:"세럼 30ml",   sent:10,posted:0, postedDate:null,         reach:null,  saves:null,clicks:null,conv:null,videoReceived:false,reusable:false,metaUsed:false},
 ];
 const DEFAULT_INV = [
-  {id:1,name:"세럼 30ml (베스트셀러)",sku:"SKU-001",stock:1240,reserved:380,reorder:500,sold30:920, category:"세럼"},
-  {id:2,name:"세럼 50ml",            sku:"SKU-002",stock:340, reserved:120,reorder:400,sold30:510, category:"세럼"},
-  {id:3,name:"선크림 SPF50 50ml",    sku:"SKU-003",stock:2140,reserved:210,reorder:600,sold30:840, category:"선케어"},
-  {id:4,name:"토너 패드 60매",        sku:"SKU-004",stock:88,  reserved:60, reorder:300,sold30:420, category:"토너"},
-  {id:5,name:"립밤 세트 (3종)",       sku:"SKU-005",stock:640, reserved:80, reorder:200,sold30:280, category:"립"},
-  {id:6,name:"클렌징 폼 150ml",       sku:"SKU-006",stock:1820,reserved:140,reorder:500,sold30:640, category:"클렌저"},
-  {id:7,name:"아이크림 15ml",         sku:"SKU-007",stock:210, reserved:90, reorder:250,sold30:310, category:"아이케어"},
+  {id:1,name:"세럼 30ml (베스트셀러)",sku:"SKU-001",stock:1240,ordered:0,  reorder:500,sold30:920, category:"세럼"},
+  {id:2,name:"세럼 50ml",            sku:"SKU-002",stock:340, ordered:500, reorder:400,sold30:510, category:"세럼"},
+  {id:3,name:"선크림 SPF50 50ml",    sku:"SKU-003",stock:2140,ordered:0,  reorder:600,sold30:840, category:"선케어"},
+  {id:4,name:"토너 패드 60매",        sku:"SKU-004",stock:88,  ordered:300, reorder:300,sold30:420, category:"토너"},
+  {id:5,name:"립밤 세트 (3종)",       sku:"SKU-005",stock:640, ordered:0,  reorder:200,sold30:280, category:"립"},
+  {id:6,name:"클렌징 폼 150ml",       sku:"SKU-006",stock:1820,ordered:0,  reorder:500,sold30:640, category:"클렌저"},
+  {id:7,name:"아이크림 15ml",         sku:"SKU-007",stock:210, ordered:250, reorder:250,sold30:310, category:"아이케어"},
 ];
 const DEFAULT_SCH = [
   {id:1,type:"공구",   title:"세럼 30ml 공구 오픈",     date:"2025-03-10",endDate:"2025-03-12",platform:"네이버 스마트스토어",note:"한정 200개, 20% 할인",status:"예정"},
@@ -48,9 +46,9 @@ const DEFAULT_SCH = [
 ];
 // 구글 시트 URL 저장 키
 const LS_SHEET_URL = "oa_sheet_url";
-const LS_INF       = "oa_inf_v6";
-const LS_INV       = "oa_inv_v6";
-const LS_SCH       = "oa_sch_v6";
+const LS_INF       = "oa_inf_v7";
+const LS_INV       = "oa_inv_v7";
+const LS_SCH       = "oa_sch_v7";
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // 유틸
@@ -68,62 +66,119 @@ function insightStatus(f){
   if(d===0) return {label:"오늘 입력!",           color:C.rose, bg:C.blush,  icon:"🔔"};
   return         {label:`D+${Math.abs(d)} 미입력`,color:C.bad,  bg:"#FEF0F0",icon:"❗"};
 }
-function stockDays(i){ return Math.round((i.stock-i.reserved)/Math.max(i.sold30/30,0.01)); }
+function stockDays(i){ return Math.round(i.stock/Math.max(i.sold30/30,0.01)); }
 function stockStatus(i){
   const d=stockDays(i);
   if(d<7)  return {label:"위험",color:C.bad, bg:"#FEF0F0"};
   if(d<21) return {label:"주의",color:C.warn,bg:"#FFF8EC"};
   return        {label:"정상",color:C.good,bg:"#EDF7F1"};
 }
+// 2차 활용 만료일 계산 (게시일+3개월)
+function reusableExpiry(postedDate){
+  if(!postedDate) return null;
+  const d = new Date(postedDate);
+  d.setMonth(d.getMonth()+3);
+  return d.toISOString().slice(0,10);
+}
+function reusableStatus(f){
+  if(!f.videoReceived) return {label:"미수령",color:C.inkLt,bg:C.cream};
+  if(!f.reusable)      return {label:"활용불가",color:C.bad,bg:"#FEF0F0"};
+  const exp = reusableExpiry(f.postedDate);
+  if(!exp) return {label:"활용가능",color:C.good,bg:"#EDF7F1"};
+  const d = daysUntil(exp);
+  if(d<0)  return {label:"만료",color:C.inkLt,bg:C.cream};
+  if(d<=14) return {label:`D-${d} 만료임박`,color:C.warn,bg:"#FFF8EC"};
+  return {label:`~${exp.slice(5)} 활용가능`,color:C.good,bg:"#EDF7F1"};
+}
 function schTypeColor(t){ return {공구:C.rose,시딩:C.purple,광고:C.gold,이벤트:C.sage}[t]||C.inkMid; }
 function schTypeIcon(t){  return {공구:"🛍",시딩:"✨",광고:"📣",이벤트:"🎉"}[t]||"📌"; }
 
-// localStorage 훅 (Next.js SSR 안전)
+// localStorage 훅
 function useLocal(key, def){
-  const [data, setData] = useState(def);
-  useEffect(()=>{
-    try{
-      const v = localStorage.getItem(key);
-      if(v) setData(JSON.parse(v));
-    }catch{}
-  }, [key]);
-  function save(v){
-    setData(v);
-    try{ localStorage.setItem(key, JSON.stringify(v)); }catch{}
-  }
-  return [data, save];
+  const [data,setData] = useState(()=>{
+    try{ const v=localStorage.getItem(key); return v?JSON.parse(v):def; }catch{ return def; }
+  });
+  function save(v){ setData(v); try{ localStorage.setItem(key,JSON.stringify(v)); }catch{} }
+  return [data,save];
 }
 
-// CSV 파싱 (구글 시트 export)
+// CSV 파싱 (구글 시트 export) — 타이틀 행 자동 스킵
 function parseCSV(text){
-  const lines = text.trim().split("\n").map(l=>l.split(",").map(c=>c.trim().replace(/^"|"$/g,"")));
+  const lines = text.trim().split("\n").map(l=>{
+    // 쉼표가 큰따옴표 안에 있는 경우 처리
+    const res=[]; let cur="", inQ=false;
+    for(let i=0;i<l.length;i++){
+      if(l[i]==='"'){inQ=!inQ;}
+      else if(l[i]===","&&!inQ){res.push(cur.trim());cur="";}
+      else cur+=l[i];
+    }
+    res.push(cur.trim());
+    return res;
+  });
   if(lines.length<2) return [];
-  const headers = lines[0].map(h=>h.toLowerCase().replace(/\s+/g,"_").replace(/[()]/g,""));
-  return lines.slice(1).filter(l=>l.some(c=>c)).map(row=>{
+  // 첫 행이 실제 헤더인지 확인
+  const HEADER_HINTS = ["캠페인","campaign","날짜","date","일","광고","지출","노출","impressions","spend"];
+  const firstRowStr = lines[0].join(",").toLowerCase();
+  const startIdx = HEADER_HINTS.some(h=>firstRowStr.includes(h)) ? 0 : 1;
+  // 헤더: 원본 텍스트 그대로 보존 (매핑에서 직접 비교)
+  const headers = lines[startIdx].map(h=>h.trim());
+  return lines.slice(startIdx+1).filter(l=>l.some(c=>c)).map(row=>{
     const obj={};
-    headers.forEach((h,i)=>{ obj[h]=row[i]||""; });
+    headers.forEach((h,i)=>{ if(h) obj[h]=row[i]||""; });
     return obj;
   });
 }
 
-// 메타 컬럼 매핑 — 광고관리자 한/영 모두 처리
+// 메타 컬럼 매핑 — 실제 광고관리자 내보내기 기준
 function mapMetaRow(row){
-  const get=(...keys)=>{ for(const k of keys){ if(row[k]!==undefined&&row[k]!=="") return row[k]; } return ""; };
-  const num=v=>{ const n=parseFloat(String(v).replace(/,/g,"")); return isNaN(n)?0:n; };
-  return {
-    date:      get("날짜","date","보고_시작","reporting_starts"),
-    campaign:  get("캠페인_이름","캠페인_명","campaign_name","campaign"),
-    objective: get("캠페인_목적","objective","목적"),
-    spend:     num(get("금액_사용","지출_금액","amount_spent","spend")),
-    impressions:num(get("노출","impressions")),
-    clicks:    num(get("링크_클릭","클릭_전체","link_clicks","clicks")),
-    lpv:       num(get("랜딩_페이지_조회","방문_페이지_조회","landing_page_views","lpv")),
-    purchases: num(get("구매","purchases","전환","conversions")),
-    reach:     num(get("도달","reach")),
-    cpc:       num(get("cpc_링크_클릭당_비용","cpc","클릭당_비용")),
-    ctr:       num(get("ctr_링크_클릭률","ctr","클릭률")),
-    cpa:       num(get("구매당_비용","cpa","전환당_비용","cost_per_purchase")),
+  // 원본 컬럼명 그대로 접근하는 헬퍼
+  const g=(...keys)=>{
+    for(const k of keys){
+      if(row[k]!==undefined&&row[k]!==null&&row[k]!=="") return row[k];
+    }
+    return "";
   };
+  const num=v=>{
+    if(v===null||v===undefined||v==="") return 0;
+    const n=parseFloat(String(v).replace(/,/g,"").replace(/[^0-9.-]/g,""));
+    return isNaN(n)?0:n;
+  };
+
+  return {
+    date:       g("일","날짜","보고 시작","date"),
+    campaign:   g("캠페인 이름","campaign_name","campaign"),
+    adset:      g("광고 세트 이름","adset_name"),
+    adName:     g("광고 이름","ad_name"),
+    // 목표: OUTCOME_SALES / LINK_CLICKS 등 — 전환/트래픽 분류 핵심
+    objective:  g("목표","목적","objective"),
+    resultType: g("결과 유형","result_type"),
+    spend:      num(g("지출 금액 (KRW)","지출 금액","amount_spent","spend")),
+    impressions:num(g("노출","impressions")),
+    clicks:     num(g("링크 클릭","link_clicks")),
+    clicksAll:  num(g("클릭(전체)","clicks")),
+    lpv:        num(g("랜딩 페이지 조회","landing_page_views")),
+    purchases:  num(g("공유 항목이 포함된 구매","결과","purchases","result")),
+    cart:       num(g("공유 항목이 포함된 장바구니에 담기","add_to_cart")),
+    convValue:  num(g("공유 항목의 구매 전환값","공유 항목의 웹사이트 구매 전환값","conversion_value")),
+    cpc:        num(g("CPC(링크 클릭당 비용)","cpc")),
+    cpcAll:     num(g("CPC(전체)")),
+    ctr:        num(g("CTR(전체)","ctr")),
+    cpa:        num(g("결과당 비용","cost_per_result","cpa")),
+    cpm:        num(g("CPM(1,000회 노출당 비용)","cpm")),
+  };
+}
+
+// 전환/트래픽 분류 — 목표 컬럼 우선, 그 다음 캠페인명
+function isConversionCampaign(objective, campaignName=""){
+  const obj = (objective||"").toUpperCase();
+  // 목표 컬럼으로 정확히 분류 (OUTCOME_SALES / LINK_CLICKS)
+  if(obj==="OUTCOME_SALES"||obj==="OUTCOME_ENGAGEMENT"||obj==="CONVERSIONS") return true;
+  if(obj==="LINK_CLICKS"||obj==="OUTCOME_TRAFFIC"||obj==="REACH"||obj==="BRAND_AWARENESS") return false;
+  // 목표가 없을 때 캠페인명으로 fallback
+  const name=(campaignName||"").toLowerCase();
+  if(["전환","conversion","purchase","구매","sales"].some(k=>name.includes(k))) return true;
+  if(["트래픽","traffic","클릭","link_click"].some(k=>name.includes(k))) return false;
+  return false;
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -207,8 +262,8 @@ const BeautyTooltip=({active,payload,label})=>{
     </div>
   );
 };
-const KpiGrid=({items})=>(
-  <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:10,marginBottom:18}}>
+const KpiGrid=({items,cols=6})=>(
+  <div className={cols===6?"kpi-grid":"kpi-grid-3"} style={{display:"grid",gridTemplateColumns:`repeat(${cols},1fr)`,gap:10,marginBottom:18}}>
     {items.map((k,i)=>{
       const good = k.change===0 ? true : k.good==="high"?k.change>0:k.change<0;
       return(
@@ -239,7 +294,7 @@ const KpiGrid=({items})=>(
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // MAIN APP
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-export default function Dashboard(){
+export default function OaDashboard(){
   const [sec,setSec]           = useState("home");
   const [metaTab,setMetaTab]   = useState("overview");
   const [campTab,setCampTab]   = useState("conversion");
@@ -266,8 +321,8 @@ export default function Dashboard(){
   const [schModal, setSchModal] = useState(null);
 
   // 폼
-  const eInf={name:"",tier:"마이크로",followers:"",platform:"인스타",product:"",sent:"",posted:"",postedDate:""};
-  const eInv={name:"",sku:"",category:"",stock:"",reserved:"",reorder:"",sold30:""};
+  const eInf={name:"",tier:"마이크로",followers:"",platform:"인스타",product:"",sent:"",posted:"",postedDate:"",videoReceived:false,reusable:false,metaUsed:false};
+  const eInv={name:"",sku:"",category:"",stock:"",ordered:"",reorder:"",sold30:""};
   const eSch={type:"공구",title:"",date:"",endDate:"",platform:"",note:"",status:"예정"};
   const [infF,setInfF]=useState(eInf);
   const [invF,setInvF]=useState(eInv);
@@ -331,34 +386,49 @@ export default function Dashboard(){
     const byDate = {};
     metaRaw.forEach(r=>{
       if(!r.date) return;
-      if(!byDate[r.date]) byDate[r.date]={day:r.date.slice(5),spend:0,clicks:0,lpv:0,purchases:0,ctr:0,n:0};
-      byDate[r.date].spend+=r.spend; byDate[r.date].clicks+=r.clicks;
-      byDate[r.date].lpv+=r.lpv; byDate[r.date].purchases+=r.purchases;
-      byDate[r.date].ctr+=r.ctr; byDate[r.date].n++;
+      if(!byDate[r.date]) byDate[r.date]={day:r.date.slice(5).replace("-","/"),spend:0,clicks:0,lpv:0,purchases:0,ctr:0,n:0};
+      byDate[r.date].spend+=r.spend;
+      byDate[r.date].clicks+=r.clicks||r.clicksAll||0;
+      byDate[r.date].lpv+=r.lpv;
+      byDate[r.date].purchases+=r.purchases;
+      byDate[r.date].ctr+=r.ctr;
+      byDate[r.date].n++;
     });
     const daily = Object.values(byDate)
       .sort((a,b)=>a.day.localeCompare(b.day))
       .map(d=>({...d,ctr:d.n?+(d.ctr/d.n).toFixed(2):0,cpc:d.clicks?+(d.spend/d.clicks).toFixed(0):0}));
 
     // 캠페인별 집계
-    const byCamp = {};
+    // 광고 이름 기준으로 집계 (광고세트 정보도 포함)
+    const byAd = {};
     metaRaw.forEach(r=>{
-      if(!r.campaign) return;
-      if(!byCamp[r.campaign]) byCamp[r.campaign]={name:r.campaign,objective:r.objective,spend:0,clicks:0,lpv:0,purchases:0};
-      byCamp[r.campaign].spend+=r.spend; byCamp[r.campaign].clicks+=r.clicks;
-      byCamp[r.campaign].lpv+=r.lpv; byCamp[r.campaign].purchases+=r.purchases;
+      const key = r.adName || r.campaign || "unknown";
+      if(!byAd[key]) byAd[key]={
+        name: r.adName || key,
+        adset: r.adset || "",
+        campaign: r.campaign || "",
+        objective: r.objective || "",
+        resultType: r.resultType || "",
+        spend:0, clicks:0, lpv:0, purchases:0, convValue:0, cart:0, ctrSum:0, n:0
+      };
+      byAd[key].spend      += r.spend;
+      byAd[key].clicks     += r.clicks||r.clicksAll||0;
+      byAd[key].lpv        += r.lpv;
+      byAd[key].purchases  += r.purchases;
+      byAd[key].convValue  += r.convValue;
+      byAd[key].cart       += r.cart;
+      byAd[key].ctrSum     += r.ctr||0;
+      byAd[key].n          += 1;
     });
-    const campaigns = Object.values(byCamp).map(c=>({
+    const campaigns = Object.values(byAd).map(c=>({
       ...c,
-      cpa:   c.purchases?Math.round(c.spend/c.purchases):0,
-      roas:  c.spend?+(c.spend>0&&c.purchases>0?(c.purchases*15000/c.spend):0).toFixed(1):0,
-      lpvRate:c.clicks?Math.round((c.lpv/c.clicks)*100):0,
-      cpc:   c.clicks?Math.round(c.spend/c.clicks):0,
-      ctr:   metaRaw.filter(r=>r.campaign===c.name).length
-               ? +(metaRaw.filter(r=>r.campaign===c.name).reduce((s,r)=>s+r.ctr,0)/metaRaw.filter(r=>r.campaign===c.name).length).toFixed(2)
-               : 0,
+      cpa:     c.purchases ? Math.round(c.spend/c.purchases) : 0,
+      roas:    c.convValue&&c.spend ? +(c.convValue/c.spend).toFixed(2) : 0,
+      lpvRate: c.clicks ? Math.round((c.lpv/c.clicks)*100) : 0,
+      cpc:     c.clicks ? Math.round(c.spend/c.clicks) : 0,
+      ctr:     c.n ? +(c.ctrSum/c.n).toFixed(2) : 0,
     }));
-    const convCamps    = campaigns.filter(c=>["conversions","purchase","전환"].some(k=>(c.objective||"").toLowerCase().includes(k)));
+    const convCamps    = campaigns.filter(c=>isConversionCampaign(c.objective, c.campaign));
     const trafficCamps = campaigns.filter(c=>!convCamps.includes(c));
 
     return {totalSpend,totalClicks,totalLpv,totalPurchases,avgCtr,avgCpc,avgCpa,lpvRate,daily,campaigns,convCamps,trafficCamps};
@@ -386,7 +456,7 @@ export default function Dashboard(){
   }
   function saveInv(){
     if(!invF.name)return;
-    const item={...invF,stock:+invF.stock||0,reserved:+invF.reserved||0,reorder:+invF.reorder||0,sold30:+invF.sold30||0};
+    const item={...invF,stock:+invF.stock||0,ordered:+invF.ordered||0,reorder:+invF.reorder||0,sold30:+invF.sold30||0};
     if(invModal==="add"){setInv([...inv,{...item,id:nid}]);setNid(n=>n+1);}
     else setInv(inv.map(v=>v.id===invF.id?{...item,id:v.id}:v));
     setInvModal(null);
@@ -425,6 +495,7 @@ export default function Dashboard(){
         </div>
       </div>
 
+      <div className="alert-grid" style={{display:"grid",gridTemplateColumns:"1fr",gap:14}}>
       {dangerInv.length>0&&(
         <Card>
           <CardTitle title="🚨 재고 위험 — 즉시 발주 필요" sub="7일치 미만"/>
@@ -435,7 +506,7 @@ export default function Dashboard(){
               <div>
                 <div style={{fontSize:12,fontWeight:800,color:C.ink}}>{item.name}</div>
                 <div style={{fontSize:10,color:C.inkMid,marginTop:2}}>
-                  가용 {(item.stock-item.reserved).toLocaleString()}개 · <span style={{color:C.bad,fontWeight:700}}>{stockDays(item)}일치</span> 남음
+                  현재고 {item.stock.toLocaleString()}개 · <span style={{color:C.bad,fontWeight:700}}>{stockDays(item)}일치</span> 남음
                 </div>
               </div>
               <div style={{display:"flex",gap:6,alignItems:"center"}}>
@@ -456,14 +527,16 @@ export default function Dashboard(){
               background:"#FFF8EC",border:`1px solid ${C.warn}33`,borderRadius:10,padding:"10px 14px",marginBottom:6,flexWrap:"wrap",gap:8}}>
               <div>
                 <div style={{fontSize:12,fontWeight:700,color:C.ink}}>{item.name}</div>
-                <div style={{fontSize:10,color:C.inkMid,marginTop:2}}>가용 {(item.stock-item.reserved).toLocaleString()}개 · <span style={{color:C.warn,fontWeight:700}}>{stockDays(item)}일치</span></div>
+                <div style={{fontSize:10,color:C.inkMid,marginTop:2}}>현재고 {item.stock.toLocaleString()}개 · <span style={{color:C.warn,fontWeight:700}}>{stockDays(item)}일치</span></div>
               </div>
               <Btn variant="neutral" small onClick={()=>setSec("inventory")}>→ 재고</Btn>
             </div>
           ))}
         </Card>
       )}
+      </div>
 
+      <div className="alert-grid" style={{display:"grid",gridTemplateColumns:"1fr",gap:14}}>
       {overdueIns.length>0&&(
         <Card>
           <CardTitle title="❗ 인사이트 미입력" sub="D+7 기록 기한 초과"/>
@@ -543,6 +616,7 @@ export default function Dashboard(){
         </Card>
       )}
 
+      </div>
       {totalAlerts===0&&(
         <div style={{textAlign:"center",padding:"52px 0",color:C.inkLt}}>
           <div style={{fontSize:52,marginBottom:12}}>✨</div>
@@ -629,7 +703,7 @@ export default function Dashboard(){
           </div>
         </div>
 
-        <KpiGrid items={metaKpi}/>
+        <KpiGrid items={metaKpi} cols={6}/>
 
         {/* 탭 */}
         <div style={{display:"flex",gap:6,overflowX:"auto",paddingBottom:2}}>
@@ -761,15 +835,21 @@ export default function Dashboard(){
                 );
                 return(
                   <>
-                    <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:10}}>
+                    <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:10,marginBottom:0}}>
                       {campTab==="conversion" ? [
-                        {label:"전환 광고비",value:`₩${Math.round(camps.reduce((s,c)=>s+c.spend,0)/1000).toLocaleString()}K`,color:C.rose},
-                        {label:"총 구매",    value:`${camps.reduce((s,c)=>s+c.purchases,0)}건`,color:C.good},
-                        {label:"평균 CPA",   value:`₩${Math.round(camps.reduce((s,c)=>s+c.spend,0)/Math.max(camps.reduce((s,c)=>s+c.purchases,0),1)).toLocaleString()}`,color:C.gold},
+                        {label:"전환 광고비",  value:`₩${Math.round(camps.reduce((s,c)=>s+c.spend,0)/1000).toLocaleString()}K`,color:C.rose},
+                        {label:"총 구매",      value:`${camps.reduce((s,c)=>s+c.purchases,0)}건`,color:C.good},
+                        {label:"총 전환값",    value:`₩${Math.round(camps.reduce((s,c)=>s+c.convValue,0)/1000).toLocaleString()}K`,color:C.purple},
+                        {label:"평균 CPA",     value:`₩${Math.round(camps.reduce((s,c)=>s+c.spend,0)/Math.max(camps.reduce((s,c)=>s+c.purchases,0),1)).toLocaleString()}`,color:C.gold},
+                        {label:"전체 ROAS",    value:`${camps.reduce((s,c)=>s+c.spend,0)>0?+(camps.reduce((s,c)=>s+c.convValue,0)/camps.reduce((s,c)=>s+c.spend,0)).toFixed(2):0}x`,color:C.sage},
+                        {label:"총 광고수",    value:`${camps.length}개`,color:C.inkMid},
                       ] : [
                         {label:"트래픽 광고비",value:`₩${Math.round(camps.reduce((s,c)=>s+c.spend,0)/1000).toLocaleString()}K`,color:C.purple},
                         {label:"총 클릭수",   value:camps.reduce((s,c)=>s+c.clicks,0).toLocaleString(),color:C.good},
+                        {label:"총 LPV",      value:camps.reduce((s,c)=>s+c.lpv,0).toLocaleString(),color:C.sage},
                         {label:"평균 CPC",    value:`₩${Math.round(camps.reduce((s,c)=>s+c.spend,0)/Math.max(camps.reduce((s,c)=>s+c.clicks,0),1)).toLocaleString()}`,color:C.gold},
+                        {label:"평균 CTR",    value:`${camps.length?+(camps.reduce((s,c)=>s+c.ctr,0)/camps.length).toFixed(2):0}%`,color:C.rose},
+                        {label:"총 광고수",   value:`${camps.length}개`,color:C.inkMid},
                       ].map((s,i)=>(
                         <div key={i} style={{background:C.white,border:`1px solid ${C.border}`,borderRadius:12,padding:"12px 14px",textAlign:"center"}}>
                           <div style={{fontSize:9,color:C.inkLt,fontWeight:700,letterSpacing:"0.1em"}}>{s.label}</div>
@@ -784,8 +864,8 @@ export default function Dashboard(){
                         <table style={{width:"100%",borderCollapse:"collapse",fontSize:11,minWidth:500}}>
                           <thead><tr style={{borderBottom:`2px solid ${C.border}`}}>
                             {(campTab==="conversion"
-                              ?["캠페인","광고비","클릭","구매","CPA","LPV율","상태"]
-                              :["캠페인","광고비","클릭","LPV","CPC","CTR","LPV율"]
+                              ?["광고명","광고세트","광고비","클릭","구매","전환값","CPA","ROAS","LPV율"]
+                              :["광고명","광고세트","광고비","클릭","LPV","CPC","CTR","LPV율"]
                             ).map(h=>(
                               <th key={h} style={{padding:"8px 8px",textAlign:h==="캠페인"?"left":"right",
                                 color:C.inkLt,fontWeight:700,fontSize:9,whiteSpace:"nowrap"}}>{h}</th>
@@ -796,13 +876,26 @@ export default function Dashboard(){
                             return(<tr key={i} style={{borderBottom:`1px solid ${C.border}`,transition:"background 0.15s"}}
                               onMouseEnter={e=>e.currentTarget.style.background=C.cream}
                               onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
-                              <td style={{padding:"10px 8px",fontWeight:700,color:C.ink,maxWidth:160,wordBreak:"break-all"}}>{c.name}</td>
+                              {/* 광고명 */}
+                              <td style={{padding:"10px 8px",maxWidth:180}}>
+                                <div style={{fontWeight:700,color:C.ink,fontSize:11,wordBreak:"break-all"}}>{c.name}</div>
+                              </td>
+                              {/* 광고세트명 */}
+                              <td style={{padding:"10px 8px",maxWidth:160}}>
+                                <div style={{fontSize:10,color:C.inkMid,wordBreak:"break-all"}}>{c.adset||"—"}</div>
+                              </td>
                               <td style={{padding:"10px 8px",textAlign:"right",color:C.inkMid,fontSize:10}}>₩{Math.round(c.spend/1000).toLocaleString()}K</td>
                               <td style={{padding:"10px 8px",textAlign:"right",color:C.inkMid}}>{c.clicks.toLocaleString()}</td>
                               {campTab==="conversion" ? <>
                                 <td style={{padding:"10px 8px",textAlign:"right",fontWeight:800,color:C.good}}>{c.purchases}</td>
+                                <td style={{padding:"10px 8px",textAlign:"right",fontSize:10,color:C.inkMid}}>
+                                  {c.convValue>0?`₩${Math.round(c.convValue/1000).toLocaleString()}K`:"—"}
+                                </td>
                                 <td style={{padding:"10px 8px",textAlign:"right"}}>
                                   {c.cpa>0?<span style={{fontWeight:800,fontSize:11,color:cpaOk?C.good:C.bad,background:cpaOk?"#EDF7F1":"#FEF0F0",padding:"2px 7px",borderRadius:20}}>₩{c.cpa.toLocaleString()}</span>:<span style={{color:C.inkLt}}>—</span>}
+                                </td>
+                                <td style={{padding:"10px 8px",textAlign:"right"}}>
+                                  {c.roas>0?<span style={{fontWeight:800,fontSize:11,color:c.roas>=3?C.good:C.warn,background:c.roas>=3?"#EDF7F1":"#FFF8EC",padding:"2px 7px",borderRadius:20}}>{c.roas}x</span>:<span style={{color:C.inkLt}}>—</span>}
                                 </td>
                               </> : <>
                                 <td style={{padding:"10px 8px",textAlign:"right",color:C.sage,fontWeight:700}}>{c.lpv.toLocaleString()}</td>
@@ -816,7 +909,7 @@ export default function Dashboard(){
                               <td style={{padding:"10px 8px",textAlign:"right"}}>
                                 <div style={{display:"flex",alignItems:"center",justifyContent:"flex-end",gap:5}}>
                                   <div style={{width:32,height:4,background:C.border,borderRadius:2,overflow:"hidden"}}>
-                                    <div style={{height:"100%",width:`${c.lpvRate}%`,background:lpvOk?C.sage:C.warn,borderRadius:2}}/>
+                                    <div style={{height:"100%",width:`${Math.min(c.lpvRate,100)}%`,background:lpvOk?C.sage:C.warn,borderRadius:2}}/>
                                   </div>
                                   <span style={{fontWeight:700,color:lpvOk?C.sage:C.warn,fontSize:10}}>{c.lpvRate}%</span>
                                 </div>
@@ -884,12 +977,12 @@ export default function Dashboard(){
   // ✨ 인플루언서 (이전과 동일 구조)
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   const infKpi=[
-    {label:"총 시딩 비용",value:"₩4,280K",change:-2.1,good:"low", icon:"📦",note:"제품 원가 기준"},
-    {label:"총 도달수",   value:infs.filter(f=>f.reach).reduce((s,f)=>s+(f.reach||0),0)>0?(infs.reduce((s,f)=>s+(f.reach||0),0)/1000).toFixed(0)+"K":"—",change:+18.4,good:"high",icon:"👁",note:"기록 완료 기준"},
+    {label:"총 도달수",   value:infs.reduce((s,f)=>s+(f.reach||0),0)>0?(infs.reduce((s,f)=>s+(f.reach||0),0)/1000).toFixed(0)+"K":"—",change:+18.4,good:"high",icon:"👁",note:"기록 완료 기준"},
     {label:"총 저장수",   value:infs.reduce((s,f)=>s+(f.saves||0),0).toLocaleString()||"—",change:+24.1,good:"high",icon:"🔖",note:"콘텐츠 저장"},
-    {label:"총 클릭수",   value:infs.reduce((s,f)=>s+(f.clicks||0),0).toLocaleString()||"—",change:+9.8, good:"high",icon:"🔗",note:"링크 클릭"},
     {label:"전환수",      value:infs.reduce((s,f)=>s+(f.conv||0),0)+"건",change:+14.2,good:"high",icon:"🛒",note:"구매 전환"},
-    {label:"기록 완료",   value:`${infs.filter(f=>insightStatus(f).label==="기록완료").length}/${infs.length}`,change:0,good:"high",icon:"✅",note:"인사이트 입력"},
+    {label:"영상 수령",   value:`${infs.filter(f=>f.videoReceived).length}/${infs.length}명`,change:0,good:"high",icon:"🎬",note:"콘텐츠 확보"},
+    {label:"2차 활용가능",value:`${infs.filter(f=>{ const rs=reusableStatus(f); return rs.label.includes("활용가능"); }).length}명`,change:0,good:"high",icon:"♻️",note:"3개월 이내"},
+    {label:"메타 활용",   value:`${infs.filter(f=>f.metaUsed).length}명`,change:0,good:"high",icon:"📣",note:"광고 소재 활용"},
   ];
   const tierData=[
     {name:"매크로",value:infs.filter(f=>f.tier==="매크로").length,color:C.rose},
@@ -910,8 +1003,8 @@ export default function Dashboard(){
           </div>
         </div>
       )}
-      <KpiGrid items={infKpi}/>
-      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
+      <KpiGrid items={infKpi} cols={6}/>
+      <div className="content-grid-2" style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
         <Card>
           <CardTitle title="티어별 구성" sub="등록된 인플루언서"/>
           {tierData.length>0?(
@@ -1020,6 +1113,30 @@ export default function Dashboard(){
                     </div>
                   </div>
                 )}
+                {/* 콘텐츠 활용 현황 */}
+                <div style={{display:"flex",gap:6,marginTop:10,flexWrap:"wrap"}}>
+                  {/* 영상 수령 */}
+                  <span style={{fontSize:10,fontWeight:700,padding:"3px 10px",borderRadius:20,
+                    color:f.videoReceived?C.good:C.inkLt,
+                    background:f.videoReceived?"#EDF7F1":C.cream,
+                    border:`1px solid ${f.videoReceived?C.good+"44":C.border}`}}>
+                    🎬 {f.videoReceived?"영상수령":"미수령"}
+                  </span>
+                  {/* 2차 활용 가능 여부 */}
+                  {(()=>{ const rs=reusableStatus(f); return(
+                    <span style={{fontSize:10,fontWeight:700,padding:"3px 10px",borderRadius:20,
+                      color:rs.color,background:rs.bg,border:`1px solid ${rs.color}44`}}>
+                      ♻️ {rs.label}
+                    </span>
+                  );})()}
+                  {/* 메타 광고 활용 */}
+                  <span style={{fontSize:10,fontWeight:700,padding:"3px 10px",borderRadius:20,
+                    color:f.metaUsed?C.purple:C.inkLt,
+                    background:f.metaUsed?C.purpleLt:C.cream,
+                    border:`1px solid ${f.metaUsed?C.purple+"44":C.border}`}}>
+                    📣 {f.metaUsed?"메타광고 활용":"미활용"}
+                  </span>
+                </div>
                 {f.reach!==null&&(
                   <div style={{display:"flex",gap:14,marginTop:10,flexWrap:"wrap"}}>
                     {[{l:"도달",v:(f.reach/1000).toFixed(0)+"K",c:C.rose},{l:"저장",v:f.saves?.toLocaleString(),c:C.gold},
@@ -1053,6 +1170,29 @@ export default function Dashboard(){
           <FR label="게시일 (D+7 자동 계산)">
             <Inp type="date" value={infF.postedDate||""} onChange={v=>setInfF(f=>({...f,postedDate:v}))}/>
           </FR>
+          <div style={{borderTop:`1px solid ${C.border}`,paddingTop:12,marginTop:4,marginBottom:12}}>
+            <div style={{fontSize:11,fontWeight:800,color:C.ink,marginBottom:10}}>📹 콘텐츠 활용</div>
+            <div style={{display:"flex",flexDirection:"column",gap:8}}>
+              {[
+                {key:"videoReceived", label:"🎬 영상 수령 완료"},
+                {key:"reusable",      label:"♻️ 2차 활용 가능 (게시일+3개월)"},
+                {key:"metaUsed",      label:"📣 메타 광고 소재로 활용"},
+              ].map(({key,label})=>(
+                <label key={key} style={{display:"flex",alignItems:"center",gap:10,cursor:"pointer",
+                  padding:"8px 12px",borderRadius:9,border:`1px solid ${infF[key]?C.rose+"55":C.border}`,
+                  background:infF[key]?C.blush:C.cream,transition:"all 0.15s"}}>
+                  <div onClick={()=>setInfF(f=>({...f,[key]:!f[key]}))}
+                    style={{width:18,height:18,borderRadius:5,flexShrink:0,cursor:"pointer",
+                      background:infF[key]?C.rose:C.white,border:`2px solid ${infF[key]?C.rose:C.border}`,
+                      display:"flex",alignItems:"center",justifyContent:"center"}}>
+                    {infF[key]&&<span style={{color:C.white,fontSize:11,fontWeight:900}}>✓</span>}
+                  </div>
+                  <span style={{fontSize:11,fontWeight:600,color:infF[key]?C.rose:C.inkMid}}
+                    onClick={()=>setInfF(f=>({...f,[key]:!f[key]}))}>{label}</span>
+                </label>
+              ))}
+            </div>
+          </div>
           <Btn onClick={saveInf} style={{width:"100%",marginTop:8}}>💾 저장</Btn>
         </Modal>
       )}
@@ -1073,12 +1213,12 @@ export default function Dashboard(){
   // 📦 재고 + 📅 스케줄 (이전 v5와 동일)
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   const invKpi=[
-    {label:"전체 SKU",  value:`${inv.length}종`,change:0,good:"high",icon:"📋",note:"활성 상품"},
-    {label:"위험 재고", value:`${dangerInv.length}종`,change:dangerInv.length>0?1:0,good:"low",icon:"⚠️",note:"즉시 발주"},
-    {label:"주의 재고", value:`${cautionInv.length}종`,change:0,good:"low",icon:"🔶",note:"14일 내 소진"},
-    {label:"30일 판매", value:inv.reduce((s,i)=>s+i.sold30,0).toLocaleString(),change:+18.4,good:"high",icon:"📈",note:"전월 대비"},
-    {label:"총 재고",   value:inv.reduce((s,i)=>s+i.stock,0).toLocaleString(),change:-3.2,good:"high",icon:"📦",note:"전체 수량"},
-    {label:"예약 수량", value:inv.reduce((s,i)=>s+i.reserved,0).toLocaleString(),change:+5.1,good:"high",icon:"🔒",note:"주문 확정분"},
+    {label:"전체 SKU",    value:`${inv.length}종`,change:0,good:"high",icon:"📋",note:"활성 상품"},
+    {label:"위험 재고",   value:`${dangerInv.length}종`,change:dangerInv.length>0?1:0,good:"low",icon:"🚨",note:"즉시 발주"},
+    {label:"주의 재고",   value:`${cautionInv.length}종`,change:0,good:"low",icon:"⚠️",note:"21일 내 소진"},
+    {label:"30일 판매",   value:inv.reduce((s,i)=>s+i.sold30,0).toLocaleString(),change:+18.4,good:"high",icon:"📈",note:"전월 대비"},
+    {label:"총 재고",     value:inv.reduce((s,i)=>s+i.stock,0).toLocaleString(),change:-3.2,good:"high",icon:"📦",note:"전체 수량"},
+    {label:"주문 재고",   value:inv.reduce((s,i)=>s+(i.ordered||0),0).toLocaleString(),change:0,good:"high",icon:"🚚",note:"입고 예정"},
   ];
   const stockTrend=[
     {week:"W1",세럼30:1680,선크림:2480,토너패드:380},
@@ -1090,14 +1230,14 @@ export default function Dashboard(){
     <div style={{display:"flex",flexDirection:"column",gap:14}}>
       {dangerInv.length>0&&(<div style={{background:"#FEF0F0",border:`1px solid ${C.bad}44`,borderRadius:12,padding:"12px 14px",display:"flex",gap:10}}><span style={{fontSize:18}}>🚨</span><div><div style={{fontSize:12,fontWeight:800,color:C.bad}}>즉시 발주 — {dangerInv.map(i=>i.name).join(", ")}</div><div style={{fontSize:10,color:C.inkMid,marginTop:2}}>가용 재고 7일치 미만</div></div></div>)}
       {cautionInv.length>0&&(<div style={{background:"#FFF8EC",border:`1px solid ${C.warn}44`,borderRadius:12,padding:"12px 14px",display:"flex",gap:10}}><span style={{fontSize:18}}>⚠️</span><div><div style={{fontSize:12,fontWeight:800,color:C.warn}}>주의 — {cautionInv.map(i=>i.name).join(", ")}</div><div style={{fontSize:10,color:C.inkMid,marginTop:2}}>14~21일 내 소진 예상</div></div></div>)}
-      <KpiGrid items={invKpi}/>
+      <KpiGrid items={invKpi} cols={6}/>
       <Card>
         <CardTitle title="전체 재고 현황" sub="가용 · 예약 · 재고일수"
-          action={<Btn small onClick={()=>{setInvF({name:"",sku:"",category:"",stock:"",reserved:"",reorder:"",sold30:""});setInvModal("add")}}>+ 추가</Btn>}/>
+          action={<Btn small onClick={()=>{setInvF({name:"",sku:"",category:"",stock:"",ordered:"",reorder:"",sold30:""});setInvModal("add")}}>+ 추가</Btn>}/>
         <div style={{overflowX:"auto"}}>
           <table style={{width:"100%",borderCollapse:"collapse",fontSize:11,minWidth:480}}>
             <thead><tr style={{borderBottom:`2px solid ${C.border}`}}>
-              {["상품","재고","예약","가용","30일판매","재고일수","상태",""].map(h=>(
+              {["상품","현재재고","주문(입고예정)","재고일수","30일판매","상태",""].map(h=>(
                 <th key={h} style={{padding:"8px 8px",textAlign:h==="상품"?"left":"right",color:C.inkLt,fontWeight:700,fontSize:9,whiteSpace:"nowrap"}}>{h}</th>
               ))}
             </tr></thead>
@@ -1108,10 +1248,13 @@ export default function Dashboard(){
                 onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
                 <td style={{padding:"10px 8px"}}><div style={{fontWeight:700,color:C.ink}}>{item.name}</div><div style={{fontSize:9,color:C.inkLt}}>{item.sku}</div></td>
                 <td style={{padding:"10px 8px",textAlign:"right",fontWeight:700,color:C.ink}}>{item.stock.toLocaleString()}</td>
-                <td style={{padding:"10px 8px",textAlign:"right",color:C.inkMid}}>{item.reserved.toLocaleString()}</td>
-                <td style={{padding:"10px 8px",textAlign:"right",fontWeight:700,color:(item.stock-item.reserved)<=item.reorder?C.bad:C.good}}>{(item.stock-item.reserved).toLocaleString()}</td>
-                <td style={{padding:"10px 8px",textAlign:"right",color:C.inkMid}}>{item.sold30.toLocaleString()}</td>
+                <td style={{padding:"10px 8px",textAlign:"right"}}>
+                  {(item.ordered||0)>0
+                    ? <span style={{fontWeight:700,color:C.good,background:"#EDF7F1",padding:"2px 8px",borderRadius:20,fontSize:10}}>+{(item.ordered||0).toLocaleString()} 입고예정</span>
+                    : <span style={{color:C.inkLt,fontSize:10}}>—</span>}
+                </td>
                 <td style={{padding:"10px 8px",textAlign:"right"}}><span style={{fontWeight:800,fontSize:11,color:d<7?C.bad:d<21?C.warn:C.good}}>{d}일</span></td>
+                <td style={{padding:"10px 8px",textAlign:"right",color:C.inkMid}}>{item.sold30.toLocaleString()}</td>
                 <td style={{padding:"10px 8px",textAlign:"right"}}><span style={{fontSize:9,fontWeight:700,color:st.color,background:st.bg,padding:"2px 8px",borderRadius:20}}>{st.label}</span></td>
                 <td style={{padding:"10px 8px",textAlign:"right"}}>
                   <div style={{display:"flex",gap:4,justifyContent:"flex-end"}}>
@@ -1124,6 +1267,7 @@ export default function Dashboard(){
           </table>
         </div>
       </Card>
+      <div className="content-grid-2" style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,alignItems:"start"}}>
       <Card>
         <CardTitle title="주요 상품 재고 추이 (4주)" sub="주간 재고 감소 흐름"/>
         <ResponsiveContainer width="100%" height={160}>
@@ -1149,6 +1293,7 @@ export default function Dashboard(){
         })}
         {inv.filter(i=>stockStatus(i).label!=="정상").length===0&&<div style={{fontSize:11,color:C.inkLt,textAlign:"center",padding:"12px 0"}}>발주 권고 없음 ✅</div>}
       </div>
+      </div>
       {invModal&&(
         <Modal title={invModal==="add"?"상품 추가":"재고 수정"} onClose={()=>setInvModal(null)}>
           <FR label="상품명 *"><Inp value={invF.name} onChange={v=>setInvF(f=>({...f,name:v}))} placeholder="세럼 30ml"/></FR>
@@ -1158,7 +1303,7 @@ export default function Dashboard(){
           </div>
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:12}}>
             <FR label="현재 재고"><Inp type="number" value={invF.stock} onChange={v=>setInvF(f=>({...f,stock:v}))} placeholder="0"/></FR>
-            <FR label="예약 수량"><Inp type="number" value={invF.reserved} onChange={v=>setInvF(f=>({...f,reserved:v}))} placeholder="0"/></FR>
+            <FR label="주문 수량 (입고예정)"><Inp type="number" value={invF.ordered} onChange={v=>setInvF(f=>({...f,ordered:v}))} placeholder="0"/></FR>
           </div>
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:12}}>
             <FR label="발주 기준"><Inp type="number" value={invF.reorder} onChange={v=>setInvF(f=>({...f,reorder:v}))} placeholder="300"/></FR>
@@ -1174,7 +1319,7 @@ export default function Dashboard(){
   const done=sch.filter(s=>s.status==="완료");
   const ScheduleSection=()=>(
     <div style={{display:"flex",flexDirection:"column",gap:14}}>
-      <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:10}}>
+      <div className="content-grid-3" style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:10}}>
         {["공구","시딩","광고","이벤트"].map(type=>{
           const tc=schTypeColor(type);
           return(<div key={type} style={{background:C.white,border:`1px solid ${C.border}`,borderRadius:12,padding:"12px 14px",textAlign:"center"}}>
@@ -1258,25 +1403,124 @@ export default function Dashboard(){
   // RENDER
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   return(
-    <div style={{background:C.cream,minHeight:"100vh",fontFamily:"'Noto Sans KR',sans-serif",color:C.ink}}>
+    <div className="oa-layout" style={{background:C.cream,minHeight:"100vh",fontFamily:"'Noto Sans KR',sans-serif",color:C.ink}}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;600;700;800;900&display=swap');
         *{box-sizing:border-box;margin:0;padding:0;} button{font-family:inherit;}
         input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
-        ::-webkit-scrollbar{height:4px;width:4px;}::-webkit-scrollbar-thumb{background:${C.border};border-radius:2px;}
+        ::-webkit-scrollbar{height:4px;width:6px;}::-webkit-scrollbar-thumb{background:${C.border};border-radius:3px;}
+        ::-webkit-scrollbar-track{background:transparent;}
+
+        /* PC 레이아웃 */
+        .oa-layout { display:flex; flex-direction:column; min-height:100vh; }
+        .oa-topbar { display:none; }
+        .oa-body   { display:flex; flex:1; }
+        .oa-sidebar{
+          width:220px; flex-shrink:0;
+          background:${C.white}; border-right:1px solid ${C.border};
+          position:fixed; top:0; left:0; bottom:0;
+          display:flex; flex-direction:column;
+          z-index:100; overflow-y:auto;
+        }
+        .oa-main { margin-left:220px; flex:1; padding:28px 32px 60px; max-width:1200px; }
+        .oa-mobile-nav { display:none !important; }
+        .kpi-grid { grid-template-columns: repeat(6,1fr) !important; }
+        .kpi-grid-3 { grid-template-columns: repeat(3,1fr) !important; }
+        .content-grid-2 { grid-template-columns: 1fr 1fr !important; }
+        .content-grid-3 { grid-template-columns: repeat(3,1fr) !important; }
+        .alert-grid { grid-template-columns: 1fr 1fr !important; }
+
+        /* 모바일 */
+        @media (max-width: 768px) {
+          .oa-sidebar { display:none !important; }
+          .oa-topbar  { display:flex !important; }
+          .oa-main    { margin-left:0 !important; padding:12px 14px 80px !important; max-width:100% !important; }
+          .oa-mobile-nav { display:flex !important; }
+          .kpi-grid   { grid-template-columns: repeat(3,1fr) !important; }
+          .kpi-grid-3 { grid-template-columns: repeat(3,1fr) !important; }
+          .content-grid-2 { grid-template-columns: 1fr !important; }
+          .content-grid-3 { grid-template-columns: repeat(2,1fr) !important; }
+          .alert-grid { grid-template-columns: 1fr !important; }
+        }
+        @media (max-width:480px){
+          .kpi-grid   { grid-template-columns: repeat(2,1fr) !important; }
+          .content-grid-3 { grid-template-columns: 1fr 1fr !important; }
+        }
       `}</style>
 
-      <header style={{background:C.white,borderBottom:`1px solid ${C.border}`,padding:"0 16px",height:56,
-        display:"flex",alignItems:"center",justifyContent:"space-between",
-        position:"sticky",top:0,zIndex:100,boxShadow:"0 2px 12px rgba(232,86,122,0.07)"}}>
-        <div style={{display:"flex",alignItems:"center",gap:10}}>
-          <div style={{width:32,height:32,background:`linear-gradient(135deg,${C.rose},${C.roseLt})`,
-            borderRadius:9,display:"flex",alignItems:"center",justifyContent:"center",
-            fontSize:16,boxShadow:`0 3px 10px ${C.rose}44`}}>🌸</div>
-          <div>
-            <div style={{fontSize:13,fontWeight:900,color:C.ink}}>OA <span style={{color:C.rose}}>HQ</span></div>
-            <div style={{fontSize:9,color:C.inkLt,letterSpacing:"0.1em"}}>MARKETING DASHBOARD</div>
+      {/* ── PC 사이드바 ── */}
+      <aside className="oa-sidebar">
+        {/* 로고 */}
+        <div style={{padding:"24px 20px 20px",borderBottom:`1px solid ${C.border}`}}>
+          <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:16}}>
+            <div style={{width:36,height:36,background:`linear-gradient(135deg,${C.rose},${C.roseLt})`,
+              borderRadius:10,display:"flex",alignItems:"center",justifyContent:"center",
+              fontSize:18,boxShadow:`0 3px 12px ${C.rose}44`,flexShrink:0}}>🌸</div>
+            <div>
+              <div style={{fontSize:15,fontWeight:900,color:C.ink,letterSpacing:"-0.02em"}}>OA <span style={{color:C.rose}}>HQ</span></div>
+              <div style={{fontSize:9,color:C.inkLt,letterSpacing:"0.08em"}}>MARKETING DASHBOARD</div>
+            </div>
           </div>
+          <div style={{display:"flex",alignItems:"center",gap:6,padding:"7px 12px",
+            background:C.blush,borderRadius:10,fontSize:11,color:C.rose,fontWeight:700}}>
+            <span style={{width:6,height:6,borderRadius:"50%",background:C.rose,flexShrink:0,
+              boxShadow:pulse?`0 0 0 4px ${C.rose}33`:"none",transition:"box-shadow 0.4s",display:"inline-block"}}/>
+            {todayStr}
+          </div>
+        </div>
+
+        {/* 사이드 네비 */}
+        <nav style={{flex:1,padding:"16px 12px"}}>
+          {NAVS.map(n=>{
+            const active = sec===n.id;
+            return(
+              <button key={n.id} onClick={()=>setSec(n.id)} style={{
+                width:"100%",display:"flex",alignItems:"center",gap:12,
+                padding:"11px 14px",borderRadius:11,border:"none",cursor:"pointer",
+                fontFamily:"inherit",fontWeight:700,fontSize:13,
+                marginBottom:4,transition:"all 0.18s",textAlign:"left",
+                background:active?C.rose:"transparent",
+                color:active?C.white:C.inkMid,
+                boxShadow:active?`0 4px 14px ${C.rose}44`:"none",
+                position:"relative",
+              }}
+              onMouseEnter={e=>{ if(!active){ e.currentTarget.style.background=C.cream; } }}
+              onMouseLeave={e=>{ if(!active){ e.currentTarget.style.background="transparent"; } }}>
+                <span style={{fontSize:18,lineHeight:1}}>{n.icon}</span>
+                <span>{n.label}</span>
+                {n.id==="home"&&totalAlerts>0&&(
+                  <span style={{marginLeft:"auto",minWidth:20,height:20,borderRadius:10,
+                    background:active?C.white:C.bad,color:active?C.bad:C.white,
+                    fontSize:10,fontWeight:900,display:"flex",alignItems:"center",justifyContent:"center",padding:"0 5px"}}>
+                    {totalAlerts}
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </nav>
+
+        {/* 사이드바 하단: 알림 요약 */}
+        {totalAlerts>0&&(
+          <div style={{margin:"0 12px 20px",padding:"12px",background:"#FFF8EC",
+            border:`1px solid ${C.warn}33`,borderRadius:12}}>
+            <div style={{fontSize:11,fontWeight:800,color:C.warn,marginBottom:6}}>🔔 확인 필요</div>
+            {dangerInv.length>0&&<div style={{fontSize:10,color:C.inkMid,marginBottom:3}}>🚨 재고위험 {dangerInv.length}종</div>}
+            {overdueIns.length>0&&<div style={{fontSize:10,color:C.inkMid,marginBottom:3}}>❗ 인사이트 {overdueIns.length}명</div>}
+            {overdueScheds.length>0&&<div style={{fontSize:10,color:C.inkMid,marginBottom:3}}>📅 기간초과 {overdueScheds.length}건</div>}
+            {urgentScheds.length>0&&<div style={{fontSize:10,color:C.inkMid}}>🔔 D-5임박 {urgentScheds.length}건</div>}
+          </div>
+        )}
+      </aside>
+
+      {/* ── 모바일 상단 헤더 ── */}
+      <header className="oa-topbar" style={{background:C.white,borderBottom:`1px solid ${C.border}`,
+        padding:"0 16px",height:54,alignItems:"center",justifyContent:"space-between",
+        position:"sticky",top:0,zIndex:100,boxShadow:"0 2px 10px rgba(232,86,122,0.07)"}}>
+        <div style={{display:"flex",alignItems:"center",gap:8}}>
+          <div style={{width:28,height:28,background:`linear-gradient(135deg,${C.rose},${C.roseLt})`,
+            borderRadius:8,display:"flex",alignItems:"center",justifyContent:"center",fontSize:14}}>🌸</div>
+          <div style={{fontSize:13,fontWeight:900,color:C.ink}}>OA <span style={{color:C.rose}}>HQ</span></div>
         </div>
         <div style={{display:"flex",alignItems:"center",gap:8}}>
           {totalAlerts>0&&(
@@ -1284,43 +1528,25 @@ export default function Dashboard(){
               background:"#FFF8EC",border:`1px solid ${C.warn}44`,borderRadius:20,
               fontSize:10,color:C.warn,fontWeight:700,cursor:"pointer"}}>🔔 {totalAlerts}건</div>
           )}
-          <div style={{display:"flex",alignItems:"center",gap:5,padding:"5px 12px",
-            background:C.blush,border:`1px solid ${C.rose}44`,borderRadius:20,fontSize:10,color:C.rose,fontWeight:700}}>
-            <span style={{width:5,height:5,borderRadius:"50%",background:C.rose,
-              boxShadow:pulse?`0 0 0 4px ${C.rose}33`:"none",transition:"box-shadow 0.4s",display:"inline-block"}}/>
-            {todayStr}
-          </div>
+          <div style={{fontSize:10,color:C.rose,fontWeight:700,background:C.blush,
+            padding:"4px 10px",borderRadius:20,border:`1px solid ${C.rose}33`}}>{todayStr}</div>
         </div>
       </header>
 
-      <div style={{padding:"10px 16px",background:C.white,borderBottom:`1px solid ${C.border}`,
-        display:"flex",gap:6,overflowX:"auto",position:"sticky",top:56,zIndex:99}}>
-        {NAVS.map(n=>(
-          <button key={n.id} onClick={()=>setSec(n.id)} style={{
-            padding:"7px 18px",borderRadius:24,border:"none",cursor:"pointer",fontWeight:700,
-            fontSize:12,whiteSpace:"nowrap",transition:"all 0.2s",fontFamily:"inherit",
-            background:sec===n.id?C.rose:C.cream,color:sec===n.id?C.white:C.inkMid,
-            boxShadow:sec===n.id?`0 4px 14px ${C.rose}44`:"none",position:"relative"}}>
-            {n.icon} {n.label}
-            {n.id==="home"&&totalAlerts>0&&(
-              <span style={{position:"absolute",top:-4,right:-4,width:16,height:16,borderRadius:"50%",
-                background:C.bad,color:C.white,fontSize:8,fontWeight:900,
-                display:"flex",alignItems:"center",justifyContent:"center"}}>{totalAlerts}</span>
-            )}
-          </button>
-        ))}
+      {/* ── 콘텐츠 영역 ── */}
+      <div className="oa-body">
+        <main className="oa-main">
+          {sec==="home"        && <HomeSection/>}
+          {sec==="meta"        && <MetaSection/>}
+          {sec==="influencer"  && <InfluencerSection/>}
+          {sec==="inventory"   && <InventorySection/>}
+          {sec==="schedule"    && <ScheduleSection/>}
+        </main>
       </div>
 
-      <main style={{padding:"16px",maxWidth:900,margin:"0 auto",paddingBottom:100}}>
-        {sec==="home"        && <HomeSection/>}
-        {sec==="meta"        && <MetaSection/>}
-        {sec==="influencer"  && <InfluencerSection/>}
-        {sec==="inventory"   && <InventorySection/>}
-        {sec==="schedule"    && <ScheduleSection/>}
-      </main>
-
-      <nav style={{position:"fixed",bottom:0,left:0,right:0,background:C.white,borderTop:`1px solid ${C.border}`,
-        display:"flex",padding:"8px 0 max(8px,env(safe-area-inset-bottom))",
+      {/* ── 모바일 하단 탭바 ── */}
+      <nav className="oa-mobile-nav" style={{position:"fixed",bottom:0,left:0,right:0,background:C.white,
+        borderTop:`1px solid ${C.border}`,padding:"6px 0 max(6px,env(safe-area-inset-bottom))",
         zIndex:200,boxShadow:"0 -4px 20px rgba(43,31,46,0.08)"}}>
         {NAVS.map(n=>(
           <button key={n.id} onClick={()=>setSec(n.id)} style={{
@@ -1329,9 +1555,9 @@ export default function Dashboard(){
             fontFamily:"inherit",position:"relative"}}>
             <span style={{fontSize:18}}>{n.icon}</span>
             <span style={{fontSize:9,fontWeight:700,color:sec===n.id?C.rose:C.inkLt}}>{n.label}</span>
-            {sec===n.id&&<div style={{width:18,height:2,background:C.rose,borderRadius:2}}/>}
+            {sec===n.id&&<div style={{width:18,height:2,background:C.rose,borderRadius:2,marginTop:1}}/>}
             {n.id==="home"&&totalAlerts>0&&(
-              <div style={{position:"absolute",top:0,right:"18%",width:14,height:14,borderRadius:"50%",
+              <div style={{position:"absolute",top:0,right:"15%",width:14,height:14,borderRadius:"50%",
                 background:C.bad,display:"flex",alignItems:"center",justifyContent:"center",
                 fontSize:8,fontWeight:900,color:C.white}}>{totalAlerts}</div>
             )}
