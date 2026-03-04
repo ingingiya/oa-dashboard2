@@ -158,17 +158,16 @@ function adScore(ad, margin){
 function schTypeColor(t){ return {공구:C.rose,시딩:C.purple,광고:C.gold,이벤트:C.sage}[t]||C.inkMid; }
 function schTypeIcon(t){  return {공구:"🛍",시딩:"✨",광고:"📣",이벤트:"🎉"}[t]||"📌"; }
 
-// localStorage 훅 — Next.js SSR 완전 안전 버전
+// localStorage 훅 — Next.js SSR 완전 안전 버전 (loaded 플래그 포함)
 function useLocal(key, def){
-  const [data, setData] = useState(def); // 서버에서는 항상 def
-  const [hydrated, setHydrated] = useState(false);
+  const [data, setData] = useState(def);
+  const [loaded, setLoaded] = useState(false);
   useEffect(()=>{
-    // 클라이언트에서만 실행
     try{
       const v = localStorage.getItem(key);
       if(v !== null) setData(JSON.parse(v));
     }catch{}
-    setHydrated(true);
+    setLoaded(true);
   }, [key]);
   function save(v){
     setData(v);
@@ -176,7 +175,7 @@ function useLocal(key, def){
       try{ localStorage.setItem(key, JSON.stringify(v)); }catch{}
     }
   }
-  return [data, save];
+  return [data, save, loaded];
 }
 
 // CSV 파싱 (구글 시트 export) — 타이틀 행 자동 스킵
@@ -422,12 +421,7 @@ export default function OaDashboard(){
     if(sheetUrlLoaded && sheetUrl) fetchSheet(sheetUrl);
   },[sheetUrl, sheetUrlLoaded]);
 
-  // 30분마다 자동 갱신
-  useEffect(()=>{
-    if(!sheetUrl) return;
-    const t = setInterval(()=>{ if(sheetUrl) fetchSheet(sheetUrl); }, 30*60*1000);
-    return ()=>clearInterval(t);
-  },[sheetUrl]);
+  // 자동 갱신 없음 — 수동 새로고침만
 
   // ── 구글 시트 fetch ──────────────────────────────
   async function fetchSheet(url){
@@ -462,6 +456,7 @@ export default function OaDashboard(){
     const url = sheetInput.trim();
     setSheetUrl(url);
     setSheetModal(false);
+    if(url) fetchSheet(url);
   }
 
   // ── 메타 데이터 집계 ─────────────────────────────
