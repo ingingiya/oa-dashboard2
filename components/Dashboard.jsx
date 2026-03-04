@@ -2249,10 +2249,10 @@ export default function OaDashboard(){
       <div className="oa-body">
         <main className="oa-main">
           {sec==="home"        && <HomeSection/>}
-          {sec==="meta"        && {MetaSection}}
-          {sec==="influencer"  && {InfluencerSection}}
-          {sec==="inventory"   && {InventorySection}}
-          {sec==="schedule"    && {ScheduleSection}}
+          {sec==="meta"        && MetaSection}
+          {sec==="influencer"  && InfluencerSection}
+          {sec==="inventory"   && InventorySection}
+          {sec==="schedule"    && ScheduleSection}
         </main>
       </div>
 
