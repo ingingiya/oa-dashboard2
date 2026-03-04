@@ -30,6 +30,12 @@ const DEFAULT_INF = [
   {id:5,name:"@rosebloom.daily",tier:"나노",    followers:"12K", platform:"인스타",product:"립밤 세트",   sent:3, posted:2, postedDate:"2025-02-27",reach:null,  saves:null,clicks:null,conv:null,videoReceived:false,reusable:false,metaUsed:false},
   {id:6,name:"@dailyglow_kr",   tier:"매크로",  followers:"156K",platform:"유튜브",product:"세럼 30ml",   sent:10,posted:0, postedDate:null,         reach:null,  saves:null,clicks:null,conv:null,videoReceived:false,reusable:false,metaUsed:false},
 ];
+// 기본 키워드별 마진 설정
+const DEFAULT_MARGINS = [
+  {id:1, keyword:"프리온",   margin:20000},
+  {id:2, keyword:"소닉플로우", margin:35000},
+];
+
 const DEFAULT_INV = [
   {id:1,name:"세럼 30ml (베스트셀러)",sku:"SKU-001",stock:1240,ordered:0,  reorder:500,sold30:920, category:"세럼"},
   {id:2,name:"세럼 50ml",            sku:"SKU-002",stock:340, ordered:500, reorder:400,sold30:510, category:"세럼"},
@@ -52,12 +58,16 @@ const LS_INF       = "oa_inf_v7";
 const LS_INV       = "oa_inv_v7";
 const LS_SCH       = "oa_sch_v7";
 const LS_MARGIN    = "oa_margin_v7"; // 마진 설정
+const LS_MARGINS   = "oa_margins_v7"; // 키워드별 마진
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // 유틸
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// TODAY: SSR에서는 고정값, 클라이언트에서 실제 날짜
 const TODAY = new Date(); TODAY.setHours(0,0,0,0);
-const todayStr = TODAY.toLocaleDateString("ko-KR",{month:"long",day:"numeric"});
+const todayStr = typeof window !== "undefined"
+  ? TODAY.toLocaleDateString("ko-KR",{month:"long",day:"numeric"})
+  : "오늘";
 
 function addDays(ds,n){ if(!ds)return null; const d=new Date(ds); d.setDate(d.getDate()+n); return d.toISOString().slice(0,10); }
 function daysUntil(ds){ if(!ds)return null; return Math.ceil((new Date(ds)-TODAY)/86400000); }
@@ -124,6 +134,13 @@ function ctrStatus(clicks, impressions){
   if(ctr>=1)   return {label:"보통",     color:C.warn, bg:"#FFF8EC", icon:"🟡", ctr:ctr.toFixed(2)};
   return             {label:"소재문제",  color:C.bad,  bg:"#FEF0F0", icon:"🔴", ctr:ctr.toFixed(2)};
 }
+// 광고명/캠페인명에서 키워드 마진 찾기
+function getAdMargin(adName, campaignName, margins, defaultMargin){
+  const text = (adName + " " + campaignName).toLowerCase();
+  const matched = (margins||[]).find(m => m.keyword && text.includes(m.keyword.toLowerCase()));
+  return matched ? matched.margin : defaultMargin;
+}
+
 function adScore(ad, margin){
   // 교체 필요 광고 판단: 하나라도 "컷" or "랜딩문제" or "소재문제"면 경고
   const issues = [];
@@ -141,13 +158,25 @@ function adScore(ad, margin){
 function schTypeColor(t){ return {공구:C.rose,시딩:C.purple,광고:C.gold,이벤트:C.sage}[t]||C.inkMid; }
 function schTypeIcon(t){  return {공구:"🛍",시딩:"✨",광고:"📣",이벤트:"🎉"}[t]||"📌"; }
 
-// localStorage 훅
+// localStorage 훅 — Next.js SSR 완전 안전 버전
 function useLocal(key, def){
-  const [data,setData] = useState(()=>{
-    try{ const v=localStorage.getItem(key); return v?JSON.parse(v):def; }catch{ return def; }
-  });
-  function save(v){ setData(v); try{ localStorage.setItem(key,JSON.stringify(v)); }catch{} }
-  return [data,save];
+  const [data, setData] = useState(def); // 서버에서는 항상 def
+  const [hydrated, setHydrated] = useState(false);
+  useEffect(()=>{
+    // 클라이언트에서만 실행
+    try{
+      const v = localStorage.getItem(key);
+      if(v !== null) setData(JSON.parse(v));
+    }catch{}
+    setHydrated(true);
+  }, [key]);
+  function save(v){
+    setData(v);
+    if(typeof window !== "undefined"){
+      try{ localStorage.setItem(key, JSON.stringify(v)); }catch{}
+    }
+  }
+  return [data, save];
 }
 
 // CSV 파싱 (구글 시트 export) — 타이틀 행 자동 스킵
@@ -355,12 +384,16 @@ export default function OaDashboard(){
   const [sch, setSch]  = useLocal(LS_SCH, DEFAULT_SCH);
 
   // 마진 설정
-  const [margin, setMargin]          = useLocal(LS_MARGIN, 30000);
+  const [margin, setMargin]          = useLocal(LS_MARGIN, 30000);  // loaded ignored
+  const [margins, setMargins]        = useLocal(LS_MARGINS, DEFAULT_MARGINS);
   const [marginModal, setMarginModal]= useState(false);
   const [marginInput, setMarginInput]= useState("");
+  const [editingMargin, setEditingMargin] = useState(null); // {id, keyword, margin}
+  const [newKeyword, setNewKeyword]  = useState("");
+  const [newMarginVal, setNewMarginVal] = useState("");
 
   // 구글 시트 연동 상태
-  const [sheetUrl,setSheetUrl]       = useLocal(LS_SHEET_URL, "");
+  const [sheetUrl,setSheetUrl, sheetUrlLoaded] = useLocal(LS_SHEET_URL, "");
   const [metaRaw,setMetaRaw]         = useState([]);   // 파싱된 원본 rows
   const [metaStatus,setMetaStatus]   = useState("idle"); // idle | loading | ok | error
   const [metaError,setMetaError]     = useState("");
@@ -384,8 +417,17 @@ export default function OaDashboard(){
 
   useEffect(()=>{const t=setInterval(()=>setPulse(v=>!v),2500);return()=>clearInterval(t);},[]);
 
-  // 시트 URL 저장하면 자동 fetch
-  useEffect(()=>{ if(sheetUrl) fetchSheet(sheetUrl); },[sheetUrl]);
+  // 시트 URL 로드되면 자동 fetch (새로고침해도 자동 연동)
+  useEffect(()=>{
+    if(sheetUrlLoaded && sheetUrl) fetchSheet(sheetUrl);
+  },[sheetUrl, sheetUrlLoaded]);
+
+  // 30분마다 자동 갱신
+  useEffect(()=>{
+    if(!sheetUrl) return;
+    const t = setInterval(()=>{ if(sheetUrl) fetchSheet(sheetUrl); }, 30*60*1000);
+    return ()=>clearInterval(t);
+  },[sheetUrl]);
 
   // ── 구글 시트 fetch ──────────────────────────────
   async function fetchSheet(url){
@@ -515,10 +557,12 @@ export default function OaDashboard(){
     return acc;
   }, {}) : {};
   const cutAds  = Object.values(adAlerts).filter(ad=>{
-    const s=adScore(ad,margin); return s.issues.some(i=>i.label==="컷"||i.label==="랜딩문제"||i.label==="소재문제");
+    const adMargin = getAdMargin(ad.name, ad.campaign, margins, margin);
+    const s=adScore(ad, adMargin); return s.issues.some(i=>i.label==="컷"||i.label==="랜딩문제"||i.label==="소재문제");
   });
   const holdAds = Object.values(adAlerts).filter(ad=>{
-    const s=adScore(ad,margin); return !cutAds.includes(ad)&&s.issues.some(i=>i.label==="보류"||i.label==="보통");
+    const adMargin = getAdMargin(ad.name, ad.campaign, margins, margin);
+    const s=adScore(ad, adMargin); return !cutAds.includes(ad)&&s.issues.some(i=>i.label==="보류"||i.label==="보통");
   });
   const totalAlerts    = overdueIns.length+dangerInv.length+overdueScheds.length+urgentScheds.length+cutAds.length+holdAds.length;
 
@@ -704,9 +748,10 @@ export default function OaDashboard(){
       {cutAds.length>0&&(
         <Card>
           <CardTitle title="🔴 광고 교체 필요" sub="컷 기준 초과 — 즉시 검토"
-            action={<Btn variant="ghost" small onClick={()=>{setMarginInput(String(margin));setMarginModal(true)}}>⚙️ 마진 {margin.toLocaleString()}원</Btn>}/>
+            action={<Btn variant="ghost" small onClick={()=>{setMarginInput(String(margin));setMarginModal(true)}}>⚙️ 마진 설정</Btn>}/>
           {cutAds.map((ad,i)=>{
-            const s=adScore(ad,margin);
+            const adMargin = getAdMargin(ad.name, ad.campaign, margins, margin);
+            const s=adScore(ad, adMargin);
             return(
               <div key={i} style={{border:`1px solid ${C.bad}33`,borderRadius:12,padding:"12px 14px",marginBottom:8,background:"#FEF8F8"}}>
                 <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",flexWrap:"wrap",gap:8}}>
@@ -752,7 +797,8 @@ export default function OaDashboard(){
         <Card>
           <CardTitle title="🟡 광고 보류 검토" sub="성과 주의 — 모니터링 필요"/>
           {holdAds.map((ad,i)=>{
-            const s=adScore(ad,margin);
+            const adMargin = getAdMargin(ad.name, ad.campaign, margins, margin);
+            const s=adScore(ad, adMargin);
             return(
               <div key={i} style={{border:`1px solid ${C.warn}33`,borderRadius:12,padding:"12px 14px",marginBottom:8,background:"#FFFBF0"}}>
                 <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",flexWrap:"wrap",gap:8}}>
@@ -791,23 +837,80 @@ export default function OaDashboard(){
 
       {/* 마진 설정 모달 */}
       {marginModal&&(
-        <Modal title="⚙️ 마진 설정" onClose={()=>setMarginModal(false)}>
+        <Modal title="⚙️ 마진 설정" onClose={()=>setMarginModal(false)} wide>
+          {/* 안내 */}
           <div style={{background:C.goldLt,borderRadius:10,padding:"12px 14px",marginBottom:16,fontSize:11,color:C.gold,fontWeight:700}}>
-            💡 CPA(전환당 비용)와 비교하는 마진 기준이에요<br/>
+            💡 광고명에 키워드가 포함되면 해당 마진이 자동 적용돼요<br/>
             <span style={{fontWeight:400,color:C.inkMid}}>마진 이하 → 유지 / 마진 근접(85~100%) → 보류 / 마진 초과 → 컷</span>
           </div>
-          <FR label="제품 마진 (원)">
-            <Inp type="number" value={marginInput} onChange={setMarginInput} placeholder="30000"/>
+
+          {/* 기본 마진 */}
+          <FR label="기본 마진 (키워드 미매칭 시 적용)">
+            <div style={{display:"flex",gap:8,alignItems:"center"}}>
+              <Inp type="number" value={marginInput} onChange={setMarginInput} placeholder="30000" style={{flex:1}}/>
+              <span style={{fontSize:11,color:C.inkMid,whiteSpace:"nowrap"}}>원</span>
+            </div>
           </FR>
-          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8,marginBottom:16}}>
-            {[20000,30000,50000].map(v=>(
+          <div style={{display:"flex",gap:8,marginBottom:16}}>
+            {[15000,20000,30000,50000].map(v=>(
               <button key={v} onClick={()=>setMarginInput(String(v))}
-                style={{padding:"8px",borderRadius:8,border:`1px solid ${C.border}`,background:marginInput==String(v)?C.rose:C.cream,
-                  color:marginInput==String(v)?C.white:C.inkMid,fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
-                ₩{v.toLocaleString()}
+                style={{flex:1,padding:"7px 4px",borderRadius:8,border:`1px solid ${C.border}`,
+                  background:marginInput==String(v)?C.rose:C.cream,
+                  color:marginInput==String(v)?C.white:C.inkMid,
+                  fontSize:10,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
+                ₩{(v/1000)}만
               </button>
             ))}
           </div>
+
+          {/* 키워드별 마진 목록 */}
+          <div style={{borderTop:`1px solid ${C.border}`,paddingTop:14,marginBottom:12}}>
+            <div style={{fontSize:12,fontWeight:800,color:C.ink,marginBottom:10}}>키워드별 마진</div>
+            {margins.map((m)=>(
+              <div key={m.id} style={{display:"flex",alignItems:"center",gap:8,marginBottom:8,
+                padding:"10px 12px",background:C.cream,borderRadius:10,border:`1px solid ${C.border}`}}>
+                {editingMargin?.id===m.id ? (
+                  <>
+                    <Inp value={editingMargin.keyword} onChange={v=>setEditingMargin(e=>({...e,keyword:v}))}
+                      placeholder="키워드" style={{flex:1}}/>
+                    <Inp type="number" value={editingMargin.margin} onChange={v=>setEditingMargin(e=>({...e,margin:v}))}
+                      placeholder="마진" style={{width:100}}/>
+                    <span style={{fontSize:10,color:C.inkMid}}>원</span>
+                    <Btn small onClick={()=>{
+                      setMargins(margins.map(x=>x.id===m.id?{...x,keyword:editingMargin.keyword,margin:+editingMargin.margin||0}:x));
+                      setEditingMargin(null);
+                    }}>✓</Btn>
+                    <Btn small variant="neutral" onClick={()=>setEditingMargin(null)}>✕</Btn>
+                  </>
+                ) : (
+                  <>
+                    <div style={{flex:1}}>
+                      <span style={{fontSize:12,fontWeight:700,color:C.ink,background:C.blush,
+                        padding:"2px 10px",borderRadius:20,border:`1px solid ${C.rose}33`}}>{m.keyword}</span>
+                    </div>
+                    <span style={{fontSize:13,fontWeight:800,color:C.rose}}>₩{(+m.margin||0).toLocaleString()}</span>
+                    <span style={{fontSize:10,color:C.inkLt}}>원</span>
+                    <Btn small variant="neutral" onClick={()=>setEditingMargin({...m})}>✏️</Btn>
+                    <Btn small variant="danger" onClick={()=>setMargins(margins.filter(x=>x.id!==m.id))}>🗑</Btn>
+                  </>
+                )}
+              </div>
+            ))}
+
+            {/* 새 키워드 추가 */}
+            <div style={{display:"flex",gap:8,alignItems:"center",marginTop:10,
+              padding:"10px 12px",background:C.sageLt,borderRadius:10,border:`1px dashed ${C.sage}66`}}>
+              <Inp value={newKeyword} onChange={setNewKeyword} placeholder="키워드 (예: 프리온)" style={{flex:1}}/>
+              <Inp type="number" value={newMarginVal} onChange={setNewMarginVal} placeholder="마진" style={{width:100}}/>
+              <span style={{fontSize:10,color:C.inkMid,whiteSpace:"nowrap"}}>원</span>
+              <Btn small variant="sage" onClick={()=>{
+                if(!newKeyword||!newMarginVal) return;
+                setMargins([...margins,{id:Date.now(),keyword:newKeyword,margin:+newMarginVal}]);
+                setNewKeyword(""); setNewMarginVal("");
+              }}>+ 추가</Btn>
+            </div>
+          </div>
+
           <Btn onClick={()=>{setMargin(+marginInput||30000);setMarginModal(false);}} style={{width:"100%"}}>💾 저장</Btn>
         </Modal>
       )}
@@ -1450,8 +1553,76 @@ export default function OaDashboard(){
     {week:"W3",세럼30:1380,선크림:2180,토너패드:188},
     {week:"W4",세럼30:1240,선크림:2140,토너패드:88},
   ];
-  const InventorySection=()=>(
+  function parseInvCSV(text){
+    const lines = text.trim().split("\n").map(l=>{
+      const res=[]; let cur="", inQ=false;
+      for(let i=0;i<l.length;i++){
+        if(l[i]==='"'){inQ=!inQ;}
+        else if(l[i]===","&&!inQ){res.push(cur.trim());cur="";}
+        else cur+=l[i];
+      }
+      res.push(cur.trim());
+      return res;
+    });
+    const HINTS=["상품명","sku","카테고리","재고","판매"];
+    let startIdx=0;
+    for(let i=0;i<Math.min(lines.length,5);i++){
+      if(HINTS.some(h=>lines[i].join(",").toLowerCase().includes(h))){startIdx=i;break;}
+    }
+    const headers=lines[startIdx].map(h=>h.toLowerCase().replace(/[\s\(\)개]/g,"").replace(/_+/g,"_"));
+    return lines.slice(startIdx+1).filter(l=>l.some(c=>c)).map((row,ri)=>{
+      const obj={};
+      headers.forEach((h,i)=>{obj[h]=row[i]||"";});
+      const num=(...ks)=>{for(const k of ks){const v=obj[k];if(v)return parseInt(String(v).replace(/,/g,""))||0;}return 0;};
+      return {
+        id:Date.now()+ri,
+        name:    obj["상품명"]||obj["name"]||"",
+        sku:     obj["sku"]||"",
+        category:obj["카테고리"]||obj["category"]||"기타",
+        stock:   num("현재재고","재고"),
+        ordered: num("주문수량","주문"),
+        reorder: num("발주기준","발주"),
+        sold30:  num("30일판매량","판매량","판매"),
+      };
+    }).filter(r=>r.name);
+  }
+
+  const InventorySection=()=>{
+    const [uploadMsg,setUploadMsg]=useState("");
+    function handleInvFile(e){
+      const file=e.target.files[0]; if(!file)return;
+      const reader=new FileReader();
+      reader.onload=ev=>{
+        try{
+          const parsed=parseInvCSV(ev.target.result);
+          if(parsed.length===0){setUploadMsg("❌ 데이터를 읽지 못했어요. 양식을 확인해주세요.");}
+          else{setInv(parsed);setUploadMsg("✅ "+parsed.length+"개 상품 업로드 완료!");}
+        }catch(err){setUploadMsg("❌ 파일 읽기 실패");}
+        setTimeout(()=>setUploadMsg(""),4000);
+      };
+      reader.readAsText(file,"utf-8");
+      e.target.value="";
+    }
+    return(
     <div style={{display:"flex",flexDirection:"column",gap:14}}>
+      {/* 업로드 배너 */}
+      <div style={{display:"flex",alignItems:"center",gap:10,padding:"12px 16px",
+        background:C.white,border:`1px solid ${C.border}`,borderRadius:12,flexWrap:"wrap"}}>
+        <span style={{fontSize:13}}>📂</span>
+        <div style={{flex:1}}>
+          <div style={{fontSize:12,fontWeight:700,color:C.ink}}>재고 파일 업로드</div>
+          <div style={{fontSize:10,color:C.inkLt}}>CSV 또는 엑셀 양식을 업로드하면 재고가 한번에 업데이트돼요</div>
+        </div>
+        {uploadMsg&&<span style={{fontSize:11,fontWeight:700,
+          color:uploadMsg.startsWith("✅")?C.good:C.bad}}>{uploadMsg}</span>}
+        <label style={{cursor:"pointer"}}>
+          <input type="file" accept=".csv,.txt" onChange={handleInvFile} style={{display:"none"}}/>
+          <span style={{fontSize:11,fontWeight:700,padding:"7px 16px",borderRadius:8,
+            background:C.rose,color:C.white,boxShadow:`0 3px 10px ${C.rose}44`,whiteSpace:"nowrap"}}>
+            📤 파일 선택
+          </span>
+        </label>
+      </div>
       {dangerInv.length>0&&(<div style={{background:"#FEF0F0",border:`1px solid ${C.bad}44`,borderRadius:12,padding:"12px 14px",display:"flex",gap:10}}><span style={{fontSize:18}}>🚨</span><div><div style={{fontSize:12,fontWeight:800,color:C.bad}}>즉시 발주 — {dangerInv.map(i=>i.name).join(", ")}</div><div style={{fontSize:10,color:C.inkMid,marginTop:2}}>가용 재고 7일치 미만</div></div></div>)}
       {cautionInv.length>0&&(<div style={{background:"#FFF8EC",border:`1px solid ${C.warn}44`,borderRadius:12,padding:"12px 14px",display:"flex",gap:10}}><span style={{fontSize:18}}>⚠️</span><div><div style={{fontSize:12,fontWeight:800,color:C.warn}}>주의 — {cautionInv.map(i=>i.name).join(", ")}</div><div style={{fontSize:10,color:C.inkMid,marginTop:2}}>14~21일 내 소진 예상</div></div></div>)}
       <KpiGrid items={invKpi} cols={6}/>
@@ -1538,6 +1709,7 @@ export default function OaDashboard(){
       )}
     </div>
   );
+  };
 
   const upcoming=sch.filter(s=>s.status!=="완료").sort((a,b)=>new Date(a.date)-new Date(b.date));
   const done=sch.filter(s=>s.status==="완료");
