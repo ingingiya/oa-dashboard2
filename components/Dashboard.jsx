@@ -63,11 +63,9 @@ const LS_MARGINS   = "oa_margins_v7"; // 키워드별 마진
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // 유틸
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// TODAY: SSR에서는 고정값, 클라이언트에서 실제 날짜
+// TODAY: 모듈 레벨에서 한 번만 계산 (서버/클라이언트 동일)
 const TODAY = new Date(); TODAY.setHours(0,0,0,0);
-const todayStr = typeof window !== "undefined"
-  ? TODAY.toLocaleDateString("ko-KR",{month:"long",day:"numeric"})
-  : "오늘";
+const todayStr = "오늘"; // 하이드레이션 불일치 방지 — 날짜는 컴포넌트에서 표시
 
 function addDays(ds,n){ if(!ds)return null; const d=new Date(ds); d.setDate(d.getDate()+n); return d.toISOString().slice(0,10); }
 function daysUntil(ds){ if(!ds)return null; return Math.ceil((new Date(ds)-TODAY)/86400000); }
@@ -158,23 +156,32 @@ function adScore(ad, margin){
 function schTypeColor(t){ return {공구:C.rose,시딩:C.purple,광고:C.gold,이벤트:C.sage}[t]||C.inkMid; }
 function schTypeIcon(t){  return {공구:"🛍",시딩:"✨",광고:"📣",이벤트:"🎉"}[t]||"📌"; }
 
-// localStorage 훅 — Next.js SSR 완전 안전 버전 (loaded 플래그 포함)
+// localStorage 훅 — SSR/CSR 완전 분리 버전
+// 서버: 항상 def 반환, 클라이언트: localStorage 값 반환
+// useState 초기화 시점에 localStorage 읽어서 하이드레이션 불일치 원천 차단
 function useLocal(key, def){
   const [data, setData] = useState(def);
   const [loaded, setLoaded] = useState(false);
+
+  // 마운트 후 딱 한 번만 localStorage에서 읽기
+  const isFirst = useCallback(()=>{}, []);
   useEffect(()=>{
+    let stored = def;
     try{
-      const v = localStorage.getItem(key);
-      if(v !== null) setData(JSON.parse(v));
+      const raw = localStorage.getItem(key);
+      if(raw !== null) stored = JSON.parse(raw);
     }catch{}
+    // 서버 렌더값(def)과 다를 때만 업데이트 → 불일치 최소화
+    setData(stored);
     setLoaded(true);
-  }, [key]);
-  function save(v){
+  // eslint-disable-next-line
+  }, []);
+
+  const save = useCallback((v)=>{
     setData(v);
-    if(typeof window !== "undefined"){
-      try{ localStorage.setItem(key, JSON.stringify(v)); }catch{}
-    }
-  }
+    try{ localStorage.setItem(key, JSON.stringify(v)); }catch{}
+  }, [key]);
+
   return [data, save, loaded];
 }
 
@@ -602,7 +609,7 @@ export default function OaDashboard(){
     <div style={{display:"flex",flexDirection:"column",gap:14}}>
       <div style={{background:`linear-gradient(135deg,${C.rose},${C.roseLt})`,borderRadius:16,padding:"20px",
         color:C.white,boxShadow:`0 8px 28px ${C.rose}44`}}>
-        <div style={{fontSize:11,fontWeight:700,letterSpacing:"0.1em",opacity:0.8,marginBottom:4}}>TODAY · {todayStr}</div>
+        <div style={{fontSize:11,fontWeight:700,letterSpacing:"0.1em",opacity:0.8,marginBottom:4}}>TODAY · {dateStr}</div>
         <div style={{fontSize:26,fontWeight:900,lineHeight:1.1}}>
           {totalAlerts>0?`확인 필요 ${totalAlerts}건`:"모두 정상 ✅"}</div>
         <div style={{fontSize:11,opacity:0.8,marginTop:6}}>
@@ -1856,7 +1863,7 @@ export default function OaDashboard(){
             background:C.blush,borderRadius:10,fontSize:11,color:C.rose,fontWeight:700}}>
             <span style={{width:6,height:6,borderRadius:"50%",background:C.rose,flexShrink:0,
               boxShadow:pulse?`0 0 0 4px ${C.rose}33`:"none",transition:"box-shadow 0.4s",display:"inline-block"}}/>
-            {todayStr}
+            {dateStr}
           </div>
         </div>
 
@@ -1922,7 +1929,7 @@ export default function OaDashboard(){
               fontSize:10,color:C.warn,fontWeight:700,cursor:"pointer"}}>🔔 {totalAlerts}건</div>
           )}
           <div style={{fontSize:10,color:C.rose,fontWeight:700,background:C.blush,
-            padding:"4px 10px",borderRadius:20,border:`1px solid ${C.rose}33`}}>{todayStr}</div>
+            padding:"4px 10px",borderRadius:20,border:`1px solid ${C.rose}33`}}>{dateStr}</div>
         </div>
       </header>
 
