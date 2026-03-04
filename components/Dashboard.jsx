@@ -379,6 +379,106 @@ const KpiGrid=({items,cols=6})=>(
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // MAIN APP
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 독립 모달 컴포넌트 — 내부 상태 관리, 외부 리렌더 차단
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+// 인플루언서 추가/수정 모달
+function InfModalComp({mode, initial, onSave, onClose}){
+
+  const [f, setF] = useState(()=>initial||eInf);
+  const set = (k,v) => setF(p=>({...p,[k]:v}));
+  return(
+    <Modal title={mode==="edit"?"✏️ 인플루언서 수정":"➕ 인플루언서 추가"} onClose={onClose}>
+      <FR label="이름(계정)"><Inp value={f.name} onChange={v=>set("name",v)} placeholder="@username"/></FR>
+      <FR label="티어"><Sel value={f.tier} onChange={v=>set("tier",v)} options={["매크로","미드","마이크로","나노"]}/></FR>
+      <FR label="팔로워"><Inp value={f.followers} onChange={v=>set("followers",v)} placeholder="예: 28K"/></FR>
+      <FR label="플랫폼"><Sel value={f.platform} onChange={v=>set("platform",v)} options={["인스타","유튜브","틱톡","블로그"]}/></FR>
+      <FR label="제품"><Inp value={f.product} onChange={v=>set("product",v)} placeholder="협찬 제품명"/></FR>
+      <FR label="발송 수량"><Inp type="number" value={f.sent} onChange={v=>set("sent",v)} placeholder="0"/></FR>
+      <FR label="게시 여부"><Sel value={String(f.posted)} onChange={v=>set("posted",v==="1"?1:0)} options={["0","1"]}/></FR>
+      <FR label="게시일"><Inp type="date" value={f.postedDate||""} onChange={v=>set("postedDate",v)}/></FR>
+      <div style={{borderTop:`1px solid ${C.border}`,margin:"12px 0 8px",paddingTop:10}}>
+        <div style={{fontSize:11,fontWeight:800,color:C.ink,marginBottom:8}}>📹 콘텐츠 활용</div>
+        {[{key:"videoReceived",label:"🎬 영상 수령 완료"},{key:"reusable",label:"♻️ 2차 활용 가능"},{key:"metaUsed",label:"📣 메타 광고 소재 활용"}].map(({key,label})=>(
+          <label key={key} style={{display:"flex",alignItems:"center",gap:8,marginBottom:8,cursor:"pointer"}}>
+            <input type="checkbox" checked={!!f[key]} onChange={e=>set(key,e.target.checked)} style={{width:15,height:15,accentColor:C.rose}}/>
+            <span style={{fontSize:11,color:C.ink}}>{label}</span>
+          </label>
+        ))}
+      </div>
+      <Btn onClick={()=>{if(!f.name)return; onSave({...f,sent:+f.sent||0,posted:+f.posted||0});}} style={{width:"100%",marginTop:4}}>
+        {mode==="edit"?"💾 저장":"➕ 추가"}
+      </Btn>
+    </Modal>
+  );
+}
+
+// 인사이트 기록 모달
+function InsModalComp({initial, onSave, onClose}){
+  const [f, setF] = useState(()=>initial||{id:null,name:"",reach:"",saves:"",clicks:"",conv:""});
+  const set = (k,v) => setF(p=>({...p,[k]:v}));
+  return(
+    <Modal title="📊 인사이트 기록" onClose={onClose}>
+      <div style={{fontSize:12,fontWeight:700,color:C.ink,marginBottom:12}}>{f.name}</div>
+      <FR label="도달(Reach)"><Inp type="number" value={f.reach} onChange={v=>set("reach",v)} placeholder="0"/></FR>
+      <FR label="저장수"><Inp type="number" value={f.saves} onChange={v=>set("saves",v)} placeholder="0"/></FR>
+      <FR label="링크 클릭"><Inp type="number" value={f.clicks} onChange={v=>set("clicks",v)} placeholder="0"/></FR>
+      <FR label="전환(구매)"><Inp type="number" value={f.conv} onChange={v=>set("conv",v)} placeholder="0"/></FR>
+      <Btn onClick={()=>onSave({...f,reach:+f.reach||0,saves:+f.saves||0,clicks:+f.clicks||0,conv:+f.conv||0})}
+        style={{width:"100%",marginTop:8}}>💾 저장</Btn>
+    </Modal>
+  );
+}
+
+// 재고 추가/수정 모달
+function InvModalComp({mode, initial, onSave, onClose}){
+
+  const [f, setF] = useState(()=>initial||eInv);
+  const set = (k,v) => setF(p=>({...p,[k]:v}));
+  return(
+    <Modal title={mode==="add"?"상품 추가":"재고 수정"} onClose={onClose}>
+      <FR label="상품명 *"><Inp value={f.name} onChange={v=>set("name",v)} placeholder="세럼 30ml"/></FR>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:12}}>
+        <FR label="SKU"><Inp value={f.sku} onChange={v=>set("sku",v)} placeholder="SKU-001"/></FR>
+        <FR label="카테고리"><Inp value={f.category} onChange={v=>set("category",v)} placeholder="세럼"/></FR>
+      </div>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:12}}>
+        <FR label="현재 재고"><Inp type="number" value={f.stock} onChange={v=>set("stock",v)} placeholder="0"/></FR>
+        <FR label="주문 수량(입고예정)"><Inp type="number" value={f.ordered} onChange={v=>set("ordered",v)} placeholder="0"/></FR>
+      </div>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:12}}>
+        <FR label="발주 기준"><Inp type="number" value={f.reorder} onChange={v=>set("reorder",v)} placeholder="300"/></FR>
+        <FR label="30일 판매량"><Inp type="number" value={f.sold30} onChange={v=>set("sold30",v)} placeholder="0"/></FR>
+      </div>
+      <Btn onClick={()=>{if(!f.name)return; onSave({...f,stock:+f.stock||0,ordered:+f.ordered||0,reorder:+f.reorder||0,sold30:+f.sold30||0});}}
+        style={{width:"100%",marginTop:8}}>💾 저장</Btn>
+    </Modal>
+  );
+}
+
+// 스케줄 추가/수정 모달
+function SchModalComp({mode, initial, onSave, onClose}){
+
+  const [f, setF] = useState(()=>initial||eSch);
+  const set = (k,v) => setF(p=>({...p,[k]:v}));
+  return(
+    <Modal title={mode==="add"?"일정 추가":"일정 수정"} onClose={onClose}>
+      <FR label="유형"><Sel value={f.type} onChange={v=>set("type",v)} options={["공구","시딩","광고","이벤트"]}/></FR>
+      <FR label="제목 *"><Inp value={f.title} onChange={v=>set("title",v)} placeholder="세럼 30ml 공구 오픈"/></FR>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:12}}>
+        <FR label="시작일 *"><Inp type="date" value={f.date} onChange={v=>set("date",v)}/></FR>
+        <FR label="종료일"><Inp type="date" value={f.endDate} onChange={v=>set("endDate",v)}/></FR>
+      </div>
+      <FR label="플랫폼"><Inp value={f.platform} onChange={v=>set("platform",v)} placeholder="네이버 스마트스토어"/></FR>
+      <FR label="메모"><Inp value={f.note} onChange={v=>set("note",v)} placeholder="한도 수량, 할인율 등"/></FR>
+      <FR label="상태"><Sel value={f.status} onChange={v=>set("status",v)} options={["예정","준비중","진행중","완료"]}/></FR>
+      <Btn onClick={()=>{if(!f.title||!f.date)return; onSave(f);}} style={{width:"100%",marginTop:8}}>💾 저장</Btn>
+    </Modal>
+  );
+}
+
 export default function OaDashboard(){
   const [sec,setSec]           = useState("home");
   const [metaTab,setMetaTab]   = useState("overview");
@@ -422,20 +522,15 @@ export default function OaDashboard(){
   const [sheetInput,setSheetInput]   = useState("");
 
   // 모달
-  const [infModal, setInfModal] = useState(null);
-  const [insModal, setInsModal] = useState(null);
-  const [invModal, setInvModal] = useState(null);
-  const [schModal, setSchModal] = useState(null);
 
   // 폼
-  const eInf={name:"",tier:"마이크로",followers:"",platform:"인스타",product:"",sent:"",posted:"",postedDate:"",videoReceived:false,reusable:false,metaUsed:false};
-  const eInv={name:"",sku:"",category:"",stock:"",ordered:"",reorder:"",sold30:""};
-  const eSch={type:"공구",title:"",date:"",endDate:"",platform:"",note:"",status:"예정"};
-  const [infF,setInfF]=useState(eInf);
-  const updateInfF = useCallback((key,val)=>setInfF(f=>({...f,[key]:val})),[]);
-  const [invF,setInvF]=useState(eInv);
-  const [schF,setSchF]=useState(eSch);
-  const [insF,setInsF]=useState({id:null,name:"",reach:"",saves:"",clicks:"",conv:""});
+
+
+
+
+
+
+
 
   useEffect(()=>{const t=setInterval(()=>setPulse(v=>!v),2500);return()=>clearInterval(t);},[]);
 
@@ -724,30 +819,34 @@ export default function OaDashboard(){
   });
   const totalAlerts    = overdueIns.length+dangerInv.length+overdueScheds.length+urgentScheds.length+cutAds.length+holdAds.length+orderRaw.length;
 
-  // ── CRUD ────────────────────────────────────────
-  function saveInf(){
-    if(!infF.name)return;
-    const item={...infF,sent:+infF.sent||0,posted:+infF.posted||0,reach:infF.reach??null,saves:infF.saves??null,clicks:infF.clicks??null,conv:infF.conv??null};
-    if(infModal==="add"){setInfs([...infs,{...item,id:nid}]);setNid(n=>n+1);}
-    else setInfs(infs.map(f=>f.id===infF.id?{...item,id:f.id}:f));
-    setInfModal(null);
+  // ── CRUD 콜백 (모달 컴포넌트에서 onSave로 호출) ─────
+  function saveInf(item){
+    if(infModalData?.mode==="edit"){
+      setInfs(arr=>arr.map(x=>x.id===item.id?item:x));
+    } else {
+      setInfs(arr=>[...arr,{...item,id:Date.now()}]);
+    }
+    setInfModalData(null);
   }
-  function saveIns(){
-    setInfs(infs.map(f=>f.id===insF.id?{...f,reach:+insF.reach||0,saves:+insF.saves||0,clicks:+insF.clicks||0,conv:+insF.conv||0}:f));
-    setInsModal(null);
+  function saveIns(item){
+    setInfs(arr=>arr.map(f=>f.id===item.id?{...f,...item}:f));
+    setInsModalData(null);
   }
-  function saveInv(){
-    if(!invF.name)return;
-    const item={...invF,stock:+invF.stock||0,ordered:+invF.ordered||0,reorder:+invF.reorder||0,sold30:+invF.sold30||0};
-    if(invModal==="add"){setInv([...inv,{...item,id:nid}]);setNid(n=>n+1);}
-    else setInv(inv.map(v=>v.id===invF.id?{...item,id:v.id}:v));
-    setInvModal(null);
+  function saveInv(item){
+    if(invModalData?.mode==="edit"){
+      setInv(arr=>arr.map(v=>v.id===item.id?item:v));
+    } else {
+      setInv(arr=>[...arr,{...item,id:Date.now()}]);
+    }
+    setInvModalData(null);
   }
-  function saveSch(){
-    if(!schF.title||!schF.date)return;
-    if(schModal==="add"){setSch([...sch,{...schF,id:nid}]);setNid(n=>n+1);}
-    else setSch(sch.map(s=>s.id===schF.id?schF:s));
-    setSchModal(null);
+  function saveSch(item){
+    if(schModalData?.mode==="edit"){
+      setSch(arr=>arr.map(s=>s.id===item.id?item:s));
+    } else {
+      setSch(arr=>[...arr,{...item,id:Date.now()}]);
+    }
+    setSchModalData(null);
   }
 
   const NAVS=[
@@ -837,8 +936,8 @@ export default function OaDashboard(){
                   </div>
                 </div>
                 <Btn variant="ghost" small onClick={()=>{
-                  setInsF({id:f.id,name:f.name,reach:"",saves:"",clicks:"",conv:""});
-                  setInsModal(true);
+                  setInsModalData({initial:{id:f.id,name:f.name,reach:"",saves:"",clicks:"",conv:""}});
+                  setInsModalData({initial:true});
                 }}>✏️ 바로 입력</Btn>
               </div>
             );
@@ -1194,23 +1293,13 @@ export default function OaDashboard(){
       )}
 
       {/* 인사이트 입력 모달 (홈에서도 접근) */}
-      {insModal&&(
-        <Modal title="📊 인사이트 기록" onClose={()=>setInsModal(null)}>
-          <div style={{fontSize:11,color:C.rose,fontWeight:700,marginBottom:16,background:C.blush,padding:"8px 12px",borderRadius:8}}>
-            {insF.name} — 게시 후 7일 데이터</div>
-          {[{k:"reach",l:"👁 도달수",p:"52000"},{k:"saves",l:"🔖 저장수",p:"640"},{k:"clicks",l:"🔗 링크 클릭",p:"480"},{k:"conv",l:"🛒 구매 전환",p:"34"}].map(({k,l,p})=>(
-            <FR key={k} label={l}><Inp type="number" value={insF[k]} onChange={v=>setInsF(f=>({...f,[k]:v}))} placeholder={`예: ${p}`}/></FR>
-          ))}
-          <Btn onClick={saveIns} style={{width:"100%",marginTop:8}}>💾 저장</Btn>
-        </Modal>
-      )}
     </div>
   );
 
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   // 📣 메타광고
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  const MetaSection=useMemo(()=>{
+  const MetaSection=(()=>{
     const d = metaAgg;
     const fmt=n=>n>=1000?`₩${Math.round(n/1000).toLocaleString()}K`:`₩${Math.round(n).toLocaleString()}`;
 
@@ -1568,7 +1657,7 @@ export default function OaDashboard(){
         )}
       </div>
     );
-  },[metaRaw, metaStatus, campTab, sheetUrl, sheetModal, margin, margins]);
+  })();
 
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   // ✨ 인플루언서 (이전과 동일 구조)
@@ -1583,48 +1672,14 @@ export default function OaDashboard(){
   ];
   // 인플루언서 모달 — 별도 컴포넌트로 분리해서 리렌더 차단
   // InfModal
-  const InfModal = useCallback(()=>{
-    if(!infModal) return null;
-    const isEdit = infModal==="edit";
-    return(
-      <Modal title={isEdit?"✏️ 인플루언서 수정":"➕ 인플루언서 추가"} onClose={()=>setInfModal(null)}>
-        <FR label="이름(계정)"><Inp value={infF.name} onChange={v=>setInfF(f=>({...f,name:v}))} placeholder="@username"/></FR>
-        <FR label="티어"><Sel value={infF.tier} onChange={v=>setInfF(f=>({...f,tier:v}))} options={["매크로","미드","마이크로","나노"]}/></FR>
-        <FR label="팔로워"><Inp value={infF.followers} onChange={v=>setInfF(f=>({...f,followers:v}))} placeholder="예: 28K"/></FR>
-        <FR label="플랫폼"><Sel value={infF.platform} onChange={v=>setInfF(f=>({...f,platform:v}))} options={["인스타","유튜브","틱톡","블로그"]}/></FR>
-        <FR label="제품"><Inp value={infF.product} onChange={v=>setInfF(f=>({...f,product:v}))} placeholder="협찬 제품명"/></FR>
-        <FR label="발송 수량"><Inp type="number" value={infF.sent} onChange={v=>setInfF(f=>({...f,sent:v}))} placeholder="0"/></FR>
-        <FR label="게시 여부"><Sel value={String(infF.posted)} onChange={v=>setInfF(f=>({...f,posted:v==="true"||v==="1"?1:v==="false"||v==="0"?0:+v||0}))} options={["0","1"]}/></FR>
-        <FR label="게시일"><Inp type="date" value={infF.postedDate||""} onChange={v=>setInfF(f=>({...f,postedDate:v}))}/></FR>
-        <div style={{borderTop:`1px solid ${C.border}`,margin:"12px 0 8px",paddingTop:10}}>
-          <div style={{fontSize:11,fontWeight:800,color:C.ink,marginBottom:8}}>📹 콘텐츠 활용</div>
-          {[
-            {key:"videoReceived",label:"🎬 영상 수령 완료"},
-            {key:"reusable",label:"♻️ 2차 활용 가능 (게시일+3개월)"},
-            {key:"metaUsed",label:"📣 메타 광고 소재로 활용"},
-          ].map(({key,label})=>(
-            <label key={key} style={{display:"flex",alignItems:"center",gap:8,marginBottom:8,cursor:"pointer"}}>
-              <input type="checkbox" checked={!!infF[key]} onChange={e=>setInfF(f=>({...f,[key]:e.target.checked}))}
-                style={{width:15,height:15,accentColor:C.rose}}/>
-              <span style={{fontSize:11,color:C.ink}}>{label}</span>
-            </label>
-          ))}
-        </div>
-        <Btn onClick={()=>{
-          if(!infF.name) return;
-          if(isEdit){
-            setInfs(arr=>arr.map(x=>x.id===infF.id?{...infF,sent:+infF.sent||0,posted:+infF.posted||0}:x));
-          } else {
-            setInfs(arr=>[...arr,{...infF,id:Date.now(),sent:+infF.sent||0,posted:+infF.posted||0}]);
-          }
-          setInfModal(null);
-        }} style={{width:"100%",marginTop:4}}>{isEdit?"💾 저장":"➕ 추가"}</Btn>
-      </Modal>
-    );
-  // eslint-disable-next-line
-  },[infModal, infF]);
+  const [infModalData, setInfModalData] = useState(null); // {mode, initial}
+  const [insModalData, setInsModalData] = useState(null); // {initial}
+  const [invModalData, setInvModalData] = useState(null); // {mode, initial}
+  const [schModalData, setSchModalData] = useState(null); // {mode, initial}
+  // 모달은 return JSX 안에서 직접 렌더링
 
-  const InfluencerSection=useMemo(()=>{
+
+  const InfluencerSection=(()=>{
     const tierData=[
       {name:"매크로",value:infs.filter(f=>f.tier==="매크로").length,color:C.rose},
       {name:"미드",  value:infs.filter(f=>f.tier==="미드").length,  color:C.gold},
@@ -1700,11 +1755,11 @@ export default function OaDashboard(){
 
       <Card>
         <CardTitle title="인플루언서별 시딩 현황" sub="게시일 기준 D+7 인사이트 기록"
-          action={<Btn small onClick={()=>{setInfF({...eInf});setInfModal("add")}}>+ 추가</Btn>}/>
+          action={<Btn small onClick={()=>{setInfModalData({mode:"add",initial:null})}}>+ 추가</Btn>}/>
         {infs.length===0&&(
           <div style={{textAlign:"center",padding:"32px 0",color:C.inkLt,fontSize:12}}>
             아직 등록된 인플루언서가 없어요<br/>
-            <Btn style={{marginTop:12}} onClick={()=>{setInfF({...eInf});setInfModal("add")}}>+ 첫 번째 추가</Btn>
+            <Btn style={{marginTop:12}} onClick={()=>{setInfModalData({mode:"add",initial:null})}}>+ 첫 번째 추가</Btn>
           </div>
         )}
         <div style={{display:"flex",flexDirection:"column",gap:8}}>
@@ -1734,11 +1789,11 @@ export default function OaDashboard(){
                       padding:"3px 10px",borderRadius:20,whiteSpace:"nowrap"}}>{st.icon} {st.label}</span>
                     {st.label!=="기록완료"&&st.label!=="미게시"&&(
                       <Btn variant="ghost" small onClick={()=>{
-                        setInsF({id:f.id,name:f.name,reach:"",saves:"",clicks:"",conv:""});
-                        setInsModal(true);
+                        setInsModalData({initial:{id:f.id,name:f.name,reach:"",saves:"",clicks:"",conv:""}});
+                        setInsModalData({initial:true});
                       }}>✏️ 기록</Btn>
                     )}
-                    <Btn variant="neutral" small onClick={()=>{setInfF(f);setInfModal("edit")}}>수정</Btn>
+                    <Btn variant="neutral" small onClick={()=>{setInfF(f);setInfModalData({mode:"edit",initial:f})}}>수정</Btn>
                     <Btn variant="danger" small onClick={()=>setInfs(infs.filter(x=>x.id!==f.id))}>🗑</Btn>
                   </div>
                 </div>
@@ -1794,20 +1849,9 @@ export default function OaDashboard(){
         </div>
       </Card>
 
-      <InfModal/>
-      {insModal&&(
-        <Modal title="📊 인사이트 기록" onClose={()=>setInsModal(null)}>
-          <div style={{fontSize:11,color:C.rose,fontWeight:700,marginBottom:16,background:C.blush,padding:"8px 12px",borderRadius:8}}>
-            {insF.name} — 게시 후 7일 데이터</div>
-          {[{k:"reach",l:"👁 도달수",p:"52000"},{k:"saves",l:"🔖 저장수",p:"640"},{k:"clicks",l:"🔗 링크 클릭",p:"480"},{k:"conv",l:"🛒 구매 전환",p:"34"}].map(({k,l,p})=>(
-            <FR key={k} label={l}><Inp type="number" value={insF[k]} onChange={v=>setInsF(f=>({...f,[k]:v}))} placeholder={`예: ${p}`}/></FR>
-          ))}
-          <Btn onClick={saveIns} style={{width:"100%",marginTop:8}}>💾 저장</Btn>
-        </Modal>
-      )}
     </div>
     );
-  },[infs, infModal, infF, insModal, insF, overdueIns]);
+  })();
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   // 📦 재고 + 📅 스케줄 (이전 v5와 동일)
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -1859,7 +1903,7 @@ export default function OaDashboard(){
     }).filter(r=>r.name);
   }
 
-  const InventorySection=useMemo(()=>{
+  const InventorySection=(()=>{
     const [uploadMsg,setUploadMsg]=useState("");
     function handleInvFile(e){
       const file=e.target.files[0]; if(!file)return;
@@ -1941,7 +1985,7 @@ export default function OaDashboard(){
       <KpiGrid items={invKpi} cols={6}/>
       <Card>
         <CardTitle title="전체 재고 현황" sub="가용 · 예약 · 재고일수"
-          action={<Btn small onClick={()=>{setInvF({name:"",sku:"",category:"",stock:"",ordered:"",reorder:"",sold30:""});setInvModal("add")}}>+ 추가</Btn>}/>
+          action={<Btn small onClick={()=>{setInvModalData({mode:"add",initial:null})}}>+ 추가</Btn>}/>
         <div style={{overflowX:"auto"}}>
           <table style={{width:"100%",borderCollapse:"collapse",fontSize:11,minWidth:480}}>
             <thead><tr style={{borderBottom:`2px solid ${C.border}`}}>
@@ -1966,7 +2010,7 @@ export default function OaDashboard(){
                 <td style={{padding:"10px 8px",textAlign:"right"}}><span style={{fontSize:9,fontWeight:700,color:st.color,background:st.bg,padding:"2px 8px",borderRadius:20}}>{st.label}</span></td>
                 <td style={{padding:"10px 8px",textAlign:"right"}}>
                   <div style={{display:"flex",gap:4,justifyContent:"flex-end"}}>
-                    <Btn variant="ghost" small onClick={()=>{setInvF(item);setInvModal("edit")}}>수정</Btn>
+                    <Btn variant="ghost" small onClick={()=>{setInvModalData({mode:"edit",initial:item})}}>수정</Btn>
                     <Btn variant="danger" small onClick={()=>setInv(inv.filter(v=>v.id!==item.id))}>🗑</Btn>
                   </div>
                 </td>
@@ -2002,31 +2046,14 @@ export default function OaDashboard(){
         {inv.filter(i=>stockStatus(i).label!=="정상").length===0&&<div style={{fontSize:11,color:C.inkLt,textAlign:"center",padding:"12px 0"}}>발주 권고 없음 ✅</div>}
       </div>
       </div>
-      {invModal&&(
-        <Modal title={invModal==="add"?"상품 추가":"재고 수정"} onClose={()=>setInvModal(null)}>
-          <FR label="상품명 *"><Inp value={invF.name} onChange={v=>setInvF(f=>({...f,name:v}))} placeholder="세럼 30ml"/></FR>
-          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:12}}>
-            <FR label="SKU"><Inp value={invF.sku} onChange={v=>setInvF(f=>({...f,sku:v}))} placeholder="SKU-001"/></FR>
-            <FR label="카테고리"><Inp value={invF.category} onChange={v=>setInvF(f=>({...f,category:v}))} placeholder="세럼"/></FR>
-          </div>
-          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:12}}>
-            <FR label="현재 재고"><Inp type="number" value={invF.stock} onChange={v=>setInvF(f=>({...f,stock:v}))} placeholder="0"/></FR>
-            <FR label="주문 수량 (입고예정)"><Inp type="number" value={invF.ordered} onChange={v=>setInvF(f=>({...f,ordered:v}))} placeholder="0"/></FR>
-          </div>
-          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:12}}>
-            <FR label="발주 기준"><Inp type="number" value={invF.reorder} onChange={v=>setInvF(f=>({...f,reorder:v}))} placeholder="300"/></FR>
-            <FR label="30일 판매량"><Inp type="number" value={invF.sold30} onChange={v=>setInvF(f=>({...f,sold30:v}))} placeholder="0"/></FR>
-          </div>
-          <Btn onClick={saveInv} style={{width:"100%",marginTop:8}}>💾 저장</Btn>
-        </Modal>
-      )}
     </div>
   );
-  },[inv,invModal,invF,invSheetStatus,invUrl,invUrlModal,invUrlInput]);
+  })();
 
   const upcoming=sch.filter(s=>s.status!=="완료").sort((a,b)=>new Date(a.date)-new Date(b.date));
   const done=sch.filter(s=>s.status==="완료");
-  const ScheduleSection=useMemo(()=>(
+  const ScheduleSection=(()=>{
+    return(
     <div style={{display:"flex",flexDirection:"column",gap:14}}>
       <div className="content-grid-3" style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:10}}>
         {["공구","시딩","광고","이벤트"].map(type=>{
@@ -2041,7 +2068,7 @@ export default function OaDashboard(){
       </div>
       <Card>
         <CardTitle title="📅 전체 일정" sub="공구·시딩·광고·이벤트 통합 스케줄"
-          action={<Btn small onClick={()=>{setSchF({type:"공구",title:"",date:"",endDate:"",platform:"",note:"",status:"예정"});setSchModal("add")}}>+ 일정 추가</Btn>}/>
+          action={<Btn small onClick={()=>{setSchModalData({mode:"add",initial:null})}}>+ 일정 추가</Btn>}/>
         {upcoming.length===0&&<div style={{textAlign:"center",color:C.inkLt,fontSize:12,padding:"28px 0"}}>예정된 일정이 없습니다</div>}
         <div style={{display:"flex",flexDirection:"column",gap:8}}>
           {upcoming.map(s=>{
@@ -2063,7 +2090,7 @@ export default function OaDashboard(){
                   </div>
                 </div>
                 <div style={{display:"flex",gap:6,flexShrink:0}}>
-                  <Btn variant="ghost" small onClick={()=>{setSchF(s);setSchModal("edit")}}>✏️</Btn>
+                  <Btn variant="ghost" small onClick={()=>{setSchModalData({mode:"edit",initial:s})}}>✏️</Btn>
                   <Btn variant="sage" small onClick={()=>setSch(sch.map(x=>x.id===s.id?{...x,status:"완료"}:x))}>✅</Btn>
                   <Btn variant="danger" small onClick={()=>setSch(sch.filter(x=>x.id!==s.id))}>🗑</Btn>
                 </div>
@@ -2091,22 +2118,9 @@ export default function OaDashboard(){
           ))}
         </Card>
       )}
-      {schModal&&(
-        <Modal title={schModal==="add"?"일정 추가":"일정 수정"} onClose={()=>setSchModal(null)}>
-          <FR label="유형"><Sel value={schF.type} onChange={v=>setSchF(f=>({...f,type:v}))} options={["공구","시딩","광고","이벤트"]}/></FR>
-          <FR label="제목 *"><Inp value={schF.title} onChange={v=>setSchF(f=>({...f,title:v}))} placeholder="세럼 30ml 공구 오픈"/></FR>
-          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:12}}>
-            <FR label="시작일 *"><Inp type="date" value={schF.date} onChange={v=>setSchF(f=>({...f,date:v}))}/></FR>
-            <FR label="종료일"><Inp type="date" value={schF.endDate} onChange={v=>setSchF(f=>({...f,endDate:v}))}/></FR>
-          </div>
-          <FR label="플랫폼"><Inp value={schF.platform} onChange={v=>setSchF(f=>({...f,platform:v}))} placeholder="네이버 스마트스토어"/></FR>
-          <FR label="메모"><Inp value={schF.note} onChange={v=>setSchF(f=>({...f,note:v}))} placeholder="한도 수량, 할인율 등"/></FR>
-          <FR label="상태"><Sel value={schF.status} onChange={v=>setSchF(f=>({...f,status:v}))} options={["예정","준비중","진행중","완료"]}/></FR>
-          <Btn onClick={saveSch} style={{width:"100%",marginTop:8}}>💾 저장</Btn>
-        </Modal>
-      )}
     </div>
-  ),[sch, schModal, schF, upcoming]);
+    );
+  })();
 
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   // RENDER
@@ -2276,6 +2290,55 @@ export default function OaDashboard(){
           </button>
         ))}
       </nav>
+
+      {/* ── 전역 모달 — 섹션 밖에서 렌더해서 리렌더 격리 ── */}
+      {infModalData&&<InfModalComp
+        mode={infModalData.mode}
+        initial={infModalData.initial}
+        onSave={(item)=>{
+          if(infModalData.mode==="edit"){
+            setInfs(arr=>arr.map(x=>x.id===item.id?item:x));
+          } else {
+            setInfs(arr=>[...arr,{...item,id:Date.now()}]);
+          }
+          setInfModalData(null);
+        }}
+        onClose={()=>setInfModalData(null)}
+      />}
+      {insModalData&&<InsModalComp
+        initial={insModalData.initial}
+        onSave={(item)=>{
+          setInfs(arr=>arr.map(x=>x.id===item.id?{...x,reach:item.reach,saves:item.saves,clicks:item.clicks,conv:item.conv}:x));
+          setInsModalData(null);
+        }}
+        onClose={()=>setInsModalData(null)}
+      />}
+      {invModalData&&<InvModalComp
+        mode={invModalData.mode}
+        initial={invModalData.initial}
+        onSave={(item)=>{
+          if(invModalData.mode==="edit"){
+            setInv(arr=>arr.map(x=>x.id===item.id?item:x));
+          } else {
+            setInv(arr=>[...arr,{...item,id:Date.now()}]);
+          }
+          setInvModalData(null);
+        }}
+        onClose={()=>setInvModalData(null)}
+      />}
+      {schModalData&&<SchModalComp
+        mode={schModalData.mode}
+        initial={schModalData.initial}
+        onSave={(item)=>{
+          if(schModalData.mode==="edit"){
+            setSch(arr=>arr.map(x=>x.id===item.id?item:x));
+          } else {
+            setSch(arr=>[...arr,{...item,id:Date.now()}]);
+          }
+          setSchModalData(null);
+        }}
+        onClose={()=>setSchModalData(null)}
+      />}
     </div>
   );
 }
