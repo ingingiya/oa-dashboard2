@@ -51,6 +51,7 @@ const LS_SHEET_URL = "oa_sheet_url";
 const LS_INF       = "oa_inf_v7";
 const LS_INV       = "oa_inv_v7";
 const LS_SCH       = "oa_sch_v7";
+const LS_MARGIN    = "oa_margin_v7"; // 마진 설정
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // 유틸
@@ -92,6 +93,51 @@ function reusableStatus(f){
   if(d<=14) return {label:`D-${d} 만료임박`,color:C.warn,bg:"#FFF8EC"};
   return {label:`~${exp.slice(5)} 활용가능`,color:C.good,bg:"#EDF7F1"};
 }
+// ── 광고 소재 판단 기준 ─────────────────────────
+function lpvCostStatus(spend, lpv){
+  if(!lpv||!spend) return null;
+  const cost = spend/lpv;
+  if(cost<300)  return {label:"매우좋음", color:C.good,  bg:"#EDF7F1", icon:"🟢", cost:Math.round(cost)};
+  if(cost<500)  return {label:"유지",     color:C.sage,  bg:C.sageLt,  icon:"🔵", cost:Math.round(cost)};
+  if(cost<800)  return {label:"보류",     color:C.warn,  bg:"#FFF8EC", icon:"🟡", cost:Math.round(cost)};
+  return              {label:"컷",        color:C.bad,   bg:"#FEF0F0", icon:"🔴", cost:Math.round(cost)};
+}
+function lpvRateStatus(clicks, lpv){
+  if(!clicks||!lpv) return null;
+  const rate = (lpv/clicks)*100;
+  if(rate>=70)  return {label:"정상",     color:C.good, bg:"#EDF7F1", icon:"✅", rate:rate.toFixed(1)};
+  if(rate>=50)  return {label:"보통",     color:C.warn, bg:"#FFF8EC", icon:"⚠️", rate:rate.toFixed(1)};
+  return              {label:"랜딩문제",  color:C.bad,  bg:"#FEF0F0", icon:"🚨", rate:rate.toFixed(1)};
+}
+function cpaStatus(spend, purchases, margin){
+  if(!purchases||!spend||!margin) return null;
+  const cpa = spend/purchases;
+  const ratio = cpa/margin;
+  if(ratio<=0.85)  return {label:"유지",  color:C.good, bg:"#EDF7F1", icon:"✅", cpa:Math.round(cpa)};
+  if(ratio<=1.0)   return {label:"보류",  color:C.warn, bg:"#FFF8EC", icon:"⚠️", cpa:Math.round(cpa)};
+  return                  {label:"컷",    color:C.bad,  bg:"#FEF0F0", icon:"🔴", cpa:Math.round(cpa)};
+}
+function ctrStatus(clicks, impressions){
+  if(!impressions||!clicks) return null;
+  const ctr = (clicks/impressions)*100;
+  if(ctr>=2)   return {label:"좋음",     color:C.good, bg:"#EDF7F1", icon:"🟢", ctr:ctr.toFixed(2)};
+  if(ctr>=1)   return {label:"보통",     color:C.warn, bg:"#FFF8EC", icon:"🟡", ctr:ctr.toFixed(2)};
+  return             {label:"소재문제",  color:C.bad,  bg:"#FEF0F0", icon:"🔴", ctr:ctr.toFixed(2)};
+}
+function adScore(ad, margin){
+  // 교체 필요 광고 판단: 하나라도 "컷" or "랜딩문제" or "소재문제"면 경고
+  const issues = [];
+  const lpvC = lpvCostStatus(ad.spend, ad.lpv);
+  const lpvR = lpvRateStatus(ad.clicks, ad.lpv);
+  const cpa  = cpaStatus(ad.spend, ad.purchases, margin);
+  const ctr  = ctrStatus(ad.clicks||ad.clicksAll, ad.impressions);
+  if(lpvC&&(lpvC.label==="컷"||lpvC.label==="보류"))   issues.push({type:"LPV단가",  ...lpvC});
+  if(lpvR&&(lpvR.label==="랜딩문제"))                   issues.push({type:"LPV전환율",...lpvR});
+  if(cpa &&(cpa.label==="컷"||cpa.label==="보류"))      issues.push({type:"CPA",      ...cpa});
+  if(ctr &&(ctr.label==="소재문제"||ctr.label==="보통")) issues.push({type:"CTR",      ...ctr});
+  return {issues, lpvC, lpvR, cpa, ctr};
+}
+
 function schTypeColor(t){ return {공구:C.rose,시딩:C.purple,광고:C.gold,이벤트:C.sage}[t]||C.inkMid; }
 function schTypeIcon(t){  return {공구:"🛍",시딩:"✨",광고:"📣",이벤트:"🎉"}[t]||"📌"; }
 
@@ -308,6 +354,11 @@ export default function OaDashboard(){
   const [inv, setInv]  = useLocal(LS_INV, DEFAULT_INV);
   const [sch, setSch]  = useLocal(LS_SCH, DEFAULT_SCH);
 
+  // 마진 설정
+  const [margin, setMargin]          = useLocal(LS_MARGIN, 30000);
+  const [marginModal, setMarginModal]= useState(false);
+  const [marginInput, setMarginInput]= useState("");
+
   // 구글 시트 연동 상태
   const [sheetUrl,setSheetUrl]       = useLocal(LS_SHEET_URL, "");
   const [metaRaw,setMetaRaw]         = useState([]);   // 파싱된 원본 rows
@@ -424,11 +475,17 @@ export default function OaDashboard(){
     });
     const campaigns = Object.values(byAd).map(c=>({
       ...c,
-      cpa:     c.purchases ? Math.round(c.spend/c.purchases) : 0,
-      roas:    c.convValue&&c.spend ? +(c.convValue/c.spend).toFixed(2) : 0,
-      lpvRate: c.clicks ? Math.round((c.lpv/c.clicks)*100) : 0,
-      cpc:     c.clicks ? Math.round(c.spend/c.clicks) : 0,
-      ctr:     c.n ? +(c.ctrSum/c.n).toFixed(2) : 0,
+      cpa:     (c.purchases||0)>0 ? Math.round((c.spend||0)/(c.purchases||1)) : 0,
+      roas:    (c.convValue||0)>0&&(c.spend||0)>0 ? +((c.convValue||0)/(c.spend||1)).toFixed(2) : 0,
+      lpvRate: (c.clicks||0)>0 ? Math.round(((c.lpv||0)/(c.clicks||1))*100) : 0,
+      cpc:     (c.clicks||0)>0 ? Math.round((c.spend||0)/(c.clicks||1)) : 0,
+      ctr:     (c.n||0)>0 ? +((c.ctrSum||0)/(c.n||1)).toFixed(2) : 0,
+      convValue: c.convValue||0,
+      purchases: c.purchases||0,
+      cart:      c.cart||0,
+      clicks:    c.clicks||0,
+      lpv:       c.lpv||0,
+      spend:     c.spend||0,
     }));
     const convCamps    = campaigns.filter(c=>isConversionCampaign(c.objective, c.campaign));
     const trafficCamps = campaigns.filter(c=>!convCamps.includes(c));
@@ -442,7 +499,28 @@ export default function OaDashboard(){
   const cautionInv     = inv.filter(i=>stockStatus(i).label==="주의");
   const overdueScheds  = sch.filter(s=>{const d=daysUntil(s.endDate||s.date);return d!==null&&d<0&&s.status!=="완료";});
   const urgentScheds   = sch.filter(s=>{const d=daysUntil(s.date);return d!==null&&d>=0&&d<=5&&s.status!=="완료";});
-  const totalAlerts    = overdueIns.length+dangerInv.length+overdueScheds.length+urgentScheds.length;
+  // 광고 교체/보류 알림 — 시트 데이터 있을 때만
+  const adAlerts = hasSheet ? metaRaw.reduce((acc, r)=>{
+    const key = r.adName||r.campaign||"";
+    if(!key) return acc;
+    if(!acc[key]) acc[key]={...r, name:key, adset:r.adset||"", campaign:r.campaign||""};
+    else {
+      acc[key].spend      =(acc[key].spend||0)+(r.spend||0);
+      acc[key].clicks     =(acc[key].clicks||0)+(r.clicks||r.clicksAll||0);
+      acc[key].clicksAll  =(acc[key].clicksAll||0)+(r.clicksAll||0);
+      acc[key].lpv        =(acc[key].lpv||0)+(r.lpv||0);
+      acc[key].purchases  =(acc[key].purchases||0)+(r.purchases||0);
+      acc[key].impressions=(acc[key].impressions||0)+(r.impressions||0);
+    }
+    return acc;
+  }, {}) : {};
+  const cutAds  = Object.values(adAlerts).filter(ad=>{
+    const s=adScore(ad,margin); return s.issues.some(i=>i.label==="컷"||i.label==="랜딩문제"||i.label==="소재문제");
+  });
+  const holdAds = Object.values(adAlerts).filter(ad=>{
+    const s=adScore(ad,margin); return !cutAds.includes(ad)&&s.issues.some(i=>i.label==="보류"||i.label==="보통");
+  });
+  const totalAlerts    = overdueIns.length+dangerInv.length+overdueScheds.length+urgentScheds.length+cutAds.length+holdAds.length;
 
   // ── CRUD ────────────────────────────────────────
   function saveInf(){
@@ -493,6 +571,8 @@ export default function OaDashboard(){
             overdueIns.length>0&&`인사이트미입력 ${overdueIns.length}`,
             overdueScheds.length>0&&`기간초과 ${overdueScheds.length}`,
             urgentScheds.length>0&&`D-5임박 ${urgentScheds.length}`,
+            cutAds.length>0&&`광고교체 ${cutAds.length}`,
+            holdAds.length>0&&`광고보류 ${holdAds.length}`,
           ].filter(Boolean).join("  ·  ")||"처리할 항목이 없습니다"}
         </div>
       </div>
@@ -619,7 +699,120 @@ export default function OaDashboard(){
       )}
 
       </div>
-      {totalAlerts===0&&(
+
+      {/* 🔴 광고 교체/컷 알림 */}
+      {cutAds.length>0&&(
+        <Card>
+          <CardTitle title="🔴 광고 교체 필요" sub="컷 기준 초과 — 즉시 검토"
+            action={<Btn variant="ghost" small onClick={()=>{setMarginInput(String(margin));setMarginModal(true)}}>⚙️ 마진 {margin.toLocaleString()}원</Btn>}/>
+          {cutAds.map((ad,i)=>{
+            const s=adScore(ad,margin);
+            return(
+              <div key={i} style={{border:`1px solid ${C.bad}33`,borderRadius:12,padding:"12px 14px",marginBottom:8,background:"#FEF8F8"}}>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",flexWrap:"wrap",gap:8}}>
+                  <div>
+                    <div style={{fontSize:12,fontWeight:800,color:C.ink}}>{ad.name}</div>
+                    <div style={{fontSize:10,color:C.inkLt,marginTop:2}}>{ad.adset||ad.campaign}</div>
+                  </div>
+                  <div style={{display:"flex",gap:5,flexWrap:"wrap"}}>
+                    {s.issues.map((issue,j)=>(
+                      <span key={j} style={{fontSize:10,fontWeight:700,padding:"3px 10px",borderRadius:20,
+                        color:issue.color,background:issue.bg,border:`1px solid ${issue.color}33`}}>
+                        {issue.icon} {issue.type} {issue.label}
+                        {issue.type==="LPV단가"&&` (₩${issue.cost})`}
+                        {issue.type==="LPV전환율"&&` (${issue.rate}%)`}
+                        {issue.type==="CPA"&&` (₩${issue.cpa?.toLocaleString()})`}
+                        {issue.type==="CTR"&&` (${issue.ctr}%)`}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+                <div style={{display:"flex",gap:16,marginTop:10,flexWrap:"wrap"}}>
+                  {[
+                    {l:"광고비",   v:`₩${Math.round((ad.spend||0)/1000)}K`},
+                    {l:"LPV단가",  v:`₩${lpvCostStatus(ad.spend,ad.lpv)?.cost||"—"}`},
+                    {l:"LPV전환율",v:`${lpvRateStatus(ad.clicks,ad.lpv)?.rate||"—"}%`},
+                    {l:"CTR",      v:`${ctrStatus(ad.clicks||ad.clicksAll,ad.impressions)?.ctr||"—"}%`},
+                    ...(ad.purchases>0?[{l:"CPA",v:`₩${Math.round(ad.spend/ad.purchases).toLocaleString()}`}]:[]),
+                  ].map(({l,v})=>(
+                    <div key={l} style={{textAlign:"center"}}>
+                      <div style={{fontSize:9,color:C.inkLt}}>{l}</div>
+                      <div style={{fontSize:12,fontWeight:800,color:C.ink}}>{v}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
+        </Card>
+      )}
+
+      {/* 🟡 광고 보류 알림 */}
+      {holdAds.length>0&&(
+        <Card>
+          <CardTitle title="🟡 광고 보류 검토" sub="성과 주의 — 모니터링 필요"/>
+          {holdAds.map((ad,i)=>{
+            const s=adScore(ad,margin);
+            return(
+              <div key={i} style={{border:`1px solid ${C.warn}33`,borderRadius:12,padding:"12px 14px",marginBottom:8,background:"#FFFBF0"}}>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",flexWrap:"wrap",gap:8}}>
+                  <div>
+                    <div style={{fontSize:12,fontWeight:700,color:C.ink}}>{ad.name}</div>
+                    <div style={{fontSize:10,color:C.inkLt,marginTop:2}}>{ad.adset||ad.campaign}</div>
+                  </div>
+                  <div style={{display:"flex",gap:5,flexWrap:"wrap"}}>
+                    {s.issues.map((issue,j)=>(
+                      <span key={j} style={{fontSize:10,fontWeight:700,padding:"3px 10px",borderRadius:20,
+                        color:issue.color,background:issue.bg,border:`1px solid ${issue.color}33`}}>
+                        {issue.icon} {issue.type} {issue.label}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+                <div style={{display:"flex",gap:16,marginTop:10,flexWrap:"wrap"}}>
+                  {[
+                    {l:"광고비",   v:`₩${Math.round((ad.spend||0)/1000)}K`},
+                    {l:"LPV단가",  v:`₩${lpvCostStatus(ad.spend,ad.lpv)?.cost||"—"}`},
+                    {l:"LPV전환율",v:`${lpvRateStatus(ad.clicks,ad.lpv)?.rate||"—"}%`},
+                    {l:"CTR",      v:`${ctrStatus(ad.clicks||ad.clicksAll,ad.impressions)?.ctr||"—"}%`},
+                    ...(ad.purchases>0?[{l:"CPA",v:`₩${Math.round(ad.spend/ad.purchases).toLocaleString()}`}]:[]),
+                  ].map(({l,v})=>(
+                    <div key={l} style={{textAlign:"center"}}>
+                      <div style={{fontSize:9,color:C.inkLt}}>{l}</div>
+                      <div style={{fontSize:12,fontWeight:700,color:C.ink}}>{v}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
+        </Card>
+      )}
+
+      {/* 마진 설정 모달 */}
+      {marginModal&&(
+        <Modal title="⚙️ 마진 설정" onClose={()=>setMarginModal(false)}>
+          <div style={{background:C.goldLt,borderRadius:10,padding:"12px 14px",marginBottom:16,fontSize:11,color:C.gold,fontWeight:700}}>
+            💡 CPA(전환당 비용)와 비교하는 마진 기준이에요<br/>
+            <span style={{fontWeight:400,color:C.inkMid}}>마진 이하 → 유지 / 마진 근접(85~100%) → 보류 / 마진 초과 → 컷</span>
+          </div>
+          <FR label="제품 마진 (원)">
+            <Inp type="number" value={marginInput} onChange={setMarginInput} placeholder="30000"/>
+          </FR>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8,marginBottom:16}}>
+            {[20000,30000,50000].map(v=>(
+              <button key={v} onClick={()=>setMarginInput(String(v))}
+                style={{padding:"8px",borderRadius:8,border:`1px solid ${C.border}`,background:marginInput==String(v)?C.rose:C.cream,
+                  color:marginInput==String(v)?C.white:C.inkMid,fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
+                ₩{v.toLocaleString()}
+              </button>
+            ))}
+          </div>
+          <Btn onClick={()=>{setMargin(+marginInput||30000);setMarginModal(false);}} style={{width:"100%"}}>💾 저장</Btn>
+        </Modal>
+      )}
+
+      {totalAlerts===0&&!holdAds.length&&(
         <div style={{textAlign:"center",padding:"52px 0",color:C.inkLt}}>
           <div style={{fontSize:52,marginBottom:12}}>✨</div>
           <div style={{fontSize:14,fontWeight:700,color:C.inkMid}}>모든 항목 정상</div>
@@ -829,7 +1022,7 @@ export default function OaDashboard(){
 
               {(()=>{
                 const camps = campTab==="conversion" ? d.convCamps : d.trafficCamps;
-                if(camps.length===0) return(
+                if(!camps||camps.length===0) return(
                   <div style={{textAlign:"center",padding:"32px",color:C.inkLt,fontSize:12}}>
                     해당 목적의 캠페인 데이터가 없습니다<br/>
                     <span style={{fontSize:10,marginTop:4,display:"block"}}>시트의 "캠페인_목적" 컬럼을 확인해주세요</span>
@@ -837,28 +1030,39 @@ export default function OaDashboard(){
                 );
                 return(
                   <>
-                    <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:10,marginBottom:0}}>
-                      {campTab==="conversion" ? [
-                        {label:"전환 광고비",  value:`₩${Math.round(camps.reduce((s,c)=>s+c.spend,0)/1000).toLocaleString()}K`,color:C.rose},
-                        {label:"총 구매",      value:`${camps.reduce((s,c)=>s+c.purchases,0)}건`,color:C.good},
-                        {label:"총 전환값",    value:`₩${Math.round(camps.reduce((s,c)=>s+c.convValue,0)/1000).toLocaleString()}K`,color:C.purple},
-                        {label:"평균 CPA",     value:`₩${Math.round(camps.reduce((s,c)=>s+c.spend,0)/Math.max(camps.reduce((s,c)=>s+c.purchases,0),1)).toLocaleString()}`,color:C.gold},
-                        {label:"전체 ROAS",    value:`${camps.reduce((s,c)=>s+c.spend,0)>0?+(camps.reduce((s,c)=>s+c.convValue,0)/camps.reduce((s,c)=>s+c.spend,0)).toFixed(2):0}x`,color:C.sage},
-                        {label:"총 광고수",    value:`${camps.length}개`,color:C.inkMid},
+                    {(()=>{
+                      const totalSpend = camps.reduce((s,c)=>s+(c.spend||0),0);
+                      const totalPurch = camps.reduce((s,c)=>s+(c.purchases||0),0);
+                      const totalConvV = camps.reduce((s,c)=>s+(c.convValue||0),0);
+                      const totalClicks= camps.reduce((s,c)=>s+(c.clicks||0),0);
+                      const totalLpv   = camps.reduce((s,c)=>s+(c.lpv||0),0);
+                      const avgCtr     = camps.length ? camps.reduce((s,c)=>s+(c.ctr||0),0)/camps.length : 0;
+                      const summaryItems = campTab==="conversion" ? [
+                        {label:"전환 광고비",  value:`₩${Math.round(totalSpend/1000).toLocaleString()}K`,      color:C.rose},
+                        {label:"총 구매",      value:`${totalPurch}건`,                                         color:C.good},
+                        {label:"총 전환값",    value:`₩${Math.round(totalConvV/1000).toLocaleString()}K`,      color:C.purple},
+                        {label:"평균 CPA",     value:totalPurch>0?`₩${Math.round(totalSpend/totalPurch).toLocaleString()}`:"—", color:C.gold},
+                        {label:"전체 ROAS",    value:totalSpend>0?`${+(totalConvV/totalSpend).toFixed(2)}x`:"—", color:C.sage},
+                        {label:"총 광고수",    value:`${camps.length}개`,                                       color:C.inkMid},
                       ] : [
-                        {label:"트래픽 광고비",value:`₩${Math.round(camps.reduce((s,c)=>s+c.spend,0)/1000).toLocaleString()}K`,color:C.purple},
-                        {label:"총 클릭수",   value:camps.reduce((s,c)=>s+c.clicks,0).toLocaleString(),color:C.good},
-                        {label:"총 LPV",      value:camps.reduce((s,c)=>s+c.lpv,0).toLocaleString(),color:C.sage},
-                        {label:"평균 CPC",    value:`₩${Math.round(camps.reduce((s,c)=>s+c.spend,0)/Math.max(camps.reduce((s,c)=>s+c.clicks,0),1)).toLocaleString()}`,color:C.gold},
-                        {label:"평균 CTR",    value:`${camps.length?+(camps.reduce((s,c)=>s+c.ctr,0)/camps.length).toFixed(2):0}%`,color:C.rose},
-                        {label:"총 광고수",   value:`${camps.length}개`,color:C.inkMid},
-                      ].map((s,i)=>(
-                        <div key={i} style={{background:C.white,border:`1px solid ${C.border}`,borderRadius:12,padding:"12px 14px",textAlign:"center"}}>
-                          <div style={{fontSize:9,color:C.inkLt,fontWeight:700,letterSpacing:"0.1em"}}>{s.label}</div>
-                          <div style={{fontSize:18,fontWeight:900,color:s.color,marginTop:4}}>{s.value}</div>
+                        {label:"트래픽 광고비",value:`₩${Math.round(totalSpend/1000).toLocaleString()}K`,      color:C.purple},
+                        {label:"총 클릭수",    value:totalClicks.toLocaleString(),                               color:C.good},
+                        {label:"총 LPV",       value:totalLpv.toLocaleString(),                                  color:C.sage},
+                        {label:"평균 CPC",     value:totalClicks>0?`₩${Math.round(totalSpend/totalClicks).toLocaleString()}`:"—", color:C.gold},
+                        {label:"평균 CTR",     value:`${avgCtr.toFixed(2)}%`,                                   color:C.rose},
+                        {label:"총 광고수",    value:`${camps.length}개`,                                       color:C.inkMid},
+                      ];
+                      return(
+                        <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:10,marginBottom:14}}>
+                          {summaryItems.map((s,i)=>(
+                            <div key={i} style={{background:C.white,border:`1px solid ${C.border}`,borderRadius:12,padding:"12px 14px",textAlign:"center"}}>
+                              <div style={{fontSize:9,color:C.inkLt,fontWeight:700,letterSpacing:"0.1em"}}>{s.label}</div>
+                              <div style={{fontSize:18,fontWeight:900,color:s.color,marginTop:4}}>{s.value}</div>
+                            </div>
+                          ))}
                         </div>
-                      ))}
-                    </div>
+                      );
+                    })()}
                     <Card>
                       <CardTitle title={campTab==="conversion"?"전환 캠페인":"트래픽 캠페인"}
                         sub={campTab==="conversion"?"CPA · LPV율 중심":"CPC · CTR 중심"}/>
@@ -874,13 +1078,31 @@ export default function OaDashboard(){
                             ))}
                           </tr></thead>
                           <tbody>{camps.map((c,i)=>{
-                            const cpaOk=c.cpa>0&&c.cpa<=16000, cpcOk=c.cpc<=130, ctrOk=c.ctr>=3, lpvOk=c.lpvRate>=65;
+                            const cpaOk=(c.cpa||0)>0&&(c.cpa||0)<=16000, cpcOk=(c.cpc||0)<=130&&(c.cpc||0)>0, ctrOk=(c.ctr||0)>=3, lpvOk=(c.lpvRate||0)>=65;
                             return(<tr key={i} style={{borderBottom:`1px solid ${C.border}`,transition:"background 0.15s"}}
                               onMouseEnter={e=>e.currentTarget.style.background=C.cream}
                               onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
-                              {/* 광고명 */}
-                              <td style={{padding:"10px 8px",maxWidth:180}}>
-                                <div style={{fontWeight:700,color:C.ink,fontSize:11,wordBreak:"break-all"}}>{c.name}</div>
+                              {/* 광고명 + 판단 뱃지 */}
+                              <td style={{padding:"10px 8px",maxWidth:200}}>
+                                <div style={{fontWeight:700,color:C.ink,fontSize:11,wordBreak:"break-all",marginBottom:4}}>{c.name}</div>
+                                {(()=>{
+                                  const adObj={spend:c.spend,clicks:c.clicks,lpv:c.lpv,purchases:c.purchases,impressions:c.impressions||0,clicksAll:c.clicks};
+                                  const lpvC=lpvCostStatus(c.spend,c.lpv);
+                                  const ct=ctrStatus(c.clicks,c.impressions||0);
+                                  const badges=[];
+                                  if(lpvC) badges.push({label:`LPV ${lpvC.label}`,color:lpvC.color,bg:lpvC.bg});
+                                  if(campTab==="conversion"){
+                                    const cpa=cpaStatus(c.spend,c.purchases,margin);
+                                    if(cpa) badges.push({label:`CPA ${cpa.label}`,color:cpa.color,bg:cpa.bg});
+                                  }
+                                  if(ct) badges.push({label:`CTR ${ct.label}`,color:ct.color,bg:ct.bg});
+                                  return badges.slice(0,2).map((b,bi)=>(
+                                    <span key={bi} style={{fontSize:9,fontWeight:700,padding:"1px 7px",borderRadius:20,
+                                      color:b.color,background:b.bg,border:`1px solid ${b.color}33`,marginRight:3,display:"inline-block"}}>
+                                      {b.label}
+                                    </span>
+                                  ));
+                                })()}
                               </td>
                               {/* 광고세트명 */}
                               <td style={{padding:"10px 8px",maxWidth:160}}>
@@ -1507,6 +1729,8 @@ export default function OaDashboard(){
           <div style={{margin:"0 12px 20px",padding:"12px",background:"#FFF8EC",
             border:`1px solid ${C.warn}33`,borderRadius:12}}>
             <div style={{fontSize:11,fontWeight:800,color:C.warn,marginBottom:6}}>🔔 확인 필요</div>
+            {cutAds.length>0&&<div style={{fontSize:10,color:C.bad,fontWeight:700,marginBottom:3}}>🔴 광고교체 {cutAds.length}개</div>}
+            {holdAds.length>0&&<div style={{fontSize:10,color:C.warn,marginBottom:3}}>🟡 광고보류 {holdAds.length}개</div>}
             {dangerInv.length>0&&<div style={{fontSize:10,color:C.inkMid,marginBottom:3}}>🚨 재고위험 {dangerInv.length}종</div>}
             {overdueIns.length>0&&<div style={{fontSize:10,color:C.inkMid,marginBottom:3}}>❗ 인사이트 {overdueIns.length}명</div>}
             {overdueScheds.length>0&&<div style={{fontSize:10,color:C.inkMid,marginBottom:3}}>📅 기간초과 {overdueScheds.length}건</div>}
