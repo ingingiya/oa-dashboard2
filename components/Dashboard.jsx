@@ -552,17 +552,7 @@ export default function OaDashboard(){
     setMetaError("");
     try{
       // 공유 URL → CSV export URL 변환
-      let csvUrl = url;
-      // https://docs.google.com/spreadsheets/d/SHEET_ID/edit... → export csv
-      const match = url.match(/\/spreadsheets\/d\/([a-zA-Z0-9_-]+)/);
-      if(match){
-        const id=match[1];
-        // gid 파라미터 있으면 추출
-        const gidMatch = url.match(/[#&?]gid=(\d+)/);
-        const gid = gidMatch?gidMatch[1]:"0";
-        csvUrl = `https://docs.google.com/spreadsheets/d/${id}/export?format=csv&gid=${gid}`;
-      }
-      const res = await fetch(csvUrl);
+      const res = await fetch(`/api/sheet?url=${encodeURIComponent(url)}`);
       if(!res.ok) throw new Error(`HTTP ${res.status}`);
       const text = await res.text();
       const rows = parseCSV(text).map(mapMetaRow).filter(r=>r.date||r.campaign);
@@ -586,15 +576,7 @@ export default function OaDashboard(){
     if(!url) return;
     setOrderStatus("loading");
     try{
-      let csvUrl = url;
-      const match = url.match(/\/spreadsheets\/d\/([a-zA-Z0-9_-]+)/);
-      if(match){
-        const id = match[1];
-        const gidMatch = url.match(/[#&?]gid=(\d+)/);
-        const gid = gidMatch ? gidMatch[1] : "0";
-        csvUrl = `https://docs.google.com/spreadsheets/d/${id}/export?format=csv&gid=${gid}`;
-      }
-      const res = await fetch(csvUrl);
+      const res = await fetch(`/api/sheet?url=${encodeURIComponent(url)}`);
       if(!res.ok) throw new Error(`HTTP ${res.status}`);
       const text = await res.text();
       const rows = parseOrderCSV(text);
@@ -617,11 +599,12 @@ export default function OaDashboard(){
       return res;
     });
     if(lines.length<2) return [];
-    // 헤더 자동 감지
-    const HINTS=["sku","상품","소진","판매","발주","임박"];
+    // 헤더 자동 감지 — 정확한 컬럼명으로 찾기 (타이틀행 오인식 방지)
+    const HEADER_KEYS=["SKU명","발주판단","최소발주일","합산7일평균"];
     let startIdx=0;
-    for(let i=0;i<Math.min(lines.length,4);i++){
-      if(HINTS.some(h=>lines[i].join(",").toLowerCase().includes(h))){startIdx=i;break;}
+    for(let i=0;i<Math.min(lines.length,5);i++){
+      const joined = lines[i].join(",");
+      if(HEADER_KEYS.filter(k=>joined.includes(k)).length>=2){startIdx=i;break;}
     }
     // 헤더 정규화: 줄바꿈/공백 제거해서 매칭 쉽게
     const headers = lines[startIdx].map(h=>h.trim().replace(/\n/g,"").replace(/\s+/g," "));
@@ -642,15 +625,7 @@ export default function OaDashboard(){
     if(!url) return;
     setInvSheetStatus("loading");
     try{
-      let csvUrl = url;
-      const match = url.match(/\/spreadsheets\/d\/([a-zA-Z0-9_-]+)/);
-      if(match){
-        const id = match[1];
-        const gidMatch = url.match(/[#&?]gid=(\d+)/);
-        const gid = gidMatch ? gidMatch[1] : "0";
-        csvUrl = `https://docs.google.com/spreadsheets/d/${id}/export?format=csv&gid=${gid}`;
-      }
-      const res = await fetch(csvUrl);
+      const res = await fetch(`/api/sheet?url=${encodeURIComponent(url)}`);
       if(!res.ok) throw new Error(`HTTP ${res.status}`);
       const text = await res.text();
       const parsed = parseInvSheetCSV(text);
@@ -1155,7 +1130,10 @@ export default function OaDashboard(){
                 const orig    = g("원본1주평균");
                 const coupang = g("쿠팡7일평균");
                 const merged  = g("합산7일평균");
-                const exhaust = g("현재고소진(합산)","합산기준 현재고소진","총재고소진(합산)");
+                const exhaust = g("합산기준 현재고소진","현재고소진(합산)","합산기준
+현재고소진");
+                const totalEx = g("합산기준 총재고소진","총재고소진(합산)","합산기준
+총재고소진");
                 const judge   = g("발주판단");
                 const judgeColor = judge.includes("즉시")?C.bad:judge.includes("검토")?C.warn:judge.includes("모니터")?C.purple:C.good;
                 const judgeBg   = judge.includes("즉시")?"#FEF0F0":judge.includes("검토")?"#FFF8EC":judge.includes("모니터")?C.purpLt:C.goodLt;
@@ -1168,9 +1146,7 @@ export default function OaDashboard(){
                     <td style={{padding:"10px 8px",textAlign:"right",fontWeight:700,color:C.purple,fontSize:10,whiteSpace:"nowrap"}}>{adjDate}</td>
                     <td style={{padding:"10px 8px",textAlign:"right",color:C.sage,fontWeight:800}}>{merged}</td>
                     <td style={{padding:"10px 8px",textAlign:"right",color:C.inkMid,whiteSpace:"nowrap"}}>{exhaust}</td>
-                    <td style={{padding:"10px 8px",textAlign:"right",color:C.inkMid,whiteSpace:"nowrap"}}>
-                      {g("총재고소진(합산)","합산기준 총재고소진")}
-                    </td>
+                    <td style={{padding:"10px 8px",textAlign:"right",color:C.inkMid,whiteSpace:"nowrap"}}>{totalEx}</td>
                     <td style={{padding:"10px 8px",textAlign:"right"}}>
                       {judge!=="—"&&<span style={{fontSize:10,fontWeight:700,padding:"3px 10px",borderRadius:20,
                         color:judgeColor,background:judgeBg,border:`1px solid ${judgeColor}33`,whiteSpace:"nowrap"}}>{judge}</span>}
