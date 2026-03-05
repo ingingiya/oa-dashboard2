@@ -599,21 +599,34 @@ export default function OaDashboard(){
       return res;
     });
     if(lines.length<2) return [];
-    // 헤더 자동 감지 — 정확한 컬럼명으로 찾기 (타이틀행 오인식 방지)
-    const HEADER_KEYS=["SKU명","발주판단","최소발주일","합산7일평균"];
-    let startIdx=0;
+    // 고정 컬럼 인덱스로 직접 읽기 (헤더 파싱 오류 방지)
+    // 컬럼 순서: SKU명(0), 최소발주일(1), 조정후발주일(2), 원본1주평균(3),
+    //   쿠팡7일평균(4), 합산7일평균(5), 판매량차이(6), 차이비율(7),
+    //   현재고(8), 현재고소진합산(9), 총재고소진합산(10), 발주판단(11), 메모(12)
+    let dataStart=0;
     for(let i=0;i<Math.min(lines.length,5);i++){
-      const joined = lines[i].join(",");
-      if(HEADER_KEYS.filter(k=>joined.includes(k)).length>=2){startIdx=i;break;}
+      const first=(lines[i][0]||"").trim();
+      if(!first||first.includes("발주 임박")||first.includes("SKU")||first==="없음") continue;
+      dataStart=i; break;
     }
-    // 헤더 정규화: 줄바꿈/공백/따옴표 제거
-    const headers = lines[startIdx].map(h=>h.trim().replace(/\n/g," ").replace(/\s+/g," ").replace(/"/g,""));
-    console.log("발주임박 헤더:", headers);
-    return lines.slice(startIdx+1).filter(l=>l.some(c=>c)).map(row=>{
-      const obj={};
-      headers.forEach((h,i)=>{ if(h) obj[h]=row[i]||""; });
-      return obj;
-    });
+    return lines.slice(dataStart)
+      .filter(l=>l[0]&&l[0].trim()&&l[0]!=="없음"&&!l[0].includes("발주 임박")&&!l[0].includes("SKU명"))
+      .map(row=>({
+        "SKU명":              (row[0]||"").trim(),
+        "최소발주일":         (row[1]||"").trim(),
+        "조정후발주일":       (row[2]||"").trim(),
+        "원본1주평균":        (row[3]||"").trim(),
+        "쿠팡7일평균":        (row[4]||"").trim(),
+        "합산7일평균":        (row[5]||"").trim(),
+        "판매량차이":         (row[6]||"").trim(),
+        "차이비율":           (row[7]||"").trim(),
+        "현재고":             (row[8]||"").trim(),
+        "합산기준 현재고소진":(row[9]||"").trim(),
+        "합산기준 총재고소진":(row[10]||"").trim(),
+        "발주판단":           (row[11]||"").trim(),
+        "메모":               (row[12]||"").trim(),
+      }));
+  }
   }
 
   // 발주임박 URL 로드시 자동 fetch
@@ -650,45 +663,31 @@ export default function OaDashboard(){
       res.push(cur.trim());
       return res;
     });
-    // 헤더행 찾기 — 정확한 컬럼명으로 (타이틀행 오인식 방지)
-    const HEADER_KEYS=["구분1","구분2","재고","판매","생산중","원가"];
-    let startIdx=0;
-    for(let i=0;i<Math.min(lines.length,5);i++){
-      const joined = lines[i].join(",");
-      if(HEADER_KEYS.filter(k=>joined.includes(k)).length>=3){startIdx=i;break;}
-    }
-    const headers = lines[startIdx].map(h=>h.trim().replace(/\n/g," ").replace(/\s+/g," "));
-    const findCol = (...keys) => {
-      for(const k of keys){
-        const idx = headers.findIndex(h=>h.toLowerCase().includes(k.toLowerCase()));
-        if(idx>=0) return idx;
-      }
-      return -1;
-    };
-    // 재고원본 컬럼 매핑 (실제 헤더 기준)
-    const iName    = findCol("이미용","욕실","(이미용");  // E열 — 쉼표 분리 대비
-    const iStock   = findCol("재고");                           // F열 (첫번째 재고)
-    const iOrdered = findCol("생산중");                         // I열
-    const iReorder = findCol("예상발주");                       // J열
-    const iSold30  = findCol("28일평균판매","28일판매");
-    const iSold7   = findCol("1주평균판매","1주판매량");
-    const iGu1     = findCol("구분1");
-    const iSku     = findCol("구분2");
+    if(lines.length<2) return [];
 
-    return lines.slice(startIdx+1).filter(l=>l.some(c=>c)).map((row,ri)=>{
-      const g = (i) => i>=0 ? (row[i]||"").trim() : "";
-      const n = (i) => { const v=g(i); return parseInt(v.replace(/,/g,""))||0; };
-      const name = g(iName);
+    // 헤더행 찾기
+    let hIdx=0;
+    for(let i=0;i<Math.min(lines.length,5);i++){
+      if(lines[i].join(",").includes("구분1")){hIdx=i;break;}
+    }
+
+    // 재고원본 고정 컬럼 인덱스 (통합_문서1.xlsx 기준)
+    // A(0)=구분1, B(1)=구분2, E(4)=제품명, F(5)=재고,
+    // I(8)=생산중, J(9)=예상발주, AD(29)=28일평균판매, AF(31)=1주평균판매
+    return lines.slice(hIdx+1).filter(l=>l.some(c=>c)).map((row,ri)=>{
+      const g = (i) => (row[i]||"").trim();
+      const n = (i) => parseFloat((row[i]||"").replace(/,/g,""))||0;
+      const name = g(4);  // E열 = 제품명
       if(!name) return null;
       return {
-        id: Date.now()+ri,
+        id:       Date.now()+ri,
         name,
-        sku:      g(iSku)||g(iGu1)||"",
-        category: "기타",
-        stock:    n(iStock),
-        ordered:  n(iOrdered),
-        reorder:  n(iReorder)||Math.round(n(iSold7)*14),
-        sold30:   n(iSold30)||n(iSold7)*4,
+        sku:      g(1)||g(0)||"",   // B열(구분2) 또는 A열(구분1)
+        category: g(0)||"기타",      // A열(구분1)
+        stock:    n(5),              // F열 = 재고
+        ordered:  n(8),              // I열 = 생산중
+        reorder:  n(9)||Math.round(n(31)*14),  // J열 = 예상발주
+        sold30:   Math.round(n(29)),            // AD열 = 28일평균판매
       };
     }).filter(Boolean);
   }
