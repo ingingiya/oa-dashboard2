@@ -627,7 +627,6 @@ export default function OaDashboard(){
         "메모":               (row[12]||"").trim(),
       }));
   }
-  }
 
   // 발주임박 URL 로드시 자동 fetch
   useEffect(()=>{
