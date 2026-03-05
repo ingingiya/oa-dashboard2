@@ -524,6 +524,7 @@ export default function OaDashboard(){
   const [metaError,setMetaError]     = useState("");
   const [sheetModal,setSheetModal]   = useState(false);
   const [sheetInput,setSheetInput]   = useState("");
+  const [deletedAds,setDeletedAds]   = useState(()=>{try{return JSON.parse(localStorage.getItem("oa_deleted_ads")||"[]");}catch{return [];}}); // 삭제된 광고명 목록
 
   // 모달
 
@@ -698,20 +699,21 @@ export default function OaDashboard(){
 
   // ── 메타 데이터 집계 ─────────────────────────────
   const hasSheet = metaStatus==="ok" && metaRaw.length>0;
+  const metaFiltered = metaRaw.filter(r => !deletedAds.includes(r.adName||r.campaign||""));
 
   const metaAgg = hasSheet ? (() => {
-    const totalSpend    = metaRaw.reduce((s,r)=>s+r.spend,0);
-    const totalClicks   = metaRaw.reduce((s,r)=>s+r.clicks,0);
-    const totalLpv      = metaRaw.reduce((s,r)=>s+r.lpv,0);
-    const totalPurchases= metaRaw.reduce((s,r)=>s+r.purchases,0);
-    const avgCtr        = metaRaw.length ? metaRaw.reduce((s,r)=>s+r.ctr,0)/metaRaw.length : 0;
+    const totalSpend    = metaFiltered.reduce((s,r)=>s+r.spend,0);
+    const totalClicks   = metaFiltered.reduce((s,r)=>s+r.clicks,0);
+    const totalLpv      = metaFiltered.reduce((s,r)=>s+r.lpv,0);
+    const totalPurchases= metaFiltered.reduce((s,r)=>s+r.purchases,0);
+    const avgCtr        = metaFiltered.length ? metaFiltered.reduce((s,r)=>s+r.ctr,0)/metaFiltered.length : 0;
     const avgCpc        = totalClicks ? totalSpend/totalClicks : 0;
     const avgCpa        = totalPurchases ? totalSpend/totalPurchases : 0;
     const lpvRate       = totalClicks ? (totalLpv/totalClicks)*100 : 0;
 
     // 날짜별 집계
     const byDate = {};
-    metaRaw.forEach(r=>{
+    metaFiltered.forEach(r=>{
       if(!r.date) return;
       if(!byDate[r.date]) byDate[r.date]={day:r.date.slice(5).replace("-","/"),spend:0,clicks:0,lpv:0,purchases:0,ctr:0,n:0};
       byDate[r.date].spend+=r.spend;
@@ -728,7 +730,7 @@ export default function OaDashboard(){
     // 캠페인별 집계
     // 광고 이름 기준으로 집계 (광고세트 정보도 포함)
     const byAd = {};
-    metaRaw.forEach(r=>{
+    metaFiltered.forEach(r=>{
       const key = r.adName || r.campaign || "unknown";
       if(!byAd[key]) byAd[key]={
         name: r.adName || key,
@@ -774,7 +776,7 @@ export default function OaDashboard(){
   const overdueScheds  = sch.filter(s=>{const d=daysUntil(s.endDate||s.date);return d!==null&&d<0&&s.status!=="완료";});
   const urgentScheds   = sch.filter(s=>{const d=daysUntil(s.date);return d!==null&&d>=0&&d<=5&&s.status!=="완료";});
   // 광고 교체/보류 알림 — 시트 데이터 있을 때만
-  const adAlerts = hasSheet ? metaRaw.reduce((acc, r)=>{
+  const adAlerts = hasSheet ? metaFiltered.reduce((acc, r)=>{
     const key = r.adName||r.campaign||"";
     if(!key) return acc;
     if(!acc[key]) acc[key]={...r, name:key, adset:r.adset||"", campaign:r.campaign||""};
@@ -1312,7 +1314,7 @@ export default function OaDashboard(){
             <div>
               {hasSheet ? (
                 <>
-                  <div style={{fontSize:12,fontWeight:800,color:C.good}}>구글 시트 연결됨 · {metaRaw.length}행 로드</div>
+                  <div style={{fontSize:12,fontWeight:800,color:C.good}}>구글 시트 연결됨 · {metaRaw.length}행 로드{deletedAds.length>0&&<span style={{color:C.inkLt,fontWeight:600}}> ({deletedAds.length}개 숨김)</span>}</div>
                   <div style={{fontSize:10,color:C.inkMid,marginTop:1}}>마지막 업데이트: 방금</div>
                 </>
               ) : metaStatus==="loading" ? (
@@ -1332,6 +1334,7 @@ export default function OaDashboard(){
           </div>
           <div style={{display:"flex",gap:6}}>
             {hasSheet&&<Btn variant="sage" small onClick={()=>fetchSheet(sheetUrl)}>🔄 새로고침</Btn>}
+            {deletedAds.length>0&&<Btn variant="neutral" small onClick={()=>{setDeletedAds([]);try{localStorage.removeItem("oa_deleted_ads");}catch{}}}>↩ 숨긴 광고 복원 ({deletedAds.length})</Btn>}
             <Btn variant={hasSheet?"neutral":"gold"} small onClick={()=>{setSheetInput(sheetUrl);setSheetModal(true)}}>
               {hasSheet?"⚙️ 시트 변경":"🔗 시트 연결"}
             </Btn>
@@ -1510,8 +1513,8 @@ export default function OaDashboard(){
                         <table style={{width:"100%",borderCollapse:"collapse",fontSize:11,minWidth:500}}>
                           <thead><tr style={{borderBottom:`2px solid ${C.border}`}}>
                             {(campTab==="conversion"
-                              ?["광고명","광고세트","광고비","클릭","구매","전환값","CPA","ROAS","LPV율"]
-                              :["광고명","광고세트","광고비","클릭","LPV","CPC","CTR","LPV율"]
+                              ?["광고명","광고세트","광고비","클릭","구매","전환값","CPA","ROAS","LPV율",""]
+                              :["광고명","광고세트","광고비","클릭","LPV","CPC","CTR","LPV율",""]
                             ).map(h=>(
                               <th key={h} style={{padding:"8px 8px",textAlign:h==="캠페인"?"left":"right",
                                 color:C.inkLt,fontWeight:700,fontSize:9,whiteSpace:"nowrap"}}>{h}</th>
@@ -1577,6 +1580,22 @@ export default function OaDashboard(){
                                   </div>
                                   <span style={{fontWeight:700,color:lpvOk?C.sage:C.warn,fontSize:10}}>{c.lpvRate}%</span>
                                 </div>
+                              </td>
+                              <td style={{padding:"10px 8px",textAlign:"center"}}>
+                                <button onClick={()=>{
+                                  const key = c.name;
+                                  const next = [...deletedAds, key];
+                                  setDeletedAds(next);
+                                  try{localStorage.setItem("oa_deleted_ads", JSON.stringify(next));}catch{}
+                                }} style={{background:"none",border:`1px solid ${C.border}`,borderRadius:6,
+                                  width:24,height:24,cursor:"pointer",fontSize:12,color:C.inkLt,
+                                  display:"flex",alignItems:"center",justifyContent:"center",
+                                  transition:"all 0.15s"}}
+                                  title="광고 숨기기"
+                                  onMouseEnter={e=>{e.currentTarget.style.background="#FEF0F0";e.currentTarget.style.borderColor=C.bad;e.currentTarget.style.color=C.bad;}}
+                                  onMouseLeave={e=>{e.currentTarget.style.background="none";e.currentTarget.style.borderColor=C.border;e.currentTarget.style.color=C.inkLt;}}>
+                                  ✕
+                                </button>
                               </td>
                             </tr>);
                           })}</tbody>
