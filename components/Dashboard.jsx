@@ -606,8 +606,9 @@ export default function OaDashboard(){
       const joined = lines[i].join(",");
       if(HEADER_KEYS.filter(k=>joined.includes(k)).length>=2){startIdx=i;break;}
     }
-    // 헤더 정규화: 줄바꿈/공백 제거해서 매칭 쉽게
-    const headers = lines[startIdx].map(h=>h.trim().replace(/\n/g,"").replace(/\s+/g," "));
+    // 헤더 정규화: 줄바꿈/공백/따옴표 제거
+    const headers = lines[startIdx].map(h=>h.trim().replace(/\n/g," ").replace(/\s+/g," ").replace(/"/g,""));
+    console.log("발주임박 헤더:", headers);
     return lines.slice(startIdx+1).filter(l=>l.some(c=>c)).map(row=>{
       const obj={};
       headers.forEach((h,i)=>{ if(h) obj[h]=row[i]||""; });
@@ -649,11 +650,12 @@ export default function OaDashboard(){
       res.push(cur.trim());
       return res;
     });
-    // 헤더행 찾기
-    const HINTS=["구분","재고","sku","상품","판매"];
+    // 헤더행 찾기 — 정확한 컬럼명으로 (타이틀행 오인식 방지)
+    const HEADER_KEYS=["구분1","구분2","재고","판매","생산중","원가"];
     let startIdx=0;
-    for(let i=0;i<Math.min(lines.length,4);i++){
-      if(HINTS.some(h=>lines[i].join(",").toLowerCase().includes(h))){startIdx=i;break;}
+    for(let i=0;i<Math.min(lines.length,5);i++){
+      const joined = lines[i].join(",");
+      if(HEADER_KEYS.filter(k=>joined.includes(k)).length>=3){startIdx=i;break;}
     }
     const headers = lines[startIdx].map(h=>h.trim().replace(/\n/g," ").replace(/\s+/g," "));
     const findCol = (...keys) => {
@@ -664,7 +666,7 @@ export default function OaDashboard(){
       return -1;
     };
     // 재고원본 컬럼 매핑 (실제 헤더 기준)
-    const iName    = findCol("이미용,욕실","(이미용","욕실)");  // E열
+    const iName    = findCol("이미용","욕실","(이미용");  // E열 — 쉼표 분리 대비
     const iStock   = findCol("재고");                           // F열 (첫번째 재고)
     const iOrdered = findCol("생산중");                         // I열
     const iReorder = findCol("예상발주");                       // J열
