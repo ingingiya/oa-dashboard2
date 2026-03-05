@@ -1131,10 +1131,8 @@ export default function OaDashboard(){
                 const orig    = g("원본1주평균");
                 const coupang = g("쿠팡7일평균");
                 const merged  = g("합산7일평균");
-                const exhaust = g("합산기준 현재고소진","현재고소진(합산)","합산기준
-현재고소진");
-                const totalEx = g("합산기준 총재고소진","총재고소진(합산)","합산기준
-총재고소진");
+                const exhaust = g("합산기준 현재고소진","현재고소진(합산)");
+                const totalEx = g("합산기준 총재고소진","총재고소진(합산)");
                 const judge   = g("발주판단");
                 const judgeColor = judge.includes("즉시")?C.bad:judge.includes("검토")?C.warn:judge.includes("모니터")?C.purple:C.good;
                 const judgeBg   = judge.includes("즉시")?"#FEF0F0":judge.includes("검토")?"#FFF8EC":judge.includes("모니터")?C.purpLt:C.goodLt;
