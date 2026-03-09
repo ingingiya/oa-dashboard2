@@ -772,12 +772,15 @@ export default function OaDashboard(){
   // ── 인플루언서 시트 fetch ─────────────────────────
   async function fetchInfSheet(url){
     if(!url) return;
+    // URL 기본 유효성 검사
+    try{ new URL(url); } catch(e){ setInfSheetStatus("error"); return; }
     setInfSheetStatus("loading");
     try{
       const res = await fetch(`/api/sheet?url=${encodeURIComponent(url)}`);
       if(!res.ok) throw new Error(`HTTP ${res.status}`);
       const text = await res.text();
-      const parsed = parseInfSheetCSV(text);
+      let parsed = [];
+      try{ parsed = parseInfSheetCSV(text); } catch(e){ parsed = []; }
       if(parsed.length > 0){
         setInfs(parsed);
         setInfSheetStatus("ok");
@@ -1857,7 +1860,7 @@ export default function OaDashboard(){
               : infSheetStatus==="loading"
               ? <div style={{fontSize:12,fontWeight:700,color:C.gold}}>⏳ 불러오는 중...</div>
               : infSheetStatus==="error"
-              ? <div style={{fontSize:12,fontWeight:800,color:C.bad}}>연결 실패 — 시트 공유 설정을 확인하세요</div>
+              ? <div style={{fontSize:12,fontWeight:800,color:C.bad}}>연결 실패 — 시트 공유 설정 또는 URL을 확인하세요</div>
               : <><div style={{fontSize:12,fontWeight:800,color:C.gold}}>구글 시트 연결하면 인플루언서 데이터가 자동 동기화돼요</div>
                   <div style={{fontSize:10,color:C.inkMid,marginTop:1}}>name · tier · platform · product · reach · saves · clicks · conv 등</div></>
             }
@@ -1865,6 +1868,7 @@ export default function OaDashboard(){
         </div>
         <div style={{display:"flex",gap:6}}>
           {infSheetStatus==="ok"&&<Btn variant="sage" small onClick={()=>fetchInfSheet(infUrl)}>🔄 새로고침</Btn>}
+          {infSheetStatus==="error"&&<Btn variant="danger" small onClick={()=>{setInfUrl("");setInfSheetStatus("idle");}}>🗑 URL 초기화</Btn>}
           <Btn variant={infSheetStatus==="ok"?"neutral":"gold"} small onClick={()=>{setInfUrlInput(infUrl);setInfUrlModal(true)}}>
             {infSheetStatus==="ok"?"⚙️ 시트 변경":"🔗 시트 연결"}
           </Btn>
