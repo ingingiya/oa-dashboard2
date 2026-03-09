@@ -23,12 +23,68 @@ const C = {
 // 기본 로컬 데이터
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 const DEFAULT_INF = [
-  {id:1,name:"@glowwith_miso",  tier:"매크로",  followers:"284K",platform:"인스타",product:"세럼 30ml",   sent:10,posted:8, postedDate:"2025-03-01",reach:310000,saves:4200,clicks:1840,conv:92, videoReceived:true, reusable:true, metaUsed:true},
-  {id:2,name:"@beauty.harang",  tier:"미드",    followers:"98K", platform:"인스타",product:"선크림 SPF50",sent:15,posted:14,postedDate:"2025-03-02",reach:128000,saves:2100,clicks:920, conv:61, videoReceived:true, reusable:true, metaUsed:false},
-  {id:3,name:"@hanbiteok_vlog", tier:"마이크로",followers:"41K", platform:"유튜브",product:"세럼 50ml",   sent:5, posted:5, postedDate:"2025-03-02",reach:84000, saves:980, clicks:1240,conv:88, videoReceived:false,reusable:false,metaUsed:false},
-  {id:4,name:"@soomin_skinlog", tier:"마이크로",followers:"28K", platform:"틱톡",  product:"토너 패드",   sent:8, posted:6, postedDate:"2025-02-26",reach:null,  saves:null,clicks:null,conv:null,videoReceived:false,reusable:false,metaUsed:false},
-  {id:5,name:"@rosebloom.daily",tier:"나노",    followers:"12K", platform:"인스타",product:"립밤 세트",   sent:3, posted:2, postedDate:"2025-02-27",reach:null,  saves:null,clicks:null,conv:null,videoReceived:false,reusable:false,metaUsed:false},
-  {id:6,name:"@dailyglow_kr",   tier:"매크로",  followers:"156K",platform:"유튜브",product:"세럼 30ml",   sent:10,posted:0, postedDate:null,         reach:null,  saves:null,clicks:null,conv:null,videoReceived:false,reusable:false,metaUsed:false},
+  {id:1,name:"@seoooazi",displayName:"경서",tier:"유료",followers:"—",platform:"인스타",product:"프리온무선고데기-유료",sent:1,posted:1,postedDate:'2025-02-08',reach:null,saves:null,clicks:null,conv:null,videoReceived:true,reusable:true,metaUsed:false,note:"릴스/2차활용가능 3.3% 10만원",paid:false},
+  {id:2,name:"@linderella_1",displayName:"린데렐라",tier:"유료",followers:"—",platform:"인스타",product:"프리온무선고데기-유료",sent:1,posted:1,postedDate:'2025-02-08',reach:null,saves:null,clicks:null,conv:null,videoReceived:true,reusable:true,metaUsed:false,note:"릴스/2차활용가능 3.3% 20만원",paid:false},
+  {id:3,name:"@still___mag",displayName:"ST!LL magazine",tier:"유료",followers:"—",platform:"인스타",product:"프리온무선고데기-유료",sent:1,posted:1,postedDate:'2025-02-08',reach:null,saves:null,clicks:null,conv:null,videoReceived:true,reusable:true,metaUsed:false,note:"릴스/2차활용가능 3.3% 15만원",paid:false},
+  {id:4,name:"@jyunizip",displayName:"쥬니홈",tier:"유료",followers:"—",platform:"인스타",product:"프리온무선고데기-유료",sent:1,posted:1,postedDate:'2025-01-30',reach:null,saves:null,clicks:null,conv:null,videoReceived:true,reusable:true,metaUsed:false,note:"릴스/2차활용가능 3.3% 25만원",paid:false},
+  {id:5,name:"@nawloseo",displayName:"나예원",tier:"유료",followers:"—",platform:"인스타",product:"프리온무선고데기-유료",sent:1,posted:1,postedDate:'2025-01-30',reach:null,saves:null,clicks:null,conv:null,videoReceived:true,reusable:true,metaUsed:false,note:"릴스/2차활용가능 3.3% 40만원",paid:false},
+  {id:6,name:"@choeun.wav",displayName:"조은",tier:"유료",followers:"—",platform:"인스타",product:"프리온무선고데기-유료",sent:1,posted:1,postedDate:'2025-02-24',reach:null,saves:null,clicks:null,conv:null,videoReceived:true,reusable:true,metaUsed:false,note:"릴스/2차활용가능 55만원",paid:false},
+  {id:7,name:"@merryonly___",displayName:"메리온니",tier:"무료",followers:"—",platform:"인스타",product:"프리온무선고데기-무료",sent:1,posted:1,postedDate:'2025-01-30',reach:null,saves:null,clicks:null,conv:null,videoReceived:true,reusable:true,metaUsed:false,note:"릴스/2차활용가능 3개월",paid:false},
+  {id:8,name:"@jinnitto",displayName:"진니또",tier:"무료",followers:"—",platform:"인스타",product:"프리온무선고데기-무료",sent:1,posted:1,postedDate:'2025-01-30',reach:null,saves:null,clicks:null,conv:null,videoReceived:true,reusable:true,metaUsed:false,note:"릴스/2차활용가능 3개월",paid:false},
+  {id:9,name:"@zee.u__0",displayName:"서쥬",tier:"무료",followers:"—",platform:"인스타",product:"프리온무선고데기-무료",sent:1,posted:1,postedDate:'2025-01-30',reach:null,saves:null,clicks:null,conv:null,videoReceived:true,reusable:true,metaUsed:false,note:"릴스/2차활용가능 3개월",paid:false},
+  {id:10,name:"@bunny_roong",displayName:"김상은",tier:"무료",followers:"—",platform:"인스타",product:"프리온무선고데기-무료",sent:1,posted:0,postedDate:'2025-01-30',reach:null,saves:null,clicks:null,conv:null,videoReceived:false,reusable:false,metaUsed:false,note:"단순시딩",paid:false},
+  {id:11,name:"@bitna.home",displayName:"빛나홈",tier:"무료",followers:"—",platform:"인스타",product:"프리온무선고데기-무료",sent:1,posted:1,postedDate:'2025-01-30',reach:null,saves:null,clicks:null,conv:null,videoReceived:true,reusable:true,metaUsed:false,note:"릴스/2차활용가능 3개월",paid:false},
+  {id:12,name:"@umm.bini",displayName:"비닝",tier:"무료",followers:"—",platform:"인스타",product:"프리온무선고데기-무료",sent:1,posted:1,postedDate:'2025-01-30',reach:null,saves:null,clicks:null,conv:null,videoReceived:true,reusable:true,metaUsed:false,note:"릴스/2차활용가능 3개월",paid:false},
+  {id:13,name:"@haepymi",displayName:"해피미",tier:"무료",followers:"—",platform:"인스타",product:"프리온무선고데기-무료",sent:1,posted:1,postedDate:'2025-02-01',reach:null,saves:null,clicks:null,conv:null,videoReceived:true,reusable:true,metaUsed:false,note:"릴스/2차활용가능 3개월",paid:false},
+  {id:14,name:"@sobong_official",displayName:"소봉",tier:"무료",followers:"—",platform:"인스타",product:"프리온무선고데기-무료",sent:1,posted:0,postedDate:'2025-02-01',reach:null,saves:null,clicks:null,conv:null,videoReceived:false,reusable:false,metaUsed:false,note:"단순시딩",paid:false},
+  {id:15,name:"@zer0o0g",displayName:"zer0o0g",tier:"무료",followers:"—",platform:"인스타",product:"프리온무선고데기-무료",sent:1,posted:1,postedDate:'2025-02-01',reach:null,saves:null,clicks:null,conv:null,videoReceived:true,reusable:true,metaUsed:false,note:"릴스/2차활용가능 3개월",paid:false},
+  {id:16,name:"@zeonzyoung",displayName:"zeonzyoung",tier:"유료",followers:"—",platform:"인스타",product:"프리온무선고데기-유료",sent:1,posted:1,postedDate:'2025-02-19',reach:null,saves:null,clicks:null,conv:null,videoReceived:true,reusable:true,metaUsed:false,note:"릴스/2차활용가능 3.3% 45만원",paid:false},
+  {id:17,name:"@koo_oing",displayName:"혜원",tier:"무료",followers:"—",platform:"인스타",product:"프리온무선고데기-무료",sent:1,posted:1,postedDate:'2025-02-05',reach:null,saves:null,clicks:null,conv:null,videoReceived:true,reusable:true,metaUsed:false,note:"릴스/2차활용가능 3개월",paid:false},
+  {id:18,name:"@eeetheng",displayName:"이땡",tier:"무료",followers:"—",platform:"인스타",product:"프리온무선고데기-무료",sent:1,posted:1,postedDate:'2025-02-05',reach:null,saves:null,clicks:null,conv:null,videoReceived:true,reusable:true,metaUsed:false,note:"릴스/2차활용가능 3개월",paid:false},
+  {id:19,name:"@chae_chae12_",displayName:"채영",tier:"무료",followers:"—",platform:"인스타",product:"프리온무선고데기",sent:1,posted:1,postedDate:'2025-01-30',reach:null,saves:null,clicks:null,conv:null,videoReceived:true,reusable:true,metaUsed:false,note:"릴스/2차활용가능",paid:false},
+  {id:20,name:"@mui_u_jiyeon",displayName:"송파미용실 유지연",tier:"무료",followers:"—",platform:"인스타",product:"프리온무선고데기",sent:1,posted:1,postedDate:'2025-01-30',reach:null,saves:null,clicks:null,conv:null,videoReceived:true,reusable:true,metaUsed:false,note:"릴스/2차활용가능",paid:false},
+  {id:21,name:"@tngnlwh",displayName:"휘수",tier:"무료",followers:"—",platform:"인스타",product:"프리온무선고데기",sent:1,posted:1,postedDate:'2025-01-30',reach:null,saves:null,clicks:null,conv:null,videoReceived:true,reusable:true,metaUsed:false,note:"릴스/2차활용가능 3.3% 10만원",paid:false},
+  {id:22,name:"@mini_eunhye",displayName:"여행다니는 으네",tier:"무료",followers:"—",platform:"인스타",product:"프리온무선고데기",sent:1,posted:1,postedDate:'2025-02-08',reach:null,saves:null,clicks:null,conv:null,videoReceived:true,reusable:true,metaUsed:false,note:"릴스/2차활용가능",paid:false},
+  {id:23,name:"@elly__glow",displayName:"앨리",tier:"무료",followers:"—",platform:"인스타",product:"프리온무선고데기",sent:1,posted:1,postedDate:'2025-02-13',reach:null,saves:null,clicks:null,conv:null,videoReceived:true,reusable:false,metaUsed:false,note:"릴스",paid:false},
+  {id:24,name:"@enjoy_nyong",displayName:"뇽뇽",tier:"무료",followers:"—",platform:"인스타",product:"프리온무선고데기",sent:1,posted:1,postedDate:'2025-02-21',reach:null,saves:null,clicks:null,conv:null,videoReceived:true,reusable:true,metaUsed:false,note:"릴스/2차활용가능",paid:false},
+  {id:25,name:"@cho_nii_",displayName:"초나",tier:"무료",followers:"—",platform:"인스타",product:"프리온무선고데기",sent:1,posted:1,postedDate:'2025-03-05',reach:null,saves:null,clicks:null,conv:null,videoReceived:true,reusable:true,metaUsed:false,note:"릴스/2차활용가능",paid:false},
+  {id:26,name:"@omi_odigani",displayName:"오미",tier:"무료",followers:"—",platform:"인스타",product:"프리온무선고데기",sent:1,posted:0,postedDate:'2025-03-08',reach:null,saves:null,clicks:null,conv:null,videoReceived:false,reusable:true,metaUsed:false,note:"릴스/2차활용가능",paid:false},
+  {id:27,name:"@oneul_sudal",displayName:"오늘수달",tier:"무료",followers:"—",platform:"인스타",product:"프리온무선고데기",sent:1,posted:0,postedDate:'2025-03-15',reach:null,saves:null,clicks:null,conv:null,videoReceived:false,reusable:true,metaUsed:false,note:"릴스/2차활용가능",paid:false},
+  {id:28,name:"@daeunce",displayName:"다은쓰님",tier:"유료",followers:"—",platform:"인스타",product:"프리온무선고데기-유료",sent:1,posted:1,postedDate:'2025-02-14',reach:null,saves:null,clicks:null,conv:null,videoReceived:true,reusable:true,metaUsed:false,note:"릴스/2차활용가능(6개월)",paid:false},
+  {id:29,name:"@j__neul",displayName:"영모어",tier:"무료",followers:"—",platform:"인스타",product:"프리온무선고데기",sent:1,posted:0,postedDate:'2025-02-13',reach:null,saves:null,clicks:null,conv:null,videoReceived:false,reusable:true,metaUsed:false,note:"릴스/2차활용가능 3개월",paid:false},
+  {id:30,name:"@trip_heesutory",displayName:"희수",tier:"무료",followers:"—",platform:"인스타",product:"프리온무선고데기(여행)",sent:1,posted:1,postedDate:'2025-03-03',reach:null,saves:null,clicks:null,conv:null,videoReceived:true,reusable:true,metaUsed:false,note:"릴스/2차활용가능 3개월",paid:false},
+  {id:31,name:"@vely_h_o",displayName:"여행 하영",tier:"무료",followers:"—",platform:"인스타",product:"프리온무선고데기(여행)",sent:1,posted:1,postedDate:'2025-02-25',reach:null,saves:null,clicks:null,conv:null,videoReceived:true,reusable:true,metaUsed:false,note:"릴스/2차활용가능 3개월",paid:false},
+  {id:32,name:"@soojungleee",displayName:"수정",tier:"무료",followers:"—",platform:"인스타",product:"프리온무선고데기(여행)",sent:1,posted:1,postedDate:'2025-02-13',reach:null,saves:null,clicks:null,conv:null,videoReceived:true,reusable:true,metaUsed:false,note:"릴스/2차활용가능 3개월",paid:false},
+  {id:33,name:"@minna.trip",displayName:"민나",tier:"무료",followers:"—",platform:"인스타",product:"프리온무선고데기(여행)",sent:1,posted:1,postedDate:'2025-02-11',reach:null,saves:null,clicks:null,conv:null,videoReceived:true,reusable:true,metaUsed:false,note:"릴스/2차활용가능 3개월",paid:false},
+  {id:34,name:"@triptrip_young",displayName:"트립영",tier:"무료",followers:"—",platform:"인스타",product:"프리온무선고데기(여행)",sent:1,posted:1,postedDate:'2025-02-17',reach:null,saves:null,clicks:null,conv:null,videoReceived:true,reusable:true,metaUsed:false,note:"릴스/2차활용가능 3개월",paid:false},
+  {id:35,name:"@jh__appy_",displayName:"정현",tier:"무료",followers:"—",platform:"인스타",product:"프리온무선고데기(여행)",sent:1,posted:1,postedDate:'2025-02-16',reach:null,saves:null,clicks:null,conv:null,videoReceived:true,reusable:true,metaUsed:false,note:"릴스/2차활용가능 3개월",paid:false},
+  {id:36,name:"@iron.min__",displayName:"쇠민",tier:"무료",followers:"—",platform:"인스타",product:"프리온무선고데기(여행)",sent:1,posted:1,postedDate:'2025-02-14',reach:null,saves:null,clicks:null,conv:null,videoReceived:true,reusable:true,metaUsed:false,note:"릴스/2차활용가능 3개월",paid:false},
+  {id:37,name:"@mangu_travel",displayName:"망구트래블",tier:"무료",followers:"—",platform:"인스타",product:"프리온무선고데기(여행)",sent:1,posted:1,postedDate:'2025-02-27',reach:null,saves:null,clicks:null,conv:null,videoReceived:true,reusable:true,metaUsed:false,note:"릴스/2차활용가능 3개월",paid:false},
+  {id:38,name:"@todayye",displayName:"투데이옌",tier:"무료",followers:"—",platform:"인스타",product:"프리온무선고데기(여행)",sent:1,posted:1,postedDate:'2025-02-28',reach:null,saves:null,clicks:null,conv:null,videoReceived:true,reusable:true,metaUsed:false,note:"릴스/2차활용가능 3개월",paid:false},
+  {id:39,name:"@ee_sani_ee",displayName:"이산이",tier:"무료",followers:"—",platform:"인스타",product:"프리온무선고데기",sent:1,posted:0,postedDate:'2025-03-01',reach:null,saves:null,clicks:null,conv:null,videoReceived:false,reusable:false,metaUsed:false,note:"미업로드 회수관련 확인 중",paid:false},
+  {id:40,name:"@soongartz",displayName:"코덕 숭",tier:"무료",followers:"—",platform:"인스타",product:"프리온무선고데기",sent:1,posted:1,postedDate:'2025-02-22',reach:null,saves:null,clicks:null,conv:null,videoReceived:true,reusable:true,metaUsed:false,note:"릴스/2차활용가능",paid:false},
+  {id:41,name:"@haroodaa",displayName:"하루",tier:"무료",followers:"—",platform:"인스타",product:"프리온무선고데기",sent:1,posted:1,postedDate:'2025-03-01',reach:null,saves:null,clicks:null,conv:null,videoReceived:true,reusable:true,metaUsed:false,note:"릴스/2차활용가능",paid:false},
+  {id:42,name:"@solitude_eo",displayName:"이숲",tier:"무료",followers:"—",platform:"인스타",product:"프리온무선고데기",sent:1,posted:1,postedDate:'2025-02-20',reach:null,saves:null,clicks:null,conv:null,videoReceived:true,reusable:true,metaUsed:false,note:"릴스/2차활용가능",paid:false},
+  {id:43,name:"@2seoa",displayName:"강은지",tier:"무료",followers:"—",platform:"인스타",product:"소닉플로우-핑크(리빙)",sent:1,posted:1,postedDate:'2025-02-24',reach:null,saves:null,clicks:null,conv:null,videoReceived:true,reusable:true,metaUsed:false,note:"컨텐츠/2차활용가능",paid:false},
+  {id:44,name:"@irae_home",displayName:"아이래홈",tier:"무료",followers:"—",platform:"인스타",product:"소닉플로우-핑크(리빙)",sent:1,posted:1,postedDate:'2025-02-23',reach:null,saves:null,clicks:null,conv:null,videoReceived:true,reusable:true,metaUsed:false,note:"컨텐츠/2차활용가능",paid:false},
+  {id:45,name:"@w__s__e__s",displayName:"원석이서",tier:"무료",followers:"—",platform:"인스타",product:"소닉플로우-핑크(리빙)",sent:1,posted:1,postedDate:'2025-02-19',reach:null,saves:null,clicks:null,conv:null,videoReceived:true,reusable:true,metaUsed:false,note:"컨텐츠/2차활용가능",paid:false},
+  {id:46,name:"@h.mee_home",displayName:"혬님",tier:"무료",followers:"—",platform:"인스타",product:"소닉플로우-핑크(리빙)",sent:1,posted:1,postedDate:'2025-03-04',reach:null,saves:null,clicks:null,conv:null,videoReceived:true,reusable:true,metaUsed:false,note:"컨텐츠/2차활용가능",paid:false},
+  {id:47,name:"@lufam_192124",displayName:"루패밀리 대빵",tier:"무료",followers:"—",platform:"인스타",product:"소닉플로우-핑크(리빙)",sent:1,posted:1,postedDate:'2025-02-19',reach:null,saves:null,clicks:null,conv:null,videoReceived:true,reusable:true,metaUsed:false,note:"컨텐츠/2차활용가능",paid:false},
+  {id:48,name:"@k__youhee",displayName:"유희",tier:"무료",followers:"—",platform:"인스타",product:"소닉플로우-핑크(리빙)",sent:1,posted:1,postedDate:'2025-03-09',reach:null,saves:null,clicks:null,conv:null,videoReceived:true,reusable:true,metaUsed:false,note:"컨텐츠/2차활용가능",paid:false},
+  {id:49,name:"@ha_ru_diary",displayName:"하루의 관사라이프",tier:"무료",followers:"—",platform:"인스타",product:"소닉플로우-핑크(리빙)",sent:1,posted:1,postedDate:'2025-03-02',reach:null,saves:null,clicks:null,conv:null,videoReceived:true,reusable:true,metaUsed:false,note:"컨텐츠/2차활용가능",paid:false},
+  {id:50,name:"@zni_home",displayName:"즈니",tier:"무료",followers:"—",platform:"인스타",product:"소닉플로우-그레이(리빙)",sent:1,posted:1,postedDate:'2025-02-21',reach:null,saves:null,clicks:null,conv:null,videoReceived:true,reusable:true,metaUsed:false,note:"컨텐츠/2차활용가능",paid:false},
+  {id:51,name:"@nyeong_ootd",displayName:"녕호",tier:"무료",followers:"—",platform:"인스타",product:"소닉플로우-그레이(리빙)",sent:1,posted:1,postedDate:'2025-02-22',reach:null,saves:null,clicks:null,conv:null,videoReceived:true,reusable:true,metaUsed:false,note:"컨텐츠/2차활용가능",paid:false},
+  {id:52,name:"@choroc_home",displayName:"초록집",tier:"무료",followers:"—",platform:"인스타",product:"소닉플로우-그레이(리빙)",sent:1,posted:0,postedDate:'2025-03-06',reach:null,saves:null,clicks:null,conv:null,videoReceived:false,reusable:true,metaUsed:false,note:"컨텐츠/2차활용가능 15만원",paid:false},
+  {id:53,name:"@yeeejinsim",displayName:"예진",tier:"무료",followers:"—",platform:"인스타",product:"소닉플로우-그레이(리빙)",sent:1,posted:0,postedDate:'2025-03-06',reach:null,saves:null,clicks:null,conv:null,videoReceived:false,reusable:true,metaUsed:false,note:"릴스/2차활용가능",paid:false},
+  {id:54,name:"@su_hana0826",displayName:"쑤",tier:"무료",followers:"—",platform:"인스타",product:"소닉플로우-핑크(리빙)",sent:1,posted:0,postedDate:'2025-03-13',reach:null,saves:null,clicks:null,conv:null,videoReceived:false,reusable:true,metaUsed:false,note:"릴스/2차활용가능",paid:false},
+  {id:55,name:"@jardin_de._marie",displayName:"마리홈",tier:"무료",followers:"—",platform:"인스타",product:"소닉플로우-그레이(리빙)",sent:1,posted:0,postedDate:'2025-03-13',reach:null,saves:null,clicks:null,conv:null,videoReceived:false,reusable:true,metaUsed:false,note:"릴스/2차활용가능(3개월)",paid:false},
+  {id:56,name:"@ryunpark_",displayName:"도련공원",tier:"무료",followers:"—",platform:"인스타",product:"소닉플로우-그레이(리빙)",sent:1,posted:0,postedDate:'2025-03-10',reach:null,saves:null,clicks:null,conv:null,videoReceived:false,reusable:true,metaUsed:false,note:"릴스/2차활용가능(무한)",paid:false},
+  {id:57,name:"@judy_roooom",displayName:"주디룸",tier:"무료",followers:"—",platform:"인스타",product:"소닉플로우-핑크(리빙)",sent:1,posted:0,postedDate:'2025-03-16',reach:null,saves:null,clicks:null,conv:null,videoReceived:false,reusable:true,metaUsed:false,note:"릴스/2차활용가능(6개월)",paid:false},
+  {id:58,name:"@chaeeun_trip",displayName:"채은",tier:"무료",followers:"—",platform:"인스타",product:"소닉플로우-핑크(여행)",sent:1,posted:0,postedDate:'2025-03-10',reach:null,saves:null,clicks:null,conv:null,videoReceived:false,reusable:true,metaUsed:false,note:"릴스/2차활용가능(6개월)",paid:false},
+  {id:59,name:"@soyo_ming",displayName:"쏘요밍",tier:"무료",followers:"—",platform:"인스타",product:"소닉플로우-핑크(여행)",sent:1,posted:0,postedDate:'2025-03-11',reach:null,saves:null,clicks:null,conv:null,videoReceived:false,reusable:true,metaUsed:false,note:"릴스/2차활용가능(6개월)",paid:false},
+  {id:60,name:"@dadahe_b",displayName:"여행하는 다다헤",tier:"무료",followers:"—",platform:"인스타",product:"소닉플로우-그레이(여행)",sent:1,posted:0,postedDate:'2025-03-22',reach:null,saves:null,clicks:null,conv:null,videoReceived:false,reusable:true,metaUsed:false,note:"릴스/2차활용가능(1개월)",paid:false},
+  {id:61,name:"@roun.life",displayName:"로운",tier:"무료",followers:"—",platform:"인스타",product:"소닉플로우-핑크(여행)",sent:1,posted:0,postedDate:'2025-03-11',reach:null,saves:null,clicks:null,conv:null,videoReceived:false,reusable:true,metaUsed:false,note:"릴스/2차활용가능(3개월)",paid:false},
+  {id:62,name:"@roun.life",displayName:"로운",tier:"무료",followers:"—",platform:"인스타",product:"프리온무선고데기(여행)",sent:1,posted:0,postedDate:'2025-03-15',reach:null,saves:null,clicks:null,conv:null,videoReceived:false,reusable:true,metaUsed:false,note:"릴스/2차활용가능(3개월)",paid:false}
 ];
 // 기본 키워드별 마진 설정
 const DEFAULT_MARGINS = [
@@ -387,29 +443,38 @@ const KpiGrid=({items,cols=6})=>(
 
 // 인플루언서 추가/수정 모달
 function InfModalComp({mode, initial, onSave, onClose}){
-
+  const eInf = {name:"",displayName:"",tier:"무료",followers:"—",platform:"인스타",product:"",sent:1,posted:0,postedDate:null,reach:null,saves:null,clicks:null,conv:null,videoReceived:false,reusable:false,metaUsed:false,note:"",paid:false};
   const [f, setF] = useState(()=>initial||eInf);
   const set = (k,v) => setF(p=>({...p,[k]:v}));
   return(
     <Modal title={mode==="edit"?"✏️ 인플루언서 수정":"➕ 인플루언서 추가"} onClose={onClose}>
-      <FR label="이름(계정)"><Inp value={f.name} onChange={v=>set("name",v)} placeholder="@username"/></FR>
-      <FR label="티어"><Sel value={f.tier} onChange={v=>set("tier",v)} options={["매크로","미드","마이크로","나노"]}/></FR>
-      <FR label="팔로워"><Inp value={f.followers} onChange={v=>set("followers",v)} placeholder="예: 28K"/></FR>
-      <FR label="플랫폼"><Sel value={f.platform} onChange={v=>set("platform",v)} options={["인스타","유튜브","틱톡","블로그"]}/></FR>
-      <FR label="제품"><Inp value={f.product} onChange={v=>set("product",v)} placeholder="협찬 제품명"/></FR>
-      <FR label="발송 수량"><Inp type="number" value={f.sent} onChange={v=>set("sent",v)} placeholder="0"/></FR>
-      <FR label="게시 여부"><Sel value={String(f.posted)} onChange={v=>set("posted",v==="1"?1:0)} options={["0","1"]}/></FR>
-      <FR label="게시일"><Inp type="date" value={f.postedDate||""} onChange={v=>set("postedDate",v)}/></FR>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+        <FR label="실명 / 닉네임"><Inp value={f.displayName||""} onChange={v=>set("displayName",v)} placeholder="경서"/></FR>
+        <FR label="계정 (핸들)"><Inp value={f.name} onChange={v=>set("name",v)} placeholder="@seoooazi"/></FR>
+      </div>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+        <FR label="티어"><Sel value={f.tier} onChange={v=>set("tier",v)} options={["유료","무료"]}/></FR>
+        <FR label="팔로워"><Inp value={f.followers} onChange={v=>set("followers",v)} placeholder="예: 28K"/></FR>
+      </div>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+        <FR label="플랫폼"><Sel value={f.platform} onChange={v=>set("platform",v)} options={["인스타","유튜브","틱톡","블로그"]}/></FR>
+        <FR label="제품"><Inp value={f.product} onChange={v=>set("product",v)} placeholder="프리온무선고데기-유료"/></FR>
+      </div>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+        <FR label="게시일"><Inp type="date" value={f.postedDate||""} onChange={v=>set("postedDate",v)}/></FR>
+        <FR label="게시 여부"><Sel value={String(f.posted)} onChange={v=>set("posted",v==="1"?1:0)} options={["0","1"]}/></FR>
+      </div>
+      <FR label="메모"><Inp value={f.note||""} onChange={v=>set("note",v)} placeholder="릴스/2차활용가능 3개월"/></FR>
       <div style={{borderTop:`1px solid ${C.border}`,margin:"12px 0 8px",paddingTop:10}}>
         <div style={{fontSize:11,fontWeight:800,color:C.ink,marginBottom:8}}>📹 콘텐츠 활용</div>
-        {[{key:"videoReceived",label:"🎬 영상 수령 완료"},{key:"reusable",label:"♻️ 2차 활용 가능"},{key:"metaUsed",label:"📣 메타 광고 소재 활용"}].map(({key,label})=>(
+        {[{key:"videoReceived",label:"🎬 영상 수령 완료"},{key:"reusable",label:"♻️ 2차 활용 가능"},{key:"metaUsed",label:"📣 메타 광고 소재 활용"},{key:"paid",label:"💰 2차활용 비용 입금 완료"}].map(({key,label})=>(
           <label key={key} style={{display:"flex",alignItems:"center",gap:8,marginBottom:8,cursor:"pointer"}}>
             <input type="checkbox" checked={!!f[key]} onChange={e=>set(key,e.target.checked)} style={{width:15,height:15,accentColor:C.rose}}/>
             <span style={{fontSize:11,color:C.ink}}>{label}</span>
           </label>
         ))}
       </div>
-      <Btn onClick={()=>{if(!f.name)return; onSave({...f,sent:+f.sent||0,posted:+f.posted||0});}} style={{width:"100%",marginTop:4}}>
+      <Btn onClick={()=>{if(!f.name)return; onSave({...f,sent:+f.sent||1,posted:+f.posted||0});}} style={{width:"100%",marginTop:4}}>
         {mode==="edit"?"💾 저장":"➕ 추가"}
       </Btn>
     </Modal>
@@ -1750,12 +1815,12 @@ export default function OaDashboard(){
   // ✨ 인플루언서 (이전과 동일 구조)
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   const infKpi=[
-    {label:"총 도달수",   value:infs.reduce((s,f)=>s+(f.reach||0),0)>0?(infs.reduce((s,f)=>s+(f.reach||0),0)/1000).toFixed(0)+"K":"—",change:+18.4,good:"high",icon:"👁",note:"기록 완료 기준"},
-    {label:"총 저장수",   value:infs.reduce((s,f)=>s+(f.saves||0),0).toLocaleString()||"—",change:+24.1,good:"high",icon:"🔖",note:"콘텐츠 저장"},
-    {label:"전환수",      value:infs.reduce((s,f)=>s+(f.conv||0),0)+"건",change:+14.2,good:"high",icon:"🛒",note:"구매 전환"},
-    {label:"영상 수령",   value:`${infs.filter(f=>f.videoReceived).length}/${infs.length}명`,change:0,good:"high",icon:"🎬",note:"콘텐츠 확보"},
-    {label:"2차 활용가능",value:`${infs.filter(f=>{ const rs=reusableStatus(f); return rs.label.includes("활용가능"); }).length}명`,change:0,good:"high",icon:"♻️",note:"3개월 이내"},
-    {label:"메타 활용",   value:`${infs.filter(f=>f.metaUsed).length}명`,change:0,good:"high",icon:"📣",note:"광고 소재 활용"},
+    {label:"유료",         value:`${infs.filter(f=>f.tier==="유료").length}명`,change:0,good:"high",icon:"💸",note:`무료 ${infs.filter(f=>f.tier==="무료").length}명`},
+    {label:"게시 완료",    value:`${infs.filter(f=>f.posted>0).length}/${infs.length}명`,change:0,good:"high",icon:"📸",note:"게시 확인 기준"},
+    {label:"2차 활용가능", value:`${infs.filter(f=>f.reusable).length}명`,change:0,good:"high",icon:"♻️",note:"활용 가능"},
+    {label:"💰 입금완료",  value:`${infs.filter(f=>f.reusable&&f.paid).length}명`,change:0,good:"high",icon:"✅",note:`미입금 ${infs.filter(f=>f.reusable&&!f.paid).length}명`},
+    {label:"메타 활용",    value:`${infs.filter(f=>f.metaUsed).length}명`,change:0,good:"high",icon:"📣",note:"광고 소재 활용"},
+    {label:"총 전환수",    value:infs.reduce((s,f)=>s+(f.conv||0),0)+"건",change:0,good:"high",icon:"🛒",note:"구매 전환"},
   ];
   // 인플루언서 모달 — 별도 컴포넌트로 분리해서 리렌더 차단
   // InfModal
@@ -1835,61 +1900,85 @@ export default function OaDashboard(){
       )}
       <KpiGrid items={infKpi} cols={6}/>
       <div className="content-grid-2" style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
+        {/* 💰 2차활용 미입금 카드 */}
         <Card>
-          <CardTitle title="티어별 구성" sub="등록된 인플루언서"/>
-          {tierData.length>0?(
-            <>
-              <ResponsiveContainer width="100%" height={120}>
-                <PieChart>
-                  <Pie data={tierData} cx="50%" cy="50%" innerRadius={30} outerRadius={52} dataKey="value" paddingAngle={3}>
-                    {tierData.map((e,i)=><Cell key={i} fill={e.color}/>)}
-                  </Pie>
-                  <Tooltip formatter={v=>`${v}명`} contentStyle={{background:C.white,border:`1px solid ${C.border}`,borderRadius:8,fontSize:11}}/>
-                </PieChart>
-              </ResponsiveContainer>
-              {tierData.map((d,i)=>(
-                <div key={i} style={{display:"flex",justifyContent:"space-between",fontSize:10,
-                  padding:"3px 0",borderBottom:i<tierData.length-1?`1px solid ${C.border}`:"none"}}>
-                  <div style={{display:"flex",alignItems:"center",gap:6}}>
-                    <div style={{width:7,height:7,borderRadius:2,background:d.color}}/>
-                    <span style={{color:C.inkMid}}>{d.name}</span>
+          <CardTitle title="💰 2차활용 입금 현황" sub={`미입금 ${infs.filter(f=>f.reusable&&!f.paid).length}명`}/>
+          {infs.filter(f=>f.reusable&&!f.paid).length===0?(
+            <div style={{textAlign:"center",padding:"24px 0",color:C.good,fontSize:12,fontWeight:700}}>✅ 모두 입금 완료</div>
+          ):(
+            <div style={{display:"flex",flexDirection:"column",gap:6,maxHeight:220,overflowY:"auto"}}>
+              {infs.filter(f=>f.reusable&&!f.paid).map((f,i)=>(
+                <div key={f.id} style={{display:"flex",alignItems:"center",justifyContent:"space-between",
+                  padding:"7px 10px",borderRadius:9,background:C.cream,border:`1px solid ${C.border}`}}>
+                  <div>
+                    <div style={{fontSize:11,fontWeight:800,color:C.ink}}>{f.displayName||f.name}</div>
+                    <div style={{fontSize:9,color:C.inkMid,marginTop:1}}>{f.product} · {f.note&&f.note.slice(0,30)}</div>
                   </div>
-                  <span style={{fontWeight:700,color:C.ink}}>{d.value}명</span>
+                  <button onClick={()=>setInfs(arr=>arr.map(x=>x.id===f.id?{...x,paid:true}:x))}
+                    style={{fontSize:10,fontWeight:700,padding:"4px 10px",borderRadius:20,cursor:"pointer",
+                      background:"#EDF7F1",color:C.good,border:`1px solid ${C.good}44`}}>
+                    입금완료 ✓
+                  </button>
                 </div>
               ))}
-            </>
-          ):(
-            <div style={{textAlign:"center",padding:"24px 0",color:C.inkLt,fontSize:11}}>인플루언서를 추가하세요</div>
+            </div>
           )}
         </Card>
+
+        {/* ♻️ 2차활용 기간 만료 체크 카드 */}
         <Card>
-          <CardTitle title="기록 현황"/>
-          {[
-            {label:"기록 완료",count:infs.filter(f=>insightStatus(f).label==="기록완료").length,color:C.good},
-            {label:"기록 대기",count:infs.filter(f=>insightStatus(f).label.includes("D-")).length,color:C.inkLt},
-            {label:"입력 필요",count:overdueIns.length,color:C.warn},
-            {label:"미게시",   count:infs.filter(f=>insightStatus(f).label==="미게시").length,color:C.inkLt},
-          ].map((row,i)=>(
-            <div key={i} style={{display:"flex",justifyContent:"space-between",alignItems:"center",
-              padding:"8px 0",borderBottom:i<3?`1px solid ${C.border}`:"none"}}>
-              <span style={{fontSize:11,color:C.inkMid}}>{row.label}</span>
-              <span style={{fontSize:18,fontWeight:900,color:row.color}}>{row.count}명</span>
-            </div>
-          ))}
-          <div style={{marginTop:10,padding:"10px 12px",background:C.blush,borderRadius:10}}>
-            <div style={{fontSize:10,fontWeight:700,color:C.rose}}>📅 다음 기록 예정</div>
-            <div style={{fontSize:10,color:C.inkMid,marginTop:3,lineHeight:1.7}}>
-              {infs.filter(f=>f.postedDate&&f.reach===null)
-                .sort((a,b)=>new Date(addDays(a.postedDate,7))-new Date(addDays(b.postedDate,7)))
-                .slice(0,2).map(f=><div key={f.id}>{f.name} · {addDays(f.postedDate,7)}</div>)}
-              {infs.filter(f=>f.postedDate&&f.reach===null).length===0&&"없음"}
-            </div>
-          </div>
+          <CardTitle title="♻️ 2차활용 기간 현황" sub="게시일 기준"/>
+          {(()=>{
+            const now = new Date();
+            const reusables = infs.filter(f=>f.reusable&&f.postedDate);
+            // 기간 파싱 — note에서 "3개월","6개월","1개월","무한" 추출
+            const getDays = (note="") => {
+              if(note.includes("무한")) return 9999;
+              const m = note.match(/(\d+)개월/);
+              return m ? parseInt(m[1])*30 : 90; // 기본 3개월
+            };
+            const withExpiry = reusables.map(f=>{
+              const days = getDays(f.note||"");
+              const expiry = new Date(f.postedDate);
+              expiry.setDate(expiry.getDate()+days);
+              const left = Math.ceil((expiry-now)/(1000*60*60*24));
+              return {...f, left, expiry: days===9999?"무한":expiry.toLocaleDateString("ko-KR",{month:"short",day:"numeric"})};
+            }).sort((a,b)=>a.left-b.left);
+            const expired  = withExpiry.filter(f=>f.left<=0&&f.left!==9999);
+            const soon     = withExpiry.filter(f=>f.left>0&&f.left<=14);
+            const ok       = withExpiry.filter(f=>f.left>14||f.left===9999);
+            return(
+              <div style={{display:"flex",flexDirection:"column",gap:4,maxHeight:220,overflowY:"auto"}}>
+                {expired.length>0&&expired.map(f=>(
+                  <div key={f.id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",
+                    padding:"6px 10px",borderRadius:8,background:"#FEF0F0",border:`1px solid ${C.bad}33`}}>
+                    <div style={{fontSize:11,fontWeight:700,color:C.bad}}>{f.displayName||f.name}</div>
+                    <span style={{fontSize:10,color:C.bad,fontWeight:700}}>만료</span>
+                  </div>
+                ))}
+                {soon.length>0&&soon.map(f=>(
+                  <div key={f.id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",
+                    padding:"6px 10px",borderRadius:8,background:"#FFF8EC",border:`1px solid ${C.warn}33`}}>
+                    <div style={{fontSize:11,fontWeight:700,color:C.warn}}>{f.displayName||f.name}</div>
+                    <span style={{fontSize:10,color:C.warn,fontWeight:700}}>D-{f.left}</span>
+                  </div>
+                ))}
+                {ok.length>0&&ok.map(f=>(
+                  <div key={f.id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",
+                    padding:"6px 10px",borderRadius:8,background:C.cream}}>
+                    <div style={{fontSize:11,color:C.inkMid}}>{f.displayName||f.name}</div>
+                    <span style={{fontSize:10,color:C.inkLt}}>{f.left===9999?"무한":f.expiry+"까지"}</span>
+                  </div>
+                ))}
+                {withExpiry.length===0&&<div style={{textAlign:"center",padding:"24px 0",color:C.inkLt,fontSize:11}}>데이터 없음</div>}
+              </div>
+            );
+          })()}
         </Card>
       </div>
 
       <Card>
-        <CardTitle title="인플루언서별 시딩 현황" sub="게시일 기준 D+7 인사이트 기록"
+        <CardTitle title="인플루언서별 시딩 현황" sub="게시일 최근순"
           action={<Btn small onClick={()=>{setInfModalData({mode:"add",initial:null})}}>+ 추가</Btn>}/>
         {infs.length===0&&(
           <div style={{textAlign:"center",padding:"32px 0",color:C.inkLt,fontSize:12}}>
@@ -1898,9 +1987,14 @@ export default function OaDashboard(){
           </div>
         )}
         <div style={{display:"flex",flexDirection:"column",gap:8}}>
-          {infs.map(f=>{
+          {[...infs].sort((a,b)=>{
+            if(!a.postedDate&&!b.postedDate) return 0;
+            if(!a.postedDate) return 1;
+            if(!b.postedDate) return -1;
+            return new Date(b.postedDate)-new Date(a.postedDate);
+          }).map(f=>{
             const st=insightStatus(f);
-            const tc={매크로:C.rose,미드:C.gold,마이크로:C.sage,나노:C.purple}[f.tier]||C.inkMid;
+            const tc={유료:C.rose,무료:C.sage,매크로:C.rose,미드:C.gold,마이크로:C.sage,나노:C.purple}[f.tier]||C.inkMid;
             const due=addDays(f.postedDate,7);
             const elapsed=f.postedDate&&due?Math.min(Math.max((TODAY-new Date(f.postedDate))/(new Date(due)-new Date(f.postedDate)),0),1):0;
             return(
@@ -1913,9 +2007,27 @@ export default function OaDashboard(){
                       {f.platform==="인스타"?"📸":f.platform==="유튜브"?"▶️":"🎵"}
                     </div>
                     <div>
-                      <div style={{fontSize:12,fontWeight:800,color:C.ink}}>{f.name}</div>
+                      <div style={{fontSize:12,fontWeight:800,color:C.ink}}>
+                        {(()=>{
+                          const handle = f.name.replace(/^@/,"");
+                          const url = f.platform==="유튜브"
+                            ? `https://www.youtube.com/@${handle}`
+                            : f.platform==="틱톡"
+                            ? `https://www.tiktok.com/@${handle}`
+                            : `https://www.instagram.com/${handle}`;
+                          return(
+                            <a href={url} target="_blank" rel="noopener noreferrer"
+                              style={{color:C.ink,textDecoration:"none",cursor:"pointer",
+                                borderBottom:`1px dashed ${C.border}`}}
+                              onMouseEnter={e=>{e.currentTarget.style.color=C.rose;e.currentTarget.style.borderBottomColor=C.rose;}}
+                              onMouseLeave={e=>{e.currentTarget.style.color=C.ink;e.currentTarget.style.borderBottomColor=C.border;}}>
+                              {f.displayName||f.name}
+                            </a>
+                          );
+                        })()}
+                      </div>
                       <div style={{fontSize:10,color:C.inkLt}}>
-                        <span style={{color:tc,fontWeight:700}}>{f.tier}</span>{" · "}{f.followers}{" · "}{f.product}
+                        <span style={{color:tc,fontWeight:700}}>{f.tier}</span>{" · "}{f.name}{" · "}{f.product}
                       </div>
                     </div>
                   </div>
@@ -1928,7 +2040,7 @@ export default function OaDashboard(){
                         setInsModalData({initial:true});
                       }}>✏️ 기록</Btn>
                     )}
-                    <Btn variant="neutral" small onClick={()=>{setInfF(f);setInfModalData({mode:"edit",initial:f})}}>수정</Btn>
+                    <Btn variant="neutral" small onClick={()=>{setInfModalData({mode:"edit",initial:f})}}>수정</Btn>
                     <Btn variant="danger" small onClick={()=>setInfs(infs.filter(x=>x.id!==f.id))}>🗑</Btn>
                   </div>
                 </div>
@@ -1946,27 +2058,47 @@ export default function OaDashboard(){
                 {/* 콘텐츠 활용 현황 */}
                 <div style={{display:"flex",gap:6,marginTop:10,flexWrap:"wrap"}}>
                   {/* 영상 수령 */}
-                  <span style={{fontSize:10,fontWeight:700,padding:"3px 10px",borderRadius:20,
-                    color:f.videoReceived?C.good:C.inkLt,
-                    background:f.videoReceived?"#EDF7F1":C.cream,
-                    border:`1px solid ${f.videoReceived?C.good+"44":C.border}`}}>
+                  <span onClick={()=>setInfs(arr=>arr.map(x=>x.id===f.id?{...x,videoReceived:!x.videoReceived}:x))}
+                    style={{fontSize:10,fontWeight:700,padding:"3px 10px",borderRadius:20,cursor:"pointer",
+                      color:f.videoReceived?C.good:C.inkLt,
+                      background:f.videoReceived?"#EDF7F1":C.cream,
+                      border:`1px solid ${f.videoReceived?C.good+"44":C.border}`}}>
                     🎬 {f.videoReceived?"영상수령":"미수령"}
                   </span>
                   {/* 2차 활용 가능 여부 */}
                   {(()=>{ const rs=reusableStatus(f); return(
-                    <span style={{fontSize:10,fontWeight:700,padding:"3px 10px",borderRadius:20,
-                      color:rs.color,background:rs.bg,border:`1px solid ${rs.color}44`}}>
+                    <span onClick={()=>setInfs(arr=>arr.map(x=>x.id===f.id?{...x,reusable:!x.reusable}:x))}
+                      style={{fontSize:10,fontWeight:700,padding:"3px 10px",borderRadius:20,cursor:"pointer",
+                        color:rs.color,background:rs.bg,border:`1px solid ${rs.color}44`}}>
                       ♻️ {rs.label}
                     </span>
                   );})()}
+                  {/* 2차활용 입금 여부 */}
+                  {f.reusable&&(
+                    <span onClick={()=>setInfs(arr=>arr.map(x=>x.id===f.id?{...x,paid:!x.paid}:x))}
+                      style={{fontSize:10,fontWeight:700,padding:"3px 10px",borderRadius:20,cursor:"pointer",
+                        color:f.paid?C.good:C.warn,
+                        background:f.paid?"#EDF7F1":"#FFF8EC",
+                        border:`1px solid ${f.paid?C.good+"44":C.warn+"44"}`}}>
+                      💰 {f.paid?"입금완료":"미입금"}
+                    </span>
+                  )}
                   {/* 메타 광고 활용 */}
-                  <span style={{fontSize:10,fontWeight:700,padding:"3px 10px",borderRadius:20,
-                    color:f.metaUsed?C.purple:C.inkLt,
-                    background:f.metaUsed?C.purpleLt:C.cream,
-                    border:`1px solid ${f.metaUsed?C.purple+"44":C.border}`}}>
+                  <span onClick={()=>setInfs(arr=>arr.map(x=>x.id===f.id?{...x,metaUsed:!x.metaUsed}:x))}
+                    style={{fontSize:10,fontWeight:700,padding:"3px 10px",borderRadius:20,cursor:"pointer",
+                      color:f.metaUsed?C.purple:C.inkLt,
+                      background:f.metaUsed?C.purpleLt:C.cream,
+                      border:`1px solid ${f.metaUsed?C.purple+"44":C.border}`}}>
                     📣 {f.metaUsed?"메타광고 활용":"미활용"}
                   </span>
                 </div>
+                {/* 메모 */}
+                {f.note&&(
+                  <div style={{marginTop:6,fontSize:10,color:C.inkMid,padding:"4px 10px",
+                    background:C.cream,borderRadius:8,display:"inline-block"}}>
+                    {f.note}
+                  </div>
+                )}
                 {f.reach!==null&&(
                   <div style={{display:"flex",gap:14,marginTop:10,flexWrap:"wrap"}}>
                     {[{l:"도달",v:(f.reach/1000).toFixed(0)+"K",c:C.rose},{l:"저장",v:f.saves?.toLocaleString(),c:C.gold},
