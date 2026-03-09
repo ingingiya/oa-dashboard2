@@ -460,8 +460,8 @@ function InvModalComp({mode, initial, onSave, onClose}){
 
 // 스케줄 추가/수정 모달
 function SchModalComp({mode, initial, onSave, onClose}){
-
-  const [f, setF] = useState(()=>initial||eSch);
+  const empty = {type:"공구",title:"",date:"",endDate:"",platform:"",note:"",status:"예정"};
+  const [f, setF] = useState(()=>initial||empty);
   const set = (k,v) => setF(p=>({...p,[k]:v}));
   return(
     <Modal title={mode==="add"?"일정 추가":"일정 수정"} onClose={onClose}>
@@ -1510,14 +1510,14 @@ export default function OaDashboard(){
                       <CardTitle title={campTab==="conversion"?"전환 캠페인":"트래픽 캠페인"}
                         sub={campTab==="conversion"?"CPA · LPV율 중심":"CPC · CTR 중심"}/>
                       <div style={{overflowX:"auto"}}>
-                        <table style={{width:"100%",borderCollapse:"collapse",fontSize:11,minWidth:500}}>
+                        <table style={{width:"100%",borderCollapse:"collapse",fontSize:11,minWidth:600}}>
                           <thead><tr style={{borderBottom:`2px solid ${C.border}`}}>
                             {(campTab==="conversion"
-                              ?["광고명","광고세트","광고비","클릭","구매","전환값","CPA","ROAS","LPV율",""]
-                              :["광고명","광고세트","광고비","클릭","LPV","CPC","CTR","LPV율",""]
-                            ).map(h=>(
-                              <th key={h} style={{padding:"8px 8px",textAlign:h==="캠페인"?"left":"right",
-                                color:C.inkLt,fontWeight:700,fontSize:9,whiteSpace:"nowrap"}}>{h}</th>
+                              ?["광고명","광고세트","광고비","클릭","구매","전환값","CPA","ROAS","LPV율","삭제"]
+                              :["광고명","광고세트","광고비","클릭","LPV","CPC","CTR","LPV율","삭제"]
+                            ).map((h,hi)=>(
+                              <th key={hi} style={{padding:"8px 8px",textAlign:h==="광고명"?"left":"center",
+                                color:C.inkLt,fontWeight:700,fontSize:9,whiteSpace:"nowrap"}}>{h==="삭제"?"":h}</th>
                             ))}
                           </tr></thead>
                           <tbody>{camps.map((c,i)=>{
