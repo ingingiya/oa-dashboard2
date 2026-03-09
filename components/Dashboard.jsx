@@ -800,7 +800,9 @@ export default function OaDashboard(){
   }
 
   function parseInfSheetCSV(text){
-    const lines = text.trim().split("\n").map(l=>{
+    // BOM 제거
+    const clean = text.replace(/^\uFEFF/, "");
+    const lines = clean.trim().split("\n").map(l=>{
       const res=[]; let cur="", inQ=false;
       for(let i=0;i<l.length;i++){
         if(l[i]==='\"'){inQ=!inQ;}
@@ -812,64 +814,64 @@ export default function OaDashboard(){
     });
     if(lines.length<2) return [];
 
-    // 헤더행 찾기 — "이름" 또는 "name" 또는 "담당자" 포함 행
+    // 헤더행 찾기 — "담당자" 또는 "제품명" 또는 "이름" 포함 행
     let hIdx=0;
     for(let i=0;i<Math.min(lines.length,5);i++){
       const joined = lines[i].join(",");
-      if(joined.includes("이름")||joined.includes("담당자")||joined.toLowerCase().includes("name")){hIdx=i;break;}
+      if(joined.includes("담당자")||joined.includes("제품명")||joined.includes("이름")){hIdx=i;break;}
     }
-    const headers = lines[hIdx].map(h=>h.trim());
+    // 헤더 정규화 (공백/줄바꿈 제거, 소문자)
+    const headers = lines[hIdx].map(h=>h.replace(/\s+/g,"").toLowerCase());
+
+    // 컬럼 인덱스 찾기 — 정규화된 헤더에서 키워드 포함 여부
     const col = (...keys) => {
       for(const k of keys){
-        const i = headers.findIndex(h=>h.includes(k));
+        const kn = k.replace(/\s+/g,"").toLowerCase();
+        const i = headers.findIndex(h=>h.includes(kn));
         if(i>=0) return i;
       }
       return -1;
     };
 
-    // 실제 시트 컬럼 매핑
-    const iManager  = col("담당자");
     const iProduct  = col("제품명","제품","상품");
     const iName     = col("이름","name");
-    const iHandle   = col("인스타그램","아이디","handle","계정");
+    const iHandle   = col("인스타그램아이디","인스타그램","아이디","handle","계정");
     const iPlatform = col("매체","platform","플랫폼");
-    const iLink     = col("링크","link","url");
-    const iSent     = col("제품 발송","발송");
-    const iSentDate = col("발송일자","발송일");
-    const iDeadline = col("작성마감","마감일","마감");
-    const iConfirm  = col("포스팅 확인","포스팅확인","확인");
+    const iSent     = col("제품발송","발송");
+    const iDeadline = col("작성마감일","마감일","마감");
+    const iConfirm  = col("포스팅확인","포스팅","확인");
     const iNote     = col("비고","note","메모");
     const iExtend   = col("기간연장","연장");
 
-    const bool = v => !!(v && (v==="확인완료"||v==="완료"||v==="O"||v==="o"||v==="Y"||v==="y"||v==="TRUE"||v==="true"||v==="1"||v==="발송완료"));
+    // "확인완료" / "발송완료" / O / Y / TRUE / 1 → true
+    const bool = v => !!(v && (
+      v==="확인완료"||v==="발송완료"||v==="완료"||
+      v==="O"||v==="o"||v==="Y"||v==="y"||
+      v==="TRUE"||v==="true"||v==="1"
+    ));
+
+    // M/D 또는 YYYY-MM-DD 날짜 파싱
+    const parseDate = raw => {
+      if(!raw) return null;
+      if(raw.match(/^\d{4}-\d{2}-\d{2}$/)) return raw;
+      if(raw.match(/^\d{1,2}\/\d{1,2}$/)){
+        const [m,d] = raw.split("/");
+        return `2025-${m.padStart(2,"0")}-${d.padStart(2,"0")}`;
+      }
+      return null;
+    };
 
     return lines.slice(hIdx+1).filter(l=>l.some(c=>c)).map((row,ri)=>{
       const g = i => i>=0?(row[i]||"").trim():"";
-
-      // 핸들: 인스타그램 아이디 컬럼 우선, 없으면 이름
       const handle = g(iHandle)||g(iName);
       const displayName = g(iName);
       if(!handle && !displayName) return null;
 
-      const product = g(iProduct);
-      const note    = [g(iNote), g(iExtend)].filter(Boolean).join(" / ");
-
-      // tier: 제품명에 "유료" 포함이면 유료, 나머지 무료
-      const tier = product.includes("유료") ? "유료" : "무료";
-
-      // reusable: 비고에 "2차활용" 포함
-      const reusable = note.includes("2차활용")||note.includes("2차 활용");
-
-      // postedDate: 작성마감일 사용 (YYYY-MM-DD 또는 M/D 형식 모두 처리)
-      const rawDate = g(iDeadline)||g(iSentDate);
-      let postedDate = null;
-      if(rawDate){
-        if(rawDate.match(/^\d{4}-\d{2}-\d{2}$/)) postedDate = rawDate;
-        else if(rawDate.match(/^\d{1,2}\/\d{1,2}$/)){
-          const [m,d] = rawDate.split("/");
-          postedDate = `2025-${m.padStart(2,"0")}-${d.padStart(2,"0")}`;
-        }
-      }
+      const product  = g(iProduct);
+      const noteRaw  = [g(iNote), g(iExtend)].filter(Boolean).join(" / ");
+      const tier     = product.includes("유료") ? "유료" : "무료";
+      const reusable = noteRaw.includes("2차활용")||noteRaw.includes("2차 활용");
+      const confirmed = bool(g(iConfirm));
 
       return {
         id:            Date.now()+ri,
@@ -879,22 +881,18 @@ export default function OaDashboard(){
         followers:     "—",
         platform:      g(iPlatform)||"인스타",
         product,
-        sent:          1,
-        posted:        bool(g(iConfirm)) ? 1 : 0,
-        postedDate,
-        reach:         null,
-        saves:         null,
-        clicks:        null,
-        conv:          null,
-        videoReceived: bool(g(iConfirm)),
+        sent:          bool(g(iSent)) ? 1 : 0,
+        posted:        confirmed ? 1 : 0,
+        postedDate:    parseDate(g(iDeadline)),
+        reach:         null, saves:null, clicks:null, conv:null,
+        videoReceived: confirmed,
         reusable,
         metaUsed:      false,
         paid:          false,
-        note,
+        note:          noteRaw,
       };
     }).filter(Boolean);
   }
-
   // 인플루언서 URL 로드시 자동 fetch
   useEffect(()=>{
     if(!infUrlLoaded || !infUrl) return;
