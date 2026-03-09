@@ -782,7 +782,16 @@ export default function OaDashboard(){
       let parsed = [];
       try{ parsed = parseInfSheetCSV(text); } catch(e){ parsed = []; }
       if(parsed.length > 0){
-        setInfs(parsed);
+        // 새로고침 시 대시보드에서 직접 체크한 값 유지 (name 기준 매칭)
+        setInfs(prev => {
+          const prevMap = {};
+          prev.forEach(p => { prevMap[p.name] = p; });
+          return parsed.map(p => {
+            const old = prevMap[p.name];
+            if(!old) return p;
+            return {...p, videoReceived:old.videoReceived, reusable:old.reusable, metaUsed:old.metaUsed, paid:old.paid};
+          });
+        });
         setInfSheetStatus("ok");
       } else {
         setInfSheetStatus("error");
@@ -802,57 +811,100 @@ export default function OaDashboard(){
       return res;
     });
     if(lines.length<2) return [];
-    // 헤더행 찾기
+
+    // 헤더행 찾기 — "이름" 또는 "name" 또는 "담당자" 포함 행
     let hIdx=0;
     for(let i=0;i<Math.min(lines.length,5);i++){
-      if(lines[i].join(",").toLowerCase().includes("name")||lines[i].join(",").includes("계정")){hIdx=i;break;}
+      const joined = lines[i].join(",");
+      if(joined.includes("이름")||joined.includes("담당자")||joined.toLowerCase().includes("name")){hIdx=i;break;}
     }
-    const headers = lines[hIdx].map(h=>h.trim().toLowerCase());
-    const col = (...keys) => { for(const k of keys){ const i=headers.findIndex(h=>h.includes(k)); if(i>=0) return i; } return -1; };
-    const iName    = col("name","계정");
-    const iTier    = col("tier","티어");
-    const iFollow  = col("follow","팔로워");
-    const iPlatform= col("platform","플랫폼");
-    const iProduct = col("product","제품","상품");
-    const iSent    = col("sent","발송");
-    const iPosted  = col("posted","게시");
-    const iPostedD = col("posteddate","게시일");
-    const iReach   = col("reach","도달");
-    const iSaves   = col("saves","저장");
-    const iClicks  = col("clicks","클릭");
-    const iConv    = col("conv","전환");
-    const iVideo   = col("videoreceived","영상수령","영상");
-    const iReusable= col("reusable","2차활용","재활용");
-    const iMeta    = col("metaused","메타활용","메타");
-    const bool = v => v&&(v.toLowerCase()==="true"||v==="1"||v==="TRUE"||v==="yes");
+    const headers = lines[hIdx].map(h=>h.trim());
+    const col = (...keys) => {
+      for(const k of keys){
+        const i = headers.findIndex(h=>h.includes(k));
+        if(i>=0) return i;
+      }
+      return -1;
+    };
+
+    // 실제 시트 컬럼 매핑
+    const iManager  = col("담당자");
+    const iProduct  = col("제품명","제품","상품");
+    const iName     = col("이름","name");
+    const iHandle   = col("인스타그램","아이디","handle","계정");
+    const iPlatform = col("매체","platform","플랫폼");
+    const iLink     = col("링크","link","url");
+    const iSent     = col("제품 발송","발송");
+    const iSentDate = col("발송일자","발송일");
+    const iDeadline = col("작성마감","마감일","마감");
+    const iConfirm  = col("포스팅 확인","포스팅확인","확인");
+    const iNote     = col("비고","note","메모");
+    const iExtend   = col("기간연장","연장");
+
+    const bool = v => !!(v && (v==="확인완료"||v==="완료"||v==="O"||v==="o"||v==="Y"||v==="y"||v==="TRUE"||v==="true"||v==="1"||v==="발송완료"));
+
     return lines.slice(hIdx+1).filter(l=>l.some(c=>c)).map((row,ri)=>{
       const g = i => i>=0?(row[i]||"").trim():"";
-      const n = i => parseInt((row[i]||"").replace(/,/g,""))||null;
-      const name = g(iName); if(!name) return null;
+
+      // 핸들: 인스타그램 아이디 컬럼 우선, 없으면 이름
+      const handle = g(iHandle)||g(iName);
+      const displayName = g(iName);
+      if(!handle && !displayName) return null;
+
+      const product = g(iProduct);
+      const note    = [g(iNote), g(iExtend)].filter(Boolean).join(" / ");
+
+      // tier: 제품명에 "유료" 포함이면 유료, 나머지 무료
+      const tier = product.includes("유료") ? "유료" : "무료";
+
+      // reusable: 비고에 "2차활용" 포함
+      const reusable = note.includes("2차활용")||note.includes("2차 활용");
+
+      // postedDate: 작성마감일 사용 (YYYY-MM-DD 또는 M/D 형식 모두 처리)
+      const rawDate = g(iDeadline)||g(iSentDate);
+      let postedDate = null;
+      if(rawDate){
+        if(rawDate.match(/^\d{4}-\d{2}-\d{2}$/)) postedDate = rawDate;
+        else if(rawDate.match(/^\d{1,2}\/\d{1,2}$/)){
+          const [m,d] = rawDate.split("/");
+          postedDate = `2025-${m.padStart(2,"0")}-${d.padStart(2,"0")}`;
+        }
+      }
+
       return {
         id:            Date.now()+ri,
-        name,
-        tier:          g(iTier)||"마이크로",
-        followers:     g(iFollow)||"—",
+        name:          handle.startsWith("@")?handle:`@${handle}`,
+        displayName:   displayName||handle,
+        tier,
+        followers:     "—",
         platform:      g(iPlatform)||"인스타",
-        product:       g(iProduct)||"",
-        sent:          parseInt(g(iSent))||0,
-        posted:        parseInt(g(iPosted))||0,
-        postedDate:    g(iPostedD)||null,
-        reach:         n(iReach),
-        saves:         n(iSaves),
-        clicks:        n(iClicks),
-        conv:          n(iConv),
-        videoReceived: bool(g(iVideo)),
-        reusable:      bool(g(iReusable)),
-        metaUsed:      bool(g(iMeta)),
+        product,
+        sent:          1,
+        posted:        bool(g(iConfirm)) ? 1 : 0,
+        postedDate,
+        reach:         null,
+        saves:         null,
+        clicks:        null,
+        conv:          null,
+        videoReceived: bool(g(iConfirm)),
+        reusable,
+        metaUsed:      false,
+        paid:          false,
+        note,
       };
     }).filter(Boolean);
   }
 
   // 인플루언서 URL 로드시 자동 fetch
   useEffect(()=>{
-    if(infUrlLoaded && infUrl) fetchInfSheet(infUrl);
+    if(!infUrlLoaded || !infUrl) return;
+    try {
+      new URL(infUrl); // URL 유효성 검사
+      fetchInfSheet(infUrl);
+    } catch(e) {
+      setInfUrl(""); // 잘못된 URL이면 조용히 삭제
+      setInfSheetStatus("idle");
+    }
   },[infUrl, infUrlLoaded]);
 
   // ── 메타 데이터 집계 ─────────────────────────────
@@ -1823,7 +1875,6 @@ export default function OaDashboard(){
     {label:"2차 활용가능", value:`${infs.filter(f=>f.reusable).length}명`,change:0,good:"high",icon:"♻️",note:"활용 가능"},
     {label:"💰 입금완료",  value:`${infs.filter(f=>f.reusable&&f.paid).length}명`,change:0,good:"high",icon:"✅",note:`미입금 ${infs.filter(f=>f.reusable&&!f.paid).length}명`},
     {label:"메타 활용",    value:`${infs.filter(f=>f.metaUsed).length}명`,change:0,good:"high",icon:"📣",note:"광고 소재 활용"},
-    {label:"총 전환수",    value:infs.reduce((s,f)=>s+(f.conv||0),0)+"건",change:0,good:"high",icon:"🛒",note:"구매 전환"},
   ];
   // 인플루언서 모달 — 별도 컴포넌트로 분리해서 리렌더 차단
   // InfModal
@@ -1879,8 +1930,9 @@ export default function OaDashboard(){
       {infUrlModal&&(
         <Modal title="📋 인플루언서 시트 연결" onClose={()=>setInfUrlModal(false)}>
           <div style={{background:C.cream,borderRadius:10,padding:"14px",marginBottom:16,fontSize:11,color:C.inkMid,lineHeight:1.7}}>
-            <b style={{color:C.ink}}>시트 컬럼 순서 (1행 헤더 필수)</b><br/>
-            name · tier · followers · platform · product · sent · posted · postedDate · reach · saves · clicks · conv · videoReceived · reusable · metaUsed
+            <b style={{color:C.ink}}>시트 1행 헤더 그대로 사용 가능</b><br/>
+            담당자 · 제품명 · 이름 · 인스타그램 아이디 · 매체 · 링크 · 제품 발송 · 제품발송일자 · 작성마감일 · 포스팅 확인 · 비고 · 기간연장<br/>
+            <span style={{color:C.rose}}>※ 포스팅 확인 컬럼이 "확인완료"이면 게시완료로 인식</span>
           </div>
           <FR label="구글 시트 URL">
             <Inp value={infUrlInput} onChange={v=>setInfUrlInput(v)} placeholder="https://docs.google.com/spreadsheets/d/..."/>
