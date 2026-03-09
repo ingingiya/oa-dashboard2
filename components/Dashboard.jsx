@@ -61,6 +61,7 @@ const LS_MARGIN    = "oa_margin_v7"; // 마진 설정
 const LS_MARGINS   = "oa_margins_v7"; // 키워드별 마진
 const LS_ORDER_URL = "oa_order_url_v7"; // 발주임박 시트 URL
 const LS_INV_URL   = "oa_inv_url_v7";   // 재고원본 시트 URL
+const LS_INF_URL   = "oa_inf_url_v7";   // 인플루언서 시트 URL
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // 유틸
@@ -517,6 +518,12 @@ export default function OaDashboard(){
   const [invUrlModal, setInvUrlModal] = useState(false);
   const [invUrlInput, setInvUrlInput] = useState("");
 
+  // 인플루언서 시트
+  const [infUrl, setInfUrl, infUrlLoaded] = useLocal(LS_INF_URL, "");
+  const [infSheetStatus, setInfSheetStatus] = useState("idle");
+  const [infUrlModal, setInfUrlModal]   = useState(false);
+  const [infUrlInput, setInfUrlInput]   = useState("");
+
   // 구글 시트 연동 상태
   const [sheetUrl,setSheetUrl, sheetUrlLoaded] = useLocal(LS_SHEET_URL, "");
   const [metaRaw,setMetaRaw]         = useState([]);   // 파싱된 원본 rows
@@ -696,6 +703,89 @@ export default function OaDashboard(){
   useEffect(()=>{
     if(invUrlLoaded && invUrl) fetchInvSheet(invUrl);
   },[invUrl, invUrlLoaded]);
+
+  // ── 인플루언서 시트 fetch ─────────────────────────
+  async function fetchInfSheet(url){
+    if(!url) return;
+    setInfSheetStatus("loading");
+    try{
+      const res = await fetch(`/api/sheet?url=${encodeURIComponent(url)}`);
+      if(!res.ok) throw new Error(`HTTP ${res.status}`);
+      const text = await res.text();
+      const parsed = parseInfSheetCSV(text);
+      if(parsed.length > 0){
+        setInfs(parsed);
+        setInfSheetStatus("ok");
+      } else {
+        setInfSheetStatus("error");
+      }
+    }catch(e){ setInfSheetStatus("error"); }
+  }
+
+  function parseInfSheetCSV(text){
+    const lines = text.trim().split("\n").map(l=>{
+      const res=[]; let cur="", inQ=false;
+      for(let i=0;i<l.length;i++){
+        if(l[i]==='\"'){inQ=!inQ;}
+        else if(l[i]===","&&!inQ){res.push(cur.trim());cur="";}
+        else cur+=l[i];
+      }
+      res.push(cur.trim());
+      return res;
+    });
+    if(lines.length<2) return [];
+    // 헤더행 찾기
+    let hIdx=0;
+    for(let i=0;i<Math.min(lines.length,5);i++){
+      if(lines[i].join(",").toLowerCase().includes("name")||lines[i].join(",").includes("계정")){hIdx=i;break;}
+    }
+    const headers = lines[hIdx].map(h=>h.trim().toLowerCase());
+    const col = (...keys) => { for(const k of keys){ const i=headers.findIndex(h=>h.includes(k)); if(i>=0) return i; } return -1; };
+    const iName    = col("name","계정");
+    const iTier    = col("tier","티어");
+    const iFollow  = col("follow","팔로워");
+    const iPlatform= col("platform","플랫폼");
+    const iProduct = col("product","제품","상품");
+    const iSent    = col("sent","발송");
+    const iPosted  = col("posted","게시");
+    const iPostedD = col("posteddate","게시일");
+    const iReach   = col("reach","도달");
+    const iSaves   = col("saves","저장");
+    const iClicks  = col("clicks","클릭");
+    const iConv    = col("conv","전환");
+    const iVideo   = col("videoreceived","영상수령","영상");
+    const iReusable= col("reusable","2차활용","재활용");
+    const iMeta    = col("metaused","메타활용","메타");
+    const bool = v => v&&(v.toLowerCase()==="true"||v==="1"||v==="TRUE"||v==="yes");
+    return lines.slice(hIdx+1).filter(l=>l.some(c=>c)).map((row,ri)=>{
+      const g = i => i>=0?(row[i]||"").trim():"";
+      const n = i => parseInt((row[i]||"").replace(/,/g,""))||null;
+      const name = g(iName); if(!name) return null;
+      return {
+        id:            Date.now()+ri,
+        name,
+        tier:          g(iTier)||"마이크로",
+        followers:     g(iFollow)||"—",
+        platform:      g(iPlatform)||"인스타",
+        product:       g(iProduct)||"",
+        sent:          parseInt(g(iSent))||0,
+        posted:        parseInt(g(iPosted))||0,
+        postedDate:    g(iPostedD)||null,
+        reach:         n(iReach),
+        saves:         n(iSaves),
+        clicks:        n(iClicks),
+        conv:          n(iConv),
+        videoReceived: bool(g(iVideo)),
+        reusable:      bool(g(iReusable)),
+        metaUsed:      bool(g(iMeta)),
+      };
+    }).filter(Boolean);
+  }
+
+  // 인플루언서 URL 로드시 자동 fetch
+  useEffect(()=>{
+    if(infUrlLoaded && infUrl) fetchInfSheet(infUrl);
+  },[infUrl, infUrlLoaded]);
 
   // ── 메타 데이터 집계 ─────────────────────────────
   const hasSheet = metaStatus==="ok" && metaRaw.length>0;
@@ -1685,6 +1775,54 @@ export default function OaDashboard(){
     ].filter(d=>d.value>0);
     return(
     <div style={{display:"flex",flexDirection:"column",gap:14}}>
+
+      {/* 구글 시트 연동 배너 */}
+      <div style={{
+        background: infSheetStatus==="ok" ? "#EDF7F1" : C.goldLt,
+        border:`1px solid ${infSheetStatus==="ok"?C.good+"55":C.gold+"66"}`,
+        borderRadius:12,padding:"12px 16px",
+        display:"flex",alignItems:"center",justifyContent:"space-between",gap:10,flexWrap:"wrap",
+      }}>
+        <div style={{display:"flex",alignItems:"center",gap:10}}>
+          <span style={{fontSize:20}}>{infSheetStatus==="ok"?"🟢":"📋"}</span>
+          <div>
+            {infSheetStatus==="ok"
+              ? <><div style={{fontSize:12,fontWeight:800,color:C.good}}>구글 시트 연결됨 · {infs.length}명 로드</div>
+                  <div style={{fontSize:10,color:C.inkMid,marginTop:1}}>시트 변경 시 자동 반영</div></>
+              : infSheetStatus==="loading"
+              ? <div style={{fontSize:12,fontWeight:700,color:C.gold}}>⏳ 불러오는 중...</div>
+              : infSheetStatus==="error"
+              ? <div style={{fontSize:12,fontWeight:800,color:C.bad}}>연결 실패 — 시트 공유 설정을 확인하세요</div>
+              : <><div style={{fontSize:12,fontWeight:800,color:C.gold}}>구글 시트 연결하면 인플루언서 데이터가 자동 동기화돼요</div>
+                  <div style={{fontSize:10,color:C.inkMid,marginTop:1}}>name · tier · platform · product · reach · saves · clicks · conv 등</div></>
+            }
+          </div>
+        </div>
+        <div style={{display:"flex",gap:6}}>
+          {infSheetStatus==="ok"&&<Btn variant="sage" small onClick={()=>fetchInfSheet(infUrl)}>🔄 새로고침</Btn>}
+          <Btn variant={infSheetStatus==="ok"?"neutral":"gold"} small onClick={()=>{setInfUrlInput(infUrl);setInfUrlModal(true)}}>
+            {infSheetStatus==="ok"?"⚙️ 시트 변경":"🔗 시트 연결"}
+          </Btn>
+        </div>
+      </div>
+
+      {/* 시트 URL 입력 모달 */}
+      {infUrlModal&&(
+        <Modal title="📋 인플루언서 시트 연결" onClose={()=>setInfUrlModal(false)}>
+          <div style={{background:C.cream,borderRadius:10,padding:"14px",marginBottom:16,fontSize:11,color:C.inkMid,lineHeight:1.7}}>
+            <b style={{color:C.ink}}>시트 컬럼 순서 (1행 헤더 필수)</b><br/>
+            name · tier · followers · platform · product · sent · posted · postedDate · reach · saves · clicks · conv · videoReceived · reusable · metaUsed
+          </div>
+          <FR label="구글 시트 URL">
+            <Inp value={infUrlInput} onChange={v=>setInfUrlInput(v)} placeholder="https://docs.google.com/spreadsheets/d/..."/>
+          </FR>
+          <div style={{display:"flex",gap:8,marginTop:4}}>
+            <Btn onClick={()=>{setInfUrl(infUrlInput);setInfUrlModal(false);fetchInfSheet(infUrlInput);}} style={{flex:1}}>🔗 연결</Btn>
+            {infUrl&&<Btn variant="danger" onClick={()=>{setInfUrl("");setInfSheetStatus("idle");setInfUrlModal(false);}}>연결 해제</Btn>}
+          </div>
+        </Modal>
+      )}
+
       {overdueIns.length>0&&(
         <div style={{background:"#FFFBF0",border:`2px solid ${C.warn}66`,borderRadius:14,
           padding:"12px 16px",display:"flex",alignItems:"center",gap:12,flexWrap:"wrap"}}>
