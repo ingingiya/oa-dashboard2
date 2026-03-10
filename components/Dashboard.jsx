@@ -854,8 +854,8 @@ export default function OaDashboard(){
     const parseDate = raw => {
       if(!raw) return null;
       if(raw.match(/^\d{4}-\d{2}-\d{2}$/)) return raw;
-      if(raw.match(/^\d{1,2}\/\d{1,2}$/)){
-        const [m,d] = raw.split("/");
+      if(raw.match(/^\d{1,2}[\/\.]\d{1,2}$/)){
+        const [m,d] = raw.split(/[\/\.]/); 
         return `2026-${m.padStart(2,"0")}-${d.padStart(2,"0")}`;
       }
       return null;
