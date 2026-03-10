@@ -856,7 +856,7 @@ export default function OaDashboard(){
       if(raw.match(/^\d{4}-\d{2}-\d{2}$/)) return raw;
       if(raw.match(/^\d{1,2}\/\d{1,2}$/)){
         const [m,d] = raw.split("/");
-        return `2025-${m.padStart(2,"0")}-${d.padStart(2,"0")}`;
+        return `2026-${m.padStart(2,"0")}-${d.padStart(2,"0")}`;
       }
       return null;
     };
@@ -869,7 +869,7 @@ export default function OaDashboard(){
 
       const product  = g(iProduct);
       const noteRaw  = [g(iNote), g(iExtend)].filter(Boolean).join(" / ");
-      const tier     = product.includes("유료") ? "유료" : "무료";
+      const tier = /\d+만원|\d+,\d{3}원/.test(noteRaw) ? "유료" : "무료";
       const reusable = noteRaw.includes("2차활용")||noteRaw.includes("2차 활용");
       const confirmed = bool(g(iConfirm));
 
