@@ -854,13 +854,16 @@ export default function OaDashboard(){
     const parseDate = raw => {
       if(!raw) return null;
       if(raw.match(/^\d{4}-\d{2}-\d{2}$/)) return raw;
-      if(raw.match(/^\d{1,2}[\/\.]\d{1,2}$/)){
-        const [m,d] = raw.split(/[\/\.]/); 
+      if(raw.match(/^\d{4}[\.\/]\d{1,2}[\.\/]\d{1,2}$/)){
+        const [y,m,d] = raw.split(/[\.\/]/);
+        return `${y}-${m.padStart(2,"0")}-${d.padStart(2,"0")}`;
+      }
+      if(raw.match(/^\d{1,2}[\.\/]\d{1,2}$/)){
+        const [m,d] = raw.split(/[\.\/]/);
         return `2026-${m.padStart(2,"0")}-${d.padStart(2,"0")}`;
       }
       return null;
     };
-
     return lines.slice(hIdx+1).filter(l=>l.some(c=>c)).map((row,ri)=>{
       const g = i => i>=0?(row[i]||"").trim():"";
       const handle = g(iHandle)||g(iName);
