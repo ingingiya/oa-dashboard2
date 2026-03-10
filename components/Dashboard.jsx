@@ -788,19 +788,19 @@ export default function OaDashboard(){
     ));
 
     // M/D 또는 YYYY-MM-DD 날짜 파싱
-    const parseDate = raw => {
-      if(!raw) return null;
-      if(raw.match(/^\d{4}-\d{2}-\d{2}$/)) return raw;
-      if(raw.match(/^\d{4}[\.\/]\d{1,2}[\.\/]\d{1,2}$/)){
-        const [y,m,d] = raw.split(/[\.\/]/);
-        return `${y}-${m.padStart(2,"0")}-${d.padStart(2,"0")}`;
-      }
-      if(raw.match(/^\d{1,2}[\.\/]\d{1,2}$/)){
-        const [m,d] = raw.split(/[\.\/]/);
-        return `2026-${m.padStart(2,"0")}-${d.padStart(2,"0")}`;
-      }
-      return null;
-    };
+     const parseDate = raw => {
+       if(!raw) return null;
+       const s = raw.trim();
+       // YYYY-MM-DD
+       if(s.match(/^\d{4}-\d{2}-\d{2}$/)) return s;
+       // YYYY. M. D 또는 YYYY.MM.DD 또는 YYYY/MM/DD (공백 포함)
+       const m1 = s.match(/^(\d{4})[\.\/]\s*(\d{1,2})[\.\/]\s*(\d{1,2})\.?$/);
+       if(m1) return `${m1[1]}-${m1[2].padStart(2,"0")}-${m1[3].padStart(2,"0")}`;
+       // M.D 또는 M/D
+       const m2 = s.match(/^(\d{1,2})[\.\/](\d{1,2})$/);
+       if(m2) return `2026-${m2[1].padStart(2,"0")}-${m2[2].padStart(2,"0")}`;
+       return null;
+     };
     return lines.slice(hIdx+1).filter(l=>l.some(c=>c)).map((row,ri)=>{
       const g = i => i>=0?(row[i]||"").trim():"";
       const handle = g(iHandle)||g(iName);
