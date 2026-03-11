@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
+import { getSetting, setSetting, getAdImages, saveAdImagesMeta, uploadAdImage } from "../lib/useSupabase";
 import {
   AreaChart, Area, BarChart, Bar, LineChart, Line,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell
@@ -18,6 +19,31 @@ const C = {
   good:"#4DAD7A", warn:"#E8A020", bad:"#E84B4B",
   purple:"#9B6FC7", purpleLt:"#F0E8FA",
 };
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 썸네일 hover 프리뷰
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function ThumbPreview({ url, name }) {
+  const [pos, setPos] = useState(null);
+  if (!url) return null;
+  return (
+    <span style={{position:"relative",display:"inline-block",verticalAlign:"middle",marginRight:6}}>
+      <img src={url} alt={name}
+        style={{width:22,height:22,borderRadius:4,objectFit:"cover",cursor:"pointer",border:"1px solid #EDE0E8"}}
+        onMouseEnter={e=>{const r=e.target.getBoundingClientRect();setPos({x:r.right+8,y:r.top});}}
+        onMouseMove={e=>setPos({x:e.clientX+12,y:e.clientY-130})}
+        onMouseLeave={()=>setPos(null)}
+      />
+      {pos&&(
+        <div style={{position:"fixed",left:pos.x,top:pos.y,zIndex:9999,pointerEvents:"none",
+          boxShadow:"0 8px 32px rgba(43,31,46,0.18)",borderRadius:12,overflow:"hidden",border:"2px solid #EDE0E8"}}>
+          <img src={url} alt={name} style={{width:260,height:260,objectFit:"cover",display:"block"}}/>
+          <div style={{padding:"6px 10px",background:"#fff",fontSize:10,color:"#6B576F",fontWeight:700}}>{name}</div>
+        </div>
+      )}
+    </span>
+  );
+}
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // 기본 로컬 데이터
@@ -534,6 +560,29 @@ export default function OaDashboard(){
   const [sheetModal,setSheetModal]   = useState(false);
   const [sheetInput,setSheetInput]   = useState("");
   const [deletedAds,setDeletedAds]   = useState(()=>{try{return JSON.parse(localStorage.getItem("oa_deleted_ads")||"[]");}catch{return [];}}); // 삭제된 광고명 목록
+  const [adImages, setAdImages]       = useState([]);
+  const [imgUploading, setImgUploading] = useState(false);
+  const [hoverImg, setHoverImg]       = useState(null);
+  const fileInputRef                  = useRef(null);
+
+  useEffect(() => {
+    getAdImages().then(imgs => { if (imgs?.length) setAdImages(imgs); }).catch(() => {});
+  }, []);
+
+  async function handleAdImageUpload(files) {
+    setImgUploading(true);
+    try {
+      const newImgs = [...adImages];
+      for (const file of Array.from(files)) {
+        const baseName = file.name.replace(/\.[^.]+$/, "");
+        const { url, path } = await uploadAdImage(file, baseName);
+        newImgs.push({ id: Date.now() + Math.random(), name: baseName, url, path });
+      }
+      setAdImages(newImgs);
+      await saveAdImagesMeta(newImgs);
+    } catch(e) { console.error(e); }
+    setImgUploading(false);
+  }
 
   // 모달
 
@@ -1491,9 +1540,46 @@ export default function OaDashboard(){
 
         <KpiGrid items={metaKpi} cols={6}/>
 
+        {/* 광고 소재 이미지 업로드 */}
+        <div style={{background:C.white,border:`1px solid ${C.border}`,borderRadius:12,padding:"14px 16px"}}>
+          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:10}}>
+            <div style={{fontWeight:800,fontSize:12,color:C.ink}}>🖼️ 광고 소재 이미지</div>
+            <div style={{display:"flex",gap:6,alignItems:"center"}}>
+              {imgUploading&&<span style={{fontSize:10,color:C.inkLt}}>업로드 중...</span>}
+              <input ref={fileInputRef} type="file" accept="image/*" multiple style={{display:"none"}}
+                onChange={e=>handleAdImageUpload(e.target.files)}/>
+              <button onClick={()=>fileInputRef.current?.click()}
+                style={{fontSize:10,fontWeight:700,padding:"5px 12px",borderRadius:8,border:`1px solid ${C.border}`,
+                  background:C.cream,cursor:"pointer",color:C.ink}}>
+                + 이미지 추가
+              </button>
+            </div>
+          </div>
+          {adImages.length===0?(
+            <div style={{fontSize:11,color:C.inkLt,textAlign:"center",padding:"12px 0"}}>
+              이미지를 업로드하면 광고명과 자동 매칭됩니다
+            </div>
+          ):(
+            <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+              {adImages.map((img,i)=>(
+                <div key={i} style={{position:"relative",display:"inline-block"}}>
+                  <ThumbPreview url={img.url} name={img.name}/>
+                  <button onClick={async()=>{
+                    const next=adImages.filter((_,j)=>j!==i);
+                    setAdImages(next);
+                    await saveAdImagesMeta(next);
+                  }} style={{position:"absolute",top:-4,right:-4,width:14,height:14,borderRadius:"50%",
+                    background:C.bad,color:"#fff",border:"none",cursor:"pointer",fontSize:8,
+                    display:"flex",alignItems:"center",justifyContent:"center",lineHeight:1}}>✕</button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
         {/* 탭 */}
         <div style={{display:"flex",gap:6,overflowX:"auto",paddingBottom:2}}>
-          {[{id:"overview",label:"📈 추이"},{id:"campaign",label:"📣 캠페인"}].map(t=>(
+          {[{id:"overview",label:"📈 추이"},{id:"campaign",label:"📣 캠페인"},{id:"weekly",label:"📅 주별"},{id:"monthly",label:"🗓️ 월별"},{id:"product",label:"📦 제품별"}].map(t=>(
             <button key={t.id} onClick={()=>setMetaTab(t.id)} style={{
               padding:"6px 16px",borderRadius:8,cursor:"pointer",border:`1px solid ${metaTab===t.id?C.rose:C.border}`,
               background:metaTab===t.id?C.blush:C.white,color:metaTab===t.id?C.rose:C.inkMid,
@@ -1675,7 +1761,10 @@ export default function OaDashboard(){
                               onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
                               {/* 광고명 + 판단 뱃지 */}
                               <td style={{padding:"10px 8px",maxWidth:200}}>
-                                <div style={{fontWeight:700,color:C.ink,fontSize:11,wordBreak:"break-all",marginBottom:4}}>{c.name}</div>
+                                <div style={{fontWeight:700,color:C.ink,fontSize:11,wordBreak:"break-all",marginBottom:4}}>
+                                  {(()=>{const thumb=adImages.find(img=>img.name&&c.name&&c.name.includes(img.name));return thumb?<ThumbPreview url={thumb.url} name={thumb.name}/>:null;})()}
+                                  {c.name}
+                                </div>
                                 {(()=>{
                                   const adObj={spend:c.spend,clicks:c.clicks,lpv:c.lpv,purchases:c.purchases,impressions:c.impressions||0,clicksAll:c.clicks};
                                   const lpvC=lpvCostStatus(c.spend,c.lpv);
@@ -1754,6 +1843,180 @@ export default function OaDashboard(){
                 );
               })()}
             </>)}
+          </div>
+        )}
+
+        {/* 주별 탭 */}
+        {metaTab==="weekly"&&(
+          <div style={{display:"flex",flexDirection:"column",gap:14}}>
+            {!hasSheet?(
+              <div style={{textAlign:"center",padding:"40px 0",color:C.inkLt}}>
+                <div style={{fontSize:36,marginBottom:10}}>📅</div>
+                <div style={{fontSize:13,fontWeight:700,color:C.inkMid}}>시트 연결 후 주별 데이터가 표시됩니다</div>
+              </div>
+            ):(()=>{
+              // 주차별 집계
+              const weekMap = {};
+              metaRaw.forEach(r=>{
+                if(!r.date) return;
+                const d = new Date(r.date);
+                const day = d.getDay();
+                const monday = new Date(d); monday.setDate(d.getDate()-(day===0?6:day-1));
+                const wk = monday.toISOString().slice(0,10);
+                if(!weekMap[wk]) weekMap[wk]={week:wk,spend:0,clicks:0,lpv:0,purchases:0,convValue:0};
+                weekMap[wk].spend+=(r.spend||0);
+                weekMap[wk].clicks+=(r.clicks||0);
+                weekMap[wk].lpv+=(r.lpv||0);
+                weekMap[wk].purchases+=(r.purchases||0);
+                weekMap[wk].convValue+=(r.convValue||0);
+              });
+              const weeks = Object.values(weekMap).sort((a,b)=>a.week.localeCompare(b.week));
+              return(
+                <Card>
+                  <CardTitle title="📅 주별 성과" sub="주차별 광고비·구매·ROAS"/>
+                  <div style={{overflowX:"auto"}}>
+                    <table style={{width:"100%",borderCollapse:"collapse",fontSize:11}}>
+                      <thead><tr style={{borderBottom:`2px solid ${C.border}`}}>
+                        {["주차","광고비","클릭","LPV","구매","ROAS"].map((h,i)=>(
+                          <th key={i} style={{padding:"8px",textAlign:i===0?"left":"right",color:C.inkLt,fontWeight:700,fontSize:9}}>{h}</th>
+                        ))}
+                      </tr></thead>
+                      <tbody>{weeks.map((w,i)=>{
+                        const roas=w.spend>0?(w.convValue/w.spend).toFixed(2):0;
+                        return(<tr key={i} style={{borderBottom:`1px solid ${C.border}`}}
+                          onMouseEnter={e=>e.currentTarget.style.background=C.cream}
+                          onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
+                          <td style={{padding:"10px 8px",fontWeight:700,color:C.ink}}>{w.week}</td>
+                          <td style={{padding:"10px 8px",textAlign:"right",color:C.rose,fontWeight:700}}>₩{Math.round(w.spend/1000).toLocaleString()}K</td>
+                          <td style={{padding:"10px 8px",textAlign:"right",color:C.inkMid}}>{w.clicks.toLocaleString()}</td>
+                          <td style={{padding:"10px 8px",textAlign:"right",color:C.sage}}>{w.lpv.toLocaleString()}</td>
+                          <td style={{padding:"10px 8px",textAlign:"right",color:C.good,fontWeight:700}}>{w.purchases}</td>
+                          <td style={{padding:"10px 8px",textAlign:"right"}}>
+                            <span style={{fontWeight:800,fontSize:11,color:roas>=3?C.good:C.warn,background:roas>=3?"#EDF7F1":"#FFF8EC",padding:"2px 7px",borderRadius:20}}>{roas}x</span>
+                          </td>
+                        </tr>);
+                      })}</tbody>
+                    </table>
+                  </div>
+                </Card>
+              );
+            })()}
+          </div>
+        )}
+
+        {/* 월별 탭 */}
+        {metaTab==="monthly"&&(
+          <div style={{display:"flex",flexDirection:"column",gap:14}}>
+            {!hasSheet?(
+              <div style={{textAlign:"center",padding:"40px 0",color:C.inkLt}}>
+                <div style={{fontSize:36,marginBottom:10}}>🗓️</div>
+                <div style={{fontSize:13,fontWeight:700,color:C.inkMid}}>시트 연결 후 월별 데이터가 표시됩니다</div>
+              </div>
+            ):(()=>{
+              const monthMap = {};
+              metaRaw.forEach(r=>{
+                if(!r.date) return;
+                const m = r.date.slice(0,7);
+                if(!monthMap[m]) monthMap[m]={month:m,spend:0,clicks:0,lpv:0,purchases:0,convValue:0};
+                monthMap[m].spend+=(r.spend||0);
+                monthMap[m].clicks+=(r.clicks||0);
+                monthMap[m].lpv+=(r.lpv||0);
+                monthMap[m].purchases+=(r.purchases||0);
+                monthMap[m].convValue+=(r.convValue||0);
+              });
+              const months = Object.values(monthMap).sort((a,b)=>a.month.localeCompare(b.month));
+              return(
+                <Card>
+                  <CardTitle title="🗓️ 월별 성과" sub="월별 광고비·구매·ROAS"/>
+                  <div style={{overflowX:"auto"}}>
+                    <table style={{width:"100%",borderCollapse:"collapse",fontSize:11}}>
+                      <thead><tr style={{borderBottom:`2px solid ${C.border}`}}>
+                        {["월","광고비","클릭","LPV","구매","전환값","ROAS"].map((h,i)=>(
+                          <th key={i} style={{padding:"8px",textAlign:i===0?"left":"right",color:C.inkLt,fontWeight:700,fontSize:9}}>{h}</th>
+                        ))}
+                      </tr></thead>
+                      <tbody>{months.map((m,i)=>{
+                        const roas=m.spend>0?(m.convValue/m.spend).toFixed(2):0;
+                        return(<tr key={i} style={{borderBottom:`1px solid ${C.border}`}}
+                          onMouseEnter={e=>e.currentTarget.style.background=C.cream}
+                          onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
+                          <td style={{padding:"10px 8px",fontWeight:800,color:C.ink,fontSize:13}}>{m.month}</td>
+                          <td style={{padding:"10px 8px",textAlign:"right",color:C.rose,fontWeight:700}}>₩{Math.round(m.spend/1000).toLocaleString()}K</td>
+                          <td style={{padding:"10px 8px",textAlign:"right",color:C.inkMid}}>{m.clicks.toLocaleString()}</td>
+                          <td style={{padding:"10px 8px",textAlign:"right",color:C.sage}}>{m.lpv.toLocaleString()}</td>
+                          <td style={{padding:"10px 8px",textAlign:"right",color:C.good,fontWeight:700}}>{m.purchases}</td>
+                          <td style={{padding:"10px 8px",textAlign:"right",color:C.purple}}>₩{Math.round(m.convValue/1000).toLocaleString()}K</td>
+                          <td style={{padding:"10px 8px",textAlign:"right"}}>
+                            <span style={{fontWeight:800,fontSize:11,color:roas>=3?C.good:C.warn,background:roas>=3?"#EDF7F1":"#FFF8EC",padding:"2px 7px",borderRadius:20}}>{roas}x</span>
+                          </td>
+                        </tr>);
+                      })}</tbody>
+                    </table>
+                  </div>
+                </Card>
+              );
+            })()}
+          </div>
+        )}
+
+        {/* 제품별 탭 */}
+        {metaTab==="product"&&(
+          <div style={{display:"flex",flexDirection:"column",gap:14}}>
+            {!hasSheet?(
+              <div style={{textAlign:"center",padding:"40px 0",color:C.inkLt}}>
+                <div style={{fontSize:36,marginBottom:10}}>📦</div>
+                <div style={{fontSize:13,fontWeight:700,color:C.inkMid}}>시트 연결 후 제품별 데이터가 표시됩니다</div>
+              </div>
+            ):(()=>{
+              // margins 키워드로 제품 분류
+              const productMap = {};
+              const PRODUCTS = margins.length>0 ? margins.map(m=>m.keyword) : ["프리온","소닉플로우","에어리소닉"];
+              metaRaw.forEach(r=>{
+                const name = (r.adName||r.campaign||"").toLowerCase();
+                let matched = "기타";
+                PRODUCTS.forEach(p=>{ if(name.includes(p.toLowerCase())) matched=p; });
+                if(!productMap[matched]) productMap[matched]={product:matched,spend:0,clicks:0,lpv:0,purchases:0,convValue:0,count:0};
+                productMap[matched].spend+=(r.spend||0);
+                productMap[matched].clicks+=(r.clicks||0);
+                productMap[matched].lpv+=(r.lpv||0);
+                productMap[matched].purchases+=(r.purchases||0);
+                productMap[matched].convValue+=(r.convValue||0);
+                productMap[matched].count++;
+              });
+              const products = Object.values(productMap).sort((a,b)=>b.spend-a.spend);
+              return(
+                <Card>
+                  <CardTitle title="📦 제품별 성과" sub="광고명 키워드 기준 자동 분류"/>
+                  <div style={{overflowX:"auto"}}>
+                    <table style={{width:"100%",borderCollapse:"collapse",fontSize:11}}>
+                      <thead><tr style={{borderBottom:`2px solid ${C.border}`}}>
+                        {["제품","광고수","광고비","구매","CPA","ROAS"].map((h,i)=>(
+                          <th key={i} style={{padding:"8px",textAlign:i===0?"left":"right",color:C.inkLt,fontWeight:700,fontSize:9}}>{h}</th>
+                        ))}
+                      </tr></thead>
+                      <tbody>{products.map((p,i)=>{
+                        const cpa=p.purchases>0?Math.round(p.spend/p.purchases):0;
+                        const roas=p.spend>0?(p.convValue/p.spend).toFixed(2):0;
+                        return(<tr key={i} style={{borderBottom:`1px solid ${C.border}`}}
+                          onMouseEnter={e=>e.currentTarget.style.background=C.cream}
+                          onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
+                          <td style={{padding:"10px 8px",fontWeight:800,color:C.ink}}>{p.product}</td>
+                          <td style={{padding:"10px 8px",textAlign:"right",color:C.inkMid}}>{p.count}</td>
+                          <td style={{padding:"10px 8px",textAlign:"right",color:C.rose,fontWeight:700}}>₩{Math.round(p.spend/1000).toLocaleString()}K</td>
+                          <td style={{padding:"10px 8px",textAlign:"right",color:C.good,fontWeight:700}}>{p.purchases}</td>
+                          <td style={{padding:"10px 8px",textAlign:"right"}}>
+                            {cpa>0?<span style={{fontWeight:800,fontSize:11,color:cpa<=16000?C.good:C.bad,background:cpa<=16000?"#EDF7F1":"#FEF0F0",padding:"2px 7px",borderRadius:20}}>₩{cpa.toLocaleString()}</span>:<span style={{color:C.inkLt}}>—</span>}
+                          </td>
+                          <td style={{padding:"10px 8px",textAlign:"right"}}>
+                            <span style={{fontWeight:800,fontSize:11,color:roas>=3?C.good:C.warn,background:roas>=3?"#EDF7F1":"#FFF8EC",padding:"2px 7px",borderRadius:20}}>{roas}x</span>
+                          </td>
+                        </tr>);
+                      })}</tbody>
+                    </table>
+                  </div>
+                </Card>
+              );
+            })()}
           </div>
         )}
 
