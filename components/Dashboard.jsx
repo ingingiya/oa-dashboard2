@@ -292,6 +292,13 @@ function isConversionCampaign(objective, campaignName=""){
 const Card=({children,style={}})=>(
   <div style={{background:C.white,border:`1px solid ${C.border}`,borderRadius:14,padding:"18px 16px",...style}}>{children}</div>
 );
+const MoreBtn=({show,total,limit,onClick})=>(
+  <button onClick={onClick} style={{width:"100%",marginTop:8,padding:"6px",borderRadius:8,
+    border:`1px solid ${C.border}`,background:"transparent",cursor:"pointer",
+    fontSize:11,fontWeight:700,color:C.inkMid,fontFamily:"inherit"}}>
+    {show?`▲ 접기`:`▼ 더보기 (${total-limit}개 더)`}
+  </button>
+);
 const CardTitle=({title,sub,action})=>(
   <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:14}}>
     <div>
@@ -1039,7 +1046,13 @@ export default function OaDashboard(){
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   // 🏠 홈
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  const HomeSection=()=>(
+  const HomeSection=()=>{
+    const [showAll, setShowAll] = useState(false);
+    const [expanded, setExpanded] = useState({});
+    const toggle = (key) => setExpanded(v=>({...v,[key]:!v[key]}));
+    const isOpen = (key) => !!expanded[key];
+    const LIMIT = 3;
+    return(
     <div style={{display:"flex",flexDirection:"column",gap:14}}>
       <div style={{background:`linear-gradient(135deg,${C.rose},${C.roseLt})`,borderRadius:16,padding:"20px",
         color:C.white,boxShadow:`0 8px 28px ${C.rose}44`}}>
@@ -1061,8 +1074,9 @@ export default function OaDashboard(){
       <div className="alert-grid" style={{display:"grid",gridTemplateColumns:"1fr",gap:14}}>
       {dangerInv.length>0&&(
         <Card>
-          <CardTitle title="🚨 재고 위험 — 즉시 발주 필요" sub="7일치 미만"/>
-          {dangerInv.map(item=>(
+          <CardTitle title="🚨 재고 위험 — 즉시 발주 필요" sub="7일치 미만"
+            action={<Btn variant="ghost" small onClick={()=>toggle("danger")}>{isOpen("danger")?"접기 ▲":"펼치기 ▼"}</Btn>}/>
+          {isOpen("danger")&&(showAll?dangerInv:dangerInv.slice(0,LIMIT)).map(item=>(
             <div key={item.id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",
               background:"#FEF0F0",border:`1px solid ${C.bad}33`,borderRadius:10,padding:"10px 14px",
               marginBottom:6,flexWrap:"wrap",gap:8}}>
@@ -1079,13 +1093,15 @@ export default function OaDashboard(){
               </div>
             </div>
           ))}
+          {isOpen("danger")&&dangerInv.length>LIMIT&&<MoreBtn show={showAll} total={dangerInv.length} limit={LIMIT} onClick={()=>setShowAll(v=>!v)}/>}
         </Card>
       )}
 
       {cautionInv.length>0&&(
         <Card>
-          <CardTitle title="⚠️ 재고 주의 — 발주 검토" sub="21일치 미만"/>
-          {cautionInv.map(item=>(
+          <CardTitle title="⚠️ 재고 주의 — 발주 검토" sub="21일치 미만"
+            action={<Btn variant="ghost" small onClick={()=>toggle("caution")}>{isOpen("caution")?"접기 ▲":"펼치기 ▼"}</Btn>}/>
+          {isOpen("caution")&&(showAll?cautionInv:cautionInv.slice(0,LIMIT)).map(item=>(
             <div key={item.id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",
               background:"#FFF8EC",border:`1px solid ${C.warn}33`,borderRadius:10,padding:"10px 14px",marginBottom:6,flexWrap:"wrap",gap:8}}>
               <div>
@@ -1095,6 +1111,7 @@ export default function OaDashboard(){
               <Btn variant="neutral" small onClick={()=>setSec("inventory")}>→ 재고</Btn>
             </div>
           ))}
+          {isOpen("caution")&&cautionInv.length>LIMIT&&<MoreBtn show={showAll} total={cautionInv.length} limit={LIMIT} onClick={()=>setShowAll(v=>!v)}/>}
         </Card>
       )}
       </div>
@@ -1102,8 +1119,9 @@ export default function OaDashboard(){
       <div className="alert-grid" style={{display:"grid",gridTemplateColumns:"1fr",gap:14}}>
       {overdueIns.length>0&&(
         <Card>
-          <CardTitle title="❗ 인사이트 미입력" sub="D+7 기록 기한 초과"/>
-          {overdueIns.map(f=>{
+          <CardTitle title="❗ 인사이트 미입력" sub="D+7 기록 기한 초과"
+            action={<Btn variant="ghost" small onClick={()=>toggle("ins")}>{isOpen("ins")?"접기 ▲":"펼치기 ▼"}</Btn>}/>
+          {isOpen("ins")&&(showAll?overdueIns:overdueIns.slice(0,LIMIT)).map(f=>{
             const st=insightStatus(f);
             return(
               <div key={f.id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",
@@ -1121,13 +1139,15 @@ export default function OaDashboard(){
               </div>
             );
           })}
+          {overdueIns.length>LIMIT&&isOpen("ins")&&<MoreBtn show={showAll} total={overdueIns.length} limit={LIMIT} onClick={()=>setShowAll(v=>!v)}/>}
         </Card>
       )}
 
       {overdueScheds.length>0&&(
         <Card>
-          <CardTitle title="📅 기간 초과 일정" sub="종료일 경과 · 미완료 처리"/>
-          {overdueScheds.map(s=>{
+          <CardTitle title="📅 기간 초과 일정" sub="종료일 경과 · 미완료 처리"
+            action={<Btn variant="ghost" small onClick={()=>toggle("sched")}>{isOpen("sched")?"접기 ▲":"펼치기 ▼"}</Btn>}/>
+          {isOpen("sched")&&(showAll?overdueScheds:overdueScheds.slice(0,LIMIT)).map(s=>{
             const tc=schTypeColor(s.type);
             return(
               <div key={s.id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",
@@ -1146,13 +1166,15 @@ export default function OaDashboard(){
               </div>
             );
           })}
+          {overdueScheds.length>LIMIT&&isOpen("sched")&&<MoreBtn show={showAll} total={overdueScheds.length} limit={LIMIT} onClick={()=>setShowAll(v=>!v)}/>}
         </Card>
       )}
 
       {urgentScheds.length>0&&(
         <Card>
-          <CardTitle title="🔔 D-5 임박 일정" sub="5일 이내 시작"/>
-          {urgentScheds.sort((a,b)=>new Date(a.date)-new Date(b.date)).map(s=>{
+          <CardTitle title="🔔 D-5 임박 일정" sub="5일 이내 시작"
+            action={<Btn variant="ghost" small onClick={()=>toggle("urgent")}>{isOpen("urgent")?"접기 ▲":"펼치기 ▼"}</Btn>}/>
+          {isOpen("urgent")&&(showAll?urgentScheds:urgentScheds.slice(0,LIMIT)).sort((a,b)=>new Date(a.date)-new Date(b.date)).map(s=>{
             const d=daysUntil(s.date), tc=schTypeColor(s.type);
             return(
               <div key={s.id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",
@@ -1176,6 +1198,7 @@ export default function OaDashboard(){
               </div>
             );
           })}
+          {urgentScheds.length>LIMIT&&isOpen("urgent")&&<MoreBtn show={showAll} total={urgentScheds.length} limit={LIMIT} onClick={()=>setShowAll(v=>!v)}/>}
         </Card>
       )}
 
@@ -1185,8 +1208,8 @@ export default function OaDashboard(){
       {cutAds.length>0&&(
         <Card>
           <CardTitle title="🔴 광고 교체 필요" sub="컷 기준 초과 — 즉시 검토"
-            action={<Btn variant="ghost" small onClick={()=>{setMarginInput(String(margin));setMarginModal(true)}}>⚙️ 마진 설정</Btn>}/>
-          {cutAds.map((ad,i)=>{
+            action={<div style={{display:"flex",gap:6}}><Btn variant="ghost" small onClick={()=>{setMarginInput(String(margin));setMarginModal(true)}}>⚙️ 마진 설정</Btn><Btn variant="ghost" small onClick={()=>toggle("cut")}>{isOpen("cut")?"접기 ▲":"펼치기 ▼"}</Btn></div>}/>
+          {isOpen("cut")&&(showAll?cutAds:cutAds.slice(0,LIMIT)).map((ad,i)=>{
             const adMargin = getAdMargin(ad.name, ad.campaign, margins, margin);
             const s=adScore(ad, adMargin);
             return(
@@ -1226,14 +1249,16 @@ export default function OaDashboard(){
               </div>
             );
           })}
+          {cutAds.length>LIMIT&&isOpen("cut")&&<MoreBtn show={showAll} total={cutAds.length} limit={LIMIT} onClick={()=>setShowAll(v=>!v)}/>}
         </Card>
       )}
 
       {/* 🟡 광고 보류 알림 */}
       {holdAds.length>0&&(
         <Card>
-          <CardTitle title="🟡 광고 보류 검토" sub="성과 주의 — 모니터링 필요"/>
-          {holdAds.map((ad,i)=>{
+          <CardTitle title="🟡 광고 보류 검토" sub="성과 주의 — 모니터링 필요"
+            action={<Btn variant="ghost" small onClick={()=>toggle("hold")}>{isOpen("hold")?"접기 ▲":"펼치기 ▼"}</Btn>}/>
+          {isOpen("hold")&&(showAll?holdAds:holdAds.slice(0,LIMIT)).map((ad,i)=>{
             const adMargin = getAdMargin(ad.name, ad.campaign, margins, margin);
             const s=adScore(ad, adMargin);
             return(
@@ -1269,6 +1294,7 @@ export default function OaDashboard(){
               </div>
             );
           })}
+          {holdAds.length>LIMIT&&isOpen("hold")&&<MoreBtn show={showAll} total={holdAds.length} limit={LIMIT} onClick={()=>setShowAll(v=>!v)}/>}
         </Card>
       )}
 
@@ -1487,7 +1513,7 @@ export default function OaDashboard(){
 
       {/* 인사이트 입력 모달 (홈에서도 접근) */}
     </div>
-  );
+  );};  // HomeSection 끝
 
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   // 📣 메타광고
