@@ -29,7 +29,7 @@ function ThumbPreview({ url, name }) {
   return (
     <span style={{position:"relative",display:"inline-block",verticalAlign:"middle",marginRight:6}}>
       <img src={url} alt={name}
-        style={{width:22,height:22,borderRadius:4,objectFit:"cover",cursor:"pointer",border:"1px solid #EDE0E8"}}
+        style={{width:40,height:40,borderRadius:6,objectFit:"cover",cursor:"pointer",border:"1px solid #EDE0E8"}}
         onMouseEnter={e=>{const r=e.target.getBoundingClientRect();setPos({x:r.right+8,y:r.top});}}
         onMouseMove={e=>setPos({x:e.clientX+12,y:e.clientY-130})}
         onMouseLeave={()=>setPos(null)}
@@ -37,7 +37,7 @@ function ThumbPreview({ url, name }) {
       {pos&&(
         <div style={{position:"fixed",left:pos.x,top:pos.y,zIndex:9999,pointerEvents:"none",
           boxShadow:"0 8px 32px rgba(43,31,46,0.18)",borderRadius:12,overflow:"hidden",border:"2px solid #EDE0E8"}}>
-          <img src={url} alt={name} style={{width:260,height:260,objectFit:"cover",display:"block"}}/>
+          <img src={url} alt={name} style={{width:320,height:320,objectFit:"cover",display:"block"}}/>
           <div style={{padding:"6px 10px",background:"#fff",fontSize:10,color:"#6B576F",fontWeight:700}}>{name}</div>
         </div>
       )}
@@ -570,6 +570,7 @@ export default function OaDashboard(){
   const [adImages, setAdImages]       = useState([]);
   const [imgUploading, setImgUploading] = useState(false);
   const [imgExpanded, setImgExpanded]  = useState(false);
+  const [homeShowAll, setHomeShowAll]  = useState(false);
   const [hoverImg, setHoverImg]       = useState(null);
   const fileInputRef                  = useRef(null);
 
@@ -1047,11 +1048,9 @@ export default function OaDashboard(){
   // 🏠 홈
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   const HomeSection=()=>{
-    const [showAll, setShowAll] = useState(false);
-    const [expanded, setExpanded] = useState({});
-    const toggle = (key) => setExpanded(v=>({...v,[key]:!v[key]}));
-    const isOpen = (key) => !!expanded[key];
-    const LIMIT = 3;
+    const showAll = homeShowAll;
+    const setShowAll = setHomeShowAll;
+    const LIMIT = 5;
     return(
     <div style={{display:"flex",flexDirection:"column",gap:14}}>
       <div style={{background:`linear-gradient(135deg,${C.rose},${C.roseLt})`,borderRadius:16,padding:"20px",
