@@ -11,13 +11,16 @@ import {
 // 팔레트
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 const C = {
-  rose:"#E8567A", roseLt:"#F2849E", blush:"#FCE8EE",
-  cream:"#FEF8F4", gold:"#C9924A", goldLt:"#F6E8D0",
-  sage:"#6BAA88", sageLt:"#E4F2EA",
-  ink:"#2B1F2E", inkMid:"#6B576F", inkLt:"#B09CB5",
-  white:"#FFFFFF", border:"#EDE0E8",
-  good:"#4DAD7A", warn:"#E8A020", bad:"#E84B4B",
-  purple:"#9B6FC7", purpleLt:"#F0E8FA",
+  // 토스 블루+화이트+그레이
+  rose:"#2563EB", roseLt:"#3B82F6", blush:"#EFF6FF",
+  cream:"#F8FAFC", gold:"#2563EB", goldLt:"#DBEAFE",
+  sage:"#16A34A", sageLt:"#F0FDF4",
+  ink:"#18181B", inkMid:"#52525B", inkLt:"#A1A1AA",
+  white:"#FFFFFF", border:"#E4E4E7",
+  good:"#16A34A", warn:"#EA580C", bad:"#DC2626",
+  purple:"#2563EB", purpleLt:"#EFF6FF",
+  // 배경
+  bg:"#F4F4F5",
 };
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -26,19 +29,35 @@ const C = {
 function ThumbPreview({ url, name }) {
   const [pos, setPos] = useState(null);
   if (!url) return null;
+  const isVideo = /\.(mp4|mov|webm|avi)$/i.test(url) || url.includes("video");
   return (
     <span style={{position:"relative",display:"inline-block",verticalAlign:"middle",marginRight:6}}>
-      <img src={url} alt={name}
-        style={{width:22,height:22,borderRadius:4,objectFit:"cover",cursor:"pointer",border:"1px solid #EDE0E8"}}
-        onMouseEnter={e=>{const r=e.target.getBoundingClientRect();setPos({x:r.right+8,y:r.top});}}
-        onMouseMove={e=>setPos({x:e.clientX+12,y:e.clientY-130})}
-        onMouseLeave={()=>setPos(null)}
-      />
+      {isVideo ? (
+        <div
+          style={{width:56,height:56,borderRadius:8,objectFit:"cover",cursor:"pointer",
+            border:"1px solid #E4E4E7",background:"#F4F4F5",display:"flex",alignItems:"center",
+            justifyContent:"center",fontSize:22}}
+          onMouseEnter={e=>{const r=e.currentTarget.getBoundingClientRect();setPos({x:r.right+8,y:r.top});}}
+          onMouseMove={e=>setPos({x:e.clientX+12,y:e.clientY-150})}
+          onMouseLeave={()=>setPos(null)}
+        >🎬</div>
+      ) : (
+        <img src={url} alt={name}
+          style={{width:56,height:56,borderRadius:8,objectFit:"cover",cursor:"pointer",border:"1px solid #E4E4E7"}}
+          onMouseEnter={e=>{const r=e.target.getBoundingClientRect();setPos({x:r.right+8,y:r.top});}}
+          onMouseMove={e=>setPos({x:e.clientX+12,y:e.clientY-150})}
+          onMouseLeave={()=>setPos(null)}
+        />
+      )}
       {pos&&(
         <div style={{position:"fixed",left:pos.x,top:pos.y,zIndex:9999,pointerEvents:"none",
-          boxShadow:"0 8px 32px rgba(43,31,46,0.18)",borderRadius:12,overflow:"hidden",border:"2px solid #EDE0E8"}}>
-          <img src={url} alt={name} style={{width:260,height:260,objectFit:"cover",display:"block"}}/>
-          <div style={{padding:"6px 10px",background:"#fff",fontSize:10,color:"#6B576F",fontWeight:700}}>{name}</div>
+          boxShadow:"0 8px 32px rgba(0,0,0,0.15)",borderRadius:12,overflow:"hidden",border:"1px solid #E4E4E7",background:"#fff"}}>
+          {isVideo ? (
+            <video src={url} style={{width:280,height:280,objectFit:"cover",display:"block"}} autoPlay muted loop playsInline/>
+          ) : (
+            <img src={url} alt={name} style={{width:280,height:280,objectFit:"cover",display:"block"}}/>
+          )}
+          <div style={{padding:"6px 10px",background:"#fff",fontSize:10,color:"#52525B",fontWeight:600}}>{name}</div>
         </div>
       )}
     </span>
@@ -574,13 +593,13 @@ export default function OaDashboard(){
     try {
       const newImgs = [...adImages];
       for (const file of Array.from(files)) {
-        const baseName = file.name.replace(/\.[^.]+$/, "");
-        const { url, path } = await uploadAdImage(file, baseName);
-        newImgs.push({ id: Date.now() + Math.random(), name: baseName, url, path });
+        const originalName = file.name.replace(/\.[^.]+$/, ""); // 원본 파일명 (한글 포함)
+        const { url, path } = await uploadAdImage(file, originalName);
+        newImgs.push({ id: Date.now() + Math.random(), name: originalName, url, path });
       }
       setAdImages(newImgs);
       await saveAdImagesMeta(newImgs);
-    } catch(e) { console.error(e); }
+    } catch(e) { console.error("업로드 에러:", e); }
     setImgUploading(false);
   }
 
@@ -1540,36 +1559,39 @@ export default function OaDashboard(){
 
         <KpiGrid items={metaKpi} cols={6}/>
 
-        {/* 광고 소재 이미지 업로드 */}
+        {/* 광고 소재 이미지/영상 업로드 */}
         <div style={{background:C.white,border:`1px solid ${C.border}`,borderRadius:12,padding:"14px 16px"}}>
-          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:10}}>
-            <div style={{fontWeight:800,fontSize:12,color:C.ink}}>🖼️ 광고 소재 이미지</div>
+          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12}}>
+            <div style={{fontWeight:700,fontSize:13,color:C.ink}}>🎬 광고 소재</div>
             <div style={{display:"flex",gap:6,alignItems:"center"}}>
               {imgUploading&&<span style={{fontSize:10,color:C.inkLt}}>업로드 중...</span>}
-              <input ref={fileInputRef} type="file" accept="image/*" multiple style={{display:"none"}}
+              <input ref={fileInputRef} type="file" accept="image/*,video/*" multiple style={{display:"none"}}
                 onChange={e=>handleAdImageUpload(e.target.files)}/>
               <button onClick={()=>fileInputRef.current?.click()}
-                style={{fontSize:10,fontWeight:700,padding:"5px 12px",borderRadius:8,border:`1px solid ${C.border}`,
-                  background:C.cream,cursor:"pointer",color:C.ink}}>
-                + 이미지 추가
+                style={{fontSize:11,fontWeight:600,padding:"5px 14px",borderRadius:8,border:`1px solid ${C.border}`,
+                  background:C.white,cursor:"pointer",color:C.rose,fontFamily:"inherit"}}>
+                + 소재 추가
               </button>
             </div>
           </div>
           {adImages.length===0?(
-            <div style={{fontSize:11,color:C.inkLt,textAlign:"center",padding:"12px 0"}}>
-              이미지를 업로드하면 광고명과 자동 매칭됩니다
+            <div style={{fontSize:11,color:C.inkLt,textAlign:"center",padding:"16px 0",
+              border:`1px dashed ${C.border}`,borderRadius:8}}>
+              이미지 또는 영상을 업로드하면 광고명과 자동 매칭됩니다
             </div>
           ):(
-            <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+            <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
               {adImages.map((img,i)=>(
-                <div key={i} style={{position:"relative",display:"inline-block"}}>
+                <div key={i} style={{position:"relative",display:"inline-flex",flexDirection:"column",alignItems:"center",gap:4}}>
                   <ThumbPreview url={img.url} name={img.name}/>
+                  <span style={{fontSize:9,color:C.inkMid,maxWidth:56,textAlign:"center",
+                    overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{img.name}</span>
                   <button onClick={async()=>{
                     const next=adImages.filter((_,j)=>j!==i);
                     setAdImages(next);
                     await saveAdImagesMeta(next);
-                  }} style={{position:"absolute",top:-4,right:-4,width:14,height:14,borderRadius:"50%",
-                    background:C.bad,color:"#fff",border:"none",cursor:"pointer",fontSize:8,
+                  }} style={{position:"absolute",top:-4,right:-4,width:16,height:16,borderRadius:"50%",
+                    background:C.bad,color:"#fff",border:"none",cursor:"pointer",fontSize:9,
                     display:"flex",alignItems:"center",justifyContent:"center",lineHeight:1}}>✕</button>
                 </div>
               ))}
@@ -1762,7 +1784,7 @@ export default function OaDashboard(){
                               {/* 광고명 + 판단 뱃지 */}
                               <td style={{padding:"10px 8px",maxWidth:200}}>
                                 <div style={{fontWeight:700,color:C.ink,fontSize:11,wordBreak:"break-all",marginBottom:4}}>
-                                  {(()=>{const thumb=adImages.find(img=>img.name&&c.name&&c.name.includes(img.name));return thumb?<ThumbPreview url={thumb.url} name={thumb.name}/>:null;})()}
+                                  {(()=>{const thumb=adImages.find(img=>img.name&&c.name&&(c.name.includes(img.name)||img.name.includes(c.name)));return thumb?<ThumbPreview url={thumb.url} name={thumb.name}/>:null;})()}
                                   {c.name}
                                 </div>
                                 {(()=>{
@@ -2650,7 +2672,7 @@ export default function OaDashboard(){
   // RENDER
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   return(
-    <div className="oa-layout" style={{background:C.cream,minHeight:"100vh",fontFamily:"'Noto Sans KR',sans-serif",color:C.ink}}>
+    <div className="oa-layout" style={{background:"#F4F4F5",minHeight:"100vh",fontFamily:"'Noto Sans KR',sans-serif",color:C.ink}}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;600;700;800;900&display=swap');
         *{box-sizing:border-box;margin:0;padding:0;} button{font-family:inherit;}
