@@ -571,6 +571,7 @@ export default function OaDashboard(){
   const [imgUploading, setImgUploading] = useState(false);
   const [imgExpanded, setImgExpanded]  = useState(false);
   const [homeShowAll, setHomeShowAll]  = useState(false);
+  const [homeExpanded, setHomeExpanded] = useState({danger:true,caution:true,ins:true,sched:true,urgent:true,cut:true,hold:true});
   const [hoverImg, setHoverImg]       = useState(null);
   const fileInputRef                  = useRef(null);
 
@@ -1050,6 +1051,8 @@ export default function OaDashboard(){
   const HomeSection=()=>{
     const showAll = homeShowAll;
     const setShowAll = setHomeShowAll;
+    const toggle = (key) => setHomeExpanded(v=>({...v,[key]:!v[key]}));
+    const isOpen = (key) => homeExpanded[key]!==false;
     const LIMIT = 5;
     return(
     <div style={{display:"flex",flexDirection:"column",gap:14}}>
