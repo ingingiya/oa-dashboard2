@@ -548,7 +548,6 @@ export default function OaDashboard(){
       {id:2, keyword:"프리온",     cpcMax:800},
     ],
   });
-  const [newCpcKeyword, setNewCpcKeyword] = useState("");
   const [newCpcVal, setNewCpcVal]         = useState("");
 
   const [marginModal, setMarginModal]= useState(false);
@@ -556,6 +555,12 @@ export default function OaDashboard(){
   const [editingMargin, setEditingMargin] = useState(null); // {id, keyword, margin}
   const [newKeyword, setNewKeyword]  = useState("");
   const [newMarginVal, setNewMarginVal] = useState("");
+  const [newCpcKeyword, setNewCpcKeyword] = useState("");
+  const [newCpcVal, setNewCpcVal]         = useState("");
+  // 목표 메모 (Supabase 팀 공유)
+  const [metaGoal, setMetaGoal]         = useSupabaseState("oa_meta_goal_v7", "");
+  const [metaGoalEditing, setMetaGoalEditing] = useState(false);
+  const [metaGoalInput, setMetaGoalInput]     = useState("");
 
   // 발주임박 시트 연동
   const [orderUrl, setOrderUrl, orderUrlLoaded] = useSupabaseState("oa_order_url_v7", "");
@@ -1244,15 +1249,16 @@ export default function OaDashboard(){
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   const MetaSection=(()=>{
     const d = metaAgg;
-    const fmt=n=>n>=1000?`₩${Math.round(n/1000).toLocaleString()}K`:`₩${Math.round(n).toLocaleString()}`;
+    // 원 단위 포맷 (만원)
+    const fmt=n=>n>=10000?`₩${Math.round(n/10000).toLocaleString()}만`:`₩${Math.round(n).toLocaleString()}`;
 
     const metaKpi = d ? [
-      {label:"총 광고비",  value:fmt(d.totalSpend),   change:0, good:"high",icon:"💸",note:`${d.daily.length}일 집계`},
-      {label:"총 클릭수",  value:d.totalClicks.toLocaleString(), change:0,good:"high",icon:"👆",note:`일평균 ${Math.round(d.totalClicks/Math.max(d.daily.length,1)).toLocaleString()}`},
-      {label:"LPV",        value:d.totalLpv.toLocaleString(),    change:0,good:"high",icon:"🛬",note:`LPV율 ${d.lpvRate.toFixed(1)}%`},
-      {label:"CPA",        value:fmt(d.avgCpa),        change:0, good:"low", icon:"🎯",note:"전환당 비용"},
-      {label:"CPC",        value:`₩${Math.round(d.avgCpc).toLocaleString()}`, change:0,good:"low",icon:"💡",note:"클릭당 비용"},
-      {label:"평균 CTR",   value:`${d.avgCtr.toFixed(2)}%`, change:0,good:"high",icon:"📊",note:"클릭률"},
+      {label:"운영중 광고비", value:fmt(d.totalSpend),   change:0, good:"high",icon:"💸",note:`${d.daily.length}일 · ${[...new Set(metaFiltered.map(r=>r.adName||r.campaign||"").filter(Boolean))].length}개 광고`},
+      {label:"총 클릭수",    value:d.totalClicks.toLocaleString(), change:0,good:"high",icon:"👆",note:`일평균 ${Math.round(d.totalClicks/Math.max(d.daily.length,1)).toLocaleString()}`},
+      {label:"LPV",          value:d.totalLpv.toLocaleString(),    change:0,good:"high",icon:"🛬",note:`LPV율 ${d.lpvRate.toFixed(1)}%`},
+      {label:"CPA",          value:d.avgCpa>0?fmt(d.avgCpa):"—",  change:0, good:"low", icon:"🎯",note:"전환당 비용"},
+      {label:"CPC",          value:`₩${Math.round(d.avgCpc).toLocaleString()}`, change:0,good:"low",icon:"💡",note:"클릭당 비용"},
+      {label:"평균 CTR",     value:`${d.avgCtr.toFixed(2)}%`, change:0,good:"high",icon:"📊",note:"클릭률"},
     ] : [
       {label:"광고비",value:"—",change:0,good:"high",icon:"💸",note:"시트 연결 필요"},
       {label:"클릭수",value:"—",change:0,good:"high",icon:"👆",note:"시트 연결 필요"},
@@ -1265,7 +1271,38 @@ export default function OaDashboard(){
     return(
       <div style={{display:"flex",flexDirection:"column",gap:14}}>
 
-        {/* 구글 시트 연결 배너 */}
+        {/* ── 목표 메모 ── */}
+        <div style={{background:C.white,border:`1px solid ${C.border}`,borderRadius:12,padding:"12px 16px"}}>
+          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:metaGoalEditing?10:0}}>
+            <div style={{display:"flex",alignItems:"center",gap:8,flex:1}}>
+              <span style={{fontSize:14}}>🎯</span>
+              {metaGoalEditing ? (
+                <textarea
+                  value={metaGoalInput}
+                  onChange={e=>setMetaGoalInput(e.target.value)}
+                  placeholder="이번 캠페인 목표를 입력하세요 (예: 3월 ROAS 700% 달성, CPA 5,000원 이하 유지)"
+                  style={{flex:1,padding:"8px 10px",border:`1px solid ${C.rose}`,borderRadius:8,
+                    fontSize:11,color:C.ink,background:C.cream,outline:"none",fontFamily:"inherit",
+                    resize:"vertical",minHeight:60,lineHeight:1.6}}
+                />
+              ) : (
+                <span style={{fontSize:12,color:metaGoal?C.ink:C.inkLt,fontWeight:metaGoal?700:400,lineHeight:1.6,flex:1}}>
+                  {metaGoal||"목표를 입력하면 팀 전체가 볼 수 있어요"}
+                </span>
+              )}
+            </div>
+            <div style={{display:"flex",gap:6,marginLeft:10,flexShrink:0}}>
+              {metaGoalEditing ? (
+                <>
+                  <Btn small onClick={()=>{setMetaGoal(metaGoalInput);setMetaGoalEditing(false);}}>💾 저장</Btn>
+                  <Btn small variant="neutral" onClick={()=>setMetaGoalEditing(false)}>취소</Btn>
+                </>
+              ) : (
+                <Btn small variant="neutral" onClick={()=>{setMetaGoalInput(metaGoal);setMetaGoalEditing(true);}}>✏️ {metaGoal?"수정":"입력"}</Btn>
+              )}
+            </div>
+          </div>
+        </div>
         <div style={{
           background: hasSheet ? "#EDF7F1" : C.goldLt,
           border:`1px solid ${hasSheet?C.good+"55":C.gold+"66"}`,
@@ -1563,19 +1600,19 @@ export default function OaDashboard(){
                       const totalLpv   = camps.reduce((s,c)=>s+(c.lpv||0),0);
                       const avgCtr     = camps.length ? camps.reduce((s,c)=>s+(c.ctr||0),0)/camps.length : 0;
                       const summaryItems = campTab==="conversion" ? [
-                        {label:"전환 광고비",  value:`₩${Math.round(totalSpend/1000).toLocaleString()}K`,      color:C.rose},
-                        {label:"총 구매",      value:`${totalPurch}건`,                                         color:C.good},
-                        {label:"총 전환값",    value:`₩${Math.round(totalConvV/1000).toLocaleString()}K`,      color:C.purple},
+                        {label:"전환 광고비",  value:`₩${Math.round(totalSpend/10000).toLocaleString()}만`,      color:C.rose},
+                        {label:"총 구매",      value:`${totalPurch}건`,                                           color:C.good},
+                        {label:"총 전환값",    value:`₩${Math.round(totalConvV/10000).toLocaleString()}만`,      color:C.purple},
                         {label:"평균 CPA",     value:totalPurch>0?`₩${Math.round(totalSpend/totalPurch).toLocaleString()}`:"—", color:C.gold},
-                        {label:"전체 ROAS",    value:totalSpend>0?`${+(totalConvV/totalSpend).toFixed(2)}x`:"—", color:C.sage},
-                        {label:"총 광고수",    value:`${camps.length}개`,                                       color:C.inkMid},
+                        {label:"전체 ROAS",    value:totalSpend>0?`${Math.round((totalConvV/totalSpend)*100)}%`:"—", color:C.sage},
+                        {label:"총 광고수",    value:`${camps.length}개`,                                         color:C.inkMid},
                       ] : [
-                        {label:"트래픽 광고비",value:`₩${Math.round(totalSpend/1000).toLocaleString()}K`,      color:C.purple},
-                        {label:"총 클릭수",    value:totalClicks.toLocaleString(),                               color:C.good},
-                        {label:"총 LPV",       value:totalLpv.toLocaleString(),                                  color:C.sage},
+                        {label:"트래픽 광고비",value:`₩${Math.round(totalSpend/10000).toLocaleString()}만`,      color:C.purple},
+                        {label:"총 클릭수",    value:totalClicks.toLocaleString(),                                color:C.good},
+                        {label:"총 LPV",       value:totalLpv.toLocaleString(),                                   color:C.sage},
                         {label:"평균 CPC",     value:totalClicks>0?`₩${Math.round(totalSpend/totalClicks).toLocaleString()}`:"—", color:C.gold},
-                        {label:"평균 CTR",     value:`${avgCtr.toFixed(2)}%`,                                   color:C.rose},
-                        {label:"총 광고수",    value:`${camps.length}개`,                                       color:C.inkMid},
+                        {label:"평균 CTR",     value:`${avgCtr.toFixed(2)}%`,                                    color:C.rose},
+                        {label:"총 광고수",    value:`${camps.length}개`,                                        color:C.inkMid},
                       ];
                       return(
                         <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:10,marginBottom:14}}>
