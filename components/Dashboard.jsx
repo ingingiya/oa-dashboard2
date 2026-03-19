@@ -664,13 +664,14 @@ export default function OaDashboard(){
     if(!file) return;
     setAllAdStatus("loading");
     try {
+      // xlsx를 동적 import (Next.js 빌드 호환)
+      const XLSX = await import("xlsx");
       const buf = await file.arrayBuffer();
-      const { read, utils } = await import("https://cdn.sheetjs.com/xlsx-0.20.2/package/xlsx.mjs");
-      const wb = read(buf);
+      const wb = XLSX.read(buf, {type:"array"});
       const ws = wb.Sheets[wb.SheetNames[0]];
-      const csv = utils.sheet_to_csv(ws);
+      const csv = XLSX.utils.sheet_to_csv(ws);
       const rows = parseCSV(csv).map(mapMetaRow).filter(r=>r.date||r.campaign);
-      await setAllAdRaw(rows); // Supabase에 저장 (팀 공유)
+      await setAllAdRaw(rows);
       setAllAdStatus("ok");
     } catch(e) {
       console.error("파일 읽기 에러:", e);
