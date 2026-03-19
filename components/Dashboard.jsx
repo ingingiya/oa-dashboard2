@@ -654,12 +654,12 @@ export default function OaDashboard(){
   const fileInputRef                  = useRef(null);
   const [isDragging, setIsDragging]   = useState(false);
 
-  // 전체 광고비 파일 (xlsx — 미게재 포함)
-  const [allAdRaw, setAllAdRaw]       = useState([]);  // 파싱된 전체 데이터
-  const [allAdStatus, setAllAdStatus] = useState("idle"); // idle | loading | ok | error
+  // 전체 광고비 파일 (xlsx — 미게재 포함) — Supabase 저장
+  const [allAdRaw, setAllAdRaw]       = useSyncState("oa_all_ad_raw_v7", []);
+  const [allAdStatus, setAllAdStatus] = useState(()=>allAdRaw?.length>0?"ok":"idle");
   const allAdFileRef                  = useRef(null);
 
-  // ── 전체 광고비 xlsx 파일 읽기 ──────────────────────
+  // ── 전체 광고비 xlsx 파일 읽기 → Supabase 저장 ────────────────
   async function handleAllAdFile(file) {
     if(!file) return;
     setAllAdStatus("loading");
@@ -670,7 +670,7 @@ export default function OaDashboard(){
       const ws = wb.Sheets[wb.SheetNames[0]];
       const csv = utils.sheet_to_csv(ws);
       const rows = parseCSV(csv).map(mapMetaRow).filter(r=>r.date||r.campaign);
-      setAllAdRaw(rows);
+      await setAllAdRaw(rows); // Supabase에 저장 (팀 공유)
       setAllAdStatus("ok");
     } catch(e) {
       console.error("파일 읽기 에러:", e);
@@ -681,6 +681,11 @@ export default function OaDashboard(){
   useEffect(() => {
     getAdImages().then(imgs => { if (imgs?.length) setAdImages(imgs); }).catch(() => {});
   }, []);
+
+  // allAdRaw Supabase에서 로드되면 status 자동 설정
+  useEffect(()=>{
+    if(allAdRaw?.length>0) setAllAdStatus("ok");
+  },[allAdRaw]);
 
   async function handleAdImageUpload(files) {
     setImgUploading(true);
