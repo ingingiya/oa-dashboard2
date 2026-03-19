@@ -1028,9 +1028,10 @@ export default function OaDashboard(){
     // 광고 이름 기준으로 집계 (광고세트 정보도 포함)
     const byAd = {};
     metaFiltered.forEach(r=>{
-      const key = r.adName || r.campaign || "unknown";
+      // key: 광고명+광고세트명 조합 (같은 광고명이 다른 세트에 있어도 구분)
+      const key = (r.adName||r.campaign||"unknown") + "|||" + (r.adset||"");
       if(!byAd[key]) byAd[key]={
-        name: r.adName || key,
+        name: r.adName || r.campaign || "unknown",
         adset: r.adset || "",
         campaign: r.campaign || "",
         objective: r.objective || "",
@@ -1084,9 +1085,9 @@ export default function OaDashboard(){
   const urgentScheds   = sch.filter(s=>{const d=daysUntil(s.date);return d!==null&&d>=0&&d<=5&&s.status!=="완료";});
   // 광고 교체/보류 알림 — 시트 데이터 있을 때만
   const adAlerts = hasSheet ? metaFiltered.reduce((acc, r)=>{
-    const key = r.adName||r.campaign||"";
-    if(!key) return acc;
-    if(!acc[key]) acc[key]={...r, name:key, adset:r.adset||"", campaign:r.campaign||""};
+    const key = (r.adName||r.campaign||"") + "|||" + (r.adset||"");
+    if(!key||key==="|||") return acc;
+    if(!acc[key]) acc[key]={...r, name:r.adName||r.campaign||"", adset:r.adset||"", campaign:r.campaign||""};
     else {
       acc[key].spend      =(acc[key].spend||0)+(r.spend||0);
       acc[key].clicks     =(acc[key].clicks||0)+(r.clicks||r.clicksAll||0);
