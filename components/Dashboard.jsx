@@ -1931,10 +1931,14 @@ export default function OaDashboard(){
                             // ── 게시 기간 (시트 날짜 기반) ──
                             const today = new Date(); today.setHours(0,0,0,0);
                             const parseD = s=>{ if(!s)return null; const d=new Date(s); return isNaN(d)?null:d; };
+                            // 시트 전체 최신 날짜 (기준점) — 오늘 데이터 없어도 정확히 판단
+                            const sheetMaxDate = metaRaw.map(r=>r.date).filter(Boolean).sort().pop();
+                            const sheetMax = parseD(sheetMaxDate);
                             const fd = parseD(c.firstDate), ld = parseD(c.lastDate);
-                            const adAge  = fd ? Math.floor((today-fd)/86400000) : null;  // 게시 시작 후 경과일
-                            const lastAgo= ld ? Math.floor((today-ld)/86400000) : null;  // 마지막 데이터 경과일
-                            const isActive = lastAgo!==null && lastAgo<=1; // 어제~오늘 데이터 있으면 활성
+                            const adAge  = fd ? Math.floor((today-fd)/86400000) : null;
+                            // 시트 최신 날짜 기준으로 마지막 데이터 비교 (오늘 기준 아님)
+                            const lastAgo= ld&&sheetMax ? Math.floor((sheetMax-ld)/86400000) : null;
+                            const isActive = lastAgo!==null && lastAgo<=1; // 시트 최신 날짜 기준 1일 이내면 활성
 
                             // ── 복제 적합 판정 (CTR좋고 LPV좋은데 CPA보류/컷) ──
                             const cloneable = campTab==="conversion" && (ct?.label==="좋음"||ct?.label==="보통") && (lpvR?.label==="정상") && (cpa&&(cpa.label==="보류"||cpa.label==="컷"));
