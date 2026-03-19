@@ -606,13 +606,13 @@ export default function OaDashboard(){
   const [metaGoalEditing, setMetaGoalEditing] = useState(false);
   const [metaGoalInput, setMetaGoalInput]     = useState("");
 
-  // ── 시트 URL 고정값 ─────────────────────────────
-  const FIXED_INV_URL  = "https://docs.google.com/spreadsheets/d/1r9WhAOgvdIcumgrkNkTbyYSVj1ONxyXp0trwzD-xAng/edit?gid=960641453#gid=960641453";
-  const FIXED_INF_URL  = "https://docs.google.com/spreadsheets/d/1r9WhAOgvdIcumgrkNkTbyYSVj1ONxyXp0trwzD-xAng/edit?gid=503054532#gid=503054532";
-  const FIXED_META_URL = "https://docs.google.com/spreadsheets/d/1r9WhAOgvdIcumgrkNkTbyYSVj1ONxyXp0trwzD-xAng/edit?gid=1293104038#gid=1293104038";
-  const invUrl = FIXED_INV_URL; const invUrlLoaded = true;
-  const infUrl = FIXED_INF_URL; const infUrlLoaded = true;
-  const orderUrl = ""; const orderUrlLoaded = true;
+  // ── 시트 URL — Supabase 저장 (팀 공유, 변경 가능) ──
+  const [invUrl, setInvUrl]   = useSyncState("oa_inv_url_v7", "https://docs.google.com/spreadsheets/d/1r9WhAOgvdIcumgrkNkTbyYSVj1ONxyXp0trwzD-xAng/edit?gid=960641453#gid=960641453");
+  const [infUrl, setInfUrl]   = useSyncState("oa_inf_url_v7", "https://docs.google.com/spreadsheets/d/1r9WhAOgvdIcumgrkNkTbyYSVj1ONxyXp0trwzD-xAng/edit?gid=503054532#gid=503054532");
+  const [sheetUrl, setSheetUrl] = useSyncState("oa_sheet_url", "https://docs.google.com/spreadsheets/d/1r9WhAOgvdIcumgrkNkTbyYSVj1ONxyXp0trwzD-xAng/edit?gid=1293104038#gid=1293104038");
+  const [orderUrl, setOrderUrl] = useSyncState("oa_order_url_v7", "");
+  const invUrlLoaded = true; const infUrlLoaded = true;
+  const sheetUrlLoaded = true; const orderUrlLoaded = true;
 
   // 발주임박
   const [orderRaw, setOrderRaw]   = useState([]);
@@ -630,8 +630,7 @@ export default function OaDashboard(){
   const [infUrlModal, setInfUrlModal]   = useState(false);
   const [infUrlInput, setInfUrlInput]   = useState("");
 
-  // 메타 구글 시트 — 고정 URL 사용
-  const sheetUrl = FIXED_META_URL; const sheetUrlLoaded = true;
+  // 메타 구글 시트
   const [metaRaw,setMetaRaw]         = useState([]);
   const [metaStatus,setMetaStatus]   = useState("idle");
   const [metaError,setMetaError]     = useState("");
@@ -654,6 +653,30 @@ export default function OaDashboard(){
   const [hoverImg, setHoverImg]       = useState(null);
   const fileInputRef                  = useRef(null);
   const [isDragging, setIsDragging]   = useState(false);
+
+  // 전체 광고비 파일 (xlsx — 미게재 포함)
+  const [allAdRaw, setAllAdRaw]       = useState([]);  // 파싱된 전체 데이터
+  const [allAdStatus, setAllAdStatus] = useState("idle"); // idle | loading | ok | error
+  const allAdFileRef                  = useRef(null);
+
+  // ── 전체 광고비 xlsx 파일 읽기 ──────────────────────
+  async function handleAllAdFile(file) {
+    if(!file) return;
+    setAllAdStatus("loading");
+    try {
+      const buf = await file.arrayBuffer();
+      const { read, utils } = await import("https://cdn.sheetjs.com/xlsx-0.20.2/package/xlsx.mjs");
+      const wb = read(buf);
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const csv = utils.sheet_to_csv(ws);
+      const rows = parseCSV(csv).map(mapMetaRow).filter(r=>r.date||r.campaign);
+      setAllAdRaw(rows);
+      setAllAdStatus("ok");
+    } catch(e) {
+      console.error("파일 읽기 에러:", e);
+      setAllAdStatus("error");
+    }
+  }
 
   useEffect(() => {
     getAdImages().then(imgs => { if (imgs?.length) setAdImages(imgs); }).catch(() => {});
@@ -725,7 +748,7 @@ export default function OaDashboard(){
   function saveSheetUrl(){
     const url = sheetInput.trim();
     if(!url) return;
-    // URL 고정 — setSheetUrl 불필요
+    setSheetUrl(url);
     setSheetModal(false);
     fetchSheet(url);
   }
@@ -1415,12 +1438,12 @@ export default function OaDashboard(){
 
         <KpiGrid items={metaKpi} cols={6}/>
 
-        {/* ── 전체 광고 Total (끈 광고 포함) ── */}
+        {/* ── 전체 광고 Total ── */}
         {hasSheet&&(()=>{
           const fmtW = n=>n>=10000?`₩${Math.round(n/10000).toLocaleString()}만`:`₩${Math.round(n).toLocaleString()}`;
           const roasP = (spend,conv)=>spend>0&&conv>0?`${Math.round((conv/spend)*100)}%`:null;
 
-          // 전환 / 트래픽 분리
+          // 게재중(시트) 집계
           const convRaw    = metaRaw.filter(r=>isConversionCampaign(r.objective,r.campaign));
           const trafficRaw = metaRaw.filter(r=>!isConversionCampaign(r.objective,r.campaign));
 
@@ -1430,18 +1453,22 @@ export default function OaDashboard(){
             lpv:     rows.reduce((s,r)=>s+(r.lpv||0),0),
             purch:   rows.reduce((s,r)=>s+(r.purchases||0),0),
             convV:   rows.reduce((s,r)=>s+(r.convValue||0),0),
-            ads:     [...new Set(rows.map(r=>r.adName||r.campaign||"").filter(Boolean))].length,
+            ads:     [...new Set(rows.map(r=>(r.adName||r.campaign||"")+"|||"+(r.adset||"")).filter(Boolean))].length,
           });
 
           const conv    = agg(convRaw);
           const traffic = agg(trafficRaw);
           const total   = agg(metaRaw);
 
+          // 전체(파일) 집계
+          const allConv    = agg(allAdRaw.filter(r=>isConversionCampaign(r.objective,r.campaign)));
+          const allTraffic = agg(allAdRaw.filter(r=>!isConversionCampaign(r.objective,r.campaign)));
+          const allTotal   = agg(allAdRaw);
+
           const dates = metaRaw.map(r=>r.date).filter(Boolean).sort();
           const period = dates.length ? `${dates[0].slice(5).replace("-","/")} ~ ${dates[dates.length-1].slice(5).replace("-","/")}` : "";
-          const hiddenCount = total.ads - [...new Set(metaFiltered.map(r=>r.adName||r.campaign||"").filter(Boolean))].length;
 
-          const Col=({label,icon,data,accent})=>(
+          const Col=({label,icon,data,allData,accent})=>(
             <div style={{background:"rgba(255,255,255,0.07)",borderRadius:12,padding:"14px 14px"}}>
               <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:10}}>
                 <span style={{fontSize:14}}>{icon}</span>
@@ -1450,16 +1477,17 @@ export default function OaDashboard(){
               </div>
               <div style={{display:"flex",flexDirection:"column",gap:6}}>
                 {[
-                  {l:"광고비", v:fmtW(data.spend)},
+                  {l:"광고비(게재중)", v:fmtW(data.spend), highlight:false},
+                  ...(allData?[{l:"광고비(전체)", v:fmtW(allData.spend), highlight:true}]:[]),
                   {l:"구매",   v:`${data.purch}건`, sub:data.purch>0?`CPA ${fmtW(data.spend/data.purch)}`:null},
-                  {l:"ROAS",   v:roasP(data.spend,data.convV)||"—", highlight:true},
-                  {l:"클릭",   v:data.clicks.toLocaleString(), sub:data.clicks>0?`CPC ${fmtW(data.spend/data.clicks)}`:null},
-                  {l:"LPV",    v:data.lpv.toLocaleString(), sub:data.clicks>0?`LPV율 ${Math.round((data.lpv/data.clicks)*100)}%`:null},
-                ].map(({l,v,sub,highlight})=>(
+                  {l:"ROAS",   v:roasP(data.spend,data.convV)||"—", green:true},
+                  {l:"LPV율",  v:data.clicks>0?`${Math.round((data.lpv/data.clicks)*100)}%`:"—"},
+                ].map(({l,v,sub,highlight,green})=>(
                   <div key={l} style={{display:"flex",justifyContent:"space-between",alignItems:"baseline"}}>
                     <span style={{fontSize:9,opacity:0.5,fontWeight:700}}>{l}</span>
                     <div style={{textAlign:"right"}}>
-                      <span style={{fontSize:13,fontWeight:900,color:highlight?"#86efac":"rgba(255,255,255,0.95)"}}>{v}</span>
+                      <span style={{fontSize:highlight?15:13,fontWeight:900,
+                        color:green?"#86efac":highlight?"#fbbf24":"rgba(255,255,255,0.95)"}}>{v}</span>
                       {sub&&<div style={{fontSize:9,opacity:0.45,marginTop:1}}>{sub}</div>}
                     </div>
                   </div>
@@ -1470,28 +1498,44 @@ export default function OaDashboard(){
 
           return(
             <div style={{background:C.ink,borderRadius:14,padding:"16px 18px",color:C.white}}>
+              {/* 헤더 */}
               <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12,flexWrap:"wrap",gap:6}}>
                 <div>
-                  <div style={{fontSize:12,fontWeight:800,letterSpacing:"0.05em"}}>📊 전체 광고 집계</div>
-                  <div style={{fontSize:10,opacity:0.5,marginTop:2}}>
-                    {period} · 총 {total.ads}개{hiddenCount>0&&` (숨김 ${hiddenCount}개 포함)`}
-                  </div>
+                  <div style={{fontSize:12,fontWeight:800,letterSpacing:"0.05em"}}>📊 광고 집계</div>
+                  <div style={{fontSize:10,opacity:0.5,marginTop:2}}>{period}</div>
                 </div>
-                <div style={{display:"flex",gap:10,alignItems:"center"}}>
+                <div style={{display:"flex",gap:8,alignItems:"center"}}>
+                  {/* 전체 파일 업로드 */}
                   <div style={{textAlign:"right"}}>
-                    <div style={{fontSize:9,opacity:0.5}}>합산 총 광고비</div>
-                    <div style={{fontSize:18,fontWeight:900,color:"#fbbf24"}}>{fmtW(total.spend)}</div>
+                    <div style={{fontSize:9,opacity:0.5}}>
+                      {allAdStatus==="ok"?`📁 전체파일 ${allAdRaw.length}행`:allAdStatus==="loading"?"⏳ 읽는중...":allAdStatus==="error"?"❌ 오류":"📁 전체파일 미업로드"}
+                    </div>
+                    <input ref={allAdFileRef} type="file" accept=".xlsx,.csv" style={{display:"none"}}
+                      onChange={e=>e.target.files[0]&&handleAllAdFile(e.target.files[0])}/>
+                    <button onClick={()=>allAdFileRef.current?.click()}
+                      style={{fontSize:10,fontWeight:700,padding:"3px 10px",borderRadius:8,
+                        background:"rgba(255,255,255,0.1)",color:"rgba(255,255,255,0.8)",
+                        border:"1px solid rgba(255,255,255,0.2)",cursor:"pointer",fontFamily:"inherit",marginTop:2}}>
+                      {allAdStatus==="ok"?"🔄 파일 변경":"📂 전체파일 업로드"}
+                    </button>
+                  </div>
+                  <div style={{textAlign:"right"}}>
+                    <div style={{fontSize:9,opacity:0.5}}>게재중 광고비</div>
+                    <div style={{fontSize:18,fontWeight:900,color:"#86efac"}}>{fmtW(total.spend)}</div>
+                    {allAdStatus==="ok"&&<div style={{fontSize:11,fontWeight:700,color:"#fbbf24"}}>전체 {fmtW(allTotal.spend)}</div>}
                   </div>
                 </div>
               </div>
               <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:10}}>
-                <Col label="전환 캠페인" icon="🎯" data={conv} accent="#f9a8d4"/>
-                <Col label="트래픽 캠페인" icon="🚦" data={traffic} accent="#93c5fd"/>
-                <Col label="합산 전체" icon="📊" data={total} accent="#86efac"/>
+                <Col label="전환 캠페인" icon="🎯" data={conv} allData={allAdStatus==="ok"?allConv:null} accent="#f9a8d4"/>
+                <Col label="트래픽 캠페인" icon="🚦" data={traffic} allData={allAdStatus==="ok"?allTraffic:null} accent="#93c5fd"/>
+                <Col label="합산 전체" icon="📊" data={total} allData={allAdStatus==="ok"?allTotal:null} accent="#86efac"/>
               </div>
             </div>
           );
         })()}
+
+        {/* 구 Total 카드 제거됨 */}
 
         {/* 광고 소재 이미지/영상 업로드 — 드래그앤드롭 */}
         <div style={{background:C.white,border:`1px solid ${C.border}`,borderRadius:12,padding:"14px 16px"}}>
@@ -2556,7 +2600,7 @@ export default function OaDashboard(){
             <Inp value={infUrlInput} onChange={v=>setInfUrlInput(v)} placeholder="https://docs.google.com/spreadsheets/d/..."/>
           </FR>
           <div style={{display:"flex",gap:8,marginTop:4}}>
-            <Btn onClick={()=>{setInfUrlModal(false);fetchInfSheet(infUrl);}} style={{flex:1}}>🔗 연결</Btn>
+            <Btn onClick={()=>{setInfUrl(infUrlInput);setInfUrlModal(false);fetchInfSheet(infUrlInput);}} style={{flex:1}}>🔗 연결</Btn>
             {infUrl&&<Btn variant="danger" onClick={()=>{setInfSheetStatus("idle");setInfUrlModal(false);}}>연결 해제</Btn>}
           </div>
         </Modal>
@@ -2915,6 +2959,7 @@ export default function OaDashboard(){
           </FR>
           <Btn onClick={()=>{
             const url=invUrlInput.trim();
+            if(url) setInvUrl(url);
             setInvUrlModal(false);
             if(url) fetchInvSheet(url);
           }} style={{width:"100%",marginTop:8}}>🔗 연결하기</Btn>
