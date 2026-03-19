@@ -238,6 +238,31 @@ function schTypeIcon(t){  return {공구:"🛍",시딩:"✨",광고:"📣",이�
 
 // useLocal은 useSupabaseState로 대체됨
 
+// ── 팀 공유 상태 훅 (localStorage 즉시 + Supabase 동기화) ──────────
+function useSyncState(key, def) {
+  const [data, setDataRaw] = useState(()=>{
+    try{ const v=localStorage.getItem(key); return v?JSON.parse(v):def; }catch{ return def; }
+  });
+  useEffect(()=>{
+    getSetting(key).then(v=>{
+      if(v!==null&&v!==undefined){
+        setDataRaw(v);
+        try{ localStorage.setItem(key, JSON.stringify(v)); }catch{}
+      }
+    }).catch(()=>{});
+  // eslint-disable-next-line
+  },[]);
+  const setData = useCallback((vOrFn)=>{
+    setDataRaw(prev=>{
+      const val = typeof vOrFn==="function"?vOrFn(prev):vOrFn;
+      try{ localStorage.setItem(key, JSON.stringify(val)); }catch{}
+      setSetting(key, val).catch(()=>{});
+      return val;
+    });
+  },[key]);
+  return [data, setData];
+}
+
 // CSV 파싱 (구글 시트 export) — 타이틀 행 자동 스킵
 function parseCSV(text){
   const lines = text.trim().split("\n").map(l=>{
@@ -554,23 +579,17 @@ export default function OaDashboard(){
   const [pulse,setPulse]       = useState(false);
   const [nid,setNid]           = useState(300);
 
-  // Supabase 동기화 데이터 (팀 공유)
   const [infs,setInfs] = useState([]);
-  const [inv, setInv, invLoaded]      = useSupabaseState("oa_inv_v7", DEFAULT_INV);
-  const [sch, setSch, schLoaded]      = useSupabaseState("oa_sch_v7", DEFAULT_SCH);
+  const [inv, setInv]         = useSyncState("oa_inv_v7",     DEFAULT_INV);
+  const [sch, setSch]         = useSyncState("oa_sch_v7", DEFAULT_SCH);
 
   // 마진 설정
-  const [margin, setMargin]           = useSupabaseState("oa_margin_v7", 30000);
-  const [margins, setMargins]         = useSupabaseState("oa_margins_v7", DEFAULT_MARGINS);
-  // 트래픽 캠페인 기준값 (설정 가능)
-  const [trafficCriteria, setTrafficCriteria] = useSupabaseState("oa_traffic_criteria_v7", {
-    cpcMax: 600,      // 기본 CPC 상한 (원)
-    ctrMin: 1.5,      // CTR 하한 (%)
-    lpvMin: 55,       // LPV율 하한 (%)
-    cpcKeywords: [    // 제품별 CPC 상한 (키워드 매칭)
-      {id:1, keyword:"소닉플로우", cpcMax:600},
-      {id:2, keyword:"프리온",     cpcMax:800},
-    ],
+  const [margin, setMargin]   = useSyncState("oa_margin_v7", 30000);
+  const [margins, setMargins] = useSyncState("oa_margins_v7", DEFAULT_MARGINS);
+  // 트래픽 캠페인 기준값
+  const [trafficCriteria, setTrafficCriteria] = useSyncState("oa_traffic_criteria_v7", {
+    cpcMax: 600, ctrMin: 1.5, lpvMin: 55,
+    cpcKeywords: [{id:1,keyword:"소닉플로우",cpcMax:600},{id:2,keyword:"프리온",cpcMax:800}],
   });
 
   const [marginModal, setMarginModal]= useState(false);
@@ -581,7 +600,7 @@ export default function OaDashboard(){
   const [newCpcKeyword, setNewCpcKeyword] = useState("");
   const [newCpcVal, setNewCpcVal]         = useState("");
   // 목표 메모 (Supabase 팀 공유)
-  const [metaGoal, setMetaGoal]         = useSupabaseState("oa_meta_goal_v7", "");
+  const [metaGoal, setMetaGoal]         = useSyncState("oa_meta_goal_v7", "");
   const [metaGoalEditing, setMetaGoalEditing] = useState(false);
   const [metaGoalInput, setMetaGoalInput]     = useState("");
 
@@ -616,7 +635,7 @@ export default function OaDashboard(){
   const [metaError,setMetaError]     = useState("");
   const [sheetModal,setSheetModal]   = useState(false);
   const [sheetInput,setSheetInput]   = useState("");
-  const [deletedAds,setDeletedAds, deletedAdsLoaded] = useSupabaseState("oa_deleted_ads_v7", []);
+  const [deletedAds, setDeletedAds] = useSyncState("oa_deleted_ads_v7", []);
   const [adImages, setAdImages]       = useState([]);
   const [imgUploading, setImgUploading] = useState(false);
   const [hoverImg, setHoverImg]       = useState(null);
