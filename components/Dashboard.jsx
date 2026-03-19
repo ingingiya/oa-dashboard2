@@ -585,27 +585,32 @@ export default function OaDashboard(){
   const [metaGoalEditing, setMetaGoalEditing] = useState(false);
   const [metaGoalInput, setMetaGoalInput]     = useState("");
 
-  // 발주임박 시트 연동
-  const [orderUrl, setOrderUrl, orderUrlLoaded] = useSupabaseState("oa_order_url_v7", "");
+  // ── 시트 URL 고정값 ─────────────────────────────
+  const FIXED_INV_URL  = "https://docs.google.com/spreadsheets/d/1r9WhAOgvdIcumgrkNkTbyYSVj1ONxyXp0trwzD-xAng/edit?gid=960641453#gid=960641453";
+  const FIXED_INF_URL  = "https://docs.google.com/spreadsheets/d/1r9WhAOgvdIcumgrkNkTbyYSVj1ONxyXp0trwzD-xAng/edit?gid=503054532#gid=503054532";
+  const FIXED_META_URL = "https://docs.google.com/spreadsheets/d/1r9WhAOgvdIcumgrkNkTbyYSVj1ONxyXp0trwzD-xAng/edit?gid=1293104038#gid=1293104038";
+  const invUrl = FIXED_INV_URL; const invUrlLoaded = true;
+  const infUrl = FIXED_INF_URL; const infUrlLoaded = true;
+  const orderUrl = ""; const orderUrlLoaded = true;
+
+  // 발주임박
   const [orderRaw, setOrderRaw]   = useState([]);
   const [orderStatus, setOrderStatus] = useState("idle");
   const [orderModal, setOrderModal]   = useState(false);
   const [orderInput, setOrderInput]   = useState("");
 
-  // 재고원본 시트 연동
-  const [invUrl, setInvUrl, invUrlLoaded] = useSupabaseState("oa_inv_url_v7", "");
+  // 재고원본
   const [invSheetStatus, setInvSheetStatus] = useState("idle");
   const [invUrlModal, setInvUrlModal] = useState(false);
   const [invUrlInput, setInvUrlInput] = useState("");
 
-  // 인플루언서 시트
-  const [infUrl, setInfUrl, infUrlLoaded] = useSupabaseState("oa_inf_url_v7", "");
+  // 인플루언서
   const [infSheetStatus, setInfSheetStatus] = useState("idle");
   const [infUrlModal, setInfUrlModal]   = useState(false);
   const [infUrlInput, setInfUrlInput]   = useState("");
 
-  // 구글 시트 연동 상태
-  const [sheetUrl,setSheetUrl, sheetUrlLoaded] = useSupabaseState("oa_sheet_url_v7", "");
+  // 메타 구글 시트 — 고정 URL 사용
+  const sheetUrl = FIXED_META_URL; const sheetUrlLoaded = true;
   const [metaRaw,setMetaRaw]         = useState([]);
   const [metaStatus,setMetaStatus]   = useState("idle");
   const [metaError,setMetaError]     = useState("");
@@ -684,7 +689,7 @@ export default function OaDashboard(){
   function saveSheetUrl(){
     const url = sheetInput.trim();
     if(!url) return;
-    setSheetUrl(url);
+    // URL 고정 — setSheetUrl 불필요
     setSheetModal(false);
     fetchSheet(url);
   }
@@ -948,7 +953,7 @@ export default function OaDashboard(){
       new URL(infUrl); // URL 유효성 검사
       fetchInfSheet(infUrl);
     } catch(e) {
-      setInfUrl(""); // 잘못된 URL이면 조용히 삭제
+      // URL 고정
       setInfSheetStatus("idle");
     }
   },[infUrl, infUrlLoaded]);
@@ -1263,7 +1268,7 @@ export default function OaDashboard(){
           </FR>
           <Btn onClick={()=>{
             const url=orderInput.trim();
-            setOrderUrl(url);
+            // URL 고정
             setOrderModal(false);
             if(url) fetchOrderSheet(url);
           }} style={{width:"100%",marginTop:8}}>🔗 연결하기</Btn>
@@ -2291,7 +2296,7 @@ export default function OaDashboard(){
               🔗 연결하기
             </Btn>
             {sheetUrl&&(
-              <Btn variant="danger" onClick={()=>{setSheetUrl("");setMetaRaw([]);setMetaStatus("idle");setSheetModal(false);}}
+              <Btn variant="danger" onClick={()=>{setMetaRaw([]);setMetaStatus("idle");setSheetModal(false);}}
                 style={{width:"100%",marginTop:8}}>
                 🗑 연결 해제
               </Btn>
@@ -2494,7 +2499,7 @@ export default function OaDashboard(){
         </div>
         <div style={{display:"flex",gap:6}}>
           {infSheetStatus==="ok"&&<Btn variant="sage" small onClick={()=>fetchInfSheet(infUrl)}>🔄 새로고침</Btn>}
-          {infSheetStatus==="error"&&<Btn variant="danger" small onClick={()=>{setInfUrl("");setInfSheetStatus("idle");}}>🗑 URL 초기화</Btn>}
+          {infSheetStatus==="error"&&<Btn variant="danger" small onClick={()=>{setInfSheetStatus("idle");}}>🗑 URL 초기화</Btn>}
           <Btn variant={infSheetStatus==="ok"?"neutral":"gold"} small onClick={()=>{setInfUrlInput(infUrl);setInfUrlModal(true)}}>
             {infSheetStatus==="ok"?"⚙️ 시트 변경":"🔗 시트 연결"}
           </Btn>
@@ -2513,8 +2518,8 @@ export default function OaDashboard(){
             <Inp value={infUrlInput} onChange={v=>setInfUrlInput(v)} placeholder="https://docs.google.com/spreadsheets/d/..."/>
           </FR>
           <div style={{display:"flex",gap:8,marginTop:4}}>
-            <Btn onClick={()=>{setInfUrl(infUrlInput);setInfUrlModal(false);fetchInfSheet(infUrlInput);}} style={{flex:1}}>🔗 연결</Btn>
-            {infUrl&&<Btn variant="danger" onClick={()=>{setInfUrl("");setInfSheetStatus("idle");setInfUrlModal(false);}}>연결 해제</Btn>}
+            <Btn onClick={()=>{setInfUrlModal(false);fetchInfSheet(infUrl);}} style={{flex:1}}>🔗 연결</Btn>
+            {infUrl&&<Btn variant="danger" onClick={()=>{setInfSheetStatus("idle");setInfUrlModal(false);}}>연결 해제</Btn>}
           </div>
         </Modal>
       )}
@@ -2872,7 +2877,6 @@ export default function OaDashboard(){
           </FR>
           <Btn onClick={()=>{
             const url=invUrlInput.trim();
-            setInvUrl(url);
             setInvUrlModal(false);
             if(url) fetchInvSheet(url);
           }} style={{width:"100%",marginTop:8}}>🔗 연결하기</Btn>
