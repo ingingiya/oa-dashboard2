@@ -553,7 +553,6 @@ export default function OaDashboard(){
       {id:2, keyword:"프리온",     cpcMax:800},
     ],
   });
-  const [newCpcVal, setNewCpcVal]         = useState("");
 
   const [marginModal, setMarginModal]= useState(false);
   const [marginInput, setMarginInput]= useState("");
