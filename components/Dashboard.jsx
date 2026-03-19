@@ -239,27 +239,29 @@ function schTypeIcon(t){  return {공구:"🛍",시딩:"✨",광고:"📣",이�
 // useLocal은 useSupabaseState로 대체됨
 
 // ── 팀 공유 상태 훅 (localStorage 즉시 + Supabase 동기화) ──────────
+// ── 팀 공유 상태 훅 — Supabase 전용 ─────────────────────────────
+// 로드 전엔 기본값으로 표시, 로드 완료 후에만 저장 허용
 function useSyncState(key, def) {
-  const [data, setDataRaw] = useState(()=>{
-    try{ const v=localStorage.getItem(key); return v?JSON.parse(v):def; }catch{ return def; }
-  });
+  const [data, setDataRaw] = useState(def);
+  const loadedRef = useRef(false);
+
   useEffect(()=>{
     getSetting(key).then(v=>{
-      if(v!==null&&v!==undefined){
-        setDataRaw(v);
-        try{ localStorage.setItem(key, JSON.stringify(v)); }catch{}
-      }
-    }).catch(()=>{});
+      if(v !== null && v !== undefined) setDataRaw(v);
+      loadedRef.current = true;
+    }).catch(()=>{ loadedRef.current = true; });
   // eslint-disable-next-line
-  },[]);
+  },[key]);
+
   const setData = useCallback((vOrFn)=>{
     setDataRaw(prev=>{
-      const val = typeof vOrFn==="function"?vOrFn(prev):vOrFn;
-      try{ localStorage.setItem(key, JSON.stringify(val)); }catch{}
-      setSetting(key, val).catch(()=>{});
+      const val = typeof vOrFn==="function" ? vOrFn(prev) : vOrFn;
+      // 로드 완료 후에만 Supabase에 저장 (초기화 방지)
+      if(loadedRef.current) setSetting(key, val).catch(()=>{});
       return val;
     });
   },[key]);
+
   return [data, setData];
 }
 
@@ -635,12 +637,23 @@ export default function OaDashboard(){
   const [metaError,setMetaError]     = useState("");
   const [sheetModal,setSheetModal]   = useState(false);
   const [sheetInput,setSheetInput]   = useState("");
-  const [deletedAds, setDeletedAds] = useSyncState("oa_deleted_ads_v7", []);
+  const [deletedAds, setDeletedAdsRaw] = useState([]);
+  // 마운트 시 Supabase에서 삭제 목록 로드
+  useEffect(()=>{
+    getSetting("oa_deleted_ads_v7").then(v=>{ if(Array.isArray(v)) setDeletedAdsRaw(v); }).catch(()=>{});
+  },[]);
+  // 저장 시 Supabase에만 저장 (팀 전체 공유)
+  const setDeletedAds = useCallback(async (v)=>{
+    const val = typeof v==="function"?v(deletedAds):v;
+    setDeletedAdsRaw(val);
+    await setSetting("oa_deleted_ads_v7", val).catch(()=>{});
+  },[deletedAds]);
   const [adImages, setAdImages]       = useState([]);
   const [imgUploading, setImgUploading] = useState(false);
+  const [imgError, setImgError]       = useState("");
   const [hoverImg, setHoverImg]       = useState(null);
   const fileInputRef                  = useRef(null);
-  const [isDragging, setIsDragging]     = useState(false);
+  const [isDragging, setIsDragging]   = useState(false);
 
   useEffect(() => {
     getAdImages().then(imgs => { if (imgs?.length) setAdImages(imgs); }).catch(() => {});
@@ -648,16 +661,20 @@ export default function OaDashboard(){
 
   async function handleAdImageUpload(files) {
     setImgUploading(true);
+    setImgError("");
     try {
       const newImgs = [...adImages];
       for (const file of Array.from(files)) {
-        const originalName = file.name.replace(/\.[^.]+$/, ""); // 원본 파일명 (한글 포함)
+        const originalName = file.name.replace(/\.[^.]+$/, "");
         const { url, path } = await uploadAdImage(file, originalName);
         newImgs.push({ id: Date.now() + Math.random(), name: originalName, url, path });
       }
       setAdImages(newImgs);
       await saveAdImagesMeta(newImgs);
-    } catch(e) { console.error("업로드 에러:", e); }
+    } catch(e) {
+      console.error("업로드 에러:", e);
+      setImgError(e.message||"업로드 실패 — Supabase Storage 정책을 확인해주세요");
+    }
     setImgUploading(false);
   }
 
@@ -1481,6 +1498,7 @@ export default function OaDashboard(){
             <div style={{fontWeight:700,fontSize:13,color:C.ink}}>🎬 광고 소재</div>
             <div style={{display:"flex",gap:6,alignItems:"center"}}>
               {imgUploading&&<span style={{fontSize:10,color:C.inkLt}}>⏳ 업로드 중...</span>}
+              {imgError&&<span style={{fontSize:10,color:C.bad,maxWidth:200,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}} title={imgError}>❌ {imgError}</span>}
               <input ref={fileInputRef} type="file" accept="image/*,video/*" multiple style={{display:"none"}}
                 onChange={e=>handleAdImageUpload(e.target.files)}/>
               <button onClick={()=>fileInputRef.current?.click()}
