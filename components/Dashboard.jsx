@@ -10,20 +10,33 @@ function useSupabaseState(key, def) {
   const [data, setData] = useState(def);
   const [loaded, setLoaded] = useState(false);
   const loadedRef = useRef(false);
+  const pendingSave = useRef(null); // 로드 전 save 요청 보관
 
   useEffect(() => {
     getSetting(key).then(v => {
+      // Supabase에 값 있으면 적용, 없으면 def 유지 (절대 덮어쓰기 안 함)
       if(v !== null && v !== undefined) setData(v);
-      setLoaded(true);
       loadedRef.current = true;
-    }).catch(() => { setLoaded(true); loadedRef.current = true; });
+      setLoaded(true);
+      // 로드 전에 save 요청 있었으면 이제 실행
+      if(pendingSave.current !== null){
+        setSetting(key, pendingSave.current);
+        pendingSave.current = null;
+      }
+    }).catch(() => {
+      loadedRef.current = true;
+      setLoaded(true);
+    });
   // eslint-disable-next-line
   }, [key]);
 
   const save = useCallback(async (v) => {
-    // Supabase 로드 완료 전엔 저장 안 함 (덮어쓰기 방지)
-    if(!loadedRef.current) return;
-    setData(v);
+    setData(v); // UI는 즉시 반영
+    if(!loadedRef.current){
+      // 아직 로드 중이면 pending에 보관 (나중에 저장)
+      pendingSave.current = v;
+      return;
+    }
     await setSetting(key, v);
   }, [key]);
 
@@ -670,9 +683,10 @@ export default function OaDashboard(){
 
   function saveSheetUrl(){
     const url = sheetInput.trim();
+    if(!url) return;
     setSheetUrl(url);
     setSheetModal(false);
-    if(url) fetchSheet(url);
+    fetchSheet(url);
   }
 
   // ── 발주임박 시트 fetch ─────────────────────────────
