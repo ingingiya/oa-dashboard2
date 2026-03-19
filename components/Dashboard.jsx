@@ -596,6 +596,7 @@ export default function OaDashboard(){
   const [imgUploading, setImgUploading] = useState(false);
   const [hoverImg, setHoverImg]       = useState(null);
   const fileInputRef                  = useRef(null);
+  const [isDragging, setIsDragging]     = useState(false);
 
   useEffect(() => {
     getAdImages().then(imgs => { if (imgs?.length) setAdImages(imgs); }).catch(() => {});
@@ -1425,44 +1426,71 @@ export default function OaDashboard(){
           );
         })()}
 
-        {/* 광고 소재 이미지/영상 업로드 */}
+        {/* 광고 소재 이미지/영상 업로드 — 드래그앤드롭 */}
         <div style={{background:C.white,border:`1px solid ${C.border}`,borderRadius:12,padding:"14px 16px"}}>
-          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12}}>
+          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:10}}>
             <div style={{fontWeight:700,fontSize:13,color:C.ink}}>🎬 광고 소재</div>
             <div style={{display:"flex",gap:6,alignItems:"center"}}>
-              {imgUploading&&<span style={{fontSize:10,color:C.inkLt}}>업로드 중...</span>}
+              {imgUploading&&<span style={{fontSize:10,color:C.inkLt}}>⏳ 업로드 중...</span>}
               <input ref={fileInputRef} type="file" accept="image/*,video/*" multiple style={{display:"none"}}
                 onChange={e=>handleAdImageUpload(e.target.files)}/>
               <button onClick={()=>fileInputRef.current?.click()}
-                style={{fontSize:11,fontWeight:600,padding:"5px 14px",borderRadius:8,border:`1px solid ${C.border}`,
-                  background:C.white,cursor:"pointer",color:C.rose,fontFamily:"inherit"}}>
+                style={{fontSize:11,fontWeight:600,padding:"5px 14px",borderRadius:8,
+                  border:`1px solid ${C.border}`,background:C.white,cursor:"pointer",
+                  color:C.rose,fontFamily:"inherit"}}>
                 + 소재 추가
               </button>
             </div>
           </div>
-          {adImages.length===0?(
-            <div style={{fontSize:11,color:C.inkLt,textAlign:"center",padding:"16px 0",
-              border:`1px dashed ${C.border}`,borderRadius:8}}>
-              이미지 또는 영상을 업로드하면 광고명과 자동 매칭됩니다
-            </div>
-          ):(
-            <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
-              {adImages.map((img,i)=>(
-                <div key={i} style={{position:"relative",display:"inline-flex",flexDirection:"column",alignItems:"center",gap:4}}>
-                  <ThumbPreview url={img.url} name={img.name}/>
-                  <span style={{fontSize:9,color:C.inkMid,maxWidth:56,textAlign:"center",
-                    overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{img.name}</span>
-                  <button onClick={async()=>{
-                    const next=adImages.filter((_,j)=>j!==i);
-                    setAdImages(next);
-                    await saveAdImagesMeta(next);
-                  }} style={{position:"absolute",top:-4,right:-4,width:16,height:16,borderRadius:"50%",
-                    background:C.bad,color:"#fff",border:"none",cursor:"pointer",fontSize:9,
-                    display:"flex",alignItems:"center",justifyContent:"center",lineHeight:1}}>✕</button>
+          {/* 드래그앤드롭 영역 */}
+          <div
+            onDrop={e=>{e.preventDefault();e.stopPropagation();setIsDragging(false);const f=e.dataTransfer.files;if(f?.length)handleAdImageUpload(f);}}
+            onDragOver={e=>{e.preventDefault();setIsDragging(true);}}
+            onDragEnter={e=>{e.preventDefault();setIsDragging(true);}}
+            onDragLeave={e=>{e.preventDefault();setIsDragging(false);}}
+            onClick={()=>adImages.length===0&&fileInputRef.current?.click()}
+            style={{
+              border:`2px dashed ${isDragging?C.rose:adImages.length?C.border+"88":C.border}`,
+              borderRadius:10,
+              padding:adImages.length?"10px":"28px 16px",
+              background:isDragging?C.blush:"transparent",
+              transition:"all 0.2s",
+              cursor:adImages.length?"default":"pointer",
+            }}
+          >
+            {adImages.length===0?(
+              <div style={{textAlign:"center",pointerEvents:"none"}}>
+                <div style={{fontSize:24,marginBottom:6}}>📂</div>
+                <div style={{fontSize:11,fontWeight:700,color:isDragging?C.rose:C.inkMid}}>
+                  {isDragging?"여기에 놓으세요!":"파일을 드래그해서 놓거나 클릭해서 추가"}
                 </div>
-              ))}
-            </div>
-          )}
+                <div style={{fontSize:10,color:C.inkLt,marginTop:3}}>이미지·영상 모두 가능 · 광고명과 자동 매칭</div>
+              </div>
+            ):(
+              <div style={{display:"flex",gap:10,flexWrap:"wrap",alignItems:"flex-start"}}>
+                {adImages.map((img,i)=>(
+                  <div key={i} style={{position:"relative",display:"inline-flex",flexDirection:"column",alignItems:"center",gap:4}}>
+                    <ThumbPreview url={img.url} name={img.name}/>
+                    <span style={{fontSize:9,color:C.inkMid,maxWidth:56,textAlign:"center",
+                      overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{img.name}</span>
+                    <button onClick={async(e)=>{
+                      e.stopPropagation();
+                      const next=adImages.filter((_,j)=>j!==i);
+                      setAdImages(next);
+                      await saveAdImagesMeta(next);
+                    }} style={{position:"absolute",top:-4,right:-4,width:16,height:16,borderRadius:"50%",
+                      background:C.bad,color:"#fff",border:"none",cursor:"pointer",fontSize:9,
+                      display:"flex",alignItems:"center",justifyContent:"center",lineHeight:1}}>✕</button>
+                  </div>
+                ))}
+                {isDragging&&(
+                  <div style={{display:"flex",alignItems:"center",justifyContent:"center",
+                    width:56,height:56,borderRadius:8,border:`2px dashed ${C.rose}`,
+                    background:C.blush,fontSize:20,pointerEvents:"none"}}>+</div>
+                )}
+              </div>
+            )}
+          </div>
         </div>
 
         {/* 탭 */}
@@ -1633,6 +1661,22 @@ export default function OaDashboard(){
                       const fmtW=n=>n>=10000?`₩${Math.round(n/10000).toLocaleString()}만`:`₩${Math.round(n).toLocaleString()}`;
                       // 광고세트별 집계
                       const adsetMap={};
+                      // 광고세트별로 최신 날짜 예산 찾기 (예산은 변경될 수 있어서 최신값 기준)
+                      const adsetBudgetMap={};
+                      metaRaw.forEach(r=>{
+                        const key=r.adset||"";
+                        if(!key) return;
+                        const budget=(r.adsetBudget||0)>0?r.adsetBudget:(r.campaignBudget||0)>0&&typeof r.campaignBudget==="number"?r.campaignBudget:0;
+                        if(!budget) return;
+                        if(!adsetBudgetMap[key]||r.date>adsetBudgetMap[key].date){
+                          adsetBudgetMap[key]={
+                            budget,
+                            budgetType:r.adsetBudgetType||r.campaignBudgetType||"일일 예산",
+                            date:r.date||"",
+                          };
+                        }
+                      });
+
                       camps.forEach(c=>{
                         const key=c.adset||"(세트없음)";
                         if(!adsetMap[key]) adsetMap[key]={
@@ -1640,11 +1684,10 @@ export default function OaDashboard(){
                           budget:0, budgetType:"",
                           ads:[], spend:0,
                         };
-                        // adsetBudget 우선, 없으면 campaignBudget
-                        const raw=metaRaw.find(r=>(r.adset||"")===(c.adset||"")&&((r.adsetBudget||0)>0||(r.campaignBudget||0)>0));
-                        if(raw&&adsetMap[key].budget===0){
-                          adsetMap[key].budget = (raw.adsetBudget||0)>0 ? raw.adsetBudget : (raw.campaignBudget||0);
-                          adsetMap[key].budgetType = raw.adsetBudgetType||raw.campaignBudgetType||"일일 예산";
+                        // 최신 날짜 예산 적용
+                        if(adsetBudgetMap[key]&&adsetMap[key].budget===0){
+                          adsetMap[key].budget=adsetBudgetMap[key].budget;
+                          adsetMap[key].budgetType=adsetBudgetMap[key].budgetType;
                         }
                         adsetMap[key].ads.push(c);
                         adsetMap[key].spend+=(c.spend||0);
@@ -1656,7 +1699,7 @@ export default function OaDashboard(){
                         <div style={{marginBottom:14}}>
                           <div style={{fontSize:11,fontWeight:800,color:C.ink,marginBottom:8,display:"flex",alignItems:"center",gap:6}}>
                             💰 광고세트 예산 현황
-                            <span style={{fontSize:9,color:C.inkLt,fontWeight:500}}>끈 광고 기준 예산 조정 권장</span>
+                            <span style={{fontSize:9,color:C.inkLt,fontWeight:500}}>최신 날짜 기준 일일 예산 · 끈 광고 제외 권장예산 자동 계산</span>
                           </div>
                           <div style={{display:"flex",flexDirection:"column",gap:8}}>
                             {adsets.map((s,i)=>{
@@ -1700,9 +1743,12 @@ export default function OaDashboard(){
                                       </div>
                                     </div>
                                     <div style={{textAlign:"right",flexShrink:0}}>
-                                      <div style={{fontSize:9,color:C.inkLt,marginBottom:2}}>현재 예산</div>
+                                      <div style={{fontSize:9,color:C.inkLt,marginBottom:2}}>
+                                        현재 일일 예산
+                                        {adsetBudgetMap[s.name]?.date&&<span style={{marginLeft:4,color:C.inkLt}}>({adsetBudgetMap[s.name].date.slice(5).replace("-","/")} 기준)</span>}
+                                      </div>
                                       <div style={{fontSize:16,fontWeight:900,color:C.ink}}>{fmtW(s.budget)}</div>
-                                      <div style={{fontSize:9,color:C.inkMid,marginTop:1}}>지출 {fmtW(s.spend)} ({sosinRate}%)</div>
+                                      <div style={{fontSize:9,color:C.inkMid,marginTop:1}}>기간 지출 {fmtW(s.spend)} ({sosinRate}%)</div>
                                     </div>
                                   </div>
                                   {/* 예산 조정 권장 */}
