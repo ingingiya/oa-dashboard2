@@ -9,18 +9,24 @@ import { getSetting, setSetting, getAdImages, saveAdImagesMeta, uploadAdImage } 
 function useSupabaseState(key, def) {
   const [data, setData] = useState(def);
   const [loaded, setLoaded] = useState(false);
+  const loadedRef = useRef(false);
+
   useEffect(() => {
     getSetting(key).then(v => {
-      // null이면 Supabase에 없는 것 → 기본값 유지, 덮어쓰지 않음
       if(v !== null && v !== undefined) setData(v);
       setLoaded(true);
-    }).catch(() => { setLoaded(true); });
+      loadedRef.current = true;
+    }).catch(() => { setLoaded(true); loadedRef.current = true; });
   // eslint-disable-next-line
   }, [key]);
+
   const save = useCallback(async (v) => {
+    // Supabase 로드 완료 전엔 저장 안 함 (덮어쓰기 방지)
+    if(!loadedRef.current) return;
     setData(v);
     await setSetting(key, v);
   }, [key]);
+
   return [data, save, loaded];
 }
 import {
@@ -586,7 +592,7 @@ export default function OaDashboard(){
   const [infUrlInput, setInfUrlInput]   = useState("");
 
   // 구글 시트 연동 상태
-  const [sheetUrl,setSheetUrl, sheetUrlLoaded] = useSupabaseState("oa_sheet_url", "");
+  const [sheetUrl,setSheetUrl, sheetUrlLoaded] = useSupabaseState("oa_sheet_url_v7", "");
   const [metaRaw,setMetaRaw]         = useState([]);
   const [metaStatus,setMetaStatus]   = useState("idle");
   const [metaError,setMetaError]     = useState("");
@@ -975,7 +981,7 @@ export default function OaDashboard(){
         objective: r.objective || "",
         resultType: r.resultType || "",
         spend:0, clicks:0, lpv:0, purchases:0, convValue:0, cart:0, ctrSum:0, n:0,
-        firstDate: r.date||null, lastDate: r.date||null,
+        firstDate: r.date||null, lastDate: r.date||null, lastActiveDate: null,
       };
       byAd[key].spend      += r.spend;
       byAd[key].clicks     += r.clicks||r.clicksAll||0;
@@ -989,6 +995,10 @@ export default function OaDashboard(){
       if(r.date){
         if(!byAd[key].firstDate||r.date<byAd[key].firstDate) byAd[key].firstDate=r.date;
         if(!byAd[key].lastDate ||r.date>byAd[key].lastDate)  byAd[key].lastDate=r.date;
+        // 실제 지출 있는 마지막 날짜 (집행중 판단용)
+        if((r.spend||0)>0){
+          if(!byAd[key].lastActiveDate||r.date>byAd[key].lastActiveDate) byAd[key].lastActiveDate=r.date;
+        }
       }
     });
     const campaigns = Object.values(byAd).map(c=>({
@@ -1931,14 +1941,15 @@ export default function OaDashboard(){
                             // ── 게시 기간 (시트 날짜 기반) ──
                             const today = new Date(); today.setHours(0,0,0,0);
                             const parseD = s=>{ if(!s)return null; const d=new Date(s); return isNaN(d)?null:d; };
-                            // 시트 전체 최신 날짜 (기준점) — 오늘 데이터 없어도 정확히 판단
+                            // 시트 전체 최신 날짜 (기준점)
                             const sheetMaxDate = metaRaw.map(r=>r.date).filter(Boolean).sort().pop();
                             const sheetMax = parseD(sheetMaxDate);
-                            const fd = parseD(c.firstDate), ld = parseD(c.lastDate);
-                            const adAge  = fd ? Math.floor((today-fd)/86400000) : null;
-                            // 시트 최신 날짜 기준으로 마지막 데이터 비교 (오늘 기준 아님)
-                            const lastAgo= ld&&sheetMax ? Math.floor((sheetMax-ld)/86400000) : null;
-                            const isActive = lastAgo!==null && lastAgo<=1; // 시트 최신 날짜 기준 1일 이내면 활성
+                            const fd  = parseD(c.firstDate);
+                            const lad = parseD(c.lastActiveDate); // 지출 있는 마지막 날
+                            const adAge = fd ? Math.floor((today-fd)/86400000) : null;
+                            // 시트 최신 날짜 기준으로 지출 있는 마지막 날 비교
+                            const lastAgo = lad&&sheetMax ? Math.floor((sheetMax-lad)/86400000) : null;
+                            const isActive = lastAgo!==null && lastAgo<=1; // 지출 기준 1일 이내면 집행중
 
                             // ── 복제 적합 판정 (CTR좋고 LPV좋은데 CPA보류/컷) ──
                             const cloneable = campTab==="conversion" && (ct?.label==="좋음"||ct?.label==="보통") && (lpvR?.label==="정상") && (cpa&&(cpa.label==="보류"||cpa.label==="컷"));
