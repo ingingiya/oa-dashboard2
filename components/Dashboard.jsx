@@ -191,6 +191,13 @@ function getAdMargin(adName, campaignName, margins, defaultMargin){
   const matched = (margins||[]).find(m => m.keyword && text.includes(m.keyword.toLowerCase()));
   return matched ? matched.margin : defaultMargin;
 }
+// 광고명/캠페인명에서 트래픽 CPC 상한 찾기
+function getTrafficCpcMax(adName, campaignName, criteria){
+  const text = ((adName||"") + " " + (campaignName||"")).toLowerCase();
+  const kws = criteria?.cpcKeywords||[];
+  const matched = kws.find(k=>k.keyword&&text.includes(k.keyword.toLowerCase()));
+  return matched ? (matched.cpcMax||criteria?.cpcMax||600) : (criteria?.cpcMax||600);
+}
 
 function adScore(ad, margin){
   // 교체 필요 광고 판단: 하나라도 "컷" or "랜딩문제" or "소재문제"면 경고
@@ -531,6 +538,18 @@ export default function OaDashboard(){
   // 마진 설정
   const [margin, setMargin]           = useSupabaseState("oa_margin_v7", 30000);
   const [margins, setMargins]         = useSupabaseState("oa_margins_v7", DEFAULT_MARGINS);
+  // 트래픽 캠페인 기준값 (설정 가능)
+  const [trafficCriteria, setTrafficCriteria] = useSupabaseState("oa_traffic_criteria_v7", {
+    cpcMax: 600,      // 기본 CPC 상한 (원)
+    ctrMin: 1.5,      // CTR 하한 (%)
+    lpvMin: 55,       // LPV율 하한 (%)
+    cpcKeywords: [    // 제품별 CPC 상한 (키워드 매칭)
+      {id:1, keyword:"소닉플로우", cpcMax:600},
+      {id:2, keyword:"프리온",     cpcMax:800},
+    ],
+  });
+  const [newCpcKeyword, setNewCpcKeyword] = useState("");
+  const [newCpcVal, setNewCpcVal]         = useState("");
 
   const [marginModal, setMarginModal]= useState(false);
   const [marginInput, setMarginInput]= useState("");
@@ -1279,6 +1298,7 @@ export default function OaDashboard(){
           <div style={{display:"flex",gap:6}}>
             {hasSheet&&<Btn variant="sage" small onClick={()=>fetchSheet(sheetUrl)}>🔄 새로고침</Btn>}
             {deletedAds.length>0&&<Btn variant="neutral" small onClick={()=>{ setDeletedAds([]); }}>↩ 숨긴 광고 복원 ({deletedAds.length})</Btn>}
+            <Btn variant="ghost" small onClick={()=>{setMarginInput(String(margin));setMarginModal(true)}}>⚙️ 기준 설정</Btn>
             <Btn variant={hasSheet?"neutral":"gold"} small onClick={()=>{setSheetInput(sheetUrl);setSheetModal(true)}}>
               {hasSheet?"⚙️ 시트 변경":"🔗 시트 연결"}
             </Btn>
@@ -1584,9 +1604,9 @@ export default function OaDashboard(){
                           return isCut?"cut":isHold?"hold":isUp?"up":"watch";
                         } else {
                           // 트래픽: CPC·CTR 기준
-                          const cpcOk=(c.cpc||0)>0&&(c.cpc||0)<=130;
-                          const ctrOk=(c.ctr||0)>=3;
-                          const lpvOk=(c.lpvRate||0)>=65;
+                          const cpcOk=(c.cpc||0)>0&&(c.cpc||0)<=getTrafficCpcMax(c.name,c.campaign,trafficCriteria);
+                          const ctrOk=(c.ctr||0)>=(trafficCriteria?.ctrMin||1);
+                          const lpvOk=(c.lpvRate||0)>=(trafficCriteria?.lpvMin||50);
                           if(!cpcOk||(ct&&ct.label==="소재문제")) return "cut";
                           if(!ctrOk||!lpvOk) return "hold";
                           if(cpcOk&&ctrOk&&lpvOk) return "up";
@@ -1696,9 +1716,9 @@ export default function OaDashboard(){
                               else if(isUp){verdict="🚀올리기";verdictColor=C.good;verdictBg:"#EDF7F1";}
                               else{verdict="👀유지";verdictColor=C.inkMid;verdictBg:C.cream;}
                             } else {
-                              const cpcOk=(c.cpc||0)>0&&(c.cpc||0)<=130;
-                              const ctrOk=(c.ctr||0)>=3;
-                              const lpvOk=(c.lpvRate||0)>=65;
+                              const cpcOk=(c.cpc||0)>0&&(c.cpc||0)<=getTrafficCpcMax(c.name,c.campaign,trafficCriteria);
+                              const ctrOk=(c.ctr||0)>=(trafficCriteria?.ctrMin||1);
+                              const lpvOk=(c.lpvRate||0)>=(trafficCriteria?.lpvMin||50);
                               if(!cpcOk||(ct?.label==="소재문제")){verdict="🔴끄기";verdictColor=C.bad;verdictBg="#FEF0F0";}
                               else if(!ctrOk||!lpvOk){verdict="⚠️줄이기";verdictColor=C.warn;verdictBg="#FFF8EC";}
                               else{verdict="🚀올리기";verdictColor=C.good;verdictBg="#EDF7F1";}
@@ -1736,9 +1756,9 @@ export default function OaDashboard(){
                             const roasOk  = (c.roas||0)>=3;
 
                             const cpaOk=(c.cpa||0)>0&&(c.cpa||0)<=16000;
-                            const cpcOk=(c.cpc||0)<=130&&(c.cpc||0)>0;
-                            const ctrOk=(c.ctr||0)>=3;
-                            const lpvOk=(c.lpvRate||0)>=65;
+                            const cpcOk=(c.cpc||0)<=getTrafficCpcMax(c.name,c.campaign,trafficCriteria)&&(c.cpc||0)>0;
+                            const ctrOk=(c.ctr||0)>=(trafficCriteria?.ctrMin||1);
+                            const lpvOk=(c.lpvRate||0)>=(trafficCriteria?.lpvMin||50);
 
                             return(<tr key={i} style={{borderBottom:`1px solid ${C.border}`,transition:"background 0.15s"}}
                               onMouseEnter={e=>e.currentTarget.style.background=C.cream}
@@ -2046,12 +2066,14 @@ export default function OaDashboard(){
           </Modal>
         )}
 
-        {/* ── 마진 설정 모달 ── */}
+        {/* ── 기준 설정 모달 (전환 마진 + 트래픽 기준) ── */}
         {marginModal&&(
-          <Modal title="⚙️ 마진 설정" onClose={()=>setMarginModal(false)} wide>
-            <div style={{background:C.goldLt,borderRadius:10,padding:"12px 14px",marginBottom:16,fontSize:11,color:C.gold,fontWeight:700}}>
-              💡 광고명에 키워드가 포함되면 해당 마진이 자동 적용돼요<br/>
-              <span style={{fontWeight:400,color:C.inkMid}}>마진 이하 → 유지 / 마진 근접(85~100%) → 보류 / 마진 초과 → 컷</span>
+          <Modal title="⚙️ 광고 기준 설정" onClose={()=>setMarginModal(false)} wide>
+
+            {/* ── 전환 캠페인 마진 ── */}
+            <div style={{fontSize:12,fontWeight:800,color:C.ink,marginBottom:10}}>🎯 전환 캠페인 — 마진 기준</div>
+            <div style={{background:C.goldLt,borderRadius:10,padding:"10px 14px",marginBottom:12,fontSize:10,color:C.gold,fontWeight:700}}>
+              광고명 키워드 포함 시 해당 마진 자동 적용 · 마진 85% 이하 → 유지 / 85~100% → 보류 / 초과 → 컷
             </div>
             <FR label="기본 마진 (키워드 미매칭 시 적용)">
               <div style={{display:"flex",gap:8,alignItems:"center"}}>
@@ -2059,19 +2081,19 @@ export default function OaDashboard(){
                 <span style={{fontSize:11,color:C.inkMid,whiteSpace:"nowrap"}}>원</span>
               </div>
             </FR>
-            <div style={{display:"flex",gap:8,marginBottom:16}}>
+            <div style={{display:"flex",gap:8,marginBottom:14}}>
               {[15000,20000,30000,50000].map(v=>(
                 <button key={v} onClick={()=>setMarginInput(String(v))}
                   style={{flex:1,padding:"7px 4px",borderRadius:8,border:`1px solid ${C.border}`,
                     background:marginInput==String(v)?C.rose:C.cream,
                     color:marginInput==String(v)?C.white:C.inkMid,
                     fontSize:10,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
-                  ₩{(v/1000)}만
+                  ₩{v/10000}만
                 </button>
               ))}
             </div>
-            <div style={{borderTop:`1px solid ${C.border}`,paddingTop:14,marginBottom:12}}>
-              <div style={{fontSize:12,fontWeight:800,color:C.ink,marginBottom:10}}>키워드별 마진</div>
+            <div style={{marginBottom:16}}>
+              <div style={{fontSize:11,fontWeight:800,color:C.ink,marginBottom:8}}>키워드별 마진</div>
               {margins.map((m)=>(
                 <div key={m.id} style={{display:"flex",alignItems:"center",gap:8,marginBottom:8,
                   padding:"10px 12px",background:C.cream,borderRadius:10,border:`1px solid ${C.border}`}}>
@@ -2096,7 +2118,7 @@ export default function OaDashboard(){
                   )}
                 </div>
               ))}
-              <div style={{display:"flex",gap:8,alignItems:"center",marginTop:10,
+              <div style={{display:"flex",gap:8,alignItems:"center",marginTop:8,
                 padding:"10px 12px",background:C.sageLt,borderRadius:10,border:`1px dashed ${C.sage}66`}}>
                 <Inp value={newKeyword} onChange={setNewKeyword} placeholder="키워드 (예: 프리온)" style={{flex:1}}/>
                 <Inp type="number" value={newMarginVal} onChange={setNewMarginVal} placeholder="마진" style={{width:100}}/>
@@ -2108,6 +2130,77 @@ export default function OaDashboard(){
                 }}>+ 추가</Btn>
               </div>
             </div>
+
+            {/* ── 트래픽 캠페인 기준 ── */}
+            <div style={{borderTop:`2px solid ${C.border}`,paddingTop:16,marginBottom:10}}>
+              <div style={{fontSize:12,fontWeight:800,color:C.ink,marginBottom:6}}>🚦 트래픽 캠페인 — 판단 기준</div>
+              <div style={{background:C.purpleLt,borderRadius:10,padding:"10px 14px",marginBottom:12,fontSize:10,color:C.purple,fontWeight:700}}>
+                CPC·CTR·LPV율 기준 이하면 🚀올리기 / 초과면 ⚠️줄이기 or 🔴끄기
+              </div>
+
+              {/* 기본값 3개 */}
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:10,marginBottom:14}}>
+                <FR label="기본 CPC 상한 (원)">
+                  <Inp type="number"
+                    value={trafficCriteria?.cpcMax||600}
+                    onChange={v=>setTrafficCriteria({...trafficCriteria,cpcMax:+v||600})}
+                    placeholder="600"/>
+                  <div style={{fontSize:9,color:C.inkLt,marginTop:3}}>키워드 미매칭 시 적용</div>
+                </FR>
+                <FR label="CTR 하한 (%)">
+                  <Inp type="number"
+                    value={trafficCriteria?.ctrMin||1.5}
+                    onChange={v=>setTrafficCriteria({...trafficCriteria,ctrMin:+v||1.5})}
+                    placeholder="1.5"/>
+                  <div style={{fontSize:9,color:C.inkLt,marginTop:3}}>미달 시 줄이기</div>
+                </FR>
+                <FR label="LPV율 하한 (%)">
+                  <Inp type="number"
+                    value={trafficCriteria?.lpvMin||55}
+                    onChange={v=>setTrafficCriteria({...trafficCriteria,lpvMin:+v||55})}
+                    placeholder="55"/>
+                  <div style={{fontSize:9,color:C.inkLt,marginTop:3}}>미달 시 줄이기</div>
+                </FR>
+              </div>
+
+              {/* 제품별 CPC 상한 */}
+              <div style={{fontSize:11,fontWeight:800,color:C.ink,marginBottom:8}}>제품별 CPC 상한</div>
+              <div style={{fontSize:10,color:C.inkMid,marginBottom:10,background:C.cream,borderRadius:8,padding:"8px 12px"}}>
+                💡 광고명에 키워드가 포함되면 제품별 CPC 상한이 자동 적용돼요<br/>
+                <span style={{color:C.inkLt}}>예: "소닉플로우_출근길" → 소닉플로우 기준 적용</span>
+              </div>
+              {(trafficCriteria?.cpcKeywords||[]).map((k)=>(
+                <div key={k.id} style={{display:"flex",alignItems:"center",gap:8,marginBottom:8,
+                  padding:"10px 12px",background:C.cream,borderRadius:10,border:`1px solid ${C.border}`}}>
+                  <div style={{flex:1}}>
+                    <span style={{fontSize:12,fontWeight:700,color:C.ink,background:C.purpleLt,
+                      padding:"2px 10px",borderRadius:20,border:`1px solid ${C.purple}33`}}>{k.keyword}</span>
+                  </div>
+                  <span style={{fontSize:13,fontWeight:800,color:C.purple}}>₩{(k.cpcMax||0).toLocaleString()}</span>
+                  <span style={{fontSize:10,color:C.inkLt}}>원</span>
+                  <Btn small variant="danger" onClick={()=>setTrafficCriteria({
+                    ...trafficCriteria,
+                    cpcKeywords:(trafficCriteria.cpcKeywords||[]).filter(x=>x.id!==k.id)
+                  })}>🗑</Btn>
+                </div>
+              ))}
+              {/* 새 키워드 추가 */}
+              <div style={{display:"flex",gap:8,alignItems:"center",marginTop:8,
+                padding:"10px 12px",background:C.purpleLt,borderRadius:10,border:`1px dashed ${C.purple}44`}}>
+                <Inp value={newCpcKeyword} onChange={setNewCpcKeyword} placeholder="키워드 (예: 소닉플로우)" style={{flex:1}}/>
+                <Inp type="number" value={newCpcVal} onChange={setNewCpcVal} placeholder="CPC 상한" style={{width:110}}/>
+                <span style={{fontSize:10,color:C.inkMid,whiteSpace:"nowrap"}}>원</span>
+                <Btn small variant="ghost" onClick={()=>{
+                  if(!newCpcKeyword||!newCpcVal) return;
+                  setTrafficCriteria({
+                    ...trafficCriteria,
+                    cpcKeywords:[...(trafficCriteria.cpcKeywords||[]),{id:Date.now(),keyword:newCpcKeyword,cpcMax:+newCpcVal}]
+                  });
+                  setNewCpcKeyword(""); setNewCpcVal("");
+                }}>+ 추가</Btn>
+              </div>
+            </div>
+
             <Btn onClick={()=>{setMargin(+marginInput||30000);setMarginModal(false);}} style={{width:"100%"}}>💾 저장</Btn>
           </Modal>
         )}
