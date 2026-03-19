@@ -281,6 +281,11 @@ function mapMetaRow(row){
     ctr:        num(g("CTR(전체)","ctr")),
     cpa:        num(g("결과당 비용","cost_per_result","cpa")),
     cpm:        num(g("CPM(1,000회 노출당 비용)","cpm")),
+    campaignBudget: num(g("캠페인 예산","campaign_budget")),
+    campaignBudgetType: g("캠페인 예산 유형","campaign_budget_type"),
+    adsetBudget: num(g("광고 세트 예산","adset_budget")),
+    adsetBudgetType: g("광고 세트 예산 유형","adset_budget_type"),
+    budgetSource: g("캠페인 예산","광고 세트 예산 유형"), // "광고 세트 예산 사용 중" or 캠페인 예산
   };
 }
 
@@ -1622,6 +1627,123 @@ export default function OaDashboard(){
                               <div style={{fontSize:18,fontWeight:900,color:s.color,marginTop:4}}>{s.value}</div>
                             </div>
                           ))}
+                        </div>
+                      );
+                    })()}
+                    {/* ── 광고세트 예산 분석 패널 ── */}
+                    {(()=>{
+                      const fmtW=n=>n>=10000?`₩${Math.round(n/10000).toLocaleString()}만`:`₩${Math.round(n).toLocaleString()}`;
+                      // 광고세트별 집계
+                      const adsetMap={};
+                      camps.forEach(c=>{
+                        const key=c.adset||"(세트없음)";
+                        if(!adsetMap[key]) adsetMap[key]={
+                          name:key,
+                          budget:0, budgetType:"",
+                          ads:[], spend:0,
+                        };
+                        // 예산: 시트 raw에서 해당 adset의 예산 찾기
+                        const raw=metaFiltered.find(r=>(r.adset||"")===(c.adset||"")&&(r.adsetBudget||r.campaignBudget));
+                        if(raw){
+                          adsetMap[key].budget = raw.adsetBudget||raw.campaignBudget||0;
+                          adsetMap[key].budgetType = raw.adsetBudgetType||raw.campaignBudgetType||"";
+                        }
+                        adsetMap[key].ads.push(c);
+                        adsetMap[key].spend+=(c.spend||0);
+                      });
+                      const adsets=Object.values(adsetMap).filter(s=>s.budget>0).sort((a,b)=>b.budget-a.budget);
+                      if(!adsets.length) return null;
+
+                      return(
+                        <div style={{marginBottom:14}}>
+                          <div style={{fontSize:11,fontWeight:800,color:C.ink,marginBottom:8,display:"flex",alignItems:"center",gap:6}}>
+                            💰 광고세트 예산 현황
+                            <span style={{fontSize:9,color:C.inkLt,fontWeight:500}}>끈 광고 기준 예산 조정 권장</span>
+                          </div>
+                          <div style={{display:"flex",flexDirection:"column",gap:8}}>
+                            {adsets.map((s,i)=>{
+                              const totalAds=s.ads.length;
+                              // 끈 광고 = deletedAds에 포함된 것
+                              const offAds=s.ads.filter(a=>deletedAds.includes(a.name));
+                              const activeAds=totalAds-offAds.length;
+                              // 권장 예산 = 현재예산 ÷ 전체 × 활성
+                              const recommended=totalAds>0?Math.round((s.budget/totalAds)*activeAds/10000)*10000:s.budget;
+                              const needsAdjust=offAds.length>0&&recommended<s.budget;
+                              const sosinRate=s.budget>0?Math.round((s.spend/s.budget)*100):0;
+
+                              return(
+                                <div key={i} style={{background:needsAdjust?"#FFF8EC":C.white,
+                                  border:`1px solid ${needsAdjust?C.warn+"55":C.border}`,
+                                  borderRadius:12,padding:"12px 14px"}}>
+                                  <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",gap:8,flexWrap:"wrap"}}>
+                                    <div style={{flex:1,minWidth:0}}>
+                                      <div style={{fontSize:11,fontWeight:800,color:C.ink,marginBottom:4,
+                                        overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{s.name}</div>
+                                      <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+                                        {/* 광고 수 */}
+                                        <span style={{fontSize:9,fontWeight:700,padding:"2px 8px",borderRadius:20,
+                                          background:C.cream,color:C.inkMid,border:`1px solid ${C.border}`}}>
+                                          광고 총 {totalAds}개
+                                        </span>
+                                        <span style={{fontSize:9,fontWeight:700,padding:"2px 8px",borderRadius:20,
+                                          background:"#EDF7F1",color:C.good,border:`1px solid ${C.good}33`}}>
+                                          🟢 활성 {activeAds}개
+                                        </span>
+                                        {offAds.length>0&&(
+                                          <span style={{fontSize:9,fontWeight:700,padding:"2px 8px",borderRadius:20,
+                                            background:"#FEF0F0",color:C.bad,border:`1px solid ${C.bad}33`}}>
+                                            ⏹ 꺼짐 {offAds.length}개
+                                          </span>
+                                        )}
+                                        <span style={{fontSize:9,fontWeight:600,padding:"2px 8px",borderRadius:20,
+                                          background:C.purpleLt,color:C.purple,border:`1px solid ${C.purple}33`}}>
+                                          {s.budgetType||"일일 예산"}
+                                        </span>
+                                      </div>
+                                    </div>
+                                    <div style={{textAlign:"right",flexShrink:0}}>
+                                      <div style={{fontSize:9,color:C.inkLt,marginBottom:2}}>현재 예산</div>
+                                      <div style={{fontSize:16,fontWeight:900,color:C.ink}}>{fmtW(s.budget)}</div>
+                                      <div style={{fontSize:9,color:C.inkMid,marginTop:1}}>지출 {fmtW(s.spend)} ({sosinRate}%)</div>
+                                    </div>
+                                  </div>
+                                  {/* 예산 조정 권장 */}
+                                  {needsAdjust&&(
+                                    <div style={{marginTop:10,padding:"10px 12px",background:"#FFF3E0",
+                                      borderRadius:8,border:`1px solid ${C.warn}44`,display:"flex",alignItems:"center",justifyContent:"space-between",gap:8}}>
+                                      <div>
+                                        <div style={{fontSize:10,fontWeight:800,color:C.warn}}>⚠️ 예산 조정 권장</div>
+                                        <div style={{fontSize:9,color:C.inkMid,marginTop:2}}>
+                                          꺼진 광고 {offAds.length}개 제외 · {activeAds}개 기준으로 재배분
+                                        </div>
+                                      </div>
+                                      <div style={{display:"flex",alignItems:"center",gap:8}}>
+                                        <div style={{textAlign:"center"}}>
+                                          <div style={{fontSize:9,color:C.inkLt}}>현재</div>
+                                          <div style={{fontSize:13,fontWeight:800,color:C.warn,textDecoration:"line-through"}}>{fmtW(s.budget)}</div>
+                                        </div>
+                                        <span style={{fontSize:12,color:C.inkMid}}>→</span>
+                                        <div style={{textAlign:"center"}}>
+                                          <div style={{fontSize:9,color:C.inkLt}}>권장</div>
+                                          <div style={{fontSize:15,fontWeight:900,color:C.good}}>{fmtW(recommended)}</div>
+                                        </div>
+                                        <div style={{fontSize:9,fontWeight:700,padding:"3px 8px",borderRadius:20,
+                                          background:"#EDF7F1",color:C.good,border:`1px solid ${C.good}33`}}>
+                                          -{fmtW(s.budget-recommended)} 절감
+                                        </div>
+                                      </div>
+                                    </div>
+                                  )}
+                                  {/* 소진율 바 */}
+                                  <div style={{marginTop:8,height:4,background:C.border,borderRadius:2,overflow:"hidden"}}>
+                                    <div style={{height:"100%",width:`${Math.min(sosinRate,100)}%`,
+                                      background:sosinRate>=80?C.good:sosinRate>=40?C.warn:C.rose,
+                                      borderRadius:2,transition:"width 0.5s"}}/>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
                         </div>
                       );
                     })()}
