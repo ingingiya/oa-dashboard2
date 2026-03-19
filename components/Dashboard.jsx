@@ -11,7 +11,8 @@ function useSupabaseState(key, def) {
   const [loaded, setLoaded] = useState(false);
   useEffect(() => {
     getSetting(key).then(v => {
-      setData(v ?? def);
+      // null이면 Supabase에 없는 것 → 기본값 유지, 덮어쓰지 않음
+      if(v !== null && v !== undefined) setData(v);
       setLoaded(true);
     }).catch(() => { setLoaded(true); });
   // eslint-disable-next-line
@@ -585,7 +586,7 @@ export default function OaDashboard(){
   const [infUrlInput, setInfUrlInput]   = useState("");
 
   // 구글 시트 연동 상태
-  const [sheetUrl,setSheetUrl, sheetUrlLoaded] = useSupabaseState("oa_sheet_url_v7", "");
+  const [sheetUrl,setSheetUrl, sheetUrlLoaded] = useSupabaseState("oa_sheet_url", "");
   const [metaRaw,setMetaRaw]         = useState([]);
   const [metaStatus,setMetaStatus]   = useState("idle");
   const [metaError,setMetaError]     = useState("");
