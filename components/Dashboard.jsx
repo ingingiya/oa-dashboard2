@@ -2,6 +2,26 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { getSetting, setSetting, getAdImages, saveAdImagesMeta, uploadAdImage } from "../lib/useSupabase";
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// Supabase 동기화 훅 — 팀 전체 공유 (localStorage 대체)
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function useSupabaseState(key, def) {
+  const [data, setData] = useState(def);
+  const [loaded, setLoaded] = useState(false);
+  useEffect(() => {
+    getSetting(key).then(v => {
+      setData(v ?? def);
+      setLoaded(true);
+    }).catch(() => { setLoaded(true); });
+  // eslint-disable-next-line
+  }, [key]);
+  const save = useCallback(async (v) => {
+    setData(v);
+    await setSetting(key, v);
+  }, [key]);
+  return [data, save, loaded];
+}
 import {
   AreaChart, Area, BarChart, Bar, LineChart, Line,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell
@@ -11,13 +31,16 @@ import {
 // 팔레트
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 const C = {
-  rose:"#E8567A", roseLt:"#F2849E", blush:"#FCE8EE",
-  cream:"#FEF8F4", gold:"#C9924A", goldLt:"#F6E8D0",
-  sage:"#6BAA88", sageLt:"#E4F2EA",
-  ink:"#2B1F2E", inkMid:"#6B576F", inkLt:"#B09CB5",
-  white:"#FFFFFF", border:"#EDE0E8",
-  good:"#4DAD7A", warn:"#E8A020", bad:"#E84B4B",
-  purple:"#9B6FC7", purpleLt:"#F0E8FA",
+  // 토스 블루+화이트+그레이
+  rose:"#2563EB", roseLt:"#3B82F6", blush:"#EFF6FF",
+  cream:"#F8FAFC", gold:"#2563EB", goldLt:"#DBEAFE",
+  sage:"#16A34A", sageLt:"#F0FDF4",
+  ink:"#18181B", inkMid:"#52525B", inkLt:"#A1A1AA",
+  white:"#FFFFFF", border:"#E4E4E7",
+  good:"#16A34A", warn:"#EA580C", bad:"#DC2626",
+  purple:"#2563EB", purpleLt:"#EFF6FF",
+  // 배경
+  bg:"#F4F4F5",
 };
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -26,19 +49,35 @@ const C = {
 function ThumbPreview({ url, name }) {
   const [pos, setPos] = useState(null);
   if (!url) return null;
+  const isVideo = /\.(mp4|mov|webm|avi)$/i.test(url) || url.includes("video");
   return (
     <span style={{position:"relative",display:"inline-block",verticalAlign:"middle",marginRight:6}}>
-      <img src={url} alt={name}
-        style={{width:40,height:40,borderRadius:6,objectFit:"cover",cursor:"pointer",border:"1px solid #EDE0E8"}}
-        onMouseEnter={e=>{const r=e.target.getBoundingClientRect();setPos({x:r.right+8,y:r.top});}}
-        onMouseMove={e=>setPos({x:e.clientX+12,y:e.clientY-130})}
-        onMouseLeave={()=>setPos(null)}
-      />
+      {isVideo ? (
+        <div
+          style={{width:56,height:56,borderRadius:8,objectFit:"cover",cursor:"pointer",
+            border:"1px solid #E4E4E7",background:"#F4F4F5",display:"flex",alignItems:"center",
+            justifyContent:"center",fontSize:22}}
+          onMouseEnter={e=>{const r=e.currentTarget.getBoundingClientRect();setPos({x:r.right+8,y:r.top});}}
+          onMouseMove={e=>setPos({x:e.clientX+12,y:e.clientY-150})}
+          onMouseLeave={()=>setPos(null)}
+        >🎬</div>
+      ) : (
+        <img src={url} alt={name}
+          style={{width:56,height:56,borderRadius:8,objectFit:"cover",cursor:"pointer",border:"1px solid #E4E4E7"}}
+          onMouseEnter={e=>{const r=e.target.getBoundingClientRect();setPos({x:r.right+8,y:r.top});}}
+          onMouseMove={e=>setPos({x:e.clientX+12,y:e.clientY-150})}
+          onMouseLeave={()=>setPos(null)}
+        />
+      )}
       {pos&&(
         <div style={{position:"fixed",left:pos.x,top:pos.y,zIndex:9999,pointerEvents:"none",
-          boxShadow:"0 8px 32px rgba(43,31,46,0.18)",borderRadius:12,overflow:"hidden",border:"2px solid #EDE0E8"}}>
-          <img src={url} alt={name} style={{width:320,height:320,objectFit:"cover",display:"block"}}/>
-          <div style={{padding:"6px 10px",background:"#fff",fontSize:10,color:"#6B576F",fontWeight:700}}>{name}</div>
+          boxShadow:"0 8px 32px rgba(0,0,0,0.15)",borderRadius:12,overflow:"hidden",border:"1px solid #E4E4E7",background:"#fff"}}>
+          {isVideo ? (
+            <video src={url} style={{width:280,height:280,objectFit:"cover",display:"block"}} autoPlay muted loop playsInline/>
+          ) : (
+            <img src={url} alt={name} style={{width:280,height:280,objectFit:"cover",display:"block"}}/>
+          )}
+          <div style={{padding:"6px 10px",background:"#fff",fontSize:10,color:"#52525B",fontWeight:600}}>{name}</div>
         </div>
       )}
     </span>
@@ -72,15 +111,7 @@ const DEFAULT_SCH = [
   {id:5,type:"공구",   title:"립밤 세트 공동구매",       date:"2025-02-20",endDate:"2025-02-22",platform:"카카오 쇼핑",         note:"완료",              status:"완료"},
 ];
 // 구글 시트 URL 저장 키
-const LS_SHEET_URL = "oa_sheet_url";
-const LS_INF       = "oa_inf_v7";
-const LS_INV       = "oa_inv_v7";
-const LS_SCH       = "oa_sch_v7";
-const LS_MARGIN    = "oa_margin_v7"; // 마진 설정
-const LS_MARGINS   = "oa_margins_v7"; // 키워드별 마진
-const LS_ORDER_URL = "oa_order_url_v7"; // 발주임박 시트 URL
-const LS_INV_URL   = "oa_inv_url_v7";   // 재고원본 시트 URL
-const LS_INF_URL   = "oa_inf_url_v7";   // 인플루언서 시트 URL
+// Supabase key 상수 (useSupabaseState에서 직접 사용)
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // 유틸
@@ -178,34 +209,7 @@ function adScore(ad, margin){
 function schTypeColor(t){ return {공구:C.rose,시딩:C.purple,광고:C.gold,이벤트:C.sage}[t]||C.inkMid; }
 function schTypeIcon(t){  return {공구:"🛍",시딩:"✨",광고:"📣",이벤트:"🎉"}[t]||"📌"; }
 
-// localStorage 훅 — SSR/CSR 완전 분리 버전
-// 서버: 항상 def 반환, 클라이언트: localStorage 값 반환
-// useState 초기화 시점에 localStorage 읽어서 하이드레이션 불일치 원천 차단
-function useLocal(key, def){
-  const [data, setData] = useState(def);
-  const [loaded, setLoaded] = useState(false);
-
-  // 마운트 후 딱 한 번만 localStorage에서 읽기
-  const isFirst = useCallback(()=>{}, []);
-  useEffect(()=>{
-    let stored = def;
-    try{
-      const raw = localStorage.getItem(key);
-      if(raw !== null) stored = JSON.parse(raw);
-    }catch{}
-    // 서버 렌더값(def)과 다를 때만 업데이트 → 불일치 최소화
-    setData(stored);
-    setLoaded(true);
-  // eslint-disable-next-line
-  }, []);
-
-  const save = useCallback((v)=>{
-    setData(v);
-    try{ localStorage.setItem(key, JSON.stringify(v)); }catch{}
-  }, [key]);
-
-  return [data, save, loaded];
-}
+// useLocal은 useSupabaseState로 대체됨
 
 // CSV 파싱 (구글 시트 export) — 타이틀 행 자동 스킵
 function parseCSV(text){
@@ -291,13 +295,6 @@ function isConversionCampaign(objective, campaignName=""){
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 const Card=({children,style={}})=>(
   <div style={{background:C.white,border:`1px solid ${C.border}`,borderRadius:14,padding:"18px 16px",...style}}>{children}</div>
-);
-const MoreBtn=({show,total,limit,onClick})=>(
-  <button onClick={onClick} style={{width:"100%",marginTop:8,padding:"6px",borderRadius:8,
-    border:`1px solid ${C.border}`,background:"transparent",cursor:"pointer",
-    fontSize:11,fontWeight:700,color:C.inkMid,fontFamily:"inherit"}}>
-    {show?`▲ 접기`:`▼ 더보기 (${total-limit}개 더)`}
-  </button>
 );
 const CardTitle=({title,sub,action})=>(
   <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:14}}>
@@ -526,14 +523,15 @@ export default function OaDashboard(){
   const [pulse,setPulse]       = useState(false);
   const [nid,setNid]           = useState(300);
 
-  // localStorage 데이터
+  // Supabase 동기화 데이터 (팀 공유)
   const [infs,setInfs] = useState([]);
-  const [inv, setInv]  = useLocal(LS_INV, DEFAULT_INV);
-  const [sch, setSch]  = useLocal(LS_SCH, DEFAULT_SCH);
+  const [inv, setInv, invLoaded]      = useSupabaseState("oa_inv_v7", DEFAULT_INV);
+  const [sch, setSch, schLoaded]      = useSupabaseState("oa_sch_v7", DEFAULT_SCH);
 
   // 마진 설정
-  const [margin, setMargin]          = useLocal(LS_MARGIN, 30000);  // loaded ignored
-  const [margins, setMargins]        = useLocal(LS_MARGINS, DEFAULT_MARGINS);
+  const [margin, setMargin]           = useSupabaseState("oa_margin_v7", 30000);
+  const [margins, setMargins]         = useSupabaseState("oa_margins_v7", DEFAULT_MARGINS);
+
   const [marginModal, setMarginModal]= useState(false);
   const [marginInput, setMarginInput]= useState("");
   const [editingMargin, setEditingMargin] = useState(null); // {id, keyword, margin}
@@ -541,37 +539,34 @@ export default function OaDashboard(){
   const [newMarginVal, setNewMarginVal] = useState("");
 
   // 발주임박 시트 연동
-  const [orderUrl, setOrderUrl, orderUrlLoaded] = useLocal(LS_ORDER_URL, "");
+  const [orderUrl, setOrderUrl, orderUrlLoaded] = useSupabaseState("oa_order_url_v7", "");
   const [orderRaw, setOrderRaw]   = useState([]);
   const [orderStatus, setOrderStatus] = useState("idle");
   const [orderModal, setOrderModal]   = useState(false);
   const [orderInput, setOrderInput]   = useState("");
 
   // 재고원본 시트 연동
-  const [invUrl, setInvUrl, invUrlLoaded] = useLocal(LS_INV_URL, "");
+  const [invUrl, setInvUrl, invUrlLoaded] = useSupabaseState("oa_inv_url_v7", "");
   const [invSheetStatus, setInvSheetStatus] = useState("idle");
   const [invUrlModal, setInvUrlModal] = useState(false);
   const [invUrlInput, setInvUrlInput] = useState("");
 
   // 인플루언서 시트
-  const [infUrl, setInfUrl, infUrlLoaded] = useLocal(LS_INF_URL, "");
+  const [infUrl, setInfUrl, infUrlLoaded] = useSupabaseState("oa_inf_url_v7", "");
   const [infSheetStatus, setInfSheetStatus] = useState("idle");
   const [infUrlModal, setInfUrlModal]   = useState(false);
   const [infUrlInput, setInfUrlInput]   = useState("");
 
   // 구글 시트 연동 상태
-  const [sheetUrl,setSheetUrl, sheetUrlLoaded] = useLocal(LS_SHEET_URL, "");
-  const [metaRaw,setMetaRaw]         = useState([]);   // 파싱된 원본 rows
-  const [metaStatus,setMetaStatus]   = useState("idle"); // idle | loading | ok | error
+  const [sheetUrl,setSheetUrl, sheetUrlLoaded] = useSupabaseState("oa_sheet_url_v7", "");
+  const [metaRaw,setMetaRaw]         = useState([]);
+  const [metaStatus,setMetaStatus]   = useState("idle");
   const [metaError,setMetaError]     = useState("");
   const [sheetModal,setSheetModal]   = useState(false);
   const [sheetInput,setSheetInput]   = useState("");
-  const [deletedAds,setDeletedAds]   = useState(()=>{try{return JSON.parse(localStorage.getItem("oa_deleted_ads")||"[]");}catch{return [];}}); // 삭제된 광고명 목록
+  const [deletedAds,setDeletedAds, deletedAdsLoaded] = useSupabaseState("oa_deleted_ads_v7", []);
   const [adImages, setAdImages]       = useState([]);
   const [imgUploading, setImgUploading] = useState(false);
-  const [imgExpanded, setImgExpanded]  = useState(false);
-  const [homeShowAll, setHomeShowAll]  = useState(false);
-  const [homeExpanded, setHomeExpanded] = useState({danger:true,caution:true,ins:true,sched:true,urgent:true,cut:true,hold:true});
   const [hoverImg, setHoverImg]       = useState(null);
   const fileInputRef                  = useRef(null);
 
@@ -579,18 +574,18 @@ export default function OaDashboard(){
     getAdImages().then(imgs => { if (imgs?.length) setAdImages(imgs); }).catch(() => {});
   }, []);
 
-  async function handleAdImageUpload(files, overrideName) {
+  async function handleAdImageUpload(files) {
     setImgUploading(true);
     try {
       const newImgs = [...adImages];
       for (const file of Array.from(files)) {
-        const baseName = overrideName || file.name.replace(/\.[^.]+$/, "");
-        const { url, path } = await uploadAdImage(file, baseName);
-        newImgs.push({ id: Date.now() + Math.random(), name: baseName, url, path });
+        const originalName = file.name.replace(/\.[^.]+$/, ""); // 원본 파일명 (한글 포함)
+        const { url, path } = await uploadAdImage(file, originalName);
+        newImgs.push({ id: Date.now() + Math.random(), name: originalName, url, path });
       }
       setAdImages(newImgs);
       await saveAdImagesMeta(newImgs);
-    } catch(e) { console.error(e); }
+    } catch(e) { console.error("업로드 에러:", e); }
     setImgUploading(false);
   }
 
@@ -606,6 +601,11 @@ export default function OaDashboard(){
 
 
   useEffect(()=>{const t=setInterval(()=>setPulse(v=>!v),2500);return()=>clearInterval(t);},[]);
+
+  // 인플루언서 데이터 Supabase에서 로드 (구글 시트 없을 때 fallback)
+  useEffect(()=>{
+    getSetting("oa_infs_v7").then(v=>{ if(Array.isArray(v)&&v.length>0) setInfs(v); }).catch(()=>{});
+  },[]);
 
   // 시트 URL 로드되면 자동 fetch (새로고침해도 자동 연동)
   useEffect(()=>{
@@ -1008,17 +1008,27 @@ export default function OaDashboard(){
   const totalAlerts    = overdueIns.length+dangerInv.length+overdueScheds.length+urgentScheds.length+cutAds.length+holdAds.length+orderRaw.length;
 
   // ── CRUD 콜백 (모달 컴포넌트에서 onSave로 호출) ─────
-  function saveInf(item){
+  async function saveInf(item){
+    let next;
     if(infModalData?.mode==="edit"){
-      setInfs(arr=>arr.map(x=>x.id===item.id?item:x));
+      next=infs.map(x=>x.id===item.id?item:x);
     } else {
-      setInfs(arr=>[...arr,{...item,id:Date.now()}]);
+      next=[...infs,{...item,id:Date.now()}];
     }
+    setInfs(next);
+    await setSetting("oa_infs_v7", next);
     setInfModalData(null);
   }
-  function saveIns(item){
-    setInfs(arr=>arr.map(f=>f.id===item.id?{...f,...item}:f));
+  async function saveIns(item){
+    const next=infs.map(f=>f.id===item.id?{...f,...item}:f);
+    setInfs(next);
+    await setSetting("oa_infs_v7", next);
     setInsModalData(null);
+  }
+  async function deleteInf(id){
+    const next=infs.filter(x=>x.id!==id);
+    setInfs(next);
+    await setSetting("oa_infs_v7", next);
   }
   function saveInv(item){
     if(invModalData?.mode==="edit"){
@@ -1028,6 +1038,7 @@ export default function OaDashboard(){
     }
     setInvModalData(null);
   }
+  async function deleteInv(id){ setInv(arr=>arr.filter(v=>v.id!==id)); }
   function saveSch(item){
     if(schModalData?.mode==="edit"){
       setSch(arr=>arr.map(s=>s.id===item.id?item:s));
@@ -1036,6 +1047,7 @@ export default function OaDashboard(){
     }
     setSchModalData(null);
   }
+  async function deleteSch(id){ setSch(arr=>arr.filter(s=>s.id!==id)); }
 
   const NAVS=[
     {id:"home",      icon:"🏠",label:"홈"},
@@ -1048,13 +1060,7 @@ export default function OaDashboard(){
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   // 🏠 홈
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  const HomeSection=()=>{
-    const showAll = homeShowAll;
-    const setShowAll = setHomeShowAll;
-    const toggle = (key) => setHomeExpanded(v=>({...v,[key]:!v[key]}));
-    const isOpen = (key) => homeExpanded[key]!==false;
-    const LIMIT = 5;
-    return(
+  const HomeSection=()=>(
     <div style={{display:"flex",flexDirection:"column",gap:14}}>
       <div style={{background:`linear-gradient(135deg,${C.rose},${C.roseLt})`,borderRadius:16,padding:"20px",
         color:C.white,boxShadow:`0 8px 28px ${C.rose}44`}}>
@@ -1076,9 +1082,8 @@ export default function OaDashboard(){
       <div className="alert-grid" style={{display:"grid",gridTemplateColumns:"1fr",gap:14}}>
       {dangerInv.length>0&&(
         <Card>
-          <CardTitle title="🚨 재고 위험 — 즉시 발주 필요" sub="7일치 미만"
-            action={<Btn variant="ghost" small onClick={()=>toggle("danger")}>{isOpen("danger")?"접기 ▲":"펼치기 ▼"}</Btn>}/>
-          {isOpen("danger")&&(showAll?dangerInv:dangerInv.slice(0,LIMIT)).map(item=>(
+          <CardTitle title="🚨 재고 위험 — 즉시 발주 필요" sub="7일치 미만"/>
+          {dangerInv.map(item=>(
             <div key={item.id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",
               background:"#FEF0F0",border:`1px solid ${C.bad}33`,borderRadius:10,padding:"10px 14px",
               marginBottom:6,flexWrap:"wrap",gap:8}}>
@@ -1095,15 +1100,13 @@ export default function OaDashboard(){
               </div>
             </div>
           ))}
-          {isOpen("danger")&&dangerInv.length>LIMIT&&<MoreBtn show={showAll} total={dangerInv.length} limit={LIMIT} onClick={()=>setShowAll(v=>!v)}/>}
         </Card>
       )}
 
       {cautionInv.length>0&&(
         <Card>
-          <CardTitle title="⚠️ 재고 주의 — 발주 검토" sub="21일치 미만"
-            action={<Btn variant="ghost" small onClick={()=>toggle("caution")}>{isOpen("caution")?"접기 ▲":"펼치기 ▼"}</Btn>}/>
-          {isOpen("caution")&&(showAll?cautionInv:cautionInv.slice(0,LIMIT)).map(item=>(
+          <CardTitle title="⚠️ 재고 주의 — 발주 검토" sub="21일치 미만"/>
+          {cautionInv.map(item=>(
             <div key={item.id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",
               background:"#FFF8EC",border:`1px solid ${C.warn}33`,borderRadius:10,padding:"10px 14px",marginBottom:6,flexWrap:"wrap",gap:8}}>
               <div>
@@ -1113,7 +1116,6 @@ export default function OaDashboard(){
               <Btn variant="neutral" small onClick={()=>setSec("inventory")}>→ 재고</Btn>
             </div>
           ))}
-          {isOpen("caution")&&cautionInv.length>LIMIT&&<MoreBtn show={showAll} total={cautionInv.length} limit={LIMIT} onClick={()=>setShowAll(v=>!v)}/>}
         </Card>
       )}
       </div>
@@ -1121,9 +1123,8 @@ export default function OaDashboard(){
       <div className="alert-grid" style={{display:"grid",gridTemplateColumns:"1fr",gap:14}}>
       {overdueIns.length>0&&(
         <Card>
-          <CardTitle title="❗ 인사이트 미입력" sub="D+7 기록 기한 초과"
-            action={<Btn variant="ghost" small onClick={()=>toggle("ins")}>{isOpen("ins")?"접기 ▲":"펼치기 ▼"}</Btn>}/>
-          {isOpen("ins")&&(showAll?overdueIns:overdueIns.slice(0,LIMIT)).map(f=>{
+          <CardTitle title="❗ 인사이트 미입력" sub="D+7 기록 기한 초과"/>
+          {overdueIns.map(f=>{
             const st=insightStatus(f);
             return(
               <div key={f.id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",
@@ -1141,15 +1142,13 @@ export default function OaDashboard(){
               </div>
             );
           })}
-          {overdueIns.length>LIMIT&&isOpen("ins")&&<MoreBtn show={showAll} total={overdueIns.length} limit={LIMIT} onClick={()=>setShowAll(v=>!v)}/>}
         </Card>
       )}
 
       {overdueScheds.length>0&&(
         <Card>
-          <CardTitle title="📅 기간 초과 일정" sub="종료일 경과 · 미완료 처리"
-            action={<Btn variant="ghost" small onClick={()=>toggle("sched")}>{isOpen("sched")?"접기 ▲":"펼치기 ▼"}</Btn>}/>
-          {isOpen("sched")&&(showAll?overdueScheds:overdueScheds.slice(0,LIMIT)).map(s=>{
+          <CardTitle title="📅 기간 초과 일정" sub="종료일 경과 · 미완료 처리"/>
+          {overdueScheds.map(s=>{
             const tc=schTypeColor(s.type);
             return(
               <div key={s.id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",
@@ -1168,15 +1167,13 @@ export default function OaDashboard(){
               </div>
             );
           })}
-          {overdueScheds.length>LIMIT&&isOpen("sched")&&<MoreBtn show={showAll} total={overdueScheds.length} limit={LIMIT} onClick={()=>setShowAll(v=>!v)}/>}
         </Card>
       )}
 
       {urgentScheds.length>0&&(
         <Card>
-          <CardTitle title="🔔 D-5 임박 일정" sub="5일 이내 시작"
-            action={<Btn variant="ghost" small onClick={()=>toggle("urgent")}>{isOpen("urgent")?"접기 ▲":"펼치기 ▼"}</Btn>}/>
-          {isOpen("urgent")&&(showAll?urgentScheds:urgentScheds.slice(0,LIMIT)).sort((a,b)=>new Date(a.date)-new Date(b.date)).map(s=>{
+          <CardTitle title="🔔 D-5 임박 일정" sub="5일 이내 시작"/>
+          {urgentScheds.sort((a,b)=>new Date(a.date)-new Date(b.date)).map(s=>{
             const d=daysUntil(s.date), tc=schTypeColor(s.type);
             return(
               <div key={s.id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",
@@ -1200,7 +1197,6 @@ export default function OaDashboard(){
               </div>
             );
           })}
-          {urgentScheds.length>LIMIT&&isOpen("urgent")&&<MoreBtn show={showAll} total={urgentScheds.length} limit={LIMIT} onClick={()=>setShowAll(v=>!v)}/>}
         </Card>
       )}
 
@@ -1210,8 +1206,8 @@ export default function OaDashboard(){
       {cutAds.length>0&&(
         <Card>
           <CardTitle title="🔴 광고 교체 필요" sub="컷 기준 초과 — 즉시 검토"
-            action={<div style={{display:"flex",gap:6}}><Btn variant="ghost" small onClick={()=>{setMarginInput(String(margin));setMarginModal(true)}}>⚙️ 마진 설정</Btn><Btn variant="ghost" small onClick={()=>toggle("cut")}>{isOpen("cut")?"접기 ▲":"펼치기 ▼"}</Btn></div>}/>
-          {isOpen("cut")&&(showAll?cutAds:cutAds.slice(0,LIMIT)).map((ad,i)=>{
+            action={<Btn variant="ghost" small onClick={()=>{setMarginInput(String(margin));setMarginModal(true)}}>⚙️ 마진 설정</Btn>}/>
+          {cutAds.map((ad,i)=>{
             const adMargin = getAdMargin(ad.name, ad.campaign, margins, margin);
             const s=adScore(ad, adMargin);
             return(
@@ -1251,16 +1247,14 @@ export default function OaDashboard(){
               </div>
             );
           })}
-          {cutAds.length>LIMIT&&isOpen("cut")&&<MoreBtn show={showAll} total={cutAds.length} limit={LIMIT} onClick={()=>setShowAll(v=>!v)}/>}
         </Card>
       )}
 
       {/* 🟡 광고 보류 알림 */}
       {holdAds.length>0&&(
         <Card>
-          <CardTitle title="🟡 광고 보류 검토" sub="성과 주의 — 모니터링 필요"
-            action={<Btn variant="ghost" small onClick={()=>toggle("hold")}>{isOpen("hold")?"접기 ▲":"펼치기 ▼"}</Btn>}/>
-          {isOpen("hold")&&(showAll?holdAds:holdAds.slice(0,LIMIT)).map((ad,i)=>{
+          <CardTitle title="🟡 광고 보류 검토" sub="성과 주의 — 모니터링 필요"/>
+          {holdAds.map((ad,i)=>{
             const adMargin = getAdMargin(ad.name, ad.campaign, margins, margin);
             const s=adScore(ad, adMargin);
             return(
@@ -1296,7 +1290,6 @@ export default function OaDashboard(){
               </div>
             );
           })}
-          {holdAds.length>LIMIT&&isOpen("hold")&&<MoreBtn show={showAll} total={holdAds.length} limit={LIMIT} onClick={()=>setShowAll(v=>!v)}/>}
         </Card>
       )}
 
@@ -1474,26 +1467,11 @@ export default function OaDashboard(){
 
             {/* 새 키워드 추가 */}
             <div style={{display:"flex",gap:8,alignItems:"center",marginTop:10,
-              padding:"10px 12px",background:C.sageLt,borderRadius:10,border:`1px dashed ${C.sage}66`}}
-              onClick={e=>e.stopPropagation()}>
-              <input
-                value={newKeyword}
-                onChange={e=>setNewKeyword(e.target.value)}
-                placeholder="키워드 (예: 프리온)"
-                style={{flex:1,padding:"9px 12px",border:`1px solid ${C.border}`,borderRadius:9,
-                  fontSize:12,color:C.ink,background:C.white,outline:"none",fontFamily:"inherit"}}
-              />
-              <input
-                type="number"
-                value={newMarginVal}
-                onChange={e=>setNewMarginVal(e.target.value)}
-                placeholder="마진"
-                style={{width:100,padding:"9px 12px",border:`1px solid ${C.border}`,borderRadius:9,
-                  fontSize:12,color:C.ink,background:C.white,outline:"none",fontFamily:"inherit"}}
-              />
+              padding:"10px 12px",background:C.sageLt,borderRadius:10,border:`1px dashed ${C.sage}66`}}>
+              <Inp value={newKeyword} onChange={setNewKeyword} placeholder="키워드 (예: 프리온)" style={{flex:1}}/>
+              <Inp type="number" value={newMarginVal} onChange={setNewMarginVal} placeholder="마진" style={{width:100}}/>
               <span style={{fontSize:10,color:C.inkMid,whiteSpace:"nowrap"}}>원</span>
-              <Btn small variant="sage" onClick={e=>{
-                e.stopPropagation();
+              <Btn small variant="sage" onClick={()=>{
                 if(!newKeyword||!newMarginVal) return;
                 setMargins([...margins,{id:Date.now(),keyword:newKeyword,margin:+newMarginVal}]);
                 setNewKeyword(""); setNewMarginVal("");
@@ -1515,7 +1493,7 @@ export default function OaDashboard(){
 
       {/* 인사이트 입력 모달 (홈에서도 접근) */}
     </div>
-  );};  // HomeSection 끝
+  );
 
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   // 📣 메타광고
@@ -1575,7 +1553,7 @@ export default function OaDashboard(){
           </div>
           <div style={{display:"flex",gap:6}}>
             {hasSheet&&<Btn variant="sage" small onClick={()=>fetchSheet(sheetUrl)}>🔄 새로고침</Btn>}
-            {deletedAds.length>0&&<Btn variant="neutral" small onClick={()=>{setDeletedAds([]);try{localStorage.removeItem("oa_deleted_ads");}catch{}}}>↩ 숨긴 광고 복원 ({deletedAds.length})</Btn>}
+            {deletedAds.length>0&&<Btn variant="neutral" small onClick={()=>{ setDeletedAds([]); }}>↩ 숨긴 광고 복원 ({deletedAds.length})</Btn>}
             <Btn variant={hasSheet?"neutral":"gold"} small onClick={()=>{setSheetInput(sheetUrl);setSheetModal(true)}}>
               {hasSheet?"⚙️ 시트 변경":"🔗 시트 연결"}
             </Btn>
@@ -1584,51 +1562,42 @@ export default function OaDashboard(){
 
         <KpiGrid items={metaKpi} cols={6}/>
 
-        {/* 광고 소재 이미지 업로드 */}
+        {/* 광고 소재 이미지/영상 업로드 */}
         <div style={{background:C.white,border:`1px solid ${C.border}`,borderRadius:12,padding:"14px 16px"}}>
-          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
-            <div style={{display:"flex",alignItems:"center",gap:8}}>
-              <div style={{fontWeight:800,fontSize:12,color:C.ink}}>🖼️ 광고 소재 이미지</div>
-              {adImages.length>0&&<span style={{fontSize:10,color:C.inkLt}}>{adImages.length}개</span>}
-            </div>
+          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12}}>
+            <div style={{fontWeight:700,fontSize:13,color:C.ink}}>🎬 광고 소재</div>
             <div style={{display:"flex",gap:6,alignItems:"center"}}>
               {imgUploading&&<span style={{fontSize:10,color:C.inkLt}}>업로드 중...</span>}
-              <input ref={fileInputRef} type="file" accept="image/*" multiple style={{display:"none"}}
+              <input ref={fileInputRef} type="file" accept="image/*,video/*" multiple style={{display:"none"}}
                 onChange={e=>handleAdImageUpload(e.target.files)}/>
               <button onClick={()=>fileInputRef.current?.click()}
-                style={{fontSize:10,fontWeight:700,padding:"4px 10px",borderRadius:8,border:`1px solid ${C.border}`,
-                  background:C.cream,cursor:"pointer",color:C.ink}}>
-                + 추가
-              </button>
-              <button onClick={()=>setImgExpanded(v=>!v)}
-                style={{fontSize:10,fontWeight:700,padding:"4px 10px",borderRadius:8,border:`1px solid ${C.border}`,
-                  background:"transparent",cursor:"pointer",color:C.inkMid,fontFamily:"inherit"}}>
-                {imgExpanded?"접기 ▲":"펼치기 ▼"}
+                style={{fontSize:11,fontWeight:600,padding:"5px 14px",borderRadius:8,border:`1px solid ${C.border}`,
+                  background:C.white,cursor:"pointer",color:C.rose,fontFamily:"inherit"}}>
+                + 소재 추가
               </button>
             </div>
           </div>
-          {imgExpanded&&(
-            <div style={{marginTop:10}}>
-              {adImages.length===0?(
-                <div style={{fontSize:11,color:C.inkLt,textAlign:"center",padding:"12px 0"}}>
-                  이미지를 업로드하면 광고명과 자동 매칭됩니다
+          {adImages.length===0?(
+            <div style={{fontSize:11,color:C.inkLt,textAlign:"center",padding:"16px 0",
+              border:`1px dashed ${C.border}`,borderRadius:8}}>
+              이미지 또는 영상을 업로드하면 광고명과 자동 매칭됩니다
+            </div>
+          ):(
+            <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
+              {adImages.map((img,i)=>(
+                <div key={i} style={{position:"relative",display:"inline-flex",flexDirection:"column",alignItems:"center",gap:4}}>
+                  <ThumbPreview url={img.url} name={img.name}/>
+                  <span style={{fontSize:9,color:C.inkMid,maxWidth:56,textAlign:"center",
+                    overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{img.name}</span>
+                  <button onClick={async()=>{
+                    const next=adImages.filter((_,j)=>j!==i);
+                    setAdImages(next);
+                    await saveAdImagesMeta(next);
+                  }} style={{position:"absolute",top:-4,right:-4,width:16,height:16,borderRadius:"50%",
+                    background:C.bad,color:"#fff",border:"none",cursor:"pointer",fontSize:9,
+                    display:"flex",alignItems:"center",justifyContent:"center",lineHeight:1}}>✕</button>
                 </div>
-              ):(
-                <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
-                  {adImages.map((img,i)=>(
-                    <div key={i} style={{position:"relative",display:"inline-block"}}>
-                      <ThumbPreview url={img.url} name={img.name}/>
-                      <button onClick={async()=>{
-                        const next=adImages.filter((_,j)=>j!==i);
-                        setAdImages(next);
-                        await saveAdImagesMeta(next);
-                      }} style={{position:"absolute",top:-4,right:-4,width:14,height:14,borderRadius:"50%",
-                        background:C.bad,color:"#fff",border:"none",cursor:"pointer",fontSize:8,
-                        display:"flex",alignItems:"center",justifyContent:"center",lineHeight:1}}>✕</button>
-                    </div>
-                  ))}
-                </div>
-              )}
+              ))}
             </div>
           )}
         </div>
@@ -1796,6 +1765,82 @@ export default function OaDashboard(){
                         </div>
                       );
                     })()}
+                    {/* ── 예산 분류 패널 (전환캠페인만) ── */}
+                    {campTab==="conversion"&&(()=>{
+                      const classify=(c)=>{
+                        const adMargin=getAdMargin(c.name,c.campaign,margins,margin);
+                        const lpvC=lpvCostStatus(c.spend,c.lpv);
+                        const lpvR=lpvRateStatus(c.clicks,c.lpv);
+                        const cpa =cpaStatus(c.spend,c.purchases,adMargin);
+                        const ct  =ctrStatus(c.clicks,c.impressions||0);
+                        const isCut=(lpvC&&(lpvC.label==="컷"))||(cpa&&cpa.label==="컷")||(lpvR&&lpvR.label==="랜딩문제")||(ct&&ct.label==="소재문제");
+                        const isHold=(lpvC&&lpvC.label==="보류")||(cpa&&cpa.label==="보류")||(ct&&ct.label==="보통");
+                        const isUp=!isCut&&!isHold&&(lpvC&&lpvC.label==="유지")&&(cpa&&cpa.label==="유지")&&(c.purchases||0)>=5;
+                        return isCut?"cut":isHold?"hold":isUp?"up":"watch";
+                      };
+                      const upList  =camps.filter(c=>classify(c)==="up");
+                      const holdList=camps.filter(c=>classify(c)==="hold");
+                      const cutList =camps.filter(c=>classify(c)==="cut");
+                      if(!upList.length&&!holdList.length&&!cutList.length) return null;
+                      return(
+                        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:10,marginBottom:14}}>
+                          {/* 예산 올릴 광고 */}
+                          <div style={{background:"#EDF7F1",border:`1px solid ${C.good}44`,borderRadius:14,padding:"12px 14px"}}>
+                            <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:8}}>
+                              <span style={{fontSize:16}}>🚀</span>
+                              <div>
+                                <div style={{fontSize:11,fontWeight:800,color:C.good}}>예산 올릴 광고</div>
+                                <div style={{fontSize:9,color:C.inkMid}}>CPA ✅ · LPV ✅ · 구매 5건↑</div>
+                              </div>
+                              <span style={{marginLeft:"auto",fontSize:13,fontWeight:900,color:C.good}}>{upList.length}개</span>
+                            </div>
+                            {upList.length===0?<div style={{fontSize:10,color:C.inkLt,textAlign:"center",padding:"8px 0"}}>해당 없음</div>:
+                            upList.map((c,i)=>(
+                              <div key={i} style={{fontSize:10,fontWeight:700,color:C.ink,padding:"4px 8px",background:C.white,borderRadius:8,marginBottom:4,display:"flex",justifyContent:"space-between"}}>
+                                <span style={{overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",maxWidth:120}}>{c.name}</span>
+                                <span style={{color:C.good,fontWeight:900,flexShrink:0}}>CPA ₩{(c.cpa||0).toLocaleString()}</span>
+                              </div>
+                            ))}
+                          </div>
+                          {/* 예산 줄일 광고 */}
+                          <div style={{background:"#FFF8EC",border:`1px solid ${C.warn}44`,borderRadius:14,padding:"12px 14px"}}>
+                            <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:8}}>
+                              <span style={{fontSize:16}}>⚠️</span>
+                              <div>
+                                <div style={{fontSize:11,fontWeight:800,color:C.warn}}>예산 줄일 광고</div>
+                                <div style={{fontSize:9,color:C.inkMid}}>CPA 보류 or LPV 보류</div>
+                              </div>
+                              <span style={{marginLeft:"auto",fontSize:13,fontWeight:900,color:C.warn}}>{holdList.length}개</span>
+                            </div>
+                            {holdList.length===0?<div style={{fontSize:10,color:C.inkLt,textAlign:"center",padding:"8px 0"}}>해당 없음</div>:
+                            holdList.map((c,i)=>(
+                              <div key={i} style={{fontSize:10,fontWeight:700,color:C.ink,padding:"4px 8px",background:C.white,borderRadius:8,marginBottom:4,display:"flex",justifyContent:"space-between"}}>
+                                <span style={{overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",maxWidth:120}}>{c.name}</span>
+                                <span style={{color:C.warn,fontWeight:900,flexShrink:0}}>CPA ₩{(c.cpa||0).toLocaleString()}</span>
+                              </div>
+                            ))}
+                          </div>
+                          {/* 끌 광고 */}
+                          <div style={{background:"#FEF0F0",border:`1px solid ${C.bad}44`,borderRadius:14,padding:"12px 14px"}}>
+                            <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:8}}>
+                              <span style={{fontSize:16}}>🔴</span>
+                              <div>
+                                <div style={{fontSize:11,fontWeight:800,color:C.bad}}>끌 광고</div>
+                                <div style={{fontSize:9,color:C.inkMid}}>CPA 컷 or 랜딩문제 or 소재문제</div>
+                              </div>
+                              <span style={{marginLeft:"auto",fontSize:13,fontWeight:900,color:C.bad}}>{cutList.length}개</span>
+                            </div>
+                            {cutList.length===0?<div style={{fontSize:10,color:C.inkLt,textAlign:"center",padding:"8px 0"}}>해당 없음</div>:
+                            cutList.map((c,i)=>(
+                              <div key={i} style={{fontSize:10,fontWeight:700,color:C.ink,padding:"4px 8px",background:C.white,borderRadius:8,marginBottom:4,display:"flex",justifyContent:"space-between"}}>
+                                <span style={{overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",maxWidth:120}}>{c.name}</span>
+                                <span style={{color:C.bad,fontWeight:900,flexShrink:0}}>CPA ₩{(c.cpa||0).toLocaleString()}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    })()}
                     <Card>
                       <CardTitle title={campTab==="conversion"?"전환 캠페인":"트래픽 캠페인"}
                         sub={campTab==="conversion"?"CPA · LPV율 중심":"CPC · CTR 중심"}/>
@@ -1818,17 +1863,7 @@ export default function OaDashboard(){
                               {/* 광고명 + 판단 뱃지 */}
                               <td style={{padding:"10px 8px",maxWidth:200}}>
                                 <div style={{fontWeight:700,color:C.ink,fontSize:11,wordBreak:"break-all",marginBottom:4}}>
-                                  {(()=>{
-                                    const thumb=adImages.find(img=>img.name&&c.name&&(c.name.includes(img.name)||img.name.includes(c.name)));
-                                    if(thumb) return <ThumbPreview url={thumb.url} name={thumb.name}/>;
-                                    return(
-                                      <span
-                                        title="이미지 업로드"
-                                        onClick={e=>{e.stopPropagation();const inp=document.createElement("input");inp.type="file";inp.accept="image/*";inp.onchange=async ev=>{const f=ev.target.files[0];if(!f)return;const name=c.name.slice(0,40);await handleAdImageUpload([f],name);};inp.click();}}
-                                        style={{cursor:"pointer",fontSize:12,marginRight:4,opacity:0.4,userSelect:"none"}}
-                                      >📎</span>
-                                    );
-                                  })()}
+                                  {(()=>{const thumb=adImages.find(img=>img.name&&c.name&&(c.name.includes(img.name)||img.name.includes(c.name)));return thumb?<ThumbPreview url={thumb.url} name={thumb.name}/>:null;})()}
                                   {c.name}
                                 </div>
                                 {(()=>{
@@ -1889,7 +1924,6 @@ export default function OaDashboard(){
                                   const key = c.name;
                                   const next = [...deletedAds, key];
                                   setDeletedAds(next);
-                                  try{localStorage.setItem("oa_deleted_ads", JSON.stringify(next));}catch{}
                                 }} style={{background:"none",border:`1px solid ${C.border}`,borderRadius:6,
                                   width:24,height:24,cursor:"pointer",fontSize:12,color:C.inkLt,
                                   display:"flex",alignItems:"center",justifyContent:"center",
@@ -2716,7 +2750,7 @@ export default function OaDashboard(){
   // RENDER
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   return(
-    <div className="oa-layout" style={{background:C.cream,minHeight:"100vh",fontFamily:"'Noto Sans KR',sans-serif",color:C.ink}}>
+    <div className="oa-layout" style={{background:"#F4F4F5",minHeight:"100vh",fontFamily:"'Noto Sans KR',sans-serif",color:C.ink}}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;600;700;800;900&display=swap');
         *{box-sizing:border-box;margin:0;padding:0;} button{font-family:inherit;}
