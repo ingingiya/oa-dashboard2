@@ -281,11 +281,10 @@ function mapMetaRow(row){
     ctr:        num(g("CTR(전체)","ctr")),
     cpa:        num(g("결과당 비용","cost_per_result","cpa")),
     cpm:        num(g("CPM(1,000회 노출당 비용)","cpm")),
-    campaignBudget: num(g("캠페인 예산","campaign_budget")),
+    campaignBudget:     num(g("캠페인 예산","campaign_budget")),
     campaignBudgetType: g("캠페인 예산 유형","campaign_budget_type"),
-    adsetBudget: num(g("광고 세트 예산","adset_budget")),
-    adsetBudgetType: g("광고 세트 예산 유형","adset_budget_type"),
-    budgetSource: g("캠페인 예산","광고 세트 예산 유형"), // "광고 세트 예산 사용 중" or 캠페인 예산
+    adsetBudget:        num(g("광고 세트 예산","adset_budget")),
+    adsetBudgetType:    g("광고 세트 예산 유형","adset_budget_type"),
   };
 }
 
@@ -1641,11 +1640,11 @@ export default function OaDashboard(){
                           budget:0, budgetType:"",
                           ads:[], spend:0,
                         };
-                        // 예산: 시트 raw에서 해당 adset의 예산 찾기
-                        const raw=metaFiltered.find(r=>(r.adset||"")===(c.adset||"")&&(r.adsetBudget||r.campaignBudget));
-                        if(raw){
-                          adsetMap[key].budget = raw.adsetBudget||raw.campaignBudget||0;
-                          adsetMap[key].budgetType = raw.adsetBudgetType||raw.campaignBudgetType||"";
+                        // adsetBudget 우선, 없으면 campaignBudget
+                        const raw=metaRaw.find(r=>(r.adset||"")===(c.adset||"")&&((r.adsetBudget||0)>0||(r.campaignBudget||0)>0));
+                        if(raw&&adsetMap[key].budget===0){
+                          adsetMap[key].budget = (raw.adsetBudget||0)>0 ? raw.adsetBudget : (raw.campaignBudget||0);
+                          adsetMap[key].budgetType = raw.adsetBudgetType||raw.campaignBudgetType||"일일 예산";
                         }
                         adsetMap[key].ads.push(c);
                         adsetMap[key].spend+=(c.spend||0);
