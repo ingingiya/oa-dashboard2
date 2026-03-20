@@ -4395,7 +4395,7 @@ export default function OaDashboard(){
                   const done=(checkDone||{})[doneKeyCL(item)];
                   const cc=CYCLE_COLORS[item.cycle];
                   return(
-                  <div key={item.id} onClick={()=>{const k=doneKeyCL(item);setCheckDone(prev=>({...(prev||{}),[k]:!(prev||{})[k]}))};}
+                  <div key={item.id} onClick={()=>{const k=doneKeyCL(item);setCheckDone(prev=>({...(prev||{}),[k]:!(prev||{})[k]}));}}
                     style={{display:"flex",alignItems:"center",gap:10,padding:"9px 12px",borderRadius:10,cursor:"pointer",
                       border:`1px solid ${done?cc.border:C.border}`,background:done?cc.bg:C.white,transition:"all 0.15s"}}>
                     <div style={{width:18,height:18,borderRadius:5,flexShrink:0,border:`2px solid ${done?cc.border:C.border}`,
