@@ -722,22 +722,54 @@ export default function OaDashboard(){
   ]);
   // 채널 바로가기 링크 — Supabase 저장
   const [quickLinks, setQuickLinks] = useSyncState("oa_quick_links_v7", [
-    {id:"instagram", name:"인스타그램", url:"", group:"channel"},
-    {id:"twitter",   name:"트위터",     url:"", group:"channel"},
-    {id:"naver",     name:"네이버",     url:"", group:"channel"},
-    {id:"ebay",      name:"이베이",     url:"", group:"channel"},
-    {id:"gmarket",   name:"지마켓",     url:"", group:"channel"},
-    {id:"zigzag",    name:"지그재그",   url:"", group:"channel"},
-    {id:"ably",      name:"에이블리",   url:"", group:"channel"},
-    {id:"musinsa",   name:"무신사",     url:"", group:"channel"},
+    {id:"instagram", name:"인스타그램",   url:"", group:"channel"},
+    {id:"twitter",   name:"트위터",       url:"https://twitter.com/OA_store_beauty", group:"channel"},
+    {id:"naver",     name:"네이버",       url:"", group:"channel"},
+    {id:"ebay",      name:"이베이",       url:"", group:"channel"},
+    {id:"11st",      name:"11번가",       url:"", group:"channel"},
+    {id:"zigzag",    name:"지그재그",     url:"", group:"channel"},
+    {id:"ably",      name:"에이블리",     url:"", group:"channel"},
+    {id:"musinsa",   name:"무신사",       url:"", group:"channel"},
+    {id:"oamall",    name:"오아몰",       url:"", group:"channel"},
+    {id:"kakao",     name:"카카오톡채널", url:"", group:"channel"},
     {id:"erp_main",      name:"ERP",       url:"", group:"erp"},
-    {id:"erp_approval",  name:"전자결재",   url:"", group:"erp"},
-    {id:"erp_purchase",  name:"발주관리",   url:"", group:"erp"},
-    {id:"erp_stock",     name:"재고관리",   url:"", group:"erp"},
-    {id:"erp_account",   name:"회계/정산",  url:"", group:"erp"},
-    {id:"erp_hr",        name:"근태/HR",    url:"", group:"erp"},
+    {id:"erp_approval",  name:"전자결재",  url:"", group:"erp"},
+    {id:"erp_purchase",  name:"발주관리",  url:"", group:"erp"},
+    {id:"erp_stock",     name:"재고관리",  url:"", group:"erp"},
+    {id:"erp_account",   name:"회계/정산", url:"", group:"erp"},
+    {id:"erp_hr",        name:"근태/HR",   url:"", group:"erp"},
   ]);
   const [quickLinksEditing, setQuickLinksEditing] = useState(false);
+
+  // 새 채널 항목이 기존 Supabase 저장값에 없으면 자동 병합
+  useEffect(()=>{
+    const defaults = [
+      {id:"instagram", name:"인스타그램",   url:"", group:"channel"},
+      {id:"twitter",   name:"트위터",       url:"https://twitter.com/OA_store_beauty", group:"channel"},
+      {id:"naver",     name:"네이버",       url:"", group:"channel"},
+      {id:"ebay",      name:"이베이",       url:"", group:"channel"},
+      {id:"11st",      name:"11번가",       url:"", group:"channel"},
+      {id:"zigzag",    name:"지그재그",     url:"", group:"channel"},
+      {id:"ably",      name:"에이블리",     url:"", group:"channel"},
+      {id:"musinsa",   name:"무신사",       url:"", group:"channel"},
+      {id:"kakao",     name:"카카오톡채널", url:"", group:"channel"},
+      {id:"erp_main",     name:"ERP",       url:"", group:"erp"},
+      {id:"erp_approval", name:"전자결재",  url:"", group:"erp"},
+      {id:"erp_purchase", name:"발주관리",  url:"", group:"erp"},
+      {id:"erp_stock",    name:"재고관리",  url:"", group:"erp"},
+      {id:"erp_account",  name:"회계/정산", url:"", group:"erp"},
+      {id:"erp_hr",       name:"근태/HR",   url:"", group:"erp"},
+    ];
+    if(!Array.isArray(quickLinks)) return;
+    const existingIds = new Set(quickLinks.map(x=>x.id));
+    // 지마켓 제거, 새 항목 추가
+    const filtered = quickLinks.filter(x=>x.id!=="gmarket");
+    const newItems = defaults.filter(d=>!existingIds.has(d.id));
+    if(newItems.length>0 || filtered.length!==quickLinks.length){
+      setQuickLinks([...filtered, ...newItems]);
+    }
+  // eslint-disable-next-line
+  },[]);
 
   // ── 전체 광고비 xlsx 파일 읽기 → Supabase 저장 ────────────────
   async function handleAllAdFile(file) {
