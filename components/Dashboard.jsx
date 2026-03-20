@@ -4161,41 +4161,47 @@ export default function OaDashboard(){
     return(
     <div style={{display:"flex",flexDirection:"column",gap:14}}>
       {/* 노션 상태 배너 */}
-      <div className="sch-banner" style={{display:"flex",alignItems:"center",gap:8,padding:"10px 12px",background:C.white,
-        border:`1px solid ${notionError?C.bad+"44":C.good+"44"}`,borderRadius:12,flexWrap:"wrap"}}>
-        <span style={{fontSize:16}}>{notionLoading?"⏳":notionError?"❌":"🟢"}</span>
-        <div style={{flex:1,fontSize:11,fontWeight:700,color:notionError?C.bad:C.good,minWidth:120}}>
-          {notionLoading?"노션 불러오는 중...":notionError?`노션 오류: ${notionError}`:`노션 연동됨 · ${schFilter==="전체"?"전체":"이번달"} ${notionSch.length}개 · 미완료 ${notionSch.filter(s=>s.status!=="완료").length}개`}
-        </div>
-        <div style={{display:"flex",gap:4,flexWrap:"wrap"}}>
-          {/* 담당자 필터 */}
-          {[{n:"전체",c:C.inkMid},{n:"소리",c:"#f472b6"},{n:"영서",c:"#60a5fa"},{n:"경은",c:"#34d399"},{n:"지수",c:"#a78bfa"}].map(({n:a,c:col})=>{
-            const active=assigneeFilter===a;
-            return(
-              <button key={a} onClick={()=>setAssigneeFilter(a)} style={{fontSize:10,padding:"3px 10px",borderRadius:20,
-                border:`1px solid ${active?col:C.border}`,background:active?col:C.cream,
-                color:active?C.white:C.inkMid,cursor:"pointer",fontFamily:"inherit",fontWeight:700}}>
-                {a==="전체"?"👥":a}
-              </button>
-            );
-          })}
-          <div style={{width:1,background:C.border,margin:"2px 2px"}}/>
-          {["미완료","전체"].map(f=>(
-            <button key={f} onClick={()=>handleFilterChange(f)} style={{fontSize:10,padding:"3px 10px",borderRadius:20,
-              border:`1px solid ${schFilter===f?C.rose:C.border}`,background:schFilter===f?C.rose:C.cream,
-              color:schFilter===f?C.white:C.inkMid,cursor:"pointer",fontFamily:"inherit",fontWeight:700}}>
-              {f}
-            </button>
-          ))}
-          <button onClick={()=>handleFilterChange(schFilter)} style={{fontSize:10,padding:"3px 10px",borderRadius:20,
-            border:`1px solid ${C.border}`,background:C.cream,cursor:"pointer",fontFamily:"inherit",fontWeight:700}}>
+      <div style={{background:C.white,border:`1px solid ${notionError?C.bad+"44":C.good+"44"}`,borderRadius:12,padding:"10px 12px"}}>
+        {/* 상태 + 새로고침 */}
+        <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}>
+          <span style={{fontSize:15}}>{notionLoading?"⏳":notionError?"❌":"🟢"}</span>
+          <div style={{flex:1,fontSize:11,fontWeight:700,color:notionError?C.bad:C.good}}>
+            {notionLoading?"노션 불러오는 중...":notionError?`노션 오류: ${notionError}`:`노션 연동됨 · ${schFilter==="전체"?"전체":"이번달"} ${notionSch.length}개 · 미완료 ${notionSch.filter(s=>s.status!=="완료").length}개`}
+          </div>
+          <button onClick={()=>handleFilterChange(schFilter)} style={{fontSize:12,padding:"4px 10px",borderRadius:20,
+            border:`1px solid ${C.border}`,background:C.cream,cursor:"pointer",fontFamily:"inherit",fontWeight:700,flexShrink:0}}>
             🔄
           </button>
+        </div>
+        {/* 필터 버튼 — 가로 스크롤 */}
+        <div style={{overflowX:"auto",WebkitOverflowScrolling:"touch",paddingBottom:2}}>
+          <div style={{display:"flex",gap:4,whiteSpace:"nowrap",minWidth:"max-content"}}>
+            {/* 담당자 필터 */}
+            {[{n:"전체",c:C.inkMid},{n:"소리",c:"#f472b6"},{n:"영서",c:"#60a5fa"},{n:"경은",c:"#34d399"},{n:"지수",c:"#a78bfa"}].map(({n:a,c:col})=>{
+              const active=assigneeFilter===a;
+              return(
+                <button key={a} onClick={()=>setAssigneeFilter(a)} style={{fontSize:10,padding:"4px 12px",borderRadius:20,
+                  border:`1px solid ${active?col:C.border}`,background:active?col:C.cream,
+                  color:active?C.white:C.inkMid,cursor:"pointer",fontFamily:"inherit",fontWeight:700,whiteSpace:"nowrap"}}>
+                  {a==="전체"?"👥 전체":a}
+                </button>
+              );
+            })}
+            <div style={{width:1,background:C.border,margin:"0 4px",flexShrink:0}}/>
+            {/* 완료 필터 */}
+            {["미완료","전체"].map(f=>(
+              <button key={f} onClick={()=>handleFilterChange(f)} style={{fontSize:10,padding:"4px 12px",borderRadius:20,
+                border:`1px solid ${schFilter===f?C.rose:C.border}`,background:schFilter===f?C.rose:C.cream,
+                color:schFilter===f?C.white:C.inkMid,cursor:"pointer",fontFamily:"inherit",fontWeight:700,whiteSpace:"nowrap"}}>
+                {f}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
       {/* 달력 */}
-      <div style={{background:C.white,border:`1px solid ${C.border}`,borderRadius:14,overflow:"hidden"}}>
+      <div style={{background:C.white,border:`1px solid ${C.border}`,borderRadius:14,overflow:"clip"}}>
         {/* 달력 헤더 */}
         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"12px 14px",
           borderBottom:`1px solid ${C.border}`}}>
