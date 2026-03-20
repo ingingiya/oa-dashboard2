@@ -243,8 +243,8 @@ function adScore(ad, margin, c={}){
   return {issues, lpvC, lpvR, cpa, ctr};
 }
 
-function schTypeColor(t){ return {공구:C.rose,시딩:C.purple,광고:C.gold,이벤트:C.sage}[t]||C.inkMid; }
-function schTypeIcon(t){  return {공구:"🛍",시딩:"✨",광고:"📣",이벤트:"🎉"}[t]||"📌"; }
+function schTypeColor(t){ return {공구:C.rose,시딩:C.purple,광고:C.gold,이벤트:C.sage,반복:"#94a3b8"}[t]||C.inkMid; }
+function schTypeIcon(t){  return {공구:"🛍",시딩:"✨",광고:"📣",이벤트:"🎉",반복:"☑️"}[t]||"📌"; }
 
 // useLocal은 useSupabaseState로 대체됨
 
@@ -4171,6 +4171,33 @@ export default function OaDashboard(){
       }
     });
 
+    // 반복 체크리스트 → 달력에 자동 표시
+    const ASSIGNEE_COLORS={"소리":"#f472b6","영서":"#60a5fa","경은":"#34d399","지수":"#a78bfa"};
+    (checkItems||[]).forEach(ci=>{
+      const daysInCal = new Date(calMonth.y, calMonth.m+1, 0).getDate();
+      for(let day=1; day<=daysInCal; day++){
+        const d = new Date(calMonth.y, calMonth.m, day);
+        const dow2 = d.getDay(); // 0=일,1=월
+        let show = false;
+        if(ci.cycle==="daily") show=true;
+        else if(ci.cycle==="weekly") show=(dow2===1); // 월요일
+        else if(ci.cycle==="monthly") show=(day===1);
+        if(!show) continue;
+        const key=toLocalKey(d);
+        if(!itemsByDate[key]) itemsByDate[key]=[];
+        itemsByDate[key].push({
+          id:"cl_"+ci.id+"_"+key,
+          title:ci.title,
+          type:"반복",
+          date:key,
+          assignee:ci.assignee||"",
+          assigneeColor:ASSIGNEE_COLORS[ci.assignee]||"#94a3b8",
+          _isChecklist:true,
+          _checkItem:ci,
+        });
+      }
+    });
+
     const todayStr2 = toLocalKey(new Date());
     const months=["1월","2월","3월","4월","5월","6월","7월","8월","9월","10월","11월","12월"];
     const days=["일","월","화","수","목","금","토"];
@@ -4303,7 +4330,36 @@ export default function OaDashboard(){
           {selItems.length===0&&<div style={{textAlign:"center",color:C.inkLt,fontSize:12,padding:"16px 0"}}>이날 일정 없음</div>}
           <div style={{display:"flex",flexDirection:"column",gap:8}}>
             {selItems.map(s=>{
-              const d=daysUntil(s.date),tc=schTypeColor(s.type);
+              const tc=schTypeColor(s.type);
+              if(s._isChecklist){
+                // 반복 체크리스트 항목
+                const ci=s._checkItem;
+                const dCL=new Date(selDay+"T00:00:00");
+                const dow3=dCL.getDay();
+                const mondayD=dCL.getDate()-dow3+(dow3===0?-6:1);
+                const monCL=new Date(dCL.getFullYear(),dCL.getMonth(),mondayD);
+                let dkCL;
+                if(ci.cycle==="daily") dkCL=ci.id+"_"+selDay;
+                else if(ci.cycle==="weekly") dkCL=ci.id+"_"+`${monCL.getFullYear()}-${String(monCL.getMonth()+1).padStart(2,"0")}-W${String(Math.ceil(monCL.getDate()/7)).padStart(2,"0")}`;
+                else dkCL=ci.id+"_"+selDay.slice(0,7);
+                const isDone=(checkDone||{})[dkCL];
+                return(
+                  <div key={s.id} onClick={()=>setCheckDone(prev=>({...(prev||{}),[dkCL]:!isDone}))}
+                    style={{display:"flex",alignItems:"center",gap:10,padding:"10px 12px",cursor:"pointer",
+                      borderRadius:10,border:`1px solid ${isDone?"#94a3b8":C.border}`,background:isDone?"#f8fafc":C.white}}>
+                    <span style={{fontSize:10,fontWeight:700,color:"#94a3b8",background:"#94a3b818",padding:"2px 8px",borderRadius:20,whiteSpace:"nowrap",flexShrink:0}}>
+                      ☑️ 반복
+                    </span>
+                    <div style={{flex:1,minWidth:0}}>
+                      <div style={{fontSize:12,fontWeight:800,color:C.ink,textDecoration:isDone?"line-through":"none",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{s.title}</div>
+                      {s.assignee&&<span style={{fontSize:10,padding:"1px 6px",borderRadius:10,background:s.assigneeColor+"22",color:s.assigneeColor,fontWeight:700}}>{s.assignee}</span>}
+                    </div>
+                    <div style={{width:22,height:22,borderRadius:6,border:`2px solid ${isDone?"#94a3b8":C.border}`,
+                      background:isDone?"#94a3b8":"transparent",display:"flex",alignItems:"center",justifyContent:"center",
+                      fontSize:13,color:"#fff",flexShrink:0}}>{isDone?"✓":""}</div>
+                  </div>
+                );
+              }
               return(
                 <div key={s.id} style={{display:"flex",alignItems:"center",gap:10,padding:"10px 12px",
                   borderRadius:10,border:`1px solid ${C.border}`,background:C.white}}>
