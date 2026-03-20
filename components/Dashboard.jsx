@@ -4161,7 +4161,7 @@ export default function OaDashboard(){
     return(
     <div style={{display:"flex",flexDirection:"column",gap:14}}>
       {/* 노션 상태 배너 */}
-      <div style={{display:"flex",alignItems:"center",gap:10,padding:"10px 14px",background:C.white,
+      <div className="sch-banner" style={{display:"flex",alignItems:"center",gap:8,padding:"10px 12px",background:C.white,
         border:`1px solid ${notionError?C.bad+"44":C.good+"44"}`,borderRadius:12,flexWrap:"wrap"}}>
         <span style={{fontSize:16}}>{notionLoading?"⏳":notionError?"❌":"🟢"}</span>
         <div style={{flex:1,fontSize:11,fontWeight:700,color:notionError?C.bad:C.good,minWidth:120}}>
@@ -4197,7 +4197,7 @@ export default function OaDashboard(){
       {/* 달력 */}
       <div style={{background:C.white,border:`1px solid ${C.border}`,borderRadius:14,overflow:"hidden"}}>
         {/* 달력 헤더 */}
-        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"14px 16px",
+        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"12px 14px",
           borderBottom:`1px solid ${C.border}`}}>
           <button onClick={()=>setCalMonth(p=>p.m===0?{y:p.y-1,m:11}:{y:p.y,m:p.m-1})}
             style={{background:"none",border:"none",cursor:"pointer",fontSize:18,color:C.inkMid,padding:"0 8px"}}>‹</button>
@@ -4216,54 +4216,57 @@ export default function OaDashboard(){
               style={{background:"none",border:"none",cursor:"pointer",fontSize:18,color:C.inkMid,padding:"0 8px"}}>›</button>
           </div>
         </div>
-        {/* 요일 헤더 */}
-        <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",borderBottom:`1px solid ${C.border}`}}>
-          {days.map((d,i)=>(
-            <div key={d} style={{padding:"8px 0",textAlign:"center",fontSize:10,fontWeight:700,
-              color:i===0?C.bad:i===6?"#3B82F6":C.inkLt}}>{d}</div>
-          ))}
-        </div>
-        {/* 날짜 그리드 */}
-        <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)"}}>
-          {Array.from({length:startDow}).map((_,i)=>(
-            <div key={`e${i}`} style={{minHeight:80,borderRight:`1px solid ${C.border}`,borderBottom:`1px solid ${C.border}`,background:C.cream}}/>
-          ))}
-          {Array.from({length:daysInMonth}).map((_,i)=>{
-            const day=i+1;
-            const dateKey=`${calMonth.y}-${String(calMonth.m+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
-            const items=itemsByDate[dateKey]||[];
-            const isToday=dateKey===todayStr2;
-            const isSel=dateKey===selDay;
-            const col=(startDow+i)%7;
-            return(
-              <div key={day} onClick={()=>setSelDay(selDay===dateKey?null:dateKey)}
-                style={{minHeight:80,padding:"6px 4px",borderRight:`1px solid ${C.border}`,borderBottom:`1px solid ${C.border}`,
-                  cursor:items.length>0||true?"pointer":"default",
-                  background:isSel?"#EFF6FF":isToday?C.blush:C.white,transition:"background 0.15s"}}>
-                <div style={{fontSize:11,fontWeight:isToday?900:600,
-                  color:isToday?C.rose:col===0?C.bad:col===6?"#3B82F6":C.ink,
-                  width:22,height:22,borderRadius:"50%",display:"flex",alignItems:"center",justifyContent:"center",
-                  background:isToday?C.rose:isSel?"#DBEAFE":"transparent",
-                  color:isToday?C.white:col===0?C.bad:col===6?"#3B82F6":C.ink,marginBottom:2}}>
-                  {day}
-                </div>
-                {items.slice(0,3).map((s,j)=>{
-                  const tc=schTypeColor(s.type);
-                  const ac=s.assigneeColor||C.inkLt;
-                  return(
-                    <div key={j} onClick={e=>{e.stopPropagation();setSchModalData({mode:"edit",initial:{...s,notionId:s.id,note:s.memo}});}}
-                      style={{fontSize:9,fontWeight:700,padding:"1px 4px",borderRadius:4,
-                      background:`${tc}18`,color:tc,marginBottom:1,
-                      overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",
-                      cursor:"pointer",borderLeft:`2px solid ${ac}`}}>
-                      {s.assignee?`(${s.assignee.slice(0,1)}) `:""}{s.title.replace(/[(\[（][가-힣]{2,4}[)\]）]\s*/g,"").slice(0,10)}
+        {/* 달력 본체 — 모바일 가로 스크롤 */}
+        <div className="cal-scroll">
+          <div className="cal-grid-wrap">
+            {/* 요일 헤더 */}
+            <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",borderBottom:`1px solid ${C.border}`}}>
+              {days.map((d,i)=>(
+                <div key={d} style={{padding:"6px 0",textAlign:"center",fontSize:10,fontWeight:700,
+                  color:i===0?C.bad:i===6?"#3B82F6":C.inkLt}}>{d}</div>
+              ))}
+            </div>
+            {/* 날짜 그리드 */}
+            <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)"}}>
+              {Array.from({length:startDow}).map((_,i)=>(
+                <div key={`e${i}`} className="cal-cell" style={{borderRight:`1px solid ${C.border}`,borderBottom:`1px solid ${C.border}`,background:C.cream}}/>
+              ))}
+              {Array.from({length:daysInMonth}).map((_,i)=>{
+                const day=i+1;
+                const dateKey=`${calMonth.y}-${String(calMonth.m+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+                const items=itemsByDate[dateKey]||[];
+                const isToday=dateKey===todayStr2;
+                const isSel=dateKey===selDay;
+                const col=(startDow+i)%7;
+                return(
+                  <div key={day} className="cal-cell" onClick={()=>setSelDay(selDay===dateKey?null:dateKey)}
+                    style={{padding:"6px 4px",borderRight:`1px solid ${C.border}`,borderBottom:`1px solid ${C.border}`,
+                      cursor:"pointer",background:isSel?"#EFF6FF":isToday?C.blush:C.white,transition:"background 0.15s"}}>
+                    <div style={{fontSize:11,fontWeight:isToday?900:600,
+                      width:20,height:20,borderRadius:"50%",display:"flex",alignItems:"center",justifyContent:"center",
+                      background:isToday?C.rose:isSel?"#DBEAFE":"transparent",
+                      color:isToday?C.white:col===0?C.bad:col===6?"#3B82F6":C.ink,marginBottom:2,flexShrink:0}}>
+                      {day}
                     </div>
-                  );
-                })}
-                {items.length>3&&<div style={{fontSize:8,color:C.inkLt,fontWeight:700}}>+{items.length-3}개</div>}
-              </div>
-            );
-          })}
+                    {items.slice(0,2).map((s,j)=>{
+                      const tc=schTypeColor(s.type);
+                      const ac=s.assigneeColor||C.inkLt;
+                      return(
+                        <div key={j} className="cal-item-text" onClick={e=>{e.stopPropagation();setSchModalData({mode:"edit",initial:{...s,notionId:s.id,note:s.memo}});}}
+                          style={{fontSize:9,fontWeight:700,padding:"1px 3px",borderRadius:3,
+                          background:`${tc}18`,color:tc,marginBottom:1,
+                          overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",
+                          cursor:"pointer",borderLeft:`2px solid ${ac}`}}>
+                          {s.assignee?`(${s.assignee.slice(0,1)}) `:""}{s.title.replace(/[(\[（][가-힣]{2,4}[)\]）]\s*/g,"").slice(0,8)}
+                        </div>
+                      );
+                    })}
+                    {items.length>2&&<div style={{fontSize:8,color:C.inkLt,fontWeight:700}}>+{items.length-2}</div>}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
         </div>
       </div>
 
@@ -4351,6 +4354,20 @@ export default function OaDashboard(){
         @media (max-width:480px){
           .kpi-grid   { grid-template-columns: repeat(2,1fr) !important; }
           .content-grid-3 { grid-template-columns: 1fr 1fr !important; }
+        }
+
+        /* 달력 모바일 */
+        .cal-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+        .cal-grid-wrap { min-width: 420px; }
+        .cal-cell { min-height: 80px; }
+        @media (max-width: 768px) {
+          .cal-cell { min-height: 60px; padding: 4px 2px !important; }
+          .cal-item-text { font-size: 8px !important; }
+          .sch-banner { flex-wrap: wrap; gap: 6px !important; }
+          .sch-banner-btns { flex-wrap: wrap; }
+        }
+        @media (max-width: 480px) {
+          .cal-cell { min-height: 48px; }
         }
       `}</style>
 
