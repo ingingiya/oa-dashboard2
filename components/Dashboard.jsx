@@ -635,11 +635,12 @@ export default function OaDashboard(){
 
   const [marginModal, setMarginModal]= useState(false);
   const [marginInput, setMarginInput]= useState("");
-  const [editingMargin, setEditingMargin] = useState(null); // {id, keyword, margin}
+  const [editingMargin, setEditingMargin] = useState(null);
   const [newKeyword, setNewKeyword]  = useState("");
   const [newMarginVal, setNewMarginVal] = useState("");
   const [newCpcKeyword, setNewCpcKeyword] = useState("");
   const [newCpcVal, setNewCpcVal]         = useState("");
+  const [convCriteriaTab, setConvCriteriaTab] = useState("default"); // 제품별 기준 탭
   // 목표 메모 (Supabase 팀 공유)
   const [metaGoal, setMetaGoal]         = useSyncState("oa_meta_goal_v7", "");
   const [metaGoalEditing, setMetaGoalEditing] = useState(false);
@@ -1263,6 +1264,7 @@ export default function OaDashboard(){
   const NAVS=[
     {id:"home",      icon:"🏠",label:"홈"},
     {id:"meta",      icon:"📣",label:"메타광고"},
+    {id:"adspend",   icon:"💰",label:"총광고비"},
     {id:"influencer",icon:"✨",label:"인플루언서"},
     {id:"inventory", icon:"📦",label:"재고"},
     {id:"schedule",  icon:"📅",label:"스케줄"},
@@ -1403,122 +1405,7 @@ export default function OaDashboard(){
 
       {/* 발주임박은 알림 그룹에 통합됨 — 상세 테이블은 재고 섹션에서 확인 */}
 
-      {/* ── 월별 성과 비교 ── */}
-      {(()=>{
-        const fmtW = n=>n>=10000?`₩${Math.round(n/10000).toLocaleString()}만`:`₩${Math.round(n).toLocaleString()}`;
-        const pct  = (a,b)=>b>0?+(a/b*100).toFixed(1):0;
-        const diff = (cur,prev)=>prev>0?+((cur-prev)/prev*100).toFixed(1):null;
-        const isInsta = r=>(r.campaign||r.adName||"").includes("Instagram 게시물");
-
-        // 월별 집계
-        const calcMonth = rows=>{
-          const r = rows.filter(x=>!isInsta(x));
-          const conv    = r.filter(x=>isConversionCampaign(x.objective,x.campaign));
-          const traffic = r.filter(x=>!isConversionCampaign(x.objective,x.campaign));
-          const agg = arr=>({
-            spend:  arr.reduce((s,x)=>s+(x.spend||0),0),
-            purch:  arr.reduce((s,x)=>s+(x.purchases||0),0),
-            convV:  arr.reduce((s,x)=>s+(x.convValue||0),0),
-            clicks: arr.reduce((s,x)=>s+(x.clicks||0),0),
-            lpv:    arr.reduce((s,x)=>s+(x.lpv||0),0),
-          });
-          const c=agg(conv), t=agg(traffic), all=agg(r);
-          return {
-            spend:   all.spend,
-            convSpend: c.spend, trafficSpend: t.spend,
-            roas:    pct(all.convV,all.spend),
-            cpa:     c.purch>0?c.spend/c.purch:0,
-            cpc:     all.clicks>0?all.spend/all.clicks:0,
-            lpvRate: pct(all.lpv,all.clicks),
-            purch:   all.purch,
-          };
-        };
-
-        const months = monthlyFiles.map(f=>({label:f.label, ...calcMonth(f.rows)}));
-
-        const METRICS = [
-          {key:"spend",    label:"총 광고비",   fmt:fmtW,            good:"none"},
-          {key:"convSpend",label:"전환 광고비",  fmt:fmtW,            good:"none"},
-          {key:"trafficSpend",label:"트래픽 광고비",fmt:fmtW,         good:"none"},
-          {key:"roas",     label:"ROAS",         fmt:v=>`${v}%`,     good:"high"},
-          {key:"cpa",      label:"CPA",          fmt:fmtW,            good:"low"},
-          {key:"cpc",      label:"CPC",          fmt:v=>`₩${Math.round(v).toLocaleString()}`, good:"low"},
-          {key:"lpvRate",  label:"LPV율",        fmt:v=>`${v}%`,     good:"high"},
-          {key:"purch",    label:"구매",          fmt:v=>`${v}건`,    good:"high"},
-        ];
-
-        return(
-          <div style={{background:C.white,border:`1px solid ${C.border}`,borderRadius:14,padding:"16px"}}>
-            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:14}}>
-              <div>
-                <div style={{fontSize:13,fontWeight:800,color:C.ink}}>📅 월별 성과 비교</div>
-                <div style={{fontSize:10,color:C.inkLt,marginTop:2}}>파일 업로드하면 월별로 자동 집계·비교해요</div>
-              </div>
-              <div style={{display:"flex",gap:6,alignItems:"center",flexWrap:"wrap"}}>
-                {monthlyFiles.map((f,i)=>(
-                  <div key={i} style={{display:"flex",alignItems:"center",gap:4,
-                    background:C.cream,borderRadius:8,padding:"4px 10px",fontSize:11,fontWeight:700,color:C.ink}}>
-                    {f.label}
-                    <button onClick={()=>setMonthlyFiles(monthlyFiles.filter((_,j)=>j!==i))}
-                      style={{background:"none",border:"none",cursor:"pointer",color:C.inkLt,fontSize:11,padding:0,lineHeight:1}}>✕</button>
-                  </div>
-                ))}
-                <input ref={monthlyFileRef} type="file" accept=".xlsx,.csv" style={{display:"none"}}
-                  onChange={e=>e.target.files[0]&&handleMonthlyFile(e.target.files[0])}/>
-                <button onClick={()=>monthlyFileRef.current?.click()}
-                  style={{fontSize:11,fontWeight:700,padding:"5px 14px",borderRadius:8,
-                    border:`1px solid ${C.rose}`,background:C.blush,color:C.rose,
-                    cursor:"pointer",fontFamily:"inherit"}}>
-                  + 월 추가
-                </button>
-              </div>
-            </div>
-
-            {months.length===0?(
-              <div style={{textAlign:"center",padding:"24px 0",color:C.inkLt,fontSize:11}}>
-                파일을 추가하면 월별 성과가 여기 표시돼요
-              </div>
-            ):(
-              <div style={{overflowX:"auto"}}>
-                <table style={{width:"100%",borderCollapse:"collapse",fontSize:11,minWidth:400}}>
-                  <thead>
-                    <tr style={{borderBottom:`2px solid ${C.border}`}}>
-                      <th style={{padding:"8px 10px",textAlign:"left",color:C.inkLt,fontWeight:700,fontSize:10}}>지표</th>
-                      {months.map((m,i)=>(
-                        <th key={i} style={{padding:"8px 10px",textAlign:"right",color:C.ink,fontWeight:800}}>{m.label}</th>
-                      ))}
-                      {months.length>=2&&<th style={{padding:"8px 10px",textAlign:"right",color:C.inkLt,fontWeight:700,fontSize:10}}>증감</th>}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {METRICS.map(({key,label,fmt,good})=>{
-                      const vals = months.map(m=>m[key]);
-                      const last = vals[vals.length-1];
-                      const prev = vals.length>=2?vals[vals.length-2]:null;
-                      const d = prev!==null?diff(last,prev):null;
-                      const isGood = d===null?null:good==="high"?d>0:good==="low"?d<0:null;
-                      return(
-                        <tr key={key} style={{borderBottom:`1px solid ${C.border}`}}>
-                          <td style={{padding:"8px 10px",color:C.inkMid,fontWeight:600}}>{label}</td>
-                          {vals.map((v,i)=>(
-                            <td key={i} style={{padding:"8px 10px",textAlign:"right",fontWeight:700,color:C.ink}}>{fmt(v)}</td>
-                          ))}
-                          {months.length>=2&&(
-                            <td style={{padding:"8px 10px",textAlign:"right",fontWeight:800,
-                              color:isGood===null?C.inkMid:isGood?C.good:C.bad}}>
-                              {d===null?"—":`${d>0?"+":""}${d}%`}
-                            </td>
-                          )}
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
-        );
-      })()}
+      {/* 월별 성과 비교 → 총광고비 탭으로 이동 */}
 
       {/* 발주임박 시트 연결 모달 */}
       {orderModal&&(
@@ -2776,7 +2663,8 @@ export default function OaDashboard(){
               {(()=>{
                 const products = convCriteria?.products||[];
                 const allTabs = [{id:'default', label:'기본값', keyword:''},...products.map(p=>({id:String(p.id),label:p.label||p.keyword,keyword:p.keyword,pid:p.id}))];
-                const [selTab, setSelTab] = React.useState('default');
+                const selTab = convCriteriaTab;
+                const setSelTab = setConvCriteriaTab;
                 const cur = selTab==='default' ? convCriteria : products.find(p=>String(p.id)===selTab)||convCriteria;
                 const update = (key, val) => {
                   if(selTab==='default'){
@@ -3516,6 +3404,225 @@ export default function OaDashboard(){
 
   const upcoming=sch.filter(s=>s.status!=="완료").sort((a,b)=>new Date(a.date)-new Date(b.date));
   const done=sch.filter(s=>s.status==="완료");
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  // 💰 총광고비
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  const AdSpendSection=(()=>{
+    const fmtW = n=>n>=10000?`₩${Math.round(n/10000).toLocaleString()}만`:`₩${Math.round(n).toLocaleString()}`;
+    const pct  = (a,b)=>b>0?+(a/b*100).toFixed(1):0;
+    const diff = (cur,prev)=>prev>0?+((cur-prev)/prev*100).toFixed(1):null;
+    const isInsta = r=>(r.campaign||r.adName||"").includes("Instagram 게시물");
+
+    // 월별 메타 집계
+    const calcMetaMonth = rows=>{
+      const r = rows.filter(x=>!isInsta(x));
+      const conv    = r.filter(x=>isConversionCampaign(x.objective,x.campaign));
+      const traffic = r.filter(x=>!isConversionCampaign(x.objective,x.campaign));
+      const agg = arr=>arr.reduce((s,x)=>s+(x.spend||0),0);
+      return {
+        total:   agg(r),
+        conv:    agg(conv),
+        traffic: agg(traffic),
+        purch:   r.reduce((s,x)=>s+(x.purchases||0),0),
+        convV:   r.reduce((s,x)=>s+(x.convValue||0),0),
+        clicks:  r.reduce((s,x)=>s+(x.clicks||0),0),
+        lpv:     r.reduce((s,x)=>s+(x.lpv||0),0),
+      };
+    };
+
+    const months = monthlyFiles.map(f=>({label:f.label, meta:calcMetaMonth(f.rows), rows:f.rows}));
+
+    const METRICS = [
+      {key:"total",    label:"메타 총 광고비", fmt:fmtW,                                    good:"none"},
+      {key:"conv",     label:"└ 전환",          fmt:fmtW,                                    good:"none"},
+      {key:"traffic",  label:"└ 트래픽",        fmt:fmtW,                                    good:"none"},
+      {key:"purch",    label:"구매",            fmt:v=>`${v}건`,                             good:"high"},
+      {key:"roas",     label:"ROAS",            fmt:v=>`${v}%`,                              good:"high"},
+      {key:"cpa",      label:"CPA",             fmt:fmtW,                                    good:"low"},
+      {key:"cpc",      label:"CPC",             fmt:v=>`₩${Math.round(v).toLocaleString()}`, good:"low"},
+      {key:"lpvRate",  label:"LPV율",           fmt:v=>`${v}%`,                              good:"high"},
+    ];
+
+    const getVal = (m, key)=>{
+      const meta = m.meta;
+      if(key==="total")   return meta.total;
+      if(key==="conv")    return meta.conv;
+      if(key==="traffic") return meta.traffic;
+      if(key==="purch")   return meta.purch;
+      if(key==="roas")    return pct(meta.convV, meta.total);
+      if(key==="cpa")     return meta.purch>0?meta.total/meta.purch:0;
+      if(key==="cpc")     return meta.clicks>0?meta.total/meta.clicks:0;
+      if(key==="lpvRate") return pct(meta.lpv, meta.clicks);
+      return 0;
+    };
+
+    return(
+      <div style={{display:"flex",flexDirection:"column",gap:16}}>
+
+        {/* ── 채널별 광고비 현황 ── */}
+        <div style={{background:C.ink,borderRadius:14,padding:"16px 18px",color:C.white}}>
+          <div style={{fontSize:13,fontWeight:800,marginBottom:4}}>💰 채널별 광고비</div>
+          <div style={{fontSize:10,opacity:0.5,marginBottom:16}}>채널 파일 업로드하면 자동 집계돼요</div>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(160px,1fr))",gap:10}}>
+            {/* 메타 */}
+            <div style={{background:"rgba(255,255,255,0.07)",borderRadius:12,padding:"14px"}}>
+              <div style={{fontSize:10,opacity:0.5,marginBottom:6}}>📣 메타광고 (시트)</div>
+              <div style={{fontSize:18,fontWeight:900,color:"#f9a8d4"}}>
+                {hasSheet?fmtW(metaFiltered.reduce((s,r)=>s+(r.spend||0),0)):"—"}
+              </div>
+              {hasSheet&&<div style={{fontSize:9,opacity:0.4,marginTop:4}}>
+                {metaRaw.map(r=>r.date).filter(Boolean).sort().slice(0,1)[0]?.slice(5).replace("-","/") || ""}
+                {" ~ "}
+                {metaRaw.map(r=>r.date).filter(Boolean).sort().slice(-1)[0]?.slice(5).replace("-","/") || ""}
+              </div>}
+            </div>
+            {/* 네이버 — 추후 추가 예정 */}
+            <div style={{background:"rgba(255,255,255,0.04)",borderRadius:12,padding:"14px",
+              border:"1px dashed rgba(255,255,255,0.1)",cursor:"pointer",
+              display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:6,minHeight:80}}
+              onClick={()=>alert("네이버 광고비 파일 업로드는 추후 지원 예정이에요")}>
+              <div style={{fontSize:20,opacity:0.3}}>+</div>
+              <div style={{fontSize:10,opacity:0.3,textAlign:"center"}}>채널 추가</div>
+            </div>
+          </div>
+        </div>
+
+        {/* ── 매출 입력 ── */}
+        <div style={{background:C.white,border:`1px solid ${C.border}`,borderRadius:14,padding:"16px"}}>
+          <div style={{fontSize:13,fontWeight:800,color:C.ink,marginBottom:4}}>📈 매출 현황</div>
+          <div style={{fontSize:10,color:C.inkLt,marginBottom:12}}>월별 매출을 입력하면 광고비 대비 효율을 계산해요</div>
+          <div style={{display:"flex",gap:10,flexWrap:"wrap",alignItems:"flex-end"}}>
+            {monthlyFiles.map((f,i)=>(
+              <div key={i} style={{background:C.cream,borderRadius:10,padding:"12px",minWidth:140}}>
+                <div style={{fontSize:11,fontWeight:700,color:C.ink,marginBottom:8}}>{f.label}</div>
+                <div style={{fontSize:10,color:C.inkLt,marginBottom:4}}>매출 (원)</div>
+                <input
+                  type="number"
+                  value={f.revenue||""}
+                  onChange={e=>{
+                    const next = monthlyFiles.map((x,j)=>j===i?{...x,revenue:+e.target.value}:x);
+                    setMonthlyFiles(next);
+                  }}
+                  placeholder="예: 50000000"
+                  style={{width:"100%",padding:"6px 8px",border:`1px solid ${C.border}`,borderRadius:8,
+                    fontSize:11,fontFamily:"inherit",outline:"none"}}
+                />
+                {f.revenue>0&&f.meta&&(
+                  <div style={{fontSize:10,color:C.good,fontWeight:700,marginTop:6}}>
+                    광고비율 {pct(calcMetaMonth(f.rows).total, f.revenue).toFixed(1)}%
+                  </div>
+                )}
+              </div>
+            ))}
+            {monthlyFiles.length===0&&(
+              <div style={{fontSize:11,color:C.inkLt}}>아래 월별 비교에서 파일을 먼저 추가해주세요</div>
+            )}
+          </div>
+        </div>
+
+        {/* ── 월별 성과 비교 ── */}
+        <div style={{background:C.white,border:`1px solid ${C.border}`,borderRadius:14,padding:"16px"}}>
+          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:14}}>
+            <div>
+              <div style={{fontSize:13,fontWeight:800,color:C.ink}}>📅 월별 성과 비교</div>
+              <div style={{fontSize:10,color:C.inkLt,marginTop:2}}>파일 업로드하면 월별로 자동 집계·비교해요</div>
+            </div>
+            <div style={{display:"flex",gap:6,alignItems:"center",flexWrap:"wrap"}}>
+              {monthlyFiles.map((f,i)=>(
+                <div key={i} style={{display:"flex",alignItems:"center",gap:4,
+                  background:C.cream,borderRadius:8,padding:"4px 10px",fontSize:11,fontWeight:700,color:C.ink}}>
+                  {f.label}
+                  <button onClick={()=>setMonthlyFiles(monthlyFiles.filter((_,j)=>j!==i))}
+                    style={{background:"none",border:"none",cursor:"pointer",color:C.inkLt,fontSize:11,padding:0,lineHeight:1}}>✕</button>
+                </div>
+              ))}
+              <input ref={monthlyFileRef} type="file" accept=".xlsx,.csv" style={{display:"none"}}
+                onChange={e=>e.target.files[0]&&handleMonthlyFile(e.target.files[0])}/>
+              <button onClick={()=>monthlyFileRef.current?.click()}
+                style={{fontSize:11,fontWeight:700,padding:"5px 14px",borderRadius:8,
+                  border:`1px solid ${C.rose}`,background:C.blush,color:C.rose,
+                  cursor:"pointer",fontFamily:"inherit"}}>
+                + 월 추가
+              </button>
+            </div>
+          </div>
+
+          {months.length===0?(
+            <div style={{textAlign:"center",padding:"24px 0",color:C.inkLt,fontSize:11}}>
+              파일을 추가하면 월별 성과가 여기 표시돼요
+            </div>
+          ):(
+            <div style={{overflowX:"auto"}}>
+              <table style={{width:"100%",borderCollapse:"collapse",fontSize:11,minWidth:400}}>
+                <thead>
+                  <tr style={{borderBottom:`2px solid ${C.border}`}}>
+                    <th style={{padding:"8px 10px",textAlign:"left",color:C.inkLt,fontWeight:700,fontSize:10}}>지표</th>
+                    {months.map((m,i)=>(
+                      <th key={i} style={{padding:"8px 10px",textAlign:"right",color:C.ink,fontWeight:800}}>{m.label}</th>
+                    ))}
+                    {months.length>=2&&<th style={{padding:"8px 10px",textAlign:"right",color:C.inkLt,fontWeight:700,fontSize:10}}>전월 대비</th>}
+                  </tr>
+                </thead>
+                <tbody>
+                  {METRICS.map(({key,label,fmt,good})=>{
+                    const vals = months.map(m=>getVal(m,key));
+                    const last = vals[vals.length-1];
+                    const prev = vals.length>=2?vals[vals.length-2]:null;
+                    const d = prev!==null&&prev>0?diff(last,prev):null;
+                    const isGood = d===null?null:good==="high"?d>0:good==="low"?d<0:null;
+                    const isSub = label.startsWith("└");
+                    return(
+                      <tr key={key} style={{borderBottom:`1px solid ${C.border}`}}>
+                        <td style={{padding:"8px 10px",color:isSub?C.inkLt:C.inkMid,fontWeight:isSub?500:600,
+                          fontSize:isSub?10:11,paddingLeft:isSub?20:10}}>{label}</td>
+                        {vals.map((v,i)=>(
+                          <td key={i} style={{padding:"8px 10px",textAlign:"right",
+                            fontWeight:isSub?600:700,color:isSub?C.inkMid:C.ink,fontSize:isSub?10:11}}>
+                            {v>0?fmt(v):"—"}
+                          </td>
+                        ))}
+                        {months.length>=2&&(
+                          <td style={{padding:"8px 10px",textAlign:"right",fontWeight:800,
+                            color:isGood===null?C.inkMid:isGood?C.good:C.bad}}>
+                            {d===null?"—":`${d>0?"+":""}${d}%`}
+                          </td>
+                        )}
+                      </tr>
+                    );
+                  })}
+                  {/* 매출 행 */}
+                  {months.some(m=>m.revenue>0)&&(
+                    <tr style={{borderBottom:`1px solid ${C.border}`,background:C.cream}}>
+                      <td style={{padding:"8px 10px",color:C.inkMid,fontWeight:600}}>매출</td>
+                      {months.map((m,i)=>(
+                        <td key={i} style={{padding:"8px 10px",textAlign:"right",fontWeight:700,color:C.ink}}>
+                          {m.revenue>0?fmtW(m.revenue):"—"}
+                        </td>
+                      ))}
+                      {months.length>=2&&<td style={{padding:"8px 10px"}}/>}
+                    </tr>
+                  )}
+                  {months.some(m=>m.revenue>0)&&(
+                    <tr style={{borderBottom:`1px solid ${C.border}`,background:C.cream}}>
+                      <td style={{padding:"8px 10px",color:C.inkMid,fontWeight:600}}>광고비율</td>
+                      {months.map((m,i)=>(
+                        <td key={i} style={{padding:"8px 10px",textAlign:"right",fontWeight:700,color:C.rose}}>
+                          {m.revenue>0?`${pct(getVal(m,"total"),m.revenue).toFixed(1)}%`:"—"}
+                        </td>
+                      ))}
+                      {months.length>=2&&<td style={{padding:"8px 10px"}}/>}
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+
+      </div>
+    );
+  })();
+
   const ScheduleSection=(()=>{
     return(
     <div style={{display:"flex",flexDirection:"column",gap:14}}>
@@ -3728,6 +3835,7 @@ export default function OaDashboard(){
         <main className="oa-main">
           {sec==="home"        && <HomeSection/>}
           {sec==="meta"        && MetaSection}
+          {sec==="adspend"     && AdSpendSection}
           {sec==="influencer"  && InfluencerSection}
           {sec==="inventory"   && InventorySection}
           {sec==="schedule"    && ScheduleSection}
