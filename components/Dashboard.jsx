@@ -713,6 +713,13 @@ export default function OaDashboard(){
   // 월별 성과 비교 파일들 — Supabase 저장
   const [monthlyFiles, setMonthlyFiles] = useSyncState("oa_monthly_files_v7", []); // [{label, rows}]
   const monthlyFileRef = useRef(null);
+  // 채널별 광고비 직접 입력 — {id, name, icon, color, amounts: {월라벨: 금액}}
+  const [channelSpends, setChannelSpends] = useSyncState("oa_channel_spends_v7", [
+    {id:"ably",    name:"에이블리",   icon:"🛍", color:"#f9a8d4", amounts:{}},
+    {id:"zigzag",  name:"지그재그",   icon:"👗", color:"#c4b5fd", amounts:{}},
+    {id:"musinsa", name:"무신사",     icon:"👟", color:"#93c5fd", amounts:{}},
+    {id:"naver",   name:"네이버광고", icon:"🔍", color:"#86efac", amounts:{}},
+  ]);
 
   // ── 전체 광고비 xlsx 파일 읽기 → Supabase 저장 ────────────────
   async function handleAllAdFile(file) {
@@ -810,7 +817,7 @@ export default function OaDashboard(){
     // 월별 성과 비교
     if(Array.isArray(monthlyFiles) && monthlyFiles.length>0){
       lines.push("");
-      lines.push("## 월별 성과 비교");
+      lines.push("## 월별 성과 비교 (메타광고)");
       lines.push("월 | 메타광고비 | 전환광고비 | 트래픽광고비 | 구매 | ROAS | CPA | CPC | LPV율 | 매출 | 광고비율");
       monthlyFiles.forEach(f=>{
         const r = (f.rows||[]).filter(x=>!((x.campaign||x.adName||"").includes("Instagram 게시물")));
@@ -829,6 +836,35 @@ export default function OaDashboard(){
         const ratio  = f.revenue>0?Math.round(spend/f.revenue*100)+"%":"—";
         lines.push(`${f.label} | ${fmtW(spend)} | ${fmtW(conv)} | ${fmtW(traff)} | ${purch}건 | ${roas} | ${cpa} | ${cpc} | ${lpvR} | ${rev} | ${ratio}`);
       });
+
+      // 채널별 광고비
+      if(Array.isArray(channelSpends) && channelSpends.length>0){
+        lines.push("");
+        lines.push("## 월별 채널별 광고비");
+        const months = monthlyFiles.map(f=>f.label);
+        lines.push("채널 | " + months.join(" | "));
+        // 메타
+        const metaRow = months.map(m=>{
+          const spend = (monthlyFiles.find(f=>f.label===m)?.rows||[])
+            .filter(r=>!((r.campaign||r.adName||"").includes("Instagram 게시물")))
+            .reduce((s,r)=>s+(r.spend||0),0);
+          return spend>0?fmtW(spend):"—";
+        });
+        lines.push(`메타광고 | ${metaRow.join(" | ")}`);
+        channelSpends.forEach(ch=>{
+          const row = months.map(m=>+(ch.amounts?.[m]||0)>0?fmtW(+(ch.amounts[m])):"—");
+          lines.push(`${ch.name} | ${row.join(" | ")}`);
+        });
+        // 합계
+        const totalRow = months.map(m=>{
+          const metaSpend = (monthlyFiles.find(f=>f.label===m)?.rows||[])
+            .filter(r=>!((r.campaign||r.adName||"").includes("Instagram 게시물")))
+            .reduce((s,r)=>s+(r.spend||0),0);
+          const chSpend = channelSpends.reduce((s,ch)=>s++(ch.amounts?.[m]||0),0);
+          return fmtW(metaSpend+chSpend);
+        });
+        lines.push(`총합 | ${totalRow.join(" | ")}`);
+      }
     }
 
     return lines.join("\n");
@@ -3625,32 +3661,112 @@ export default function OaDashboard(){
       <div style={{display:"flex",flexDirection:"column",gap:16}}>
 
         {/* ── 채널별 광고비 현황 ── */}
-        <div style={{background:C.ink,borderRadius:14,padding:"16px 18px",color:C.white}}>
-          <div style={{fontSize:13,fontWeight:800,marginBottom:4}}>💰 채널별 광고비</div>
-          <div style={{fontSize:10,opacity:0.5,marginBottom:16}}>채널 파일 업로드하면 자동 집계돼요</div>
-          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(160px,1fr))",gap:10}}>
-            {/* 메타 */}
-            <div style={{background:"rgba(255,255,255,0.07)",borderRadius:12,padding:"14px"}}>
-              <div style={{fontSize:10,opacity:0.5,marginBottom:6}}>📣 메타광고 (시트)</div>
-              <div style={{fontSize:18,fontWeight:900,color:"#f9a8d4"}}>
-                {hasSheet?fmtW(metaFiltered.reduce((s,r)=>s+(r.spend||0),0)):"—"}
+        {(()=>{
+          const months = monthlyFiles.map(f=>f.label);
+          const metaByMonth = {};
+          monthlyFiles.forEach(f=>{
+            const spend = (f.rows||[]).filter(r=>!((r.campaign||r.adName||"").includes("Instagram 게시물")))
+              .reduce((s,r)=>s+(r.spend||0),0);
+            metaByMonth[f.label] = spend;
+          });
+          // 현재 시트 데이터도 포함 (월 라벨 없으면 "현재"로)
+          const metaCurrentSpend = metaFiltered.reduce((s,r)=>s+(r.spend||0),0);
+
+          // 월별 채널 합산
+          const totalByMonth = {};
+          months.forEach(m=>{
+            let t = metaByMonth[m]||0;
+            channelSpends.forEach(ch=>{ t += +(ch.amounts?.[m]||0); });
+            totalByMonth[m] = t;
+          });
+
+          return(
+            <div style={{background:C.ink,borderRadius:14,padding:"16px 18px",color:C.white}}>
+              <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:14}}>
+                <div>
+                  <div style={{fontSize:13,fontWeight:800}}>💰 채널별 광고비</div>
+                  <div style={{fontSize:10,opacity:0.5,marginTop:2}}>월별 금액 직접 입력 · Supabase 팀 공유</div>
+                </div>
               </div>
-              {hasSheet&&<div style={{fontSize:9,opacity:0.4,marginTop:4}}>
-                {metaRaw.map(r=>r.date).filter(Boolean).sort().slice(0,1)[0]?.slice(5).replace("-","/") || ""}
-                {" ~ "}
-                {metaRaw.map(r=>r.date).filter(Boolean).sort().slice(-1)[0]?.slice(5).replace("-","/") || ""}
-              </div>}
+
+              {months.length===0?(
+                <div style={{textAlign:"center",padding:"16px 0",opacity:0.3,fontSize:11}}>
+                  아래 월별 비교에서 파일을 먼저 추가하면 월 탭이 생겨요
+                </div>
+              ):(
+                <div style={{overflowX:"auto"}}>
+                  <table style={{width:"100%",borderCollapse:"collapse",fontSize:11}}>
+                    <thead>
+                      <tr>
+                        <th style={{padding:"8px 10px",textAlign:"left",opacity:0.5,fontWeight:700,fontSize:10}}>채널</th>
+                        {months.map(m=>(
+                          <th key={m} style={{padding:"8px 10px",textAlign:"right",fontWeight:800,color:"rgba(255,255,255,0.9)"}}>{m}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {/* 메타 */}
+                      <tr style={{borderTop:"1px solid rgba(255,255,255,0.08)"}}>
+                        <td style={{padding:"8px 10px",fontWeight:700}}>
+                          <span style={{marginRight:6}}>📣</span>메타광고
+                        </td>
+                        {months.map(m=>(
+                          <td key={m} style={{padding:"8px 10px",textAlign:"right",fontWeight:700,color:"#f9a8d4"}}>
+                            {metaByMonth[m]>0?fmtW(metaByMonth[m]):"—"}
+                          </td>
+                        ))}
+                      </tr>
+                      {/* 다른 채널들 */}
+                      {channelSpends.map((ch,ci)=>(
+                        <tr key={ch.id} style={{borderTop:"1px solid rgba(255,255,255,0.08)"}}>
+                          <td style={{padding:"8px 10px",fontWeight:700}}>
+                            <span style={{marginRight:6}}>{ch.icon}</span>{ch.name}
+                          </td>
+                          {months.map(m=>(
+                            <td key={m} style={{padding:"4px 6px",textAlign:"right"}}>
+                              <input
+                                type="number"
+                                value={ch.amounts?.[m]||""}
+                                onChange={e=>{
+                                  const next = channelSpends.map((x,j)=>j===ci
+                                    ?{...x,amounts:{...(x.amounts||{}),[m]:+e.target.value||0}}
+                                    :x);
+                                  setChannelSpends(next);
+                                }}
+                                placeholder="0"
+                                style={{width:90,padding:"4px 6px",borderRadius:6,border:"1px solid rgba(255,255,255,0.15)",
+                                  background:"rgba(255,255,255,0.07)",color:ch.color,
+                                  fontSize:11,fontWeight:700,fontFamily:"inherit",outline:"none",textAlign:"right"}}
+                              />
+                            </td>
+                          ))}
+                        </tr>
+                      ))}
+                      {/* 합계 */}
+                      <tr style={{borderTop:"2px solid rgba(255,255,255,0.2)"}}>
+                        <td style={{padding:"10px 10px",fontWeight:800,fontSize:12}}>합계</td>
+                        {months.map(m=>(
+                          <td key={m} style={{padding:"10px 10px",textAlign:"right",fontWeight:900,fontSize:14,color:"#fbbf24"}}>
+                            {totalByMonth[m]>0?fmtW(totalByMonth[m]):"—"}
+                          </td>
+                        ))}
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              )}
+
+              {/* 현재 시트 (월 파일 없어도 보여줌) */}
+              {metaCurrentSpend>0&&(
+                <div style={{marginTop:12,paddingTop:12,borderTop:"1px solid rgba(255,255,255,0.1)",
+                  display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                  <div style={{fontSize:10,opacity:0.5}}>📣 현재 시트 기준 메타광고비</div>
+                  <div style={{fontSize:16,fontWeight:900,color:"#f9a8d4"}}>{fmtW(metaCurrentSpend)}</div>
+                </div>
+              )}
             </div>
-            {/* 네이버 — 추후 추가 예정 */}
-            <div style={{background:"rgba(255,255,255,0.04)",borderRadius:12,padding:"14px",
-              border:"1px dashed rgba(255,255,255,0.1)",cursor:"pointer",
-              display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:6,minHeight:80}}
-              onClick={()=>alert("네이버 광고비 파일 업로드는 추후 지원 예정이에요")}>
-              <div style={{fontSize:20,opacity:0.3}}>+</div>
-              <div style={{fontSize:10,opacity:0.3,textAlign:"center"}}>채널 추가</div>
-            </div>
-          </div>
-        </div>
+          );
+        })()}
 
         {/* ── 매출 입력 ── */}
         <div style={{background:C.white,border:`1px solid ${C.border}`,borderRadius:14,padding:"16px"}}>
