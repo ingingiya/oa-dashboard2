@@ -611,11 +611,14 @@ export default function OaDashboard(){
   const [notionLoading, setNotionLoading] = useState(false);
   const [notionError, setNotionError] = useState(null);
 
-  const fetchNotionSch = useCallback(async () => {
+  const fetchNotionSch = useCallback(async (opts={}) => {
     setNotionLoading(true);
     setNotionError(null);
     try {
-      const res = await fetch("/api/notion");
+      const params = new URLSearchParams();
+      if (opts.month) params.set("month", opts.month);
+      if (opts.completed) params.set("completed", "true");
+      const res = await fetch("/api/notion?" + params.toString());
       const data = await res.json();
       if (data.error) { setNotionError(data.error); }
       else { setNotionSch(data.items || []); }
@@ -623,7 +626,12 @@ export default function OaDashboard(){
     setNotionLoading(false);
   }, []);
 
-  useEffect(() => { fetchNotionSch(); }, [fetchNotionSch]);
+  // 초기 로딩: 이번달만 (빠름)
+  useEffect(() => {
+    const now = new Date();
+    const month = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,"0")}`;
+    fetchNotionSch({ month });
+  }, [fetchNotionSch]);
 
   async function saveNotionSch(item) {
     if (schModalData?.mode === "edit" && item.notionId) {
@@ -4109,6 +4117,17 @@ export default function OaDashboard(){
     const [selDay, setSelDay] = useState(null);
     const [schFilter, setSchFilter] = useState("미완료"); // 미완료 | 전체
 
+    function handleFilterChange(f) {
+      setSchFilter(f);
+      if (f === "전체") {
+        fetchNotionSch({ completed: true });
+      } else {
+        const now = new Date();
+        const month = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,"0")}`;
+        fetchNotionSch({ month });
+      }
+    }
+
     const activeItems = schFilter==="전체" ? notionSch : notionSch.filter(s=>s.status!=="완료");
 
     // 달력 계산
@@ -4143,17 +4162,17 @@ export default function OaDashboard(){
         border:`1px solid ${notionError?C.bad+"44":C.good+"44"}`,borderRadius:12}}>
         <span style={{fontSize:16}}>{notionLoading?"⏳":notionError?"❌":"🟢"}</span>
         <div style={{flex:1,fontSize:11,fontWeight:700,color:notionError?C.bad:C.good}}>
-          {notionLoading?"노션 불러오는 중...":notionError?`노션 오류: ${notionError}`:`노션 연동됨 · 전체 ${notionSch.length}개 · 미완료 ${notionSch.filter(s=>s.status!=="완료").length}개`}
+          {notionLoading?"노션 불러오는 중...":notionError?`노션 오류: ${notionError}`:`노션 연동됨 · ${schFilter==="전체"?"전체":"이번달"} ${notionSch.length}개 · 미완료 ${notionSch.filter(s=>s.status!=="완료").length}개`}
         </div>
         <div style={{display:"flex",gap:6}}>
           {["미완료","전체"].map(f=>(
-            <button key={f} onClick={()=>setSchFilter(f)} style={{fontSize:10,padding:"3px 10px",borderRadius:20,
+            <button key={f} onClick={()=>handleFilterChange(f)} style={{fontSize:10,padding:"3px 10px",borderRadius:20,
               border:`1px solid ${schFilter===f?C.rose:C.border}`,background:schFilter===f?C.rose:C.cream,
               color:schFilter===f?C.white:C.inkMid,cursor:"pointer",fontFamily:"inherit",fontWeight:700}}>
               {f}
             </button>
           ))}
-          <button onClick={fetchNotionSch} style={{fontSize:10,padding:"3px 10px",borderRadius:20,
+          <button onClick={()=>handleFilterChange(schFilter)} style={{fontSize:10,padding:"3px 10px",borderRadius:20,
             border:`1px solid ${C.border}`,background:C.cream,cursor:"pointer",fontFamily:"inherit",fontWeight:700}}>
             🔄
           </button>

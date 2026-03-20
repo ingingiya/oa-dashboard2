@@ -23,11 +23,13 @@ function parseProps(props) {
   return { title, date, endDate, assignee, type, status, done, memo };
 }
 
-export async function GET() {
+export async function GET(request) {
   const token = process.env.NOTION_TOKEN;
   if (!token) return Response.json({ error: "NOTION_TOKEN 없음" }, { status: 500 });
+  const { searchParams } = new URL(request.url);
+  const showCompleted = searchParams.get("completed") === "true";
+  const month = searchParams.get("month"); // "YYYY-MM" 형식, 없으면 전체
   try {
-    // 페이지네이션으로 전체 데이터 가져오기
     let allResults = [];
     let cursor = undefined;
     do {
@@ -35,6 +37,26 @@ export async function GET() {
         sorts: [{ property: "날짜", direction: "ascending" }],
         page_size: 100,
       };
+
+      // 필터 조합
+      const filters = [];
+      if (!showCompleted) {
+        filters.push({ property: "상태", select: { does_not_equal: "완료" } });
+      }
+      if (month) {
+        const [y, m] = month.split("-").map(Number);
+        const start = `${y}-${String(m).padStart(2,"0")}-01`;
+        const lastD = new Date(y, m, 0).getDate();
+        const end = `${y}-${String(m).padStart(2,"0")}-${String(lastD).padStart(2,"0")}`;
+        filters.push({ property: "날짜", date: { on_or_after: start } });
+        filters.push({ property: "날짜", date: { on_or_before: end } });
+      }
+      if (filters.length === 1) {
+        body.filter = filters[0];
+      } else if (filters.length > 1) {
+        body.filter = { and: filters };
+      }
+
       if (cursor) body.start_cursor = cursor;
       const res = await fetch(`https://api.notion.com/v1/databases/${SCHEDULE_DB_ID}/query`, {
         method: "POST",
