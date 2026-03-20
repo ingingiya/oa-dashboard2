@@ -1590,73 +1590,66 @@ export default function OaDashboard(){
             style={{fontSize:9,padding:"3px 10px",borderRadius:6,border:`1px solid ${C.border}`,
               background:quickLinksEditing?C.rose:C.cream,color:quickLinksEditing?C.white:C.inkMid,
               cursor:"pointer",fontFamily:"inherit",fontWeight:700}}>
-            {quickLinksEditing?"완료":"링크 편집"}
+            {quickLinksEditing?"완료":"편집"}
           </button>
         </div>
 
-        {/* 채널 */}
-        <div style={{marginBottom:10}}>
-          <div style={{fontSize:9,color:C.inkLt,fontWeight:600,marginBottom:6}}>판매 채널</div>
-          <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
-            {quickLinks.filter(l=>l.group==="channel").map((ch,i)=>(
-              quickLinksEditing ? (
-                <div key={ch.id} style={{display:"flex",alignItems:"center",gap:4,
-                  background:C.cream,borderRadius:8,padding:"4px 8px",border:`1px solid ${C.border}`}}>
-                  <span style={{fontSize:11,fontWeight:700,color:C.ink,minWidth:48}}>{ch.name}</span>
-                  <input
-                    value={ch.url||""}
-                    onChange={e=>setQuickLinks(quickLinks.map(x=>x.id===ch.id?{...x,url:e.target.value}:x))}
-                    placeholder="https://..."
-                    style={{width:180,padding:"3px 6px",border:`1px solid ${C.border}`,borderRadius:6,
-                      fontSize:10,fontFamily:"inherit",outline:"none"}}
-                  />
-                </div>
-              ) : (
-                <a key={ch.id} href={ch.url||"#"} target={ch.url?"_blank":"_self"} rel="noopener noreferrer"
-                  onClick={e=>{if(!ch.url)e.preventDefault();}}
-                  style={{padding:"5px 14px",borderRadius:20,border:`1px solid ${C.border}`,
-                    background:C.cream,color:ch.url?C.ink:C.inkLt,fontSize:11,fontWeight:700,
-                    textDecoration:"none",whiteSpace:"nowrap",opacity:ch.url?1:0.5}}
-                  onMouseEnter={e=>{if(ch.url){e.currentTarget.style.background=C.rose;e.currentTarget.style.color=C.white;e.currentTarget.style.borderColor=C.rose;}}}
-                  onMouseLeave={e=>{e.currentTarget.style.background=C.cream;e.currentTarget.style.color=ch.url?C.ink:C.inkLt;e.currentTarget.style.borderColor=C.border;}}>
-                  {ch.name}
-                </a>
-              )
-            ))}
+        {["channel","erp"].map(group=>(
+          <div key={group} style={{marginBottom:10}}>
+            <div style={{fontSize:9,color:C.inkLt,fontWeight:600,marginBottom:6}}>
+              {group==="channel"?"판매 채널":"ERP / 사내 툴"}
+            </div>
+            <div style={{display:"flex",gap:6,flexWrap:"wrap",alignItems:"center"}}>
+              {quickLinks.filter(l=>l.group===group).map(ch=>(
+                quickLinksEditing ? (
+                  <div key={ch.id} style={{display:"flex",alignItems:"center",gap:4,
+                    background:C.cream,borderRadius:8,padding:"4px 8px",border:`1px solid ${C.border}`}}>
+                    {/* 이름 편집 */}
+                    <input
+                      value={ch.name||""}
+                      onChange={e=>setQuickLinks(quickLinks.map(x=>x.id===ch.id?{...x,name:e.target.value}:x))}
+                      placeholder="이름"
+                      style={{width:70,padding:"3px 6px",border:`1px solid ${C.border}`,borderRadius:6,
+                        fontSize:10,fontFamily:"inherit",outline:"none",fontWeight:700}}
+                    />
+                    {/* URL 편집 */}
+                    <input
+                      value={ch.url||""}
+                      onChange={e=>setQuickLinks(quickLinks.map(x=>x.id===ch.id?{...x,url:e.target.value}:x))}
+                      placeholder="https://..."
+                      style={{width:180,padding:"3px 6px",border:`1px solid ${C.border}`,borderRadius:6,
+                        fontSize:10,fontFamily:"inherit",outline:"none"}}
+                    />
+                    {/* 삭제 */}
+                    <button onClick={()=>setQuickLinks(quickLinks.filter(x=>x.id!==ch.id))}
+                      style={{background:"none",border:"none",cursor:"pointer",color:C.bad,fontSize:13,padding:"0 2px",lineHeight:1}}>
+                      ✕
+                    </button>
+                  </div>
+                ) : (
+                  <a key={ch.id} href={ch.url||"#"} target={ch.url?"_blank":"_self"} rel="noopener noreferrer"
+                    onClick={e=>{if(!ch.url)e.preventDefault();}}
+                    style={{padding:"5px 14px",borderRadius:20,border:`1px solid ${C.border}`,
+                      background:C.cream,color:ch.url?C.ink:C.inkLt,fontSize:11,fontWeight:700,
+                      textDecoration:"none",whiteSpace:"nowrap",opacity:ch.url?1:0.5}}
+                    onMouseEnter={e=>{if(ch.url){e.currentTarget.style.background=group==="erp"?C.purple:C.rose;e.currentTarget.style.color=C.white;e.currentTarget.style.borderColor=group==="erp"?C.purple:C.rose;}}}
+                    onMouseLeave={e=>{e.currentTarget.style.background=C.cream;e.currentTarget.style.color=ch.url?C.ink:C.inkLt;e.currentTarget.style.borderColor=C.border;}}>
+                    {ch.name}
+                  </a>
+                )
+              ))}
+              {/* 항목 추가 버튼 */}
+              {quickLinksEditing&&(
+                <button onClick={()=>setQuickLinks([...quickLinks,{id:`${group}_${Date.now()}`,name:"새 링크",url:"",group}])}
+                  style={{padding:"4px 12px",borderRadius:20,border:`1px dashed ${C.border}`,
+                    background:"transparent",color:C.inkLt,fontSize:11,fontWeight:700,
+                    cursor:"pointer",fontFamily:"inherit",whiteSpace:"nowrap"}}>
+                  + 추가
+                </button>
+              )}
+            </div>
           </div>
-        </div>
-
-        {/* ERP */}
-        <div style={{borderTop:`1px solid ${C.border}`,paddingTop:10}}>
-          <div style={{fontSize:9,color:C.inkLt,fontWeight:600,marginBottom:6}}>ERP</div>
-          <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
-            {quickLinks.filter(l=>l.group==="erp").map((ch)=>(
-              quickLinksEditing ? (
-                <div key={ch.id} style={{display:"flex",alignItems:"center",gap:4,
-                  background:C.cream,borderRadius:8,padding:"4px 8px",border:`1px solid ${C.border}`}}>
-                  <span style={{fontSize:11,fontWeight:700,color:C.ink,minWidth:60}}>{ch.name}</span>
-                  <input
-                    value={ch.url||""}
-                    onChange={e=>setQuickLinks(quickLinks.map(x=>x.id===ch.id?{...x,url:e.target.value}:x))}
-                    placeholder="https://..."
-                    style={{width:200,padding:"3px 6px",border:`1px solid ${C.border}`,borderRadius:6,
-                      fontSize:10,fontFamily:"inherit",outline:"none"}}
-                  />
-                </div>
-              ) : (
-                <a key={ch.id} href={ch.url||"#"} target={ch.url?"_blank":"_self"} rel="noopener noreferrer"
-                  onClick={e=>{if(!ch.url)e.preventDefault();}}
-                  style={{padding:"5px 14px",borderRadius:20,border:`1px solid ${C.border}`,
-                    background:C.cream,color:ch.url?C.ink:C.inkLt,fontSize:11,fontWeight:700,
-                    textDecoration:"none",whiteSpace:"nowrap",opacity:ch.url?1:0.5}}
-                  onMouseEnter={e=>{if(ch.url){e.currentTarget.style.background=C.purple;e.currentTarget.style.color=C.white;e.currentTarget.style.borderColor=C.purple;}}}
-                  onMouseLeave={e=>{e.currentTarget.style.background=C.cream;e.currentTarget.style.color=ch.url?C.ink:C.inkLt;e.currentTarget.style.borderColor=C.border;}}>
-                  {ch.name}
-                </a>
-              )
-            ))}
-          </div>
-        </div>
+        ))}
       </div>
 
       {/* ── 상단 헤더 배너 ── */}
