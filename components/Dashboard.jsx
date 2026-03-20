@@ -415,7 +415,7 @@ const FR=({label,children})=>(
     {children}
   </div>
 );
-const BeautyTooltip=({active,payload,label})=>{
+const BeautyTooltip=({active,payload,label,fmt})=>{
   if(!active||!payload?.length) return null;
   return(
     <div style={{background:C.white,border:`1px solid ${C.border}`,borderRadius:10,padding:"10px 14px",
@@ -423,7 +423,9 @@ const BeautyTooltip=({active,payload,label})=>{
       <p style={{color:C.rose,fontWeight:700,marginBottom:5}}>{label}</p>
       {payload.map((p,i)=>(
         <p key={i} style={{color:C.inkMid,margin:"2px 0"}}>{p.name}:{" "}
-          <span style={{color:C.ink,fontWeight:700}}>{typeof p.value==="number"?p.value.toLocaleString():p.value}</span>
+          <span style={{color:C.ink,fontWeight:700}}>
+            {fmt ? fmt(p.value) : typeof p.value==="number"?p.value.toLocaleString():p.value}
+          </span>
         </p>
       ))}
     </div>
@@ -1041,17 +1043,28 @@ export default function OaDashboard(){
     const byDate = {};
     metaFiltered.forEach(r=>{
       if(!r.date) return;
-      if(!byDate[r.date]) byDate[r.date]={day:r.date.slice(5).replace("-","/"),spend:0,clicks:0,lpv:0,purchases:0,ctr:0,n:0};
-      byDate[r.date].spend+=r.spend;
-      byDate[r.date].clicks+=r.clicks||r.clicksAll||0;
-      byDate[r.date].lpv+=r.lpv;
-      byDate[r.date].purchases+=r.purchases;
-      byDate[r.date].ctr+=r.ctr;
+      if(!byDate[r.date]) byDate[r.date]={
+        day:r.date.slice(5).replace("-","/"),
+        spend:0, clicks:0, lpv:0, purchases:0,
+        impressions:0, convValue:0, n:0
+      };
+      byDate[r.date].spend      += r.spend||0;
+      byDate[r.date].clicks     += r.clicks||0;        // 링크 클릭만 사용 (일관성)
+      byDate[r.date].lpv        += r.lpv||0;
+      byDate[r.date].purchases  += r.purchases||0;
+      byDate[r.date].impressions+= r.impressions||0;
+      byDate[r.date].convValue  += r.convValue||0;
       byDate[r.date].n++;
     });
     const daily = Object.values(byDate)
       .sort((a,b)=>a.day.localeCompare(b.day))
-      .map(d=>({...d,ctr:d.n?+(d.ctr/d.n).toFixed(2):0,cpc:d.clicks?+(d.spend/d.clicks).toFixed(0):0}));
+      .map(d=>({
+        ...d,
+        // CTR = 클릭/노출 × 100 (직접 계산, 더 정확)
+        ctr: d.impressions>0 ? +((d.clicks/d.impressions)*100).toFixed(2) : 0,
+        cpc: d.clicks>0 ? +(d.spend/d.clicks).toFixed(0) : 0,
+        lpvRate: d.clicks>0 ? +((d.lpv/d.clicks)*100).toFixed(1) : 0,
+      }));
 
     // 캠페인별 집계
     // 광고 이름 기준으로 집계 (광고세트 정보도 포함)
@@ -1650,8 +1663,21 @@ export default function OaDashboard(){
             )}
             {hasSheet&&d&&(<>
               <Card>
+                <CardTitle title="일별 광고비" sub="소진 패턴"/>
+                <ResponsiveContainer width="100%" height={160}>
+                  <BarChart data={d.daily}>
+                    <CartesianGrid strokeDasharray="3 3" stroke={C.border}/>
+                    <XAxis dataKey="day" tick={{fontSize:8,fill:C.inkLt}} axisLine={false} tickLine={false} interval={Math.floor(d.daily.length/6)}/>
+                    <YAxis tick={{fontSize:8,fill:C.inkLt}} axisLine={false} tickLine={false}
+                      tickFormatter={v=>v>=10000?`${Math.round(v/10000)}만`:v}/>
+                    <Tooltip content={<BeautyTooltip fmt={v=>`₩${Math.round(v/10000).toLocaleString()}만`}/>}/>
+                    <Bar dataKey="spend" fill={C.roseLt} radius={[3,3,0,0]} name="광고비"/>
+                  </BarChart>
+                </ResponsiveContainer>
+              </Card>
+              <Card>
                 <CardTitle title="클릭수 vs LPV 일별 추이" sub="클릭 대비 랜딩 도달 흐름"/>
-                <ResponsiveContainer width="100%" height={190}>
+                <ResponsiveContainer width="100%" height={180}>
                   <AreaChart data={d.daily}>
                     <defs>
                       <linearGradient id="cg" x1="0" y1="0" x2="0" y2="1">
@@ -1665,12 +1691,12 @@ export default function OaDashboard(){
                     <XAxis dataKey="day" tick={{fontSize:9,fill:C.inkLt}} axisLine={false} tickLine={false} interval={Math.floor(d.daily.length/7)}/>
                     <YAxis tick={{fontSize:9,fill:C.inkLt}} axisLine={false} tickLine={false}/>
                     <Tooltip content={<BeautyTooltip/>}/>
-                    <Area type="monotone" dataKey="clicks" stroke={C.rose} strokeWidth={2.5} fill="url(#cg)" name="클릭수"/>
+                    <Area type="monotone" dataKey="clicks" stroke={C.rose} strokeWidth={2.5} fill="url(#cg)" name="링크클릭"/>
                     <Area type="monotone" dataKey="lpv"    stroke={C.sage} strokeWidth={2}   fill="url(#lg)" name="LPV"/>
                   </AreaChart>
                 </ResponsiveContainer>
-                <div style={{display:"flex",gap:16,justifyContent:"flex-end",marginTop:8}}>
-                  {[{c:C.rose,l:"클릭수"},{c:C.sage,l:"LPV"}].map(({c,l})=>(
+                <div style={{display:"flex",gap:16,justifyContent:"flex-end",marginTop:4}}>
+                  {[{c:C.rose,l:"링크클릭"},{c:C.sage,l:"LPV"}].map(({c,l})=>(
                     <div key={l} style={{display:"flex",alignItems:"center",gap:5,fontSize:10,color:C.inkMid}}>
                       <div style={{width:14,height:3,background:c,borderRadius:2}}/>{l}
                     </div>
@@ -1679,19 +1705,7 @@ export default function OaDashboard(){
               </Card>
               <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
                 <Card>
-                  <CardTitle title="일별 광고비" sub="소진 패턴"/>
-                  <ResponsiveContainer width="100%" height={140}>
-                    <BarChart data={d.daily}>
-                      <CartesianGrid strokeDasharray="3 3" stroke={C.border}/>
-                      <XAxis dataKey="day" tick={{fontSize:8,fill:C.inkLt}} axisLine={false} tickLine={false} interval={Math.floor(d.daily.length/5)}/>
-                      <YAxis tick={{fontSize:8,fill:C.inkLt}} axisLine={false} tickLine={false}/>
-                      <Tooltip content={<BeautyTooltip/>}/>
-                      <Bar dataKey="spend" fill={C.roseLt} radius={[3,3,0,0]} name="광고비(₩)"/>
-                    </BarChart>
-                  </ResponsiveContainer>
-                </Card>
-                <Card>
-                  <CardTitle title="CTR 추이" sub="일별 클릭률"/>
+                  <CardTitle title="CTR 추이" sub="일별 클릭률 (링크클릭/노출)"/>
                   <ResponsiveContainer width="100%" height={140}>
                     <AreaChart data={d.daily}>
                       <defs>
@@ -1701,9 +1715,26 @@ export default function OaDashboard(){
                       </defs>
                       <CartesianGrid strokeDasharray="3 3" stroke={C.border}/>
                       <XAxis dataKey="day" tick={{fontSize:8,fill:C.inkLt}} axisLine={false} tickLine={false} interval={Math.floor(d.daily.length/5)}/>
-                      <YAxis tick={{fontSize:8,fill:C.inkLt}} axisLine={false} tickLine={false}/>
-                      <Tooltip content={<BeautyTooltip/>}/>
-                      <Area type="monotone" dataKey="ctr" stroke={C.gold} strokeWidth={2} fill="url(#ctrg)" name="CTR(%)"/>
+                      <YAxis tick={{fontSize:8,fill:C.inkLt}} axisLine={false} tickLine={false} tickFormatter={v=>`${v}%`}/>
+                      <Tooltip content={<BeautyTooltip fmt={v=>`${v}%`}/>}/>
+                      <Area type="monotone" dataKey="ctr" stroke={C.gold} strokeWidth={2} fill="url(#ctrg)" name="CTR"/>
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </Card>
+                <Card>
+                  <CardTitle title="LPV율 추이" sub="링크클릭 → 랜딩 도달률"/>
+                  <ResponsiveContainer width="100%" height={140}>
+                    <AreaChart data={d.daily}>
+                      <defs>
+                        <linearGradient id="lpvrg" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor={C.purple} stopOpacity={0.25}/><stop offset="95%" stopColor={C.purple} stopOpacity={0}/>
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" stroke={C.border}/>
+                      <XAxis dataKey="day" tick={{fontSize:8,fill:C.inkLt}} axisLine={false} tickLine={false} interval={Math.floor(d.daily.length/5)}/>
+                      <YAxis tick={{fontSize:8,fill:C.inkLt}} axisLine={false} tickLine={false} tickFormatter={v=>`${v}%`}/>
+                      <Tooltip content={<BeautyTooltip fmt={v=>`${v}%`}/>}/>
+                      <Area type="monotone" dataKey="lpvRate" stroke={C.purple} strokeWidth={2} fill="url(#lpvrg)" name="LPV율"/>
                     </AreaChart>
                   </ResponsiveContainer>
                 </Card>
