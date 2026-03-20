@@ -222,6 +222,13 @@ function getTrafficCpcMax(adName, campaignName, criteria){
   const matched = kws.find(k=>k.keyword&&text.includes(k.keyword.toLowerCase()));
   return matched ? (matched.cpcMax||criteria?.cpcMax||600) : (criteria?.cpcMax||600);
 }
+// 광고명/캠페인명에서 제품별 전환 기준값 찾기
+function getConvCriteria(adName, campaignName, convCriteria){
+  const text = ((adName||"") + " " + (campaignName||"")).toLowerCase();
+  const products = convCriteria?.products||[];
+  const matched = products.find(p=>p.keyword&&text.includes(p.keyword.toLowerCase()));
+  return matched || convCriteria || {};
+}
 
 function adScore(ad, margin, c={}){
   const issues = [];
@@ -609,15 +616,21 @@ export default function OaDashboard(){
   });
   // 전환 캠페인 기준값 (변경 가능)
   const [convCriteria, setConvCriteria] = useSyncState("oa_conv_criteria_v7", {
-    cpaGood: 85,   // 마진 대비 % 이하 → 유지
-    cpaHold: 100,  // 마진 대비 % 이하 → 보류 (초과 → 컷)
-    lpvCostGood: 300,  // LPV 단가 이하 → 매우좋음
-    lpvCostOk:   500,  // LPV 단가 이하 → 유지
-    lpvCostHold: 800,  // LPV 단가 이하 → 보류 (초과 → 컷)
-    lpvRateGood: 70,   // LPV율 이상 → 정상
-    lpvRateOk:   50,   // LPV율 이상 → 보통 (미달 → 랜딩문제)
-    ctrGood: 2.0,      // CTR 이상 → 좋음
-    ctrOk:   1.0,      // CTR 이상 → 보통 (미달 → 소재문제)
+    cpaGood: 85, cpaHold: 100,
+    lpvCostGood: 800, lpvCostOk: 1200, lpvCostHold: 2000,
+    lpvRateGood: 60, lpvRateOk: 40,
+    ctrGood: 1.2, ctrOk: 0.7,
+    // 제품별 기준값 (키워드 매칭)
+    products: [
+      {id:1, keyword:"소닉플로우", label:"드라이기",
+        cpaGood:85, cpaHold:100,
+        lpvCostGood:800, lpvCostOk:1200, lpvCostHold:2000,
+        lpvRateGood:60, lpvRateOk:40, ctrGood:1.2, ctrOk:0.7},
+      {id:2, keyword:"프리온", label:"고데기",
+        cpaGood:85, cpaHold:100,
+        lpvCostGood:1000, lpvCostOk:1500, lpvCostHold:2500,
+        lpvRateGood:55, lpvRateOk:35, ctrGood:1.0, ctrOk:0.6},
+    ],
   });
 
   const [marginModal, setMarginModal]= useState(false);
@@ -1197,11 +1210,11 @@ export default function OaDashboard(){
   }, {}) : {};
   const cutAds  = Object.values(adAlerts).filter(ad=>{
     const adMargin = getAdMargin(ad.name, ad.campaign, margins, margin);
-    const s=adScore(ad, adMargin, convCriteria); return s.issues.some(i=>i.label==="컷"||i.label==="랜딩문제"||i.label==="소재문제");
+    const s=adScore(ad, adMargin, getConvCriteria(ad.name, ad.campaign, convCriteria)); return s.issues.some(i=>i.label==="컷"||i.label==="랜딩문제"||i.label==="소재문제");
   });
   const holdAds = Object.values(adAlerts).filter(ad=>{
     const adMargin = getAdMargin(ad.name, ad.campaign, margins, margin);
-    const s=adScore(ad, adMargin, convCriteria); return !cutAds.includes(ad)&&s.issues.some(i=>i.label==="보류"||i.label==="보통");
+    const s=adScore(ad, adMargin, getConvCriteria(ad.name, ad.campaign, convCriteria)); return !cutAds.includes(ad)&&s.issues.some(i=>i.label==="보류"||i.label==="보통");
   });
   const totalAlerts    = overdueIns.length+dangerInv.length+overdueScheds.length+urgentScheds.length+cutAds.length+holdAds.length+orderRaw.length;
 
@@ -2007,8 +2020,8 @@ export default function OaDashboard(){
                   if(!isActive) return false;
                   if(campTab==="conversion"){
                     const adMargin = getAdMargin(c.name,c.campaign,margins,margin);
-                    const cpa = cpaStatus(c.spend,c.purchases,adMargin,convCriteria);
-                    const lpvR = lpvRateStatus(c.clicks,c.lpv,convCriteria);
+                    const cpa = cpaStatus(c.spend,c.purchases,adMargin,getConvCriteria(c.name,c.campaign,convCriteria));
+                    const lpvR = lpvRateStatus(c.clicks,c.lpv,getConvCriteria(c.name,c.campaign,convCriteria));
                     return (!cpa||cpa.label==="유지") && (!lpvR||lpvR.label==="정상");
                   } else {
                     const cpcOk=(c.cpc||0)>0&&(c.cpc||0)<=getTrafficCpcMax(c.name,c.campaign,trafficCriteria);
@@ -2270,10 +2283,10 @@ export default function OaDashboard(){
                       const isConv = campTab==="conversion";
                       const classify=(c)=>{
                         const adMargin=getAdMargin(c.name,c.campaign,margins,margin);
-                        const lpvC=lpvCostStatus(c.spend,c.lpv,convCriteria);
-                        const lpvR=lpvRateStatus(c.clicks,c.lpv,convCriteria);
-                        const cpa =cpaStatus(c.spend,c.purchases,adMargin,convCriteria);
-                        const ct  =ctrStatus(c.clicks,c.impressions||0,convCriteria);
+                        const lpvC=lpvCostStatus(c.spend,c.lpv,getConvCriteria(c.name,c.campaign,convCriteria));
+                        const lpvR=lpvRateStatus(c.clicks,c.lpv,getConvCriteria(c.name,c.campaign,convCriteria));
+                        const cpa =cpaStatus(c.spend,c.purchases,adMargin,getConvCriteria(c.name,c.campaign,convCriteria));
+                        const ct  =ctrStatus(c.clicks,c.impressions||0,getConvCriteria(c.name,c.campaign,convCriteria));
                         if(isConv){
                           const isCut=(lpvC&&lpvC.label==="컷")||(cpa&&cpa.label==="컷")||(lpvR&&lpvR.label==="랜딩문제")||(ct&&ct.label==="소재문제");
                           const isHold=(lpvC&&lpvC.label==="보류")||(cpa&&cpa.label==="보류")||(ct&&ct.label==="보통");
@@ -2377,10 +2390,10 @@ export default function OaDashboard(){
                           </tr></thead>
                           <tbody>{camps.map((c,i)=>{
                             const adMargin=getAdMargin(c.name,c.campaign,margins,margin);
-                            const lpvC=lpvCostStatus(c.spend,c.lpv,convCriteria);
-                            const lpvR=lpvRateStatus(c.clicks,c.lpv,convCriteria);
-                            const cpa =cpaStatus(c.spend,c.purchases,adMargin,convCriteria);
-                            const ct  =ctrStatus(c.clicks,c.impressions||0,convCriteria);
+                            const lpvC=lpvCostStatus(c.spend,c.lpv,getConvCriteria(c.name,c.campaign,convCriteria));
+                            const lpvR=lpvRateStatus(c.clicks,c.lpv,getConvCriteria(c.name,c.campaign,convCriteria));
+                            const cpa =cpaStatus(c.spend,c.purchases,adMargin,getConvCriteria(c.name,c.campaign,convCriteria));
+                            const ct  =ctrStatus(c.clicks,c.impressions||0,getConvCriteria(c.name,c.campaign,convCriteria));
 
                             // ── 켜야/꺼야 판정 ──
                             let verdict, verdictColor, verdictBg;
@@ -2752,63 +2765,108 @@ export default function OaDashboard(){
         {marginModal&&(
           <Modal title="⚙️ 광고 기준 설정" onClose={()=>setMarginModal(false)} wide>
 
-            {/* ── 전환 캠페인 판단 기준 ── */}
+            {/* ── 전환 캠페인 판단 기준 (제품별) ── */}
             <div style={{borderTop:`2px solid ${C.border}`,paddingTop:16,marginBottom:16}}>
-              <div style={{fontSize:12,fontWeight:800,color:C.ink,marginBottom:6}}>🎯 전환 캠페인 — 판단 기준값</div>
-              <div style={{background:C.goldLt,borderRadius:10,padding:"10px 14px",marginBottom:12,fontSize:10,color:C.gold,fontWeight:700}}>
-                수치를 조절해서 광고 판단 기준을 설정하세요. 낮출수록 더 엄격하게 판단해요.
+              <div style={{fontSize:12,fontWeight:800,color:C.ink,marginBottom:6}}>🎯 전환 캠페인 — 제품별 판단 기준</div>
+              <div style={{background:C.goldLt,borderRadius:10,padding:"10px 14px",marginBottom:14,fontSize:10,color:C.gold,fontWeight:700}}>
+                광고명에 키워드가 포함되면 제품별 기준이 자동 적용돼요. 키워드 미매칭 시 기본값 적용.
               </div>
-              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:10}}>
-                <FR label="CPA 유지 기준 (마진 대비 %)">
-                  <Inp type="number" value={convCriteria?.cpaGood||85}
-                    onChange={v=>setConvCriteria({...convCriteria,cpaGood:+v})} placeholder="85"/>
-                  <div style={{fontSize:9,color:C.inkLt,marginTop:3}}>이하 → ✅ 유지</div>
-                </FR>
-                <FR label="CPA 보류 기준 (마진 대비 %)">
-                  <Inp type="number" value={convCriteria?.cpaHold||100}
-                    onChange={v=>setConvCriteria({...convCriteria,cpaHold:+v})} placeholder="100"/>
-                  <div style={{fontSize:9,color:C.inkLt,marginTop:3}}>이하 → ⚠️ 보류 / 초과 → 🔴 컷</div>
-                </FR>
-              </div>
-              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:10,marginBottom:10}}>
-                <FR label="LPV 단가 좋음 (원)">
-                  <Inp type="number" value={convCriteria?.lpvCostGood||300}
-                    onChange={v=>setConvCriteria({...convCriteria,lpvCostGood:+v})} placeholder="300"/>
-                  <div style={{fontSize:9,color:C.inkLt,marginTop:3}}>미만 → 🟢 매우좋음</div>
-                </FR>
-                <FR label="LPV 단가 유지 (원)">
-                  <Inp type="number" value={convCriteria?.lpvCostOk||500}
-                    onChange={v=>setConvCriteria({...convCriteria,lpvCostOk:+v})} placeholder="500"/>
-                  <div style={{fontSize:9,color:C.inkLt,marginTop:3}}>미만 → 🔵 유지</div>
-                </FR>
-                <FR label="LPV 단가 보류 (원)">
-                  <Inp type="number" value={convCriteria?.lpvCostHold||800}
-                    onChange={v=>setConvCriteria({...convCriteria,lpvCostHold:+v})} placeholder="800"/>
-                  <div style={{fontSize:9,color:C.inkLt,marginTop:3}}>미만 → 🟡 보류 / 초과 → 🔴 컷</div>
-                </FR>
-              </div>
-              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr 1fr",gap:10}}>
-                <FR label="LPV율 정상 (%)">
-                  <Inp type="number" value={convCriteria?.lpvRateGood||70}
-                    onChange={v=>setConvCriteria({...convCriteria,lpvRateGood:+v})} placeholder="70"/>
-                  <div style={{fontSize:9,color:C.inkLt,marginTop:3}}>이상 → ✅ 정상</div>
-                </FR>
-                <FR label="LPV율 보통 (%)">
-                  <Inp type="number" value={convCriteria?.lpvRateOk||50}
-                    onChange={v=>setConvCriteria({...convCriteria,lpvRateOk:+v})} placeholder="50"/>
-                  <div style={{fontSize:9,color:C.inkLt,marginTop:3}}>이상 → ⚠️ 보통 / 미달 → 🚨</div>
-                </FR>
-                <FR label="CTR 좋음 (%)">
-                  <Inp type="number" step="0.1" value={convCriteria?.ctrGood||2}
-                    onChange={v=>setConvCriteria({...convCriteria,ctrGood:+v})} placeholder="2.0"/>
-                  <div style={{fontSize:9,color:C.inkLt,marginTop:3}}>이상 → 🟢 좋음</div>
-                </FR>
-                <FR label="CTR 보통 (%)">
-                  <Inp type="number" step="0.1" value={convCriteria?.ctrOk||1}
-                    onChange={v=>setConvCriteria({...convCriteria,ctrOk:+v})} placeholder="1.0"/>
-                  <div style={{fontSize:9,color:C.inkLt,marginTop:3}}>이상 → 🟡 보통 / 미달 → 🔴</div>
-                </FR>
-              </div>
+
+              {/* 제품별 탭 */}
+              {(()=>{
+                const products = convCriteria?.products||[];
+                const allTabs = [{id:'default', label:'기본값', keyword:''},...products.map(p=>({id:String(p.id),label:p.label||p.keyword,keyword:p.keyword,pid:p.id}))];
+                const [selTab, setSelTab] = React.useState('default');
+                const cur = selTab==='default' ? convCriteria : products.find(p=>String(p.id)===selTab)||convCriteria;
+                const update = (key, val) => {
+                  if(selTab==='default'){
+                    setConvCriteria({...convCriteria, [key]:val});
+                  } else {
+                    setConvCriteria({...convCriteria, products: products.map(p=>String(p.id)===selTab?{...p,[key]:val}:p)});
+                  }
+                };
+                return(<>
+                  {/* 탭 */}
+                  <div style={{display:"flex",gap:6,marginBottom:14,flexWrap:"wrap"}}>
+                    {allTabs.map(t=>(
+                      <button key={t.id} onClick={()=>setSelTab(t.id)}
+                        style={{padding:"6px 14px",borderRadius:8,border:`1px solid ${selTab===t.id?C.rose:C.border}`,
+                          background:selTab===t.id?C.blush:C.white,color:selTab===t.id?C.rose:C.inkMid,
+                          fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
+                        {t.id==='default'?'🔧 기본값':`📦 ${t.label}`}
+                      </button>
+                    ))}
+                    {/* 제품 추가 */}
+                    <button onClick={()=>{
+                      const kw = prompt("제품 키워드 (예: 소닉플로우)");
+                      if(!kw) return;
+                      const lb = prompt("제품명 (예: 드라이기)") || kw;
+                      const newP = {id:Date.now(),keyword:kw,label:lb,
+                        cpaGood:convCriteria?.cpaGood||85,cpaHold:convCriteria?.cpaHold||100,
+                        lpvCostGood:convCriteria?.lpvCostGood||800,lpvCostOk:convCriteria?.lpvCostOk||1200,lpvCostHold:convCriteria?.lpvCostHold||2000,
+                        lpvRateGood:convCriteria?.lpvRateGood||60,lpvRateOk:convCriteria?.lpvRateOk||40,
+                        ctrGood:convCriteria?.ctrGood||1.2,ctrOk:convCriteria?.ctrOk||0.7};
+                      setConvCriteria({...convCriteria,products:[...products,newP]});
+                    }} style={{padding:"6px 14px",borderRadius:8,border:`1px dashed ${C.border}`,
+                      background:C.cream,color:C.inkMid,fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
+                      + 제품 추가
+                    </button>
+                    {selTab!=='default'&&(
+                      <button onClick={()=>{
+                        setConvCriteria({...convCriteria,products:products.filter(p=>String(p.id)!==selTab)});
+                        setSelTab('default');
+                      }} style={{padding:"6px 14px",borderRadius:8,border:`1px solid ${C.bad}44`,
+                        background:"#FEF0F0",color:C.bad,fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
+                        🗑 삭제
+                      </button>
+                    )}
+                  </div>
+
+                  {/* 기준값 편집 */}
+                  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:10}}>
+                    <FR label="CPA 유지 (마진 대비 %)">
+                      <Inp type="number" value={cur?.cpaGood||85} onChange={v=>update('cpaGood',+v)} placeholder="85"/>
+                      <div style={{fontSize:9,color:C.inkLt,marginTop:2}}>이하 → ✅ 유지</div>
+                    </FR>
+                    <FR label="CPA 보류 (마진 대비 %)">
+                      <Inp type="number" value={cur?.cpaHold||100} onChange={v=>update('cpaHold',+v)} placeholder="100"/>
+                      <div style={{fontSize:9,color:C.inkLt,marginTop:2}}>이하 → ⚠️ 보류 / 초과 → 🔴 컷</div>
+                    </FR>
+                  </div>
+                  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:10,marginBottom:10}}>
+                    <FR label="LPV 단가 좋음 (원)">
+                      <Inp type="number" value={cur?.lpvCostGood||800} onChange={v=>update('lpvCostGood',+v)} placeholder="800"/>
+                      <div style={{fontSize:9,color:C.inkLt,marginTop:2}}>미만 → 🟢</div>
+                    </FR>
+                    <FR label="LPV 단가 유지 (원)">
+                      <Inp type="number" value={cur?.lpvCostOk||1200} onChange={v=>update('lpvCostOk',+v)} placeholder="1200"/>
+                      <div style={{fontSize:9,color:C.inkLt,marginTop:2}}>미만 → 🔵</div>
+                    </FR>
+                    <FR label="LPV 단가 보류 (원)">
+                      <Inp type="number" value={cur?.lpvCostHold||2000} onChange={v=>update('lpvCostHold',+v)} placeholder="2000"/>
+                      <div style={{fontSize:9,color:C.inkLt,marginTop:2}}>미만 → 🟡 / 초과 → 🔴</div>
+                    </FR>
+                  </div>
+                  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr 1fr",gap:10}}>
+                    <FR label="LPV율 정상 (%)">
+                      <Inp type="number" value={cur?.lpvRateGood||60} onChange={v=>update('lpvRateGood',+v)} placeholder="60"/>
+                      <div style={{fontSize:9,color:C.inkLt,marginTop:2}}>이상 → ✅</div>
+                    </FR>
+                    <FR label="LPV율 보통 (%)">
+                      <Inp type="number" value={cur?.lpvRateOk||40} onChange={v=>update('lpvRateOk',+v)} placeholder="40"/>
+                      <div style={{fontSize:9,color:C.inkLt,marginTop:2}}>이상 → ⚠️</div>
+                    </FR>
+                    <FR label="CTR 좋음 (%)">
+                      <Inp type="number" step="0.1" value={cur?.ctrGood||1.2} onChange={v=>update('ctrGood',+v)} placeholder="1.2"/>
+                      <div style={{fontSize:9,color:C.inkLt,marginTop:2}}>이상 → 🟢</div>
+                    </FR>
+                    <FR label="CTR 보통 (%)">
+                      <Inp type="number" step="0.1" value={cur?.ctrOk||0.7} onChange={v=>update('ctrOk',+v)} placeholder="0.7"/>
+                      <div style={{fontSize:9,color:C.inkLt,marginTop:2}}>이상 → 🟡</div>
+                    </FR>
+                  </div>
+                </>);
+              })()}
             </div>
 
             {/* ── 전환 캠페인 마진 ── */}
