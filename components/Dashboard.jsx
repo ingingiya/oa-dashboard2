@@ -4198,11 +4198,11 @@ export default function OaDashboard(){
                       {textContent}
                       {chartData&&(()=>{
                         if(!chartData.data||!chartData.data.length) return null;
-                        // value가 문자열이면 숫자로 변환
                         const data = chartData.data.map(d=>({...d, value: typeof d.value==="string"?parseFloat(d.value.replace(/[^0-9.-]/g,""))||0:d.value}));
                         const COLORS=["#f9a8d4","#93c5fd","#86efac","#fbbf24","#c4b5fd","#6ee7b7"];
+                        const chartId = `chart-${i}`;
                         return(
-                          <div style={{marginTop:10,background:C.white,borderRadius:10,padding:"10px",width:280}}>
+                          <div id={chartId} style={{marginTop:10,background:C.white,borderRadius:10,padding:"10px",width:280}}>
                             <div style={{fontSize:10,fontWeight:700,color:C.ink,marginBottom:6}}>{chartData.title}</div>
                             <ResponsiveContainer width="100%" height={160}>
                               {chartData.type==="pie"?(
@@ -4232,6 +4232,23 @@ export default function OaDashboard(){
                                 </BarChart>
                               )}
                             </ResponsiveContainer>
+                            {/* 이미지 저장 버튼 */}
+                            <button onClick={async()=>{
+                              try {
+                                const el = document.getElementById(chartId);
+                                if(!el) return;
+                                const h2c = (await import("https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js")).default || window.html2canvas;
+                                const canvas = await h2c(el, {backgroundColor:"#ffffff",scale:2});
+                                const a = document.createElement("a");
+                                a.href = canvas.toDataURL("image/png");
+                                a.download = `${chartData.title||"chart"}_${new Date().toLocaleDateString("ko-KR").replace(/\./g,"").replace(/ /g,"")}.png`;
+                                a.click();
+                              } catch(e) { alert("이미지 저장 실패: "+e.message); }
+                            }} style={{marginTop:8,width:"100%",padding:"5px",borderRadius:6,
+                              border:`1px solid ${C.border}`,background:C.cream,
+                              color:C.inkMid,fontSize:9,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
+                              🖼 이미지로 저장
+                            </button>
                           </div>
                         );
                       })()}
