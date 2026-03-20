@@ -265,29 +265,32 @@ function useSyncState(key, def) {
   return [data, setData];
 }
 
-// CSV 파싱 (구글 시트 export) — 타이틀 행 자동 스킵
+// CSV 파싱 — 따옴표 안 쉼표 올바르게 처리
 function parseCSV(text){
-  const lines = text.trim().split("\n").map(l=>{
-    // 쉼표가 큰따옴표 안에 있는 경우 처리
+  const lines = text.trim().split("\n");
+  if(lines.length<2) return [];
+
+  // CSV 한 줄 파싱 — 따옴표 안 쉼표 무시
+  const splitCSV = line => {
     const res=[]; let cur="", inQ=false;
-    for(let i=0;i<l.length;i++){
-      if(l[i]==='"'){inQ=!inQ;}
-      else if(l[i]===","&&!inQ){res.push(cur.trim());cur="";}
-      else cur+=l[i];
+    for(let i=0;i<line.length;i++){
+      const c=line[i];
+      if(c==='"'){ inQ=!inQ; }
+      else if(c===','&&!inQ){ res.push(cur.trim()); cur=""; }
+      else cur+=c;
     }
     res.push(cur.trim());
-    return res;
-  });
-  if(lines.length<2) return [];
-  // 첫 행이 실제 헤더인지 확인
+    return res.map(v=>v.replace(/^"|"$/g,"").trim());
+  };
+
   const HEADER_HINTS = ["캠페인","campaign","날짜","date","일","광고","지출","노출","impressions","spend"];
-  const firstRowStr = lines[0].join(",").toLowerCase();
+  const firstRowStr = lines[0].toLowerCase();
   const startIdx = HEADER_HINTS.some(h=>firstRowStr.includes(h)) ? 0 : 1;
-  // 헤더: 원본 텍스트 그대로 보존 (매핑에서 직접 비교)
-  const headers = lines[startIdx].map(h=>h.trim());
-  return lines.slice(startIdx+1).filter(l=>l.some(c=>c)).map(row=>{
+  const headers = splitCSV(lines[startIdx]);
+  return lines.slice(startIdx+1).filter(l=>l.trim()).map(row=>{
+    const cols = splitCSV(row);
     const obj={};
-    headers.forEach((h,i)=>{ if(h) obj[h]=row[i]||""; });
+    headers.forEach((h,i)=>{ if(h) obj[h]=cols[i]||""; });
     return obj;
   });
 }
