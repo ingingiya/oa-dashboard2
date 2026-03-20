@@ -4136,20 +4136,21 @@ export default function OaDashboard(){
     const startDow = firstDay.getDay(); // 0=일
     const daysInMonth = lastDay.getDate();
 
-    // 날짜별 항목 매핑
+    // 날짜별 항목 매핑 (로컬 날짜 기준 — toISOString은 UTC라 한국에서 날짜 오류 발생)
+    const toLocalKey = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
     const itemsByDate = {};
     activeItems.forEach(s => {
       if (!s.date) return;
-      const sd = new Date(s.date); sd.setHours(0,0,0,0);
-      const ed = s.endDate ? new Date(s.endDate) : sd;
+      const sd = new Date(s.date + "T00:00:00");
+      const ed = s.endDate ? new Date(s.endDate + "T00:00:00") : new Date(sd);
       for (let d = new Date(sd); d <= ed; d.setDate(d.getDate()+1)) {
-        const key = d.toISOString().slice(0,10);
+        const key = toLocalKey(d);
         if (!itemsByDate[key]) itemsByDate[key] = [];
         if (d.getTime()===sd.getTime()) itemsByDate[key].push(s); // 시작일에만 표시
       }
     });
 
-    const todayStr2 = new Date().toISOString().slice(0,10);
+    const todayStr2 = toLocalKey(new Date());
     const months=["1월","2월","3월","4월","5월","6월","7월","8월","9월","10월","11월","12월"];
     const days=["일","월","화","수","목","금","토"];
 
