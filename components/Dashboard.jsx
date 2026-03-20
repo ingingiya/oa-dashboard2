@@ -720,6 +720,20 @@ export default function OaDashboard(){
     {id:"musinsa", name:"무신사",     icon:"👟", color:"#93c5fd", amounts:{}},
     {id:"naver",   name:"네이버광고", icon:"🔍", color:"#86efac", amounts:{}},
   ]);
+  // 채널 바로가기 링크 — Supabase 저장
+  const [quickLinks, setQuickLinks] = useSyncState("oa_quick_links_v7", [
+    {id:"instagram", name:"인스타그램", url:"", group:"channel"},
+    {id:"twitter",   name:"트위터",     url:"", group:"channel"},
+    {id:"naver",     name:"네이버",     url:"", group:"channel"},
+    {id:"ebay",      name:"이베이",     url:"", group:"channel"},
+    {id:"gmarket",   name:"지마켓",     url:"", group:"channel"},
+    {id:"zigzag",    name:"지그재그",   url:"", group:"channel"},
+    {id:"ably",      name:"에이블리",   url:"", group:"channel"},
+    {id:"musinsa",   name:"무신사",     url:"", group:"channel"},
+    {id:"erp_approval", name:"전자결재",     url:"", group:"erp"},
+    {id:"erp_main",     name:"메인대시보드", url:"", group:"erp"},
+  ]);
+  const [quickLinksEditing, setQuickLinksEditing] = useState(false);
 
   // ── 전체 광고비 xlsx 파일 읽기 → Supabase 저장 ────────────────
   async function handleAllAdFile(file) {
@@ -860,7 +874,7 @@ export default function OaDashboard(){
           const metaSpend = (monthlyFiles.find(f=>f.label===m)?.rows||[])
             .filter(r=>!((r.campaign||r.adName||"").includes("Instagram 게시물")))
             .reduce((s,r)=>s+(r.spend||0),0);
-          const chSpend = channelSpends.reduce((s,ch)=>s++(ch.amounts?.[m]||0),0);
+          const chSpend = channelSpends.reduce((s,ch)=>s+(+(ch.amounts?.[m]||0)),0);
           return fmtW(metaSpend+chSpend);
         });
         lines.push(`총합 | ${totalRow.join(" | ")}`);
@@ -1531,6 +1545,83 @@ export default function OaDashboard(){
 
     return(
     <div style={{display:"flex",flexDirection:"column",gap:12}}>
+
+      {/* ── 채널 바로가기 + ERP ── */}
+      <div style={{background:C.white,border:`1px solid ${C.border}`,borderRadius:12,padding:"12px 14px"}}>
+        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:10}}>
+          <div style={{fontSize:9,fontWeight:700,color:C.inkLt,letterSpacing:"0.08em"}}>빠른 링크</div>
+          <button onClick={()=>setQuickLinksEditing(v=>!v)}
+            style={{fontSize:9,padding:"3px 10px",borderRadius:6,border:`1px solid ${C.border}`,
+              background:quickLinksEditing?C.rose:C.cream,color:quickLinksEditing?C.white:C.inkMid,
+              cursor:"pointer",fontFamily:"inherit",fontWeight:700}}>
+            {quickLinksEditing?"완료":"링크 편집"}
+          </button>
+        </div>
+
+        {/* 채널 */}
+        <div style={{marginBottom:10}}>
+          <div style={{fontSize:9,color:C.inkLt,fontWeight:600,marginBottom:6}}>판매 채널</div>
+          <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+            {quickLinks.filter(l=>l.group==="channel").map((ch,i)=>(
+              quickLinksEditing ? (
+                <div key={ch.id} style={{display:"flex",alignItems:"center",gap:4,
+                  background:C.cream,borderRadius:8,padding:"4px 8px",border:`1px solid ${C.border}`}}>
+                  <span style={{fontSize:11,fontWeight:700,color:C.ink,minWidth:48}}>{ch.name}</span>
+                  <input
+                    value={ch.url||""}
+                    onChange={e=>setQuickLinks(quickLinks.map(x=>x.id===ch.id?{...x,url:e.target.value}:x))}
+                    placeholder="https://..."
+                    style={{width:180,padding:"3px 6px",border:`1px solid ${C.border}`,borderRadius:6,
+                      fontSize:10,fontFamily:"inherit",outline:"none"}}
+                  />
+                </div>
+              ) : (
+                <a key={ch.id} href={ch.url||"#"} target={ch.url?"_blank":"_self"} rel="noopener noreferrer"
+                  onClick={e=>{if(!ch.url)e.preventDefault();}}
+                  style={{padding:"5px 14px",borderRadius:20,border:`1px solid ${C.border}`,
+                    background:C.cream,color:ch.url?C.ink:C.inkLt,fontSize:11,fontWeight:700,
+                    textDecoration:"none",whiteSpace:"nowrap",opacity:ch.url?1:0.5}}
+                  onMouseEnter={e=>{if(ch.url){e.currentTarget.style.background=C.rose;e.currentTarget.style.color=C.white;e.currentTarget.style.borderColor=C.rose;}}}
+                  onMouseLeave={e=>{e.currentTarget.style.background=C.cream;e.currentTarget.style.color=ch.url?C.ink:C.inkLt;e.currentTarget.style.borderColor=C.border;}}>
+                  {ch.name}
+                </a>
+              )
+            ))}
+          </div>
+        </div>
+
+        {/* ERP */}
+        <div style={{borderTop:`1px solid ${C.border}`,paddingTop:10}}>
+          <div style={{fontSize:9,color:C.inkLt,fontWeight:600,marginBottom:6}}>ERP</div>
+          <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+            {quickLinks.filter(l=>l.group==="erp").map((ch)=>(
+              quickLinksEditing ? (
+                <div key={ch.id} style={{display:"flex",alignItems:"center",gap:4,
+                  background:C.cream,borderRadius:8,padding:"4px 8px",border:`1px solid ${C.border}`}}>
+                  <span style={{fontSize:11,fontWeight:700,color:C.ink,minWidth:60}}>{ch.name}</span>
+                  <input
+                    value={ch.url||""}
+                    onChange={e=>setQuickLinks(quickLinks.map(x=>x.id===ch.id?{...x,url:e.target.value}:x))}
+                    placeholder="https://..."
+                    style={{width:200,padding:"3px 6px",border:`1px solid ${C.border}`,borderRadius:6,
+                      fontSize:10,fontFamily:"inherit",outline:"none"}}
+                  />
+                </div>
+              ) : (
+                <a key={ch.id} href={ch.url||"#"} target={ch.url?"_blank":"_self"} rel="noopener noreferrer"
+                  onClick={e=>{if(!ch.url)e.preventDefault();}}
+                  style={{padding:"5px 14px",borderRadius:20,border:`1px solid ${C.border}`,
+                    background:C.cream,color:ch.url?C.ink:C.inkLt,fontSize:11,fontWeight:700,
+                    textDecoration:"none",whiteSpace:"nowrap",opacity:ch.url?1:0.5}}
+                  onMouseEnter={e=>{if(ch.url){e.currentTarget.style.background=C.purple;e.currentTarget.style.color=C.white;e.currentTarget.style.borderColor=C.purple;}}}
+                  onMouseLeave={e=>{e.currentTarget.style.background=C.cream;e.currentTarget.style.color=ch.url?C.ink:C.inkLt;e.currentTarget.style.borderColor=C.border;}}>
+                  {ch.name}
+                </a>
+              )
+            ))}
+          </div>
+        </div>
+      </div>
 
       {/* ── 상단 헤더 배너 ── */}
       <div style={{background:totalAlerts>0?`linear-gradient(135deg,${C.bad},#EF4444)`:`linear-gradient(135deg,${C.good},#22C55E)`,
