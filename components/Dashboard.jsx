@@ -741,71 +741,6 @@ export default function OaDashboard(){
   ]);
   const [quickLinksEditing, setQuickLinksEditing] = useState(false);
 
-  // ── 업무관리 (Task V1) ─────────────────────────────
-  const [tasks, setTasks]           = useSyncState("oa_tasks_v1", []);
-  const [taskModal, setTaskModal]   = useState(false);
-  const [taskEdit, setTaskEdit]     = useState(null); // null = 신규, obj = 수정
-  const [taskFilter, setTaskFilter] = useState("all"); // all | mine | review
-  const MEMBERS_LIST = ["소리","영서","경은","지수"];
-  const TASK_TYPES   = ["콘텐츠 업로드","메타광고 제작","행사 제안","기획","기타"];
-  const TASK_STATUS  = [
-    {id:"todo",         label:"할 일",      color:"#94a3b8"},
-    {id:"in_progress",  label:"진행 중",    color:"#60a5fa"},
-    {id:"review_needed",label:"검토 요청",  color:"#f59e0b"},
-    {id:"approved",     label:"승인",       color:"#34d399"},
-    {id:"done",         label:"완료",       color:"#6ee7b7"},
-    {id:"hold",         label:"보류",       color:"#f87171"},
-  ];
-  const PRIORITY = [{id:"high",label:"긴급",color:"#ef4444"},{id:"mid",label:"보통",color:"#f59e0b"},{id:"low",label:"낮음",color:"#94a3b8"}];
-  const MEMBER_COLORS_TASK = {"소리":"#f472b6","영서":"#60a5fa","경은":"#34d399","지수":"#a78bfa"};
-
-  function newTask() {
-    return {
-      id: Date.now(),
-      title: "",
-      type: "기타",
-      assignee: "",
-      priority: "mid",
-      status: "todo",
-      dueDate: "",
-      primaryLink: {label:"", url:""},
-      secondaryLinks: [],
-      checklist: [],
-      createdAt: new Date().toISOString(),
-      lastReviewedAt: null,
-    };
-  }
-
-  function saveTask(t) {
-    if(!t.title.trim()) return;
-    setTasks(prev=>{
-      const arr = Array.isArray(prev)?prev:[];
-      const idx = arr.findIndex(x=>x.id===t.id);
-      return idx>=0 ? arr.map(x=>x.id===t.id?t:x) : [...arr,t];
-    });
-    setTaskModal(false); setTaskEdit(null);
-  }
-
-  function deleteTask(id) {
-    setTasks(prev=>(Array.isArray(prev)?prev:[]).filter(x=>x.id!==id));
-  }
-
-  function updateTaskStatus(id, status) {
-    setTasks(prev=>(Array.isArray(prev)?prev:[]).map(x=>x.id===id?{...x,status}:x));
-  }
-
-  function markReviewed(id) {
-    setTasks(prev=>(Array.isArray(prev)?prev:[]).map(x=>x.id===id?{...x,lastReviewedAt:new Date().toISOString()}:x));
-  }
-
-  // 노션 스케줄
-  const [notionItems, setNotionItems]     = useState([]);
-  const [notionLoading, setNotionLoading] = useState(false);
-  const [notionError, setNotionError]     = useState("");
-  const [notionTab, setNotionTab]         = useState("todo"); // "todo" | "done"
-  const [notionAddModal, setNotionAddModal] = useState(false);
-  const [notionForm, setNotionForm]       = useState({name:"",date:"",product:"",select:""});
-
   // 새 채널 항목이 기존 Supabase 저장값에 없으면 자동 병합
   useEffect(()=>{
     const defaults = [
@@ -860,37 +795,6 @@ export default function OaDashboard(){
     agentEndRef.current?.scrollIntoView({behavior:"smooth"});
   },[agentMsgs]);
 
-  // ── 노션 스케줄 함수 ─────────────────────────────
-  async function fetchNotion() {
-    setNotionLoading(true); setNotionError("");
-    try {
-      const res = await fetch("/api/notion");
-      const data = await res.json();
-      if(data.error) throw new Error(data.error);
-      setNotionItems(data.items||[]);
-    } catch(e) { setNotionError(e.message); }
-    setNotionLoading(false);
-  }
-  async function toggleNotionDone(id, done) {
-    setNotionItems(prev=>prev.map(x=>x.id===id?{...x,done}:x));
-    await fetch("/api/notion",{method:"POST",headers:{"Content-Type":"application/json"},
-      body:JSON.stringify({action:"toggle",pageId:id,done})});
-  }
-  async function createNotionItem() {
-    if(!notionForm.name) return;
-    const res = await fetch("/api/notion",{method:"POST",headers:{"Content-Type":"application/json"},
-      body:JSON.stringify({action:"create",data:notionForm})});
-    const data = await res.json();
-    if(data.ok){ setNotionAddModal(false); setNotionForm({name:"",date:"",product:"",select:""}); fetchNotion(); }
-  }
-  async function deleteNotionItem(id) {
-    setNotionItems(prev=>prev.filter(x=>x.id!==id));
-    await fetch("/api/notion",{method:"POST",headers:{"Content-Type":"application/json"},
-      body:JSON.stringify({action:"delete",pageId:id})});
-  }
-
-  useEffect(()=>{ fetchNotion(); },[]);
-
   useEffect(() => {
     getAdImages().then(imgs => { if (imgs?.length) setAdImages(imgs); }).catch(() => {});
   }, []);
@@ -900,85 +804,65 @@ export default function OaDashboard(){
     const fmtW = n=>n>=10000?`₩${Math.round(n/10000).toLocaleString()}만`:`₩${Math.round(n).toLocaleString()}`;
     const lines = [];
     const dates = metaRaw.map(r=>r.date).filter(Boolean).sort();
-    const period = dates.length?`${dates[0].slice(5)} ~ ${dates[dates.length-1].slice(5)}`:"기간 없음";
+    const period = dates.length?`${dates[0]} ~ ${dates[dates.length-1]}`:"기간 없음";
 
-    // 전체 요약 (핵심만)
-    const totalSpend = metaFiltered.reduce((s,r)=>s+(r.spend||0),0);
-    const totalPurch = metaFiltered.reduce((s,r)=>s+(r.purchases||0),0);
-    const totalConvV = metaFiltered.reduce((s,r)=>s+(r.convValue||0),0);
-    const totalClicks= metaFiltered.reduce((s,r)=>s+(r.clicks||0),0);
-    const totalLpv   = metaFiltered.reduce((s,r)=>s+(r.lpv||0),0);
-    lines.push(`[메타광고 ${period}] 광고비:${fmtW(totalSpend)} 구매:${totalPurch}건 ROAS:${totalSpend>0?Math.round(totalConvV/totalSpend*100):"—"}% CPA:${totalPurch>0?fmtW(totalSpend/totalPurch):"—"} CPC:${totalClicks>0?`₩${Math.round(totalSpend/totalClicks)}`:"—"} LPV율:${totalClicks>0?Math.round(totalLpv/totalClicks*100):"—"}%`);
+    lines.push(`## 메타광고 데이터 (${period})`);
+    lines.push(`- 총 광고비: ${fmtW(metaFiltered.reduce((s,r)=>s+(r.spend||0),0))}`);
+    lines.push(`- 총 구매: ${metaFiltered.reduce((s,r)=>s+(r.purchases||0),0)}건`);
+    lines.push(`- 총 전환값: ${fmtW(metaFiltered.reduce((s,r)=>s+(r.convValue||0),0))}`);
+    lines.push(`- 총 클릭: ${metaFiltered.reduce((s,r)=>s+(r.clicks||0),0).toLocaleString()}`);
+    lines.push(`- 총 LPV: ${metaFiltered.reduce((s,r)=>s+(r.lpv||0),0).toLocaleString()}`);
+    lines.push("");
 
-    // 광고별 성과 — 상위 10개만
+    // 광고별 성과
     const byAd = {};
     metaFiltered.forEach(r=>{
-      const key=(r.adName||r.campaign||"?");
-      if(!byAd[key]) byAd[key]={name:key,spend:0,purch:0,convV:0,clicks:0,lpv:0};
-      byAd[key].spend+=r.spend||0; byAd[key].purch+=r.purchases||0;
-      byAd[key].convV+=r.convValue||0; byAd[key].clicks+=r.clicks||0; byAd[key].lpv+=r.lpv||0;
-    });
-    const ads = Object.values(byAd).sort((a,b)=>b.spend-a.spend).slice(0,10);
-    lines.push(`[광고별 상위10] 광고명|광고비|구매|ROAS|CPA|LPV율`);
-    ads.forEach(a=>{
-      const roas=a.spend>0?Math.round(a.convV/a.spend*100)+"%":"—";
-      const cpa=a.purch>0?fmtW(a.spend/a.purch):"—";
-      const lpvR=a.clicks>0?Math.round(a.lpv/a.clicks*100)+"%":"—";
-      lines.push(`${a.name}|${fmtW(a.spend)}|${a.purch}건|${roas}|${cpa}|${lpvR}`);
+      const key=(r.adName||r.campaign||"unknown")+"|||"+(r.adset||"");
+      if(!byAd[key]) byAd[key]={name:r.adName||r.campaign||"",campaign:r.campaign||"",adset:r.adset||"",spend:0,purch:0,convV:0,clicks:0,lpv:0};
+      byAd[key].spend+=r.spend||0;
+      byAd[key].purch+=r.purchases||0;
+      byAd[key].convV+=r.convValue||0;
+      byAd[key].clicks+=r.clicks||0;
+      byAd[key].lpv+=r.lpv||0;
     });
 
-    // 날짜별 추이 — 최근 7일만
+    const ads = Object.values(byAd).sort((a,b)=>b.spend-a.spend).slice(0,20);
+    lines.push("## 광고별 성과 (상위 20개, 광고비 순)");
+    lines.push("광고명 | 캠페인 | 광고비 | 구매 | ROAS | CPA | CPC | LPV율");
+    ads.forEach(a=>{
+      const roas = a.spend>0?Math.round(a.convV/a.spend*100)+"%" :"—";
+      const cpa  = a.purch>0?fmtW(a.spend/a.purch):"—";
+      const cpc  = a.clicks>0?`₩${Math.round(a.spend/a.clicks)}`:"—";
+      const lpvR = a.clicks>0?Math.round(a.lpv/a.clicks*100)+"%":"—";
+      lines.push(`${a.name} | ${a.campaign} | ${fmtW(a.spend)} | ${a.purch}건 | ${roas} | ${cpa} | ${cpc} | ${lpvR}`);
+    });
+
+    // 날짜별 추이
     const byDate = {};
     metaFiltered.forEach(r=>{
       if(!r.date) return;
-      if(!byDate[r.date]) byDate[r.date]={spend:0,purch:0,clicks:0};
-      byDate[r.date].spend+=r.spend||0; byDate[r.date].purch+=r.purchases||0; byDate[r.date].clicks+=r.clicks||0;
+      if(!byDate[r.date]) byDate[r.date]={spend:0,clicks:0,lpv:0,purch:0};
+      byDate[r.date].spend+=r.spend||0;
+      byDate[r.date].clicks+=r.clicks||0;
+      byDate[r.date].lpv+=r.lpv||0;
+      byDate[r.date].purch+=r.purchases||0;
     });
-    const recentDates = Object.entries(byDate).sort((a,b)=>a[0].localeCompare(b[0])).slice(-7);
-    lines.push(`[최근7일] 날짜|광고비|구매`);
-    recentDates.forEach(([d,v])=>lines.push(`${d.slice(5)}|${fmtW(v.spend)}|${v.purch}건`));
-
-    // 재고 (소진 임박만)
-    const urgentInv = inv.filter(i=>{
-      const days = Math.round((i.stock-i.reserved)/Math.max(i.sold30/30,0.01));
-      return days < 30;
+    lines.push("");
+    lines.push("## 날짜별 추이");
+    lines.push("날짜 | 광고비 | 구매 | CPC");
+    Object.entries(byDate).sort((a,b)=>a[0].localeCompare(b[0])).forEach(([d,v])=>{
+      lines.push(`${d} | ${fmtW(v.spend)} | ${v.purch}건 | ${v.clicks>0?`₩${Math.round(v.spend/v.clicks)}`:"—"}`);
     });
-    if(urgentInv.length>0){
-      lines.push(`[재고주의] ${urgentInv.map(i=>`${i.name}:${Math.round((i.stock-i.reserved)/Math.max(i.sold30/30,0.01))}일`).join(", ")}`);
-    }
 
-    // 월별 비교 (라벨+핵심 지표만)
-    if(Array.isArray(monthlyFiles)&&monthlyFiles.length>0){
-      lines.push(`[월별비교] 월|광고비|구매|ROAS|매출|광고비율`);
-      monthlyFiles.forEach(f=>{
-        const r=(f.rows||[]).filter(x=>!((x.campaign||x.adName||"").includes("Instagram 게시물")));
-        const sp=r.reduce((s,x)=>s+(x.spend||0),0);
-        const pu=r.reduce((s,x)=>s+(x.purchases||0),0);
-        const cv=r.reduce((s,x)=>s+(x.convValue||0),0);
-        const roas=sp>0?Math.round(cv/sp*100)+"%":"—";
-        const rev=f.revenue>0?fmtW(f.revenue):"—";
-        const ratio=f.revenue>0?Math.round(sp/f.revenue*100)+"%":"—";
-        lines.push(`${f.label}|${fmtW(sp)}|${pu}건|${roas}|${rev}|${ratio}`);
+    // 재고
+    if(inv.length>0){
+      lines.push("");
+      lines.push("## 재고 현황");
+      inv.forEach(i=>{
+        const days = Math.round((i.stock-i.reserved)/Math.max(i.sold30/30,0.01));
+        lines.push(`${i.name}: 재고 ${i.stock}개, 예약 ${i.reserved}개, 월판매 ${i.sold30}개, 소진예상 ${days}일`);
       });
     }
-
-    // 채널별 광고비 (입력된 것만)
-    if(Array.isArray(channelSpends)){
-      const filled = channelSpends.filter(ch=>Object.values(ch.amounts||{}).some(v=>v>0));
-      if(filled.length>0){
-        const months = Array.isArray(monthlyFiles)?monthlyFiles.map(f=>f.label):[];
-        if(months.length>0){
-          lines.push(`[채널광고비] ${months.slice(-2).map(m=>{
-            const meta=(monthlyFiles.find(f=>f.label===m)?.rows||[]).filter(r=>!((r.campaign||r.adName||"").includes("Instagram 게시물"))).reduce((s,r)=>s+(r.spend||0),0);
-            const ch=filled.reduce((s,c)=>s+(+(c.amounts?.[m]||0)),0);
-            return `${m}:메타${fmtW(meta)}+기타${fmtW(ch)}=합계${fmtW(meta+ch)}`;
-          }).join(" / ")}`);
-        }
-      }
-    }
-
-    return lines.join("\n");
-  }
 
     // 월별 성과 비교
     if(Array.isArray(monthlyFiles) && monthlyFiles.length>0){
@@ -4157,290 +4041,71 @@ export default function OaDashboard(){
     );
   })();
 
-
-
-  const TaskSection=(()=>{
-    const taskList = Array.isArray(tasks)?tasks:[];
-    const now = new Date();
-    const daysSince = (d) => d ? Math.floor((now-new Date(d))/86400000) : 999;
-    const needReview = taskList.filter(t=>t.status==="review_needed"&&daysSince(t.lastReviewedAt)>=1)
-      .sort((a,b)=>daysSince(b.lastReviewedAt)-daysSince(a.lastReviewedAt));
-    const filtered = taskList.filter(t=>{
-      if(taskFilter==="review") return t.status==="review_needed";
-      if(taskFilter==="todo") return ["todo","in_progress"].includes(t.status);
-      if(taskFilter==="done") return ["done","approved"].includes(t.status);
-      return true;
-    });
-    const statusObj = Object.fromEntries(TASK_STATUS.map(s=>[s.id,s]));
-    const priorityObj = Object.fromEntries(PRIORITY.map(p=>[p.id,p]));
-    const checklistDone = (t) => {
-      if(!t.checklist?.length) return {done:0,total:0,pct:100};
-      const done = t.checklist.filter(c=>c.done).length;
-      return {done,total:t.checklist.length,pct:Math.round(done/t.checklist.length*100)};
-    };
+  const ScheduleSection=(()=>{
     return(
     <div style={{display:"flex",flexDirection:"column",gap:14}}>
-      {needReview.length>0&&(
-        <div style={{background:`linear-gradient(135deg,${C.rose},#f97316)`,borderRadius:14,padding:"14px 16px",color:C.white}}>
-          <div style={{fontSize:12,fontWeight:800,marginBottom:10}}>🚨 확인 필요 {needReview.length}건</div>
-          <div style={{display:"flex",flexDirection:"column",gap:8}}>
-            {needReview.map(t=>{
-              const days=daysSince(t.lastReviewedAt);
-              const cl=checklistDone(t);
-              return(
-                <div key={t.id} style={{background:"rgba(255,255,255,0.15)",borderRadius:10,padding:"10px 12px",border:days>=3?"2px solid rgba(255,255,255,0.5)":"none"}}>
-                  <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:8,flexWrap:"wrap"}}>
-                    <div style={{flex:1}}>
-                      <div style={{display:"flex",gap:6,alignItems:"center",marginBottom:4,flexWrap:"wrap"}}>
-                        {days>=3&&<span style={{fontSize:9,background:"rgba(255,255,255,0.3)",padding:"2px 6px",borderRadius:20,fontWeight:800}}>📌 최상단</span>}
-                        <span style={{fontSize:9,background:MEMBER_COLORS_TASK[t.assignee]||"rgba(255,255,255,0.2)",padding:"2px 8px",borderRadius:20,fontWeight:700}}>{t.assignee||"미지정"}</span>
-                      </div>
-                      <div style={{fontSize:13,fontWeight:800}}>{t.title}</div>
-                      {cl.total>0&&<div style={{fontSize:10,opacity:0.8,marginTop:2}}>체크리스트 {cl.done}/{cl.total} ({cl.pct}%)</div>}
-                    </div>
-                    <div style={{display:"flex",gap:6,flexShrink:0}}>
-                      {t.primaryLink?.url&&<a href={t.primaryLink.url} target="_blank" rel="noopener noreferrer" style={{padding:"5px 12px",borderRadius:8,background:"rgba(255,255,255,0.9)",color:C.rose,fontSize:10,fontWeight:800,textDecoration:"none"}}>{t.primaryLink.label||"열기"}</a>}
-                      <button onClick={()=>{markReviewed(t.id);updateTaskStatus(t.id,"approved");}} style={{padding:"5px 12px",borderRadius:8,background:"rgba(255,255,255,0.2)",color:C.white,fontSize:10,fontWeight:700,border:"none",cursor:"pointer",fontFamily:"inherit"}}>✅ 승인</button>
-                      <button onClick={()=>{setTaskEdit(t);setTaskModal(true);markReviewed(t.id);}} style={{padding:"5px 12px",borderRadius:8,background:"rgba(255,255,255,0.1)",color:C.white,fontSize:10,fontWeight:700,border:"none",cursor:"pointer",fontFamily:"inherit"}}>✏️</button>
-                    </div>
+      <div className="content-grid-3" style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:10}}>
+        {["공구","시딩","광고","이벤트"].map(type=>{
+          const tc=schTypeColor(type);
+          return(<div key={type} style={{background:C.white,border:`1px solid ${C.border}`,borderRadius:12,padding:"12px 14px",textAlign:"center"}}>
+            <div style={{fontSize:20,marginBottom:4}}>{schTypeIcon(type)}</div>
+            <div style={{fontSize:9,color:C.inkLt,fontWeight:700,letterSpacing:"0.1em"}}>{type}</div>
+            <div style={{fontSize:22,fontWeight:900,color:tc}}>{sch.filter(s=>s.type===type&&s.status!=="완료").length}</div>
+            <div style={{fontSize:9,color:C.inkLt}}>진행 예정</div>
+          </div>);
+        })}
+      </div>
+      <Card>
+        <CardTitle title="📅 전체 일정" sub="공구·시딩·광고·이벤트 통합 스케줄"
+          action={<Btn small onClick={()=>{setSchModalData({mode:"add",initial:null})}}>+ 일정 추가</Btn>}/>
+        {upcoming.length===0&&<div style={{textAlign:"center",color:C.inkLt,fontSize:12,padding:"28px 0"}}>예정된 일정이 없습니다</div>}
+        <div style={{display:"flex",flexDirection:"column",gap:8}}>
+          {upcoming.map(s=>{
+            const d=daysUntil(s.date),tc=schTypeColor(s.type),isUrgent=d!==null&&d<=3&&d>=0;
+            return(<div key={s.id} style={{border:`1px solid ${isUrgent?C.rose+"66":C.border}`,borderRadius:12,
+              padding:"12px 14px",background:isUrgent?"#FFF8FC":C.white,transition:"box-shadow 0.2s"}}
+              onMouseEnter={e=>e.currentTarget.style.boxShadow=`0 4px 16px rgba(232,86,122,0.1)`}
+              onMouseLeave={e=>e.currentTarget.style.boxShadow="none"}>
+              <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",gap:8,flexWrap:"wrap"}}>
+                <div style={{display:"flex",gap:10,alignItems:"flex-start",flex:1,minWidth:0}}>
+                  <div style={{display:"flex",flexDirection:"column",alignItems:"center",minWidth:44,flexShrink:0}}>
+                    <span style={{fontSize:10,fontWeight:700,color:tc,background:`${tc}18`,padding:"2px 8px",borderRadius:20,whiteSpace:"nowrap"}}>{schTypeIcon(s.type)} {s.type}</span>
+                    {d!==null&&<span style={{fontSize:9,marginTop:4,color:d<0?C.bad:d<=3?C.rose:C.inkLt,fontWeight:700}}>{d===0?"오늘":d<0?`D+${Math.abs(d)}`:`D-${d}`}</span>}
+                  </div>
+                  <div>
+                    <div style={{fontSize:13,fontWeight:800,color:C.ink}}>{s.title}</div>
+                    <div style={{fontSize:10,color:C.inkLt,marginTop:2}}>📆 {s.date}{s.endDate?` ~ ${s.endDate}`:""}{s.platform&&` · ${s.platform}`}</div>
+                    {s.note&&<div style={{fontSize:10,color:C.inkMid,marginTop:3}}>💬 {s.note}</div>}
                   </div>
                 </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
-      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:8,flexWrap:"wrap"}}>
-        <div style={{display:"flex",gap:4,padding:"4px",background:C.cream,borderRadius:10}}>
-          {[{id:"all",label:"전체"},{id:"todo",label:"진행 중"},{id:"review",label:"검토요청"},{id:"done",label:"완료"}].map(f=>(
-            <button key={f.id} onClick={()=>setTaskFilter(f.id)}
-              style={{padding:"5px 12px",borderRadius:7,border:"none",cursor:"pointer",fontSize:11,fontWeight:700,fontFamily:"inherit",
-                background:taskFilter===f.id?C.white:"transparent",color:taskFilter===f.id?C.ink:C.inkMid}}>
-              {f.label}
-            </button>
-          ))}
-        </div>
-        <button onClick={()=>{setTaskEdit(newTask());setTaskModal(true);}}
-          style={{padding:"7px 16px",borderRadius:10,border:"none",background:C.rose,color:C.white,fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
-          + 업무 추가
-        </button>
-      </div>
-      {filtered.length===0?(
-        <div style={{textAlign:"center",padding:"40px",color:C.inkLt,fontSize:12}}>업무가 없어요 🎉</div>
-      ):(
-        <div style={{display:"flex",flexDirection:"column",gap:8}}>
-          {filtered.map(t=>{
-            const st=statusObj[t.status]||{label:t.status,color:"#94a3b8"};
-            const pr=priorityObj[t.priority]||{label:"",color:"#94a3b8"};
-            const cl=checklistDone(t);
-            const dueDate=t.dueDate?new Date(t.dueDate):null;
-            const daysLeft=dueDate?Math.ceil((dueDate-now)/86400000):null;
-            const isOverdue=daysLeft!==null&&daysLeft<0;
-            return(
-              <div key={t.id} style={{background:C.white,border:`1px solid ${t.status==="review_needed"?C.gold+"66":C.border}`,borderRadius:12,padding:"12px 14px",borderLeft:`3px solid ${st.color}`}}>
-                <div style={{display:"flex",alignItems:"flex-start",gap:10}}>
-                  <div style={{flex:1,minWidth:0}}>
-                    <div style={{display:"flex",gap:5,alignItems:"center",marginBottom:5,flexWrap:"wrap"}}>
-                      <span style={{fontSize:9,padding:"2px 7px",borderRadius:20,fontWeight:700,background:st.color+"22",color:st.color,border:`1px solid ${st.color}44`}}>{st.label}</span>
-                      <span style={{fontSize:9,padding:"2px 7px",borderRadius:20,fontWeight:700,background:pr.color+"18",color:pr.color}}>{pr.label}</span>
-                      {t.assignee&&<span style={{fontSize:9,padding:"2px 7px",borderRadius:20,fontWeight:700,background:(MEMBER_COLORS_TASK[t.assignee]||"#94a3b8")+"25",color:MEMBER_COLORS_TASK[t.assignee]||"#94a3b8"}}>{t.assignee}</span>}
-                    </div>
-                    <div style={{fontSize:13,fontWeight:800,color:C.ink,marginBottom:4}}>{t.title}</div>
-                    <div style={{display:"flex",gap:10,alignItems:"center",flexWrap:"wrap"}}>
-                      {t.dueDate&&<span style={{fontSize:10,color:isOverdue?C.bad:daysLeft<=2?C.warn:C.inkLt,fontWeight:600}}>📅 {t.dueDate}{daysLeft!==null&&<span style={{marginLeft:4,fontWeight:800}}>{daysLeft===0?"오늘":isOverdue?`D+${Math.abs(daysLeft)}`:`D-${daysLeft}`}</span>}</span>}
-                      {cl.total>0&&<span style={{fontSize:10,color:C.inkLt}}>☑ {cl.done}/{cl.total} ({cl.pct}%)</span>}
-                    </div>
-                    {(t.primaryLink?.url||t.secondaryLinks?.some(l=>l.url))&&(
-                      <div style={{display:"flex",gap:6,marginTop:7,flexWrap:"wrap"}}>
-                        {t.primaryLink?.url&&<a href={t.primaryLink.url} target="_blank" rel="noopener noreferrer" style={{padding:"4px 10px",borderRadius:6,background:C.rose,color:C.white,fontSize:10,fontWeight:700,textDecoration:"none"}}>{t.primaryLink.label||"메인 링크"}</a>}
-                        {t.secondaryLinks?.filter(l=>l.url).map((l,i)=>(
-                          <a key={i} href={l.url} target="_blank" rel="noopener noreferrer" style={{padding:"4px 10px",borderRadius:6,background:C.cream,color:C.inkMid,fontSize:10,fontWeight:600,textDecoration:"none",border:`1px solid ${C.border}`}}>{l.label||`링크${i+1}`}</a>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                  <div style={{display:"flex",flexDirection:"column",gap:4,flexShrink:0}}>
-                    <select value={t.status} onChange={e=>updateTaskStatus(t.id,e.target.value)}
-                      style={{fontSize:9,padding:"3px 6px",borderRadius:6,border:`1px solid ${C.border}`,background:C.cream,fontFamily:"inherit",cursor:"pointer"}}>
-                      {TASK_STATUS.map(s=><option key={s.id} value={s.id}>{s.label}</option>)}
-                    </select>
-                    <button onClick={()=>{setTaskEdit({...t});setTaskModal(true);}} style={{fontSize:9,padding:"3px 8px",borderRadius:6,border:`1px solid ${C.border}`,background:C.cream,cursor:"pointer",fontFamily:"inherit",color:C.inkMid}}>편집</button>
-                    <button onClick={()=>deleteTask(t.id)} style={{fontSize:9,padding:"3px 8px",borderRadius:6,border:`1px solid ${C.bad}33`,background:"#FEF0F0",cursor:"pointer",fontFamily:"inherit",color:C.bad}}>삭제</button>
-                  </div>
+                <div style={{display:"flex",gap:6,flexShrink:0}}>
+                  <Btn variant="ghost" small onClick={()=>{setSchModalData({mode:"edit",initial:s})}}>✏️</Btn>
+                  <Btn variant="sage" small onClick={()=>setSch(sch.map(x=>x.id===s.id?{...x,status:"완료"}:x))}>✅</Btn>
+                  <Btn variant="danger" small onClick={()=>setSch(sch.filter(x=>x.id!==s.id))}>🗑</Btn>
                 </div>
               </div>
-            );
+            </div>);
           })}
         </div>
-      )}
-      {taskModal&&taskEdit&&(
-        <Modal title="업무 관리" onClose={()=>{setTaskModal(false);setTaskEdit(null);}}>
-          <div style={{display:"flex",flexDirection:"column",gap:12}}>
-            <FR label="업무명 *"><Inp value={taskEdit.title} onChange={v=>setTaskEdit({...taskEdit,title:v})} placeholder="업무를 입력하세요"/></FR>
-            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
-              <FR label="담당자">
-                <select value={taskEdit.assignee||""} onChange={e=>setTaskEdit({...taskEdit,assignee:e.target.value})} style={{width:"100%",padding:"8px 10px",border:`1px solid ${C.border}`,borderRadius:8,fontSize:12,fontFamily:"inherit"}}>
-                  <option value="">미지정</option>
-                  {MEMBERS_LIST.map(m=><option key={m} value={m}>{m}</option>)}
-                </select>
-              </FR>
-              <FR label="상태">
-                <select value={taskEdit.status||"todo"} onChange={e=>setTaskEdit({...taskEdit,status:e.target.value})} style={{width:"100%",padding:"8px 10px",border:`1px solid ${C.border}`,borderRadius:8,fontSize:12,fontFamily:"inherit"}}>
-                  {TASK_STATUS.map(s=><option key={s.id} value={s.id}>{s.label}</option>)}
-                </select>
-              </FR>
-            </div>
-            <FR label="마감일"><Inp type="date" value={taskEdit.dueDate||""} onChange={v=>setTaskEdit({...taskEdit,dueDate:v})}/></FR>
-            <FR label="메인 링크">
-              <div style={{display:"flex",gap:6}}>
-                <Inp value={taskEdit.primaryLink?.label||""} onChange={v=>setTaskEdit({...taskEdit,primaryLink:{...taskEdit.primaryLink,label:v}})} placeholder="라벨" style={{flex:"0 0 100px"}}/>
-                <Inp value={taskEdit.primaryLink?.url||""} onChange={v=>setTaskEdit({...taskEdit,primaryLink:{...taskEdit.primaryLink,url:v}})} placeholder="https://..." style={{flex:1}}/>
+      </Card>
+      {done.length>0&&(
+        <Card>
+          <CardTitle title="✅ 완료된 일정" sub={`${done.length}건`}/>
+          {done.map(s=>(
+            <div key={s.id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",
+              padding:"8px 10px",borderRadius:10,background:C.cream,opacity:0.7,marginBottom:4}}>
+              <div>
+                <span style={{fontSize:10,fontWeight:700,color:schTypeColor(s.type),background:`${schTypeColor(s.type)}18`,
+                  padding:"1px 7px",borderRadius:20,marginRight:8}}>{s.type}</span>
+                <span style={{fontSize:12,fontWeight:600,color:C.inkMid}}>{s.title}</span>
               </div>
-            </FR>
-            <FR label="체크리스트">
-              {(taskEdit.checklist||[]).map((c,i)=>(
-                <div key={i} style={{display:"flex",gap:6,alignItems:"center",marginBottom:6}}>
-                  <input type="checkbox" checked={c.done||false} onChange={e=>setTaskEdit({...taskEdit,checklist:taskEdit.checklist.map((x,j)=>j===i?{...x,done:e.target.checked}:x)})}/>
-                  <Inp value={c.text||""} onChange={v=>setTaskEdit({...taskEdit,checklist:taskEdit.checklist.map((x,j)=>j===i?{...x,text:v}:x)})} placeholder="항목" style={{flex:1}}/>
-                  <button onClick={()=>setTaskEdit({...taskEdit,checklist:taskEdit.checklist.filter((_,j)=>j!==i)})} style={{border:"none",background:"none",cursor:"pointer",color:C.bad,fontSize:14}}>✕</button>
-                </div>
-              ))}
-              <button onClick={()=>setTaskEdit({...taskEdit,checklist:[...(taskEdit.checklist||[]),{text:"",done:false}]})} style={{fontSize:11,padding:"5px 12px",borderRadius:8,border:`1px dashed ${C.border}`,background:C.cream,color:C.inkMid,cursor:"pointer",fontFamily:"inherit"}}>+ 항목 추가</button>
-            </FR>
-            <div style={{display:"flex",gap:8}}>
-              <Btn onClick={()=>saveTask(taskEdit)} style={{flex:1}}>💾 저장</Btn>
-              <Btn variant="neutral" onClick={()=>{setTaskModal(false);setTaskEdit(null);}}>취소</Btn>
+              <div style={{display:"flex",gap:6,alignItems:"center"}}>
+                <span style={{fontSize:10,color:C.inkLt}}>{s.date}</span>
+                <Btn variant="danger" small onClick={()=>setSch(sch.filter(x=>x.id!==s.id))}>🗑</Btn>
+              </div>
             </div>
-          </div>
-        </Modal>
-      )}
-    </div>
-    );
-  })();
-
-  const ScheduleSection=(()=>{
-    const MEMBER_COLORS = {"영서":"#f9a8d4","지수":"#93c5fd","소리":"#86efac","경은":"#fbbf24"};
-    const getMemberColor = name => {
-      const found = Object.entries(MEMBER_COLORS).find(([k])=>name?.includes(k));
-      return found ? found[1] : "#c4b5fd";
-    };
-    const todoItems = notionItems.filter(x=>!x.done);
-    const doneItems = notionItems.filter(x=>x.done);
-    return(
-    <div style={{display:"flex",flexDirection:"column",gap:14}}>
-      <div style={{background:C.white,border:`1px solid ${C.border}`,borderRadius:14,padding:"16px"}}>
-        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12}}>
-          <div>
-            <div style={{fontSize:13,fontWeight:800,color:C.ink}}>📋 소재 스케줄</div>
-            <div style={{fontSize:10,color:C.inkLt,marginTop:2}}>노션 연동 · 실시간 동기화</div>
-          </div>
-          <div style={{display:"flex",gap:6}}>
-            <button onClick={fetchNotion}
-              style={{fontSize:10,padding:"5px 12px",borderRadius:8,border:`1px solid ${C.border}`,
-                background:C.cream,color:C.inkMid,cursor:"pointer",fontFamily:"inherit",fontWeight:700}}>
-              {notionLoading?"⏳":"🔄"} 새로고침
-            </button>
-            <button onClick={()=>setNotionAddModal(true)}
-              style={{fontSize:10,padding:"5px 12px",borderRadius:8,border:"none",
-                background:C.rose,color:C.white,cursor:"pointer",fontFamily:"inherit",fontWeight:700}}>
-              + 추가
-            </button>
-          </div>
-        </div>
-        <div style={{display:"flex",gap:4,marginBottom:12,borderBottom:`1px solid ${C.border}`,paddingBottom:8}}>
-          {[{id:"todo",label:`진행 중 (${todoItems.length})`},{id:"done",label:`완료 (${doneItems.length})`}].map(t=>(
-            <button key={t.id} onClick={()=>setNotionTab(t.id)}
-              style={{padding:"5px 14px",borderRadius:8,border:"none",cursor:"pointer",fontFamily:"inherit",
-                fontSize:11,fontWeight:700,background:notionTab===t.id?C.rose:"transparent",
-                color:notionTab===t.id?C.white:C.inkMid}}>
-              {t.label}
-            </button>
           ))}
-        </div>
-        {notionError&&(
-          <div style={{background:"#FEF0F0",border:`1px solid ${C.bad}33`,borderRadius:8,padding:"10px 12px",
-            fontSize:11,color:C.bad,marginBottom:10}}>
-            ❌ {notionError}
-          </div>
-        )}
-        {notionLoading&&!notionItems.length?(
-          <div style={{textAlign:"center",padding:"24px",color:C.inkLt,fontSize:11}}>⏳ 노션에서 불러오는 중...</div>
-        ):(
-          <div style={{display:"flex",flexDirection:"column",gap:8}}>
-            {(notionTab==="todo"?todoItems:doneItems).map(item=>{
-              const assignee = item.assignee;
-              const memberColor = item.assigneeColor||getMemberColor(item.name)||"#c4b5fd";
-              const daysLeft = item.date ? Math.ceil((new Date(item.date)-new Date())/(1000*60*60*24)) : null;
-              const typeColor = {공구:C.rose,시딩:C.purple,광고:C.gold,이벤트:C.sage}[item.select]||C.inkMid;
-              return(
-                <div key={item.id} style={{display:"flex",alignItems:"flex-start",gap:10,
-                  padding:"10px 12px",borderRadius:10,
-                  border:`1px solid ${item.done?"#e5e7eb":daysLeft!==null&&daysLeft<=3&&daysLeft>=0?C.rose+"44":C.border}`,
-                  background:item.done?"#f9fafb":daysLeft!==null&&daysLeft<=3&&daysLeft>=0?"#FFF8FC":C.white,
-                  opacity:item.done?0.6:1}}>
-                  <button onClick={()=>toggleNotionDone(item.id,!item.done)}
-                    style={{width:18,height:18,borderRadius:5,border:`2px solid ${item.done?C.good:C.border}`,
-                      background:item.done?C.good:"transparent",cursor:"pointer",flexShrink:0,marginTop:1,
-                      display:"flex",alignItems:"center",justifyContent:"center",color:C.white,fontSize:11}}>
-                    {item.done?"✓":""}
-                  </button>
-                  <div style={{flex:1,minWidth:0}}>
-                    <div style={{display:"flex",alignItems:"center",gap:6,flexWrap:"wrap",marginBottom:3}}>
-                      <span style={{fontSize:12,fontWeight:800,color:item.done?C.inkLt:C.ink,
-                        textDecoration:item.done?"line-through":"none"}}>
-                        {item.name||"(제목없음)"}
-                      </span>
-                      {item.select&&<span style={{fontSize:9,padding:"2px 8px",borderRadius:20,background:`${typeColor}18`,color:typeColor,fontWeight:700}}>{item.select}</span>}
-                      {item.product&&<span style={{fontSize:9,padding:"2px 8px",borderRadius:20,background:`${C.rose}15`,color:C.rose,fontWeight:700}}>{item.product}</span>}
-                      {assignee&&<span style={{fontSize:9,padding:"2px 8px",borderRadius:20,background:`${memberColor}25`,color:memberColor,fontWeight:800,border:`1px solid ${memberColor}55`}}>{assignee}</span>}
-                    </div>
-                    <div style={{display:"flex",gap:10,alignItems:"center",flexWrap:"wrap"}}>
-                      {item.date&&(
-                        <span style={{fontSize:10,color:daysLeft!==null&&daysLeft<=3&&daysLeft>=0?C.rose:C.inkLt,fontWeight:600}}>
-                          📅 {item.date}
-                          {daysLeft!==null&&<span style={{marginLeft:4,fontWeight:800}}>
-                            {daysLeft===0?"오늘":daysLeft<0?`D+${Math.abs(daysLeft)}`:`D-${daysLeft}`}
-                          </span>}
-                        </span>
-                      )}
-                      {item.status&&<span style={{fontSize:9,color:C.inkLt,background:C.cream,padding:"1px 6px",borderRadius:10}}>{item.status}</span>}
-                    </div>
-                  </div>
-                  <button onClick={()=>deleteNotionItem(item.id)}
-                    style={{background:"none",border:"none",cursor:"pointer",color:C.inkLt,fontSize:12,padding:"2px 4px",opacity:0.4,flexShrink:0}}
-                    onMouseEnter={e=>e.currentTarget.style.opacity="1"}
-                    onMouseLeave={e=>e.currentTarget.style.opacity="0.4"}>✕</button>
-                </div>
-              );
-            })}
-            {(notionTab==="todo"?todoItems:doneItems).length===0&&(
-              <div style={{textAlign:"center",padding:"20px",color:C.inkLt,fontSize:11}}>
-                {notionTab==="todo"?"진행 중인 일정이 없어요 🎉":"완료된 일정이 없어요"}
-              </div>
-            )}
-          </div>
-        )}
-      </div>
-      {notionAddModal&&(
-        <Modal title="📋 소재 일정 추가" onClose={()=>setNotionAddModal(false)}>
-          <FR label="소재명 *"><Inp value={notionForm.name} onChange={v=>setNotionForm(f=>({...f,name:v}))} placeholder="소재명 입력"/></FR>
-          <FR label="시작일"><Inp type="date" value={notionForm.date} onChange={v=>setNotionForm(f=>({...f,date:v}))}/></FR>
-          <FR label="제품"><Inp value={notionForm.product} onChange={v=>setNotionForm(f=>({...f,product:v}))} placeholder="소닉플로우, 프리온 등"/></FR>
-          <FR label="담당자">
-            <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
-              {["영서","지수","소리","경은"].map(name=>(
-                <button key={name} onClick={()=>setNotionForm(f=>({...f,select:name}))}
-                  style={{padding:"5px 14px",borderRadius:20,border:`1px solid ${notionForm.select===name?MEMBER_COLORS[name]:C.border}`,
-                    background:notionForm.select===name?MEMBER_COLORS[name]+"22":"transparent",
-                    color:notionForm.select===name?MEMBER_COLORS[name]:C.inkMid,
-                    fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
-                  {name}
-                </button>
-              ))}
-            </div>
-          </FR>
-          <Btn onClick={createNotionItem} style={{width:"100%",marginTop:8}}>추가</Btn>
-        </Modal>
+        </Card>
       )}
     </div>
     );
@@ -4587,7 +4252,6 @@ export default function OaDashboard(){
       <div className="oa-body">
         <main className="oa-main">
           {sec==="home"        && <HomeSection/>}
-          {sec==="tasks"       && TaskSection}
           {sec==="meta"        && MetaSection}
           {sec==="adspend"     && AdSpendSection}
           {sec==="influencer"  && InfluencerSection}
