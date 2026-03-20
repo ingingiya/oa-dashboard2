@@ -740,8 +740,8 @@ export default function OaDashboard(){
     {id:"erp_hr",        name:"근태/HR",   url:"", group:"erp"},
   ]);
   const [quickLinksEditing, setQuickLinksEditing] = useState(false);
-  const [schedView, setSchedView] = useState("list"); // "list" | "calendar"
-  const [calMonth, setCalMonth]   = useState(()=>{const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}`});
+  const [schedView, setSchedView] = useState("list");
+  const [calMonth, setCalMonth]   = useState(new Date().toISOString().slice(0,7));
 
   // ── 업무관리 (Task V1) ─────────────────────────────
   const [tasks, setTasks]           = useSyncState("oa_tasks_v1", []);
