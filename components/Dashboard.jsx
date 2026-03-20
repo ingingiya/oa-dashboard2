@@ -4368,6 +4368,18 @@ export default function OaDashboard(){
 
     const libNames = new Set((creativeLib||[]).map(i=>i.name));
 
+    // 광고명으로 업로드된 이미지 매칭
+    function findThumb(adName) {
+      if (!adName || !adImages?.length) return "";
+      const img = adImages.find(img =>
+        img.name && adName && (
+          adName.toLowerCase().includes(img.name.toLowerCase()) ||
+          img.name.toLowerCase().includes(adName.toLowerCase())
+        )
+      );
+      return img?.url || "";
+    }
+
     function saveGoodAds() {
       const goodAds = adList.filter(ad => adQuality(ad) !== "normal" && !libNames.has(ad.adName));
       if (goodAds.length === 0) { alert("새로 저장할 소재가 없어요 (이미 모두 저장됐거나 기준 미달)"); return; }
@@ -4377,12 +4389,14 @@ export default function OaDashboard(){
         name: ad.adName,
         link: "",
         product: "",
+        thumbUrl: findThumb(ad.adName),
         note: `CTR ${ad.ctr.toFixed(2)}% · ROAS ${ad.roas.toFixed(0)}% · 소진 ${Math.round(ad.spend).toLocaleString()}원`,
         tags: adQuality(ad) === "great" ? "우수소재,상위소재" : "상위소재",
         addedAt: now,
       }));
       setCreativeLib(prev => [...newItems, ...(prev||[])]);
-      alert(`✅ ${newItems.length}개 소재를 라이브러리에 저장했어요!`);
+      const withThumb = newItems.filter(i=>i.thumbUrl).length;
+      alert(`✅ ${newItems.length}개 소재 저장 완료!\n${withThumb > 0 ? `🖼 ${withThumb}개에 썸네일 자동 연결됨` : "썸네일 없음 (이미지 업로드 필요)"}`);
       setTab("library");
     }
 
@@ -4490,8 +4504,10 @@ export default function OaDashboard(){
                   <Btn small onClick={()=>requestRecreate(ad)}>🎨 재제작 요청</Btn>
                   <Btn variant="sage" small disabled={alreadySaved} onClick={()=>{
                     if(alreadySaved){alert("이미 라이브러리에 저장된 소재예요");return;}
+                    const thumb = findThumb(ad.adName);
                     setCreativeLib(prev=>[{
                       id:Date.now()+"",name:ad.adName,link:"",product:"",
+                      thumbUrl: thumb,
                       note:`CTR ${ad.ctr.toFixed(2)}% · ROAS ${ad.roas.toFixed(0)}% · 소진 ${Math.round(ad.spend).toLocaleString()}원`,
                       tags: quality==="great"?"우수소재,상위소재":"상위소재",
                       addedAt:new Date().toISOString().slice(0,10)
@@ -4544,7 +4560,18 @@ export default function OaDashboard(){
                   : {border:`1px solid ${C.border}`,background:C.white};
               return(
               <div key={item.id} style={{padding:"10px 12px",borderRadius:10,...cardStyle}}>
-                <div style={{display:"flex",alignItems:"flex-start",gap:8}}>
+                <div style={{display:"flex",alignItems:"flex-start",gap:10}}>
+                  {/* 썸네일 */}
+                  {item.thumbUrl ? (
+                    <div style={{flexShrink:0,width:56,height:56,borderRadius:8,overflow:"hidden",border:`1px solid ${C.border}`,background:C.cream}}>
+                      <ThumbPreview url={item.thumbUrl} name={item.name}/>
+                    </div>
+                  ) : (
+                    <div style={{flexShrink:0,width:56,height:56,borderRadius:8,border:`1px dashed ${C.border}`,background:C.cream,
+                      display:"flex",alignItems:"center",justifyContent:"center",fontSize:20,color:C.inkLt}}>
+                      🖼
+                    </div>
+                  )}
                   <div style={{flex:1,minWidth:0}}>
                     <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:2}}>
                       {isGreat&&<span style={{fontSize:10}}>🌟</span>}
