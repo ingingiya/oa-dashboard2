@@ -4232,34 +4232,36 @@ export default function OaDashboard(){
                                 </BarChart>
                               )}
                             </ResponsiveContainer>
-                            {/* 이미지 저장 버튼 */}
-                            <button onClick={async()=>{
-                              try {
-                                const el = document.getElementById(chartId);
-                                if(!el) return;
-                                const { default: h2c } = await import("html2canvas");
-                                const canvas = await h2c(el, {backgroundColor:"#ffffff",scale:2});
-                                const a = document.createElement("a");
-                                a.href = canvas.toDataURL("image/png");
-                                a.download = `${chartData.title||"chart"}_${new Date().toLocaleDateString("ko-KR").replace(/\./g,"").replace(/ /g,"")}.png`;
-                                a.click();
-                              } catch(e) { alert("이미지 저장 실패: "+e.message); }
-                            }} style={{marginTop:8,width:"100%",padding:"5px",borderRadius:6,
-                              border:`1px solid ${C.border}`,background:C.cream,
-                              color:C.inkMid,fontSize:9,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
-                              🖼 이미지로 저장
-                            </button>
                           </div>
                         );
                       })()}
                     </div>
-                    {/* 저장 버튼 (assistant 메시지만) */}
+                    {/* 저장/이미지 버튼 (assistant 메시지만) */}
                     {!isUser&&(
-                      <button onClick={()=>saveAgentMsg(question, m.content)}
-                        style={{fontSize:9,padding:"3px 10px",borderRadius:6,border:`1px solid ${C.border}`,
-                          background:C.white,cursor:"pointer",fontFamily:"inherit",color:C.inkMid}}>
-                        💾 저장
-                      </button>
+                      <div style={{display:"flex",gap:4}}>
+                        <button onClick={()=>saveAgentMsg(question, m.content)}
+                          style={{fontSize:9,padding:"3px 10px",borderRadius:6,border:`1px solid ${C.border}`,
+                            background:C.white,cursor:"pointer",fontFamily:"inherit",color:C.inkMid}}>
+                          💾 저장
+                        </button>
+                        {chartData&&(
+                          <button onClick={async()=>{
+                            try {
+                              const el = document.getElementById(`chart-${i}`);
+                              if(!el) return;
+                              const { default: h2c } = await import("html2canvas");
+                              const canvas = await h2c(el, {backgroundColor:"#ffffff",scale:2});
+                              const a = document.createElement("a");
+                              a.href = canvas.toDataURL("image/png");
+                              a.download = `${chartData.title||"chart"}_${new Date().toLocaleDateString("ko-KR").replace(/\./g,"").replace(/ /g,"")}.png`;
+                              a.click();
+                            } catch(e) { alert("저장 실패: "+e.message); }
+                          }} style={{fontSize:9,padding:"3px 10px",borderRadius:6,border:`1px solid ${C.border}`,
+                            background:C.white,cursor:"pointer",fontFamily:"inherit",color:C.inkMid}}>
+                            🖼 이미지
+                          </button>
+                        )}
+                      </div>
                     )}
                   </div>
                 );
