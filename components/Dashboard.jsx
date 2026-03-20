@@ -740,8 +740,6 @@ export default function OaDashboard(){
     {id:"erp_hr",        name:"근태/HR",   url:"", group:"erp"},
   ]);
   const [quickLinksEditing, setQuickLinksEditing] = useState(false);
-  const [schedView, setSchedView] = useState("list");
-  const [calMonth, setCalMonth]   = useState(new Date().toISOString().slice(0,7));
 
   // ── 업무관리 (Task V1) ─────────────────────────────
   const [tasks, setTasks]           = useSyncState("oa_tasks_v1", []);
@@ -4475,269 +4473,119 @@ export default function OaDashboard(){
   })();
 
   const ScheduleSection=(()=>{
-    const MEMBER_COLORS = {
-      "영서": "#f9a8d4", "지수": "#93c5fd",
-      "소리": "#86efac", "경은": "#fbbf24",
-    };
+    const MEMBER_COLORS = {"영서":"#f9a8d4","지수":"#93c5fd","소리":"#86efac","경은":"#fbbf24"};
     const getMemberColor = name => {
       const found = Object.entries(MEMBER_COLORS).find(([k])=>name?.includes(k));
       return found ? found[1] : "#c4b5fd";
     };
-
     const todoItems = notionItems.filter(x=>!x.done);
     const doneItems = notionItems.filter(x=>x.done);
-    const allItems  = [...notionItems];
-
-    // 달력 계산
-    const calParts = calMonth.split("-").map(Number);
-    const calY = calParts[0];
-    const calM = calParts[1];
-    const firstDay = new Date(calY, calM-1, 1).getDay(); // 0=일
-    const daysInMonth = new Date(calY, calM, 0).getDate();
-    const prevMonth = () => {
-      const d = new Date(calY, calM-2, 1);
-      setCalMonth(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}`);
-    };
-    const nextMonth = () => {
-      const d = new Date(calY, calM, 1);
-      setCalMonth(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}`);
-    };
-    const itemsByDate = {};
-    allItems.forEach(item=>{
-      if(!item.date) return;
-      const d = item.date.slice(0,10);
-      if(!itemsByDate[d]) itemsByDate[d]=[];
-      itemsByDate[d].push(item);
-    });
-    // 오늘
-    const todayStr = new Date().toISOString().slice(0,10);
-
     return(
     <div style={{display:"flex",flexDirection:"column",gap:14}}>
-
-      {/* ── 뷰 전환 + 헤더 ── */}
-      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:8,flexWrap:"wrap"}}>
-        <div style={{display:"flex",gap:4,padding:"3px",background:C.cream,borderRadius:9}}>
-          {[{id:"list",label:"📋 목록"},{id:"calendar",label:"📅 달력"}].map(v=>(
-            <button key={v.id} onClick={()=>setSchedView(v.id)}
-              style={{padding:"5px 14px",borderRadius:7,border:"none",cursor:"pointer",fontSize:11,fontWeight:700,fontFamily:"inherit",
-                background:schedView===v.id?C.white:"transparent",color:schedView===v.id?C.ink:C.inkMid,
-                boxShadow:schedView===v.id?"0 1px 4px rgba(0,0,0,0.1)":"none"}}>
-              {v.label}
+      <div style={{background:C.white,border:`1px solid ${C.border}`,borderRadius:14,padding:"16px"}}>
+        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12}}>
+          <div>
+            <div style={{fontSize:13,fontWeight:800,color:C.ink}}>📋 소재 스케줄</div>
+            <div style={{fontSize:10,color:C.inkLt,marginTop:2}}>노션 연동 · 실시간 동기화</div>
+          </div>
+          <div style={{display:"flex",gap:6}}>
+            <button onClick={fetchNotion}
+              style={{fontSize:10,padding:"5px 12px",borderRadius:8,border:`1px solid ${C.border}`,
+                background:C.cream,color:C.inkMid,cursor:"pointer",fontFamily:"inherit",fontWeight:700}}>
+              {notionLoading?"⏳":"🔄"} 새로고침
+            </button>
+            <button onClick={()=>setNotionAddModal(true)}
+              style={{fontSize:10,padding:"5px 12px",borderRadius:8,border:"none",
+                background:C.rose,color:C.white,cursor:"pointer",fontFamily:"inherit",fontWeight:700}}>
+              + 추가
+            </button>
+          </div>
+        </div>
+        <div style={{display:"flex",gap:4,marginBottom:12,borderBottom:`1px solid ${C.border}`,paddingBottom:8}}>
+          {[{id:"todo",label:`진행 중 (${todoItems.length})`},{id:"done",label:`완료 (${doneItems.length})`}].map(t=>(
+            <button key={t.id} onClick={()=>setNotionTab(t.id)}
+              style={{padding:"5px 14px",borderRadius:8,border:"none",cursor:"pointer",fontFamily:"inherit",
+                fontSize:11,fontWeight:700,background:notionTab===t.id?C.rose:"transparent",
+                color:notionTab===t.id?C.white:C.inkMid}}>
+              {t.label}
             </button>
           ))}
         </div>
-        <div style={{display:"flex",gap:6}}>
-          <button onClick={fetchNotion}
-            style={{fontSize:10,padding:"5px 12px",borderRadius:8,border:`1px solid ${C.border}`,
-              background:C.cream,color:C.inkMid,cursor:"pointer",fontFamily:"inherit",fontWeight:700}}>
-            {notionLoading?"⏳":"🔄"} 동기화
-          </button>
-          <button onClick={()=>setNotionAddModal(true)}
-            style={{fontSize:10,padding:"5px 12px",borderRadius:8,border:"none",
-              background:C.rose,color:C.white,cursor:"pointer",fontFamily:"inherit",fontWeight:700}}>
-            + 추가
-          </button>
-        </div>
-      </div>
-
-      {notionError&&(
-        <div style={{background:"#FEF0F0",border:`1px solid ${C.bad}33`,borderRadius:8,padding:"10px 12px",
-          fontSize:11,color:C.bad}}>
-          ❌ {notionError} — NOTION_TOKEN 환경변수를 확인해줘요
-        </div>
-      )}
-
-      {/* ── 달력 뷰 ── */}
-      {schedView==="calendar"&&(
-        <div style={{background:C.white,border:`1px solid ${C.border}`,borderRadius:14,padding:"16px"}}>
-          {/* 달력 헤더 */}
-          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:14}}>
-            <button onClick={prevMonth}
-              style={{padding:"5px 12px",borderRadius:8,border:`1px solid ${C.border}`,background:C.cream,
-                color:C.inkMid,cursor:"pointer",fontFamily:"inherit",fontWeight:700,fontSize:12}}>‹</button>
-            <div style={{fontSize:14,fontWeight:800,color:C.ink}}>{calY}년 {calM}월</div>
-            <button onClick={nextMonth}
-              style={{padding:"5px 12px",borderRadius:8,border:`1px solid ${C.border}`,background:C.cream,
-                color:C.inkMid,cursor:"pointer",fontFamily:"inherit",fontWeight:700,fontSize:12}}>›</button>
+        {notionError&&(
+          <div style={{background:"#FEF0F0",border:`1px solid ${C.bad}33`,borderRadius:8,padding:"10px 12px",
+            fontSize:11,color:C.bad,marginBottom:10}}>
+            ❌ {notionError}
           </div>
-          {/* 요일 헤더 */}
-          <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:2,marginBottom:4}}>
-            {["일","월","화","수","목","금","토"].map((d,i)=>(
-              <div key={d} style={{textAlign:"center",fontSize:10,fontWeight:700,
-                color:i===0?C.bad:i===6?"#60a5fa":C.inkMid,padding:"4px 0"}}>{d}</div>
-            ))}
-          </div>
-          {/* 날짜 셀 */}
-          <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:2}}>
-            {/* 빈 칸 */}
-            {Array.from({length:firstDay}).map((_,i)=>(
-              <div key={`empty-${i}`} style={{minHeight:64,borderRadius:8,background:C.cream,opacity:0.3}}/>
-            ))}
-            {/* 날짜 */}
-            {Array.from({length:daysInMonth}).map((_,i)=>{
-              const day = i+1;
-              const dateStr = `${calY}-${String(calM).padStart(2,"0")}-${String(day).padStart(2,"0")}`;
-              const dayItems = itemsByDate[dateStr]||[];
-              const isToday = dateStr===todayStr;
-              const dow = (firstDay+i)%7;
+        )}
+        {notionLoading&&!notionItems.length?(
+          <div style={{textAlign:"center",padding:"24px",color:C.inkLt,fontSize:11}}>⏳ 노션에서 불러오는 중...</div>
+        ):(
+          <div style={{display:"flex",flexDirection:"column",gap:8}}>
+            {(notionTab==="todo"?todoItems:doneItems).map(item=>{
+              const assignee = item.assignee;
+              const memberColor = item.assigneeColor||getMemberColor(item.name)||"#c4b5fd";
+              const daysLeft = item.date ? Math.ceil((new Date(item.date)-new Date())/(1000*60*60*24)) : null;
+              const typeColor = {공구:C.rose,시딩:C.purple,광고:C.gold,이벤트:C.sage}[item.select]||C.inkMid;
               return(
-                <div key={day} style={{
-                  minHeight:64,borderRadius:8,padding:"4px 5px",
-                  background:isToday?C.blush:C.white,
-                  border:`1px solid ${isToday?C.rose+"66":C.border}`,
-                }}>
-                  <div style={{fontSize:10,fontWeight:isToday?900:600,
-                    color:isToday?C.rose:dow===0?C.bad:dow===6?"#60a5fa":C.inkMid,
-                    marginBottom:3}}>
-                    {day}
+                <div key={item.id} style={{display:"flex",alignItems:"flex-start",gap:10,
+                  padding:"10px 12px",borderRadius:10,
+                  border:`1px solid ${item.done?"#e5e7eb":daysLeft!==null&&daysLeft<=3&&daysLeft>=0?C.rose+"44":C.border}`,
+                  background:item.done?"#f9fafb":daysLeft!==null&&daysLeft<=3&&daysLeft>=0?"#FFF8FC":C.white,
+                  opacity:item.done?0.6:1}}>
+                  <button onClick={()=>toggleNotionDone(item.id,!item.done)}
+                    style={{width:18,height:18,borderRadius:5,border:`2px solid ${item.done?C.good:C.border}`,
+                      background:item.done?C.good:"transparent",cursor:"pointer",flexShrink:0,marginTop:1,
+                      display:"flex",alignItems:"center",justifyContent:"center",color:C.white,fontSize:11}}>
+                    {item.done?"✓":""}
+                  </button>
+                  <div style={{flex:1,minWidth:0}}>
+                    <div style={{display:"flex",alignItems:"center",gap:6,flexWrap:"wrap",marginBottom:3}}>
+                      <span style={{fontSize:12,fontWeight:800,color:item.done?C.inkLt:C.ink,
+                        textDecoration:item.done?"line-through":"none"}}>
+                        {item.name||"(제목없음)"}
+                      </span>
+                      {item.select&&<span style={{fontSize:9,padding:"2px 8px",borderRadius:20,background:`${typeColor}18`,color:typeColor,fontWeight:700}}>{item.select}</span>}
+                      {item.product&&<span style={{fontSize:9,padding:"2px 8px",borderRadius:20,background:`${C.rose}15`,color:C.rose,fontWeight:700}}>{item.product}</span>}
+                      {assignee&&<span style={{fontSize:9,padding:"2px 8px",borderRadius:20,background:`${memberColor}25`,color:memberColor,fontWeight:800,border:`1px solid ${memberColor}55`}}>{assignee}</span>}
+                    </div>
+                    <div style={{display:"flex",gap:10,alignItems:"center",flexWrap:"wrap"}}>
+                      {item.date&&(
+                        <span style={{fontSize:10,color:daysLeft!==null&&daysLeft<=3&&daysLeft>=0?C.rose:C.inkLt,fontWeight:600}}>
+                          📅 {item.date}
+                          {daysLeft!==null&&<span style={{marginLeft:4,fontWeight:800}}>
+                            {daysLeft===0?"오늘":daysLeft<0?`D+${Math.abs(daysLeft)}`:`D-${daysLeft}`}
+                          </span>}
+                        </span>
+                      )}
+                      {item.status&&<span style={{fontSize:9,color:C.inkLt,background:C.cream,padding:"1px 6px",borderRadius:10}}>{item.status}</span>}
+                    </div>
                   </div>
-                  <div style={{display:"flex",flexDirection:"column",gap:2}}>
-                    {dayItems.slice(0,3).map((item,j)=>(
-                      <div key={j} style={{
-                        fontSize:9,fontWeight:600,padding:"1px 5px",borderRadius:4,
-                        background:getMemberColor(item.assignee||item.name)+"30",
-                        color:getMemberColor(item.assignee||item.name),
-                        overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",
-                        textDecoration:item.done?"line-through":"none",opacity:item.done?0.5:1,
-                      }} title={item.name}>
-                        {item.name}
-                      </div>
-                    ))}
-                    {dayItems.length>3&&(
-                      <div style={{fontSize:8,color:C.inkLt,paddingLeft:4}}>+{dayItems.length-3}개</div>
-                    )}
-                  </div>
+                  <button onClick={()=>deleteNotionItem(item.id)}
+                    style={{background:"none",border:"none",cursor:"pointer",color:C.inkLt,fontSize:12,padding:"2px 4px",opacity:0.4,flexShrink:0}}
+                    onMouseEnter={e=>e.currentTarget.style.opacity="1"}
+                    onMouseLeave={e=>e.currentTarget.style.opacity="0.4"}>✕</button>
                 </div>
               );
             })}
-          </div>
-          {/* 범례 */}
-          <div style={{display:"flex",gap:10,marginTop:12,flexWrap:"wrap"}}>
-            {Object.entries(MEMBER_COLORS).map(([name,color])=>(
-              <div key={name} style={{display:"flex",alignItems:"center",gap:4}}>
-                <div style={{width:8,height:8,borderRadius:"50%",background:color}}/>
-                <span style={{fontSize:10,color:C.inkMid}}>{name}</span>
+            {(notionTab==="todo"?todoItems:doneItems).length===0&&(
+              <div style={{textAlign:"center",padding:"20px",color:C.inkLt,fontSize:11}}>
+                {notionTab==="todo"?"진행 중인 일정이 없어요 🎉":"완료된 일정이 없어요"}
               </div>
-            ))}
+            )}
           </div>
-        </div>
-      )}
-
-      {/* ── 목록 뷰 ── */}
-      {schedView==="list"&&(
-        <div style={{background:C.white,border:`1px solid ${C.border}`,borderRadius:14,padding:"16px"}}>
-          <div style={{display:"flex",gap:4,marginBottom:12,borderBottom:`1px solid ${C.border}`,paddingBottom:8}}>
-            {[{id:"todo",label:`진행 중 (${todoItems.length})`},{id:"done",label:`완료 (${doneItems.length})`}].map(t=>(
-              <button key={t.id} onClick={()=>setNotionTab(t.id)}
-                style={{padding:"5px 14px",borderRadius:8,border:"none",cursor:"pointer",fontFamily:"inherit",
-                  fontSize:11,fontWeight:700,background:notionTab===t.id?C.rose:"transparent",
-                  color:notionTab===t.id?C.white:C.inkMid}}>
-                {t.label}
-              </button>
-            ))}
-          </div>
-
-          {notionLoading&&!notionItems.length?(
-            <div style={{textAlign:"center",padding:"24px",color:C.inkLt,fontSize:11}}>⏳ 노션에서 불러오는 중...</div>
-          ):(
-            <div style={{display:"flex",flexDirection:"column",gap:8}}>
-              {(notionTab==="todo"?todoItems:doneItems).map(item=>{
-                const assignee = item.assignee;
-                const memberColor = item.assigneeColor || "#c4b5fd";
-                const daysLeft = item.date ? Math.ceil((new Date(item.date)-new Date())/(1000*60*60*24)) : null;
-                const typeColor = {공구:C.rose,시딩:C.purple,광고:C.gold,이벤트:C.sage}[item.select]||C.inkMid;
-                return(
-                  <div key={item.id} style={{
-                    display:"flex",alignItems:"flex-start",gap:10,
-                    padding:"10px 12px",borderRadius:10,
-                    border:`1px solid ${item.done?"#e5e7eb":daysLeft!==null&&daysLeft<=3&&daysLeft>=0?C.rose+"44":C.border}`,
-                    background:item.done?"#f9fafb":daysLeft!==null&&daysLeft<=3&&daysLeft>=0?"#FFF8FC":C.white,
-                    opacity:item.done?0.6:1,
-                  }}>
-                    <button onClick={()=>toggleNotionDone(item.id,!item.done)}
-                      style={{width:18,height:18,borderRadius:5,border:`2px solid ${item.done?C.good:C.border}`,
-                        background:item.done?C.good:"transparent",cursor:"pointer",flexShrink:0,marginTop:1,
-                        display:"flex",alignItems:"center",justifyContent:"center",color:C.white,fontSize:11}}>
-                      {item.done?"✓":""}
-                    </button>
-                    <div style={{flex:1,minWidth:0}}>
-                      <div style={{display:"flex",alignItems:"center",gap:6,flexWrap:"wrap",marginBottom:3}}>
-                        <span style={{fontSize:12,fontWeight:800,color:item.done?C.inkLt:C.ink,
-                          textDecoration:item.done?"line-through":"none"}}>
-                          {item.name||"(제목없음)"}
-                        </span>
-                        {item.select&&(
-                          <span style={{fontSize:9,padding:"2px 8px",borderRadius:20,
-                            background:`${typeColor}18`,color:typeColor,fontWeight:700}}>
-                            {item.select}
-                          </span>
-                        )}
-                        {item.product&&(
-                          <span style={{fontSize:9,padding:"2px 8px",borderRadius:20,
-                            background:`${C.rose}15`,color:C.rose,fontWeight:700}}>
-                            {item.product}
-                          </span>
-                        )}
-                        {assignee&&(
-                          <span style={{fontSize:9,padding:"2px 8px",borderRadius:20,
-                            background:`${memberColor}25`,color:memberColor,fontWeight:800,
-                            border:`1px solid ${memberColor}55`}}>
-                            {assignee}
-                          </span>
-                        )}
-                      </div>
-                      <div style={{display:"flex",gap:10,alignItems:"center",flexWrap:"wrap"}}>
-                        {item.date&&(
-                          <span style={{fontSize:10,color:daysLeft!==null&&daysLeft<=3&&daysLeft>=0?C.rose:C.inkLt,fontWeight:600}}>
-                            📅 {item.date}
-                            {daysLeft!==null&&<span style={{marginLeft:4,fontWeight:800}}>
-                              {daysLeft===0?"오늘":daysLeft<0?`D+${Math.abs(daysLeft)}`:`D-${daysLeft}`}
-                            </span>}
-                          </span>
-                        )}
-                        {item.status&&<span style={{fontSize:9,color:C.inkLt,background:C.cream,padding:"1px 6px",borderRadius:10}}>{item.status}</span>}
-                      </div>
-                    </div>
-                    <button onClick={()=>deleteNotionItem(item.id)}
-                      style={{background:"none",border:"none",cursor:"pointer",color:C.inkLt,fontSize:12,
-                        padding:"2px 4px",opacity:0.4,flexShrink:0}}
-                      onMouseEnter={e=>e.currentTarget.style.opacity="1"}
-                      onMouseLeave={e=>e.currentTarget.style.opacity="0.4"}>
-                      ✕
-                    </button>
-                  </div>
-                );
-              })}
-              {(notionTab==="todo"?todoItems:doneItems).length===0&&(
-                <div style={{textAlign:"center",padding:"20px",color:C.inkLt,fontSize:11}}>
-                  {notionTab==="todo"?"진행 중인 일정이 없어요 🎉":"완료된 일정이 없어요"}
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-      )}
-
-
-      {/* 노션 일정 추가 모달 */}
+        )}
+      </div>
       {notionAddModal&&(
         <Modal title="📋 소재 일정 추가" onClose={()=>setNotionAddModal(false)}>
-          <FR label="소재명 *">
-            <Inp value={notionForm.name} onChange={v=>setNotionForm(f=>({...f,name:v}))} placeholder="소재명 입력"/>
-          </FR>
-          <FR label="시작일">
-            <Inp type="date" value={notionForm.date} onChange={v=>setNotionForm(f=>({...f,date:v}))}/>
-          </FR>
-          <FR label="제품">
-            <Inp value={notionForm.product} onChange={v=>setNotionForm(f=>({...f,product:v}))} placeholder="소닉플로우, 프리온 등"/>
-          </FR>
+          <FR label="소재명 *"><Inp value={notionForm.name} onChange={v=>setNotionForm(f=>({...f,name:v}))} placeholder="소재명 입력"/></FR>
+          <FR label="시작일"><Inp type="date" value={notionForm.date} onChange={v=>setNotionForm(f=>({...f,date:v}))}/></FR>
+          <FR label="제품"><Inp value={notionForm.product} onChange={v=>setNotionForm(f=>({...f,product:v}))} placeholder="소닉플로우, 프리온 등"/></FR>
           <FR label="담당자">
             <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
               {["영서","지수","소리","경은"].map(name=>(
                 <button key={name} onClick={()=>setNotionForm(f=>({...f,select:name}))}
                   style={{padding:"5px 14px",borderRadius:20,border:`1px solid ${notionForm.select===name?MEMBER_COLORS[name]:C.border}`,
-                    background:notionForm.select===name?`${MEMBER_COLORS[name]}22`:"transparent",
+                    background:notionForm.select===name?MEMBER_COLORS[name]+"22":"transparent",
                     color:notionForm.select===name?MEMBER_COLORS[name]:C.inkMid,
                     fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
                   {name}
@@ -4745,71 +4593,8 @@ export default function OaDashboard(){
               ))}
             </div>
           </FR>
-          <Btn onClick={createNotionItem} style={{width:"100%",marginTop:8}}>추가하기</Btn>
+          <Btn onClick={createNotionItem} style={{width:"100%",marginTop:8}}>추가</Btn>
         </Modal>
-      )}
-      <div className="content-grid-3" style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:10}}>
-        {["공구","시딩","광고","이벤트"].map(type=>{
-          const tc=schTypeColor(type);
-          return(<div key={type} style={{background:C.white,border:`1px solid ${C.border}`,borderRadius:12,padding:"12px 14px",textAlign:"center"}}>
-            <div style={{fontSize:20,marginBottom:4}}>{schTypeIcon(type)}</div>
-            <div style={{fontSize:9,color:C.inkLt,fontWeight:700,letterSpacing:"0.1em"}}>{type}</div>
-            <div style={{fontSize:22,fontWeight:900,color:tc}}>{sch.filter(s=>s.type===type&&s.status!=="완료").length}</div>
-            <div style={{fontSize:9,color:C.inkLt}}>진행 예정</div>
-          </div>);
-        })}
-      </div>
-      <Card>
-        <CardTitle title="📅 전체 일정" sub="공구·시딩·광고·이벤트 통합 스케줄"
-          action={<Btn small onClick={()=>{setSchModalData({mode:"add",initial:null})}}>+ 일정 추가</Btn>}/>
-        {upcoming.length===0&&<div style={{textAlign:"center",color:C.inkLt,fontSize:12,padding:"28px 0"}}>예정된 일정이 없습니다</div>}
-        <div style={{display:"flex",flexDirection:"column",gap:8}}>
-          {upcoming.map(s=>{
-            const d=daysUntil(s.date),tc=schTypeColor(s.type),isUrgent=d!==null&&d<=3&&d>=0;
-            return(<div key={s.id} style={{border:`1px solid ${isUrgent?C.rose+"66":C.border}`,borderRadius:12,
-              padding:"12px 14px",background:isUrgent?"#FFF8FC":C.white,transition:"box-shadow 0.2s"}}
-              onMouseEnter={e=>e.currentTarget.style.boxShadow=`0 4px 16px rgba(232,86,122,0.1)`}
-              onMouseLeave={e=>e.currentTarget.style.boxShadow="none"}>
-              <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",gap:8,flexWrap:"wrap"}}>
-                <div style={{display:"flex",gap:10,alignItems:"flex-start",flex:1,minWidth:0}}>
-                  <div style={{display:"flex",flexDirection:"column",alignItems:"center",minWidth:44,flexShrink:0}}>
-                    <span style={{fontSize:10,fontWeight:700,color:tc,background:`${tc}18`,padding:"2px 8px",borderRadius:20,whiteSpace:"nowrap"}}>{schTypeIcon(s.type)} {s.type}</span>
-                    {d!==null&&<span style={{fontSize:9,marginTop:4,color:d<0?C.bad:d<=3?C.rose:C.inkLt,fontWeight:700}}>{d===0?"오늘":d<0?`D+${Math.abs(d)}`:`D-${d}`}</span>}
-                  </div>
-                  <div>
-                    <div style={{fontSize:13,fontWeight:800,color:C.ink}}>{s.title}</div>
-                    <div style={{fontSize:10,color:C.inkLt,marginTop:2}}>📆 {s.date}{s.endDate?` ~ ${s.endDate}`:""}{s.platform&&` · ${s.platform}`}</div>
-                    {s.note&&<div style={{fontSize:10,color:C.inkMid,marginTop:3}}>💬 {s.note}</div>}
-                  </div>
-                </div>
-                <div style={{display:"flex",gap:6,flexShrink:0}}>
-                  <Btn variant="ghost" small onClick={()=>{setSchModalData({mode:"edit",initial:s})}}>✏️</Btn>
-                  <Btn variant="sage" small onClick={()=>setSch(sch.map(x=>x.id===s.id?{...x,status:"완료"}:x))}>✅</Btn>
-                  <Btn variant="danger" small onClick={()=>setSch(sch.filter(x=>x.id!==s.id))}>🗑</Btn>
-                </div>
-              </div>
-            </div>);
-          })}
-        </div>
-      </Card>
-      {done.length>0&&(
-        <Card>
-          <CardTitle title="✅ 완료된 일정" sub={`${done.length}건`}/>
-          {done.map(s=>(
-            <div key={s.id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",
-              padding:"8px 10px",borderRadius:10,background:C.cream,opacity:0.7,marginBottom:4}}>
-              <div>
-                <span style={{fontSize:10,fontWeight:700,color:schTypeColor(s.type),background:`${schTypeColor(s.type)}18`,
-                  padding:"1px 7px",borderRadius:20,marginRight:8}}>{s.type}</span>
-                <span style={{fontSize:12,fontWeight:600,color:C.inkMid}}>{s.title}</span>
-              </div>
-              <div style={{display:"flex",gap:6,alignItems:"center"}}>
-                <span style={{fontSize:10,color:C.inkLt}}>{s.date}</span>
-                <Btn variant="danger" small onClick={()=>setSch(sch.filter(x=>x.id!==s.id))}>🗑</Btn>
-              </div>
-            </div>
-          ))}
-        </Card>
       )}
     </div>
     );
