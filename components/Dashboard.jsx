@@ -4131,15 +4131,47 @@ export default function OaDashboard(){
                 <div style={{textAlign:"center",padding:"20px 10px"}}>
                   <div style={{fontSize:28,marginBottom:8}}>👋</div>
                   <div style={{fontSize:12,fontWeight:700,color:C.ink,marginBottom:6}}>안녕하세요! 마케팅 데이터 에이전트예요</div>
-                  <div style={{fontSize:10,color:C.inkLt,lineHeight:1.6}}>현재 메타광고 데이터를 알고 있어요.<br/>궁금한 거 뭐든 물어보세요!</div>
-                  <div style={{marginTop:14,display:"flex",flexDirection:"column",gap:6}}>
-                    {["ROAS 가장 높은 광고 뭐야?","오늘 광고비 얼마야?","어떤 광고 꺼야 할까?","날짜별 광고비 그래프 그려줘"].map(q=>(
-                      <button key={q} onClick={()=>setAgentInput(q)}
-                        style={{padding:"7px 12px",borderRadius:10,border:`1px solid ${C.border}`,
-                          background:C.cream,color:C.inkMid,fontSize:10,fontWeight:600,
-                          cursor:"pointer",fontFamily:"inherit",textAlign:"left"}}>
-                        {q}
-                      </button>
+                  <div style={{fontSize:10,color:C.inkLt,lineHeight:1.6}}>현재 메타광고 · 재고 데이터를 알고 있어요.<br/>아래 질문을 눌러보세요!</div>
+                  <div style={{marginTop:14,display:"flex",flexDirection:"column",gap:10,textAlign:"left"}}>
+                    {[
+                      {label:"📊 성과 분석", qs:[
+                        "ROAS 가장 높은 광고 TOP 3 알려줘",
+                        "CPA 가장 낮은 광고 뭐야?",
+                        "LPV율 낮은 광고 있어? 랜딩 문제 의심되는 거",
+                        "CTR 낮아서 소재 문제인 광고 찾아줘",
+                      ]},
+                      {label:"💰 광고비 현황", qs:[
+                        "날짜별 광고비 추이 그래프 그려줘",
+                        "전환 vs 트래픽 광고비 비율 파이차트로 보여줘",
+                        "광고별 광고비 바차트 그려줘",
+                      ]},
+                      {label:"🔍 광고 판단", qs:[
+                        "지금 당장 꺼야 할 광고 있어?",
+                        "예산 올려볼 만한 광고 추천해줘",
+                        "소닉플로우 광고 중에 성과 좋은 거 뭐야?",
+                        "프리온 광고 CPA 어때?",
+                      ]},
+                      {label:"📦 재고", qs:[
+                        "재고 소진 임박한 제품 있어?",
+                        "재고 현황 전체 알려줘",
+                      ]},
+                    ].map(cat=>(
+                      <div key={cat.label}>
+                        <div style={{fontSize:10,fontWeight:800,color:C.ink,marginBottom:5}}>{cat.label}</div>
+                        <div style={{display:"flex",flexDirection:"column",gap:4}}>
+                          {cat.qs.map(q=>(
+                            <button key={q} onClick={()=>setAgentInput(q)}
+                              style={{padding:"7px 12px",borderRadius:10,border:`1px solid ${C.border}`,
+                                background:C.white,color:C.inkMid,fontSize:10,fontWeight:500,
+                                cursor:"pointer",fontFamily:"inherit",textAlign:"left",
+                                transition:"background 0.15s"}}
+                              onMouseEnter={e=>e.target.style.background=C.cream}
+                              onMouseLeave={e=>e.target.style.background=C.white}>
+                              {q}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
                     ))}
                   </div>
                 </div>
