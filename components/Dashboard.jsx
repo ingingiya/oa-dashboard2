@@ -572,20 +572,20 @@ function InvModalComp({mode, initial, onSave, onClose}){
 
 // 스케줄 추가/수정 모달
 function SchModalComp({mode, initial, onSave, onClose}){
-  const empty = {type:"공구",title:"",date:"",endDate:"",platform:"",note:"",status:"예정"};
+  const empty = {type:"공구",title:"",date:"",endDate:"",assignee:"",note:"",status:"예정"};
   const [f, setF] = useState(()=>initial||empty);
   const set = (k,v) => setF(p=>({...p,[k]:v}));
   return(
     <Modal title={mode==="add"?"일정 추가":"일정 수정"} onClose={onClose}>
-      <FR label="유형"><Sel value={f.type} onChange={v=>set("type",v)} options={["공구","시딩","광고","이벤트"]}/></FR>
+      <FR label="유형"><Sel value={f.type} onChange={v=>set("type",v)} options={["공구","시딩","광고","이벤트","촬영","기타"]}/></FR>
       <FR label="제목 *"><Inp value={f.title} onChange={v=>set("title",v)} placeholder="세럼 30ml 공구 오픈"/></FR>
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:12}}>
         <FR label="시작일 *"><Inp type="date" value={f.date} onChange={v=>set("date",v)}/></FR>
         <FR label="종료일"><Inp type="date" value={f.endDate} onChange={v=>set("endDate",v)}/></FR>
       </div>
-      <FR label="플랫폼"><Inp value={f.platform} onChange={v=>set("platform",v)} placeholder="네이버 스마트스토어"/></FR>
-      <FR label="메모"><Inp value={f.note} onChange={v=>set("note",v)} placeholder="한도 수량, 할인율 등"/></FR>
-      <FR label="상태"><Sel value={f.status} onChange={v=>set("status",v)} options={["예정","준비중","진행중","완료"]}/></FR>
+      <FR label="담당자"><Sel value={f.assignee||""} onChange={v=>set("assignee",v)} options={["","소리","영서","경은","지수"]}/></FR>
+      <FR label="메모"><Inp value={f.note||""} onChange={v=>set("note",v)} placeholder="한도 수량, 할인율 등"/></FR>
+      <FR label="상태"><Sel value={f.status} onChange={v=>set("status",v)} options={["예정","진행중","완료","보류"]}/></FR>
       <Btn onClick={()=>{if(!f.title||!f.date)return; onSave(f);}} style={{width:"100%",marginTop:8}}>💾 저장</Btn>
     </Modal>
   );
@@ -605,6 +605,69 @@ export default function OaDashboard(){
   const [infs,setInfs] = useState([]);
   const [inv, setInv]         = useSyncState("oa_inv_v7",     DEFAULT_INV);
   const [sch, setSch]         = useSyncState("oa_sch_v7", DEFAULT_SCH);
+
+  // ── Notion 스케줄 연동 ──────────────────────────────
+  const [notionSch, setNotionSch] = useState([]);
+  const [notionLoading, setNotionLoading] = useState(false);
+  const [notionError, setNotionError] = useState(null);
+
+  const fetchNotionSch = useCallback(async () => {
+    setNotionLoading(true);
+    setNotionError(null);
+    try {
+      const res = await fetch("/api/notion");
+      const data = await res.json();
+      if (data.error) { setNotionError(data.error); }
+      else { setNotionSch(data.items || []); }
+    } catch(e) { setNotionError(e.message); }
+    setNotionLoading(false);
+  }, []);
+
+  useEffect(() => { fetchNotionSch(); }, [fetchNotionSch]);
+
+  async function saveNotionSch(item) {
+    if (schModalData?.mode === "edit" && item.notionId) {
+      await fetch("/api/notion", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "update", pageId: item.notionId, data: {
+          title: item.title, date: item.date, endDate: item.endDate || null,
+          assignee: item.assignee || null, type: item.type, status: item.status,
+          memo: item.note || "",
+        }}),
+      });
+    } else {
+      await fetch("/api/notion", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "create", data: {
+          title: item.title, date: item.date, endDate: item.endDate || null,
+          assignee: item.assignee || null, type: item.type, status: item.status || "예정",
+          memo: item.note || "",
+        }}),
+      });
+    }
+    await fetchNotionSch();
+    setSchModalData(null);
+  }
+
+  async function deleteNotionSch(notionId) {
+    await fetch("/api/notion", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "delete", pageId: notionId }),
+    });
+    setNotionSch(prev => prev.filter(s => s.id !== notionId));
+  }
+
+  async function toggleNotionDone(notionId, done) {
+    setNotionSch(prev => prev.map(s => s.id === notionId ? { ...s, done } : s));
+    await fetch("/api/notion", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "toggle", pageId: notionId, done }),
+    });
+  }
 
   // 마진 설정
   const [margin, setMargin]   = useSyncState("oa_margin_v7", 30000);
@@ -1443,8 +1506,8 @@ export default function OaDashboard(){
   const overdueIns     = infs.filter(f=>{const s=insightStatus(f);return s.label.includes("미입력")||s.label==="오늘 입력!";});
   const dangerInv      = inv.filter(i=>stockStatus(i).label==="위험");
   const cautionInv     = inv.filter(i=>stockStatus(i).label==="주의");
-  const overdueScheds  = sch.filter(s=>{const d=daysUntil(s.endDate||s.date);return d!==null&&d<0&&s.status!=="완료";});
-  const urgentScheds   = sch.filter(s=>{const d=daysUntil(s.date);return d!==null&&d>=0&&d<=5&&s.status!=="완료";});
+  const overdueScheds  = notionSch.filter(s=>{const d=daysUntil(s.endDate||s.date);return d!==null&&d<0&&s.status!=="완료";});
+  const urgentScheds   = notionSch.filter(s=>{const d=daysUntil(s.date);return d!==null&&d>=0&&d<=5&&s.status!=="완료";});
   // 광고 교체/보류 알림 — 시트 데이터 있을 때만
   const adAlerts = hasSheet ? metaFiltered.reduce((acc, r)=>{
     const key = (r.adName||r.campaign||"") + "|||" + (r.adset||"");
@@ -3723,8 +3786,8 @@ export default function OaDashboard(){
   );
   })();
 
-  const upcoming=sch.filter(s=>s.status!=="완료").sort((a,b)=>new Date(a.date)-new Date(b.date));
-  const done=sch.filter(s=>s.status==="완료");
+  const upcoming=notionSch.filter(s=>s.status!=="완료").sort((a,b)=>new Date(a.date)-new Date(b.date));
+  const done=notionSch.filter(s=>s.status==="완료");
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   // 💰 총광고비
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -4042,25 +4105,39 @@ export default function OaDashboard(){
   })();
 
   const ScheduleSection=(()=>{
+    const nUpcoming = notionSch.filter(s=>s.status!=="완료").sort((a,b)=>new Date(a.date)-new Date(b.date));
+    const nDone = notionSch.filter(s=>s.status==="완료");
     return(
     <div style={{display:"flex",flexDirection:"column",gap:14}}>
+      {/* Notion 연동 상태 배너 */}
+      <div style={{display:"flex",alignItems:"center",gap:10,padding:"10px 14px",background:C.white,
+        border:`1px solid ${notionError?C.bad+"44":C.good+"44"}`,borderRadius:12}}>
+        <span style={{fontSize:16}}>{notionLoading?"⏳":notionError?"❌":"🟢"}</span>
+        <div style={{flex:1,fontSize:11,fontWeight:700,color:notionError?C.bad:C.good}}>
+          {notionLoading?"노션 불러오는 중...":notionError?`노션 오류: ${notionError}`:`노션 연동됨 · ${notionSch.length}개`}
+        </div>
+        <button onClick={fetchNotionSch} style={{fontSize:10,padding:"4px 10px",borderRadius:8,
+          border:`1px solid ${C.border}`,background:C.cream,cursor:"pointer",fontFamily:"inherit",fontWeight:700}}>
+          🔄 새로고침
+        </button>
+      </div>
       <div className="content-grid-3" style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:10}}>
         {["공구","시딩","광고","이벤트"].map(type=>{
           const tc=schTypeColor(type);
           return(<div key={type} style={{background:C.white,border:`1px solid ${C.border}`,borderRadius:12,padding:"12px 14px",textAlign:"center"}}>
             <div style={{fontSize:20,marginBottom:4}}>{schTypeIcon(type)}</div>
             <div style={{fontSize:9,color:C.inkLt,fontWeight:700,letterSpacing:"0.1em"}}>{type}</div>
-            <div style={{fontSize:22,fontWeight:900,color:tc}}>{sch.filter(s=>s.type===type&&s.status!=="완료").length}</div>
+            <div style={{fontSize:22,fontWeight:900,color:tc}}>{notionSch.filter(s=>s.type===type&&s.status!=="완료").length}</div>
             <div style={{fontSize:9,color:C.inkLt}}>진행 예정</div>
           </div>);
         })}
       </div>
       <Card>
-        <CardTitle title="📅 전체 일정" sub="공구·시딩·광고·이벤트 통합 스케줄"
+        <CardTitle title="📅 전체 일정" sub="노션 연동 스케줄"
           action={<Btn small onClick={()=>{setSchModalData({mode:"add",initial:null})}}>+ 일정 추가</Btn>}/>
-        {upcoming.length===0&&<div style={{textAlign:"center",color:C.inkLt,fontSize:12,padding:"28px 0"}}>예정된 일정이 없습니다</div>}
+        {nUpcoming.length===0&&!notionLoading&&<div style={{textAlign:"center",color:C.inkLt,fontSize:12,padding:"28px 0"}}>예정된 일정이 없습니다</div>}
         <div style={{display:"flex",flexDirection:"column",gap:8}}>
-          {upcoming.map(s=>{
+          {nUpcoming.map(s=>{
             const d=daysUntil(s.date),tc=schTypeColor(s.type),isUrgent=d!==null&&d<=3&&d>=0;
             return(<div key={s.id} style={{border:`1px solid ${isUrgent?C.rose+"66":C.border}`,borderRadius:12,
               padding:"12px 14px",background:isUrgent?"#FFF8FC":C.white,transition:"box-shadow 0.2s"}}
@@ -4074,24 +4151,27 @@ export default function OaDashboard(){
                   </div>
                   <div>
                     <div style={{fontSize:13,fontWeight:800,color:C.ink}}>{s.title}</div>
-                    <div style={{fontSize:10,color:C.inkLt,marginTop:2}}>📆 {s.date}{s.endDate?` ~ ${s.endDate}`:""}{s.platform&&` · ${s.platform}`}</div>
-                    {s.note&&<div style={{fontSize:10,color:C.inkMid,marginTop:3}}>💬 {s.note}</div>}
+                    <div style={{fontSize:10,color:C.inkLt,marginTop:2}}>
+                      📆 {s.date}{s.endDate?` ~ ${s.endDate}`:""}
+                      {s.assignee&&<span style={{marginLeft:6,padding:"1px 6px",borderRadius:10,background:s.assigneeColor+"22",color:s.assigneeColor,fontWeight:700}}>{s.assignee}</span>}
+                    </div>
+                    {s.memo&&<div style={{fontSize:10,color:C.inkMid,marginTop:3}}>💬 {s.memo}</div>}
                   </div>
                 </div>
                 <div style={{display:"flex",gap:6,flexShrink:0}}>
-                  <Btn variant="ghost" small onClick={()=>{setSchModalData({mode:"edit",initial:s})}}>✏️</Btn>
-                  <Btn variant="sage" small onClick={()=>setSch(sch.map(x=>x.id===s.id?{...x,status:"완료"}:x))}>✅</Btn>
-                  <Btn variant="danger" small onClick={()=>setSch(sch.filter(x=>x.id!==s.id))}>🗑</Btn>
+                  <Btn variant="ghost" small onClick={()=>{setSchModalData({mode:"edit",initial:{...s,notionId:s.id,note:s.memo}})}}>✏️</Btn>
+                  <Btn variant="sage" small onClick={()=>toggleNotionDone(s.id, true)}>✅</Btn>
+                  <Btn variant="danger" small onClick={()=>deleteNotionSch(s.id)}>🗑</Btn>
                 </div>
               </div>
             </div>);
           })}
         </div>
       </Card>
-      {done.length>0&&(
+      {nDone.length>0&&(
         <Card>
-          <CardTitle title="✅ 완료된 일정" sub={`${done.length}건`}/>
-          {done.map(s=>(
+          <CardTitle title="✅ 완료된 일정" sub={`${nDone.length}건`}/>
+          {nDone.map(s=>(
             <div key={s.id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",
               padding:"8px 10px",borderRadius:10,background:C.cream,opacity:0.7,marginBottom:4}}>
               <div>
@@ -4101,7 +4181,7 @@ export default function OaDashboard(){
               </div>
               <div style={{display:"flex",gap:6,alignItems:"center"}}>
                 <span style={{fontSize:10,color:C.inkLt}}>{s.date}</span>
-                <Btn variant="danger" small onClick={()=>setSch(sch.filter(x=>x.id!==s.id))}>🗑</Btn>
+                <Btn variant="danger" small onClick={()=>deleteNotionSch(s.id)}>🗑</Btn>
               </div>
             </div>
           ))}
@@ -4319,14 +4399,7 @@ export default function OaDashboard(){
       {schModalData&&<SchModalComp
         mode={schModalData.mode}
         initial={schModalData.initial}
-        onSave={(item)=>{
-          if(schModalData.mode==="edit"){
-            setSch(arr=>arr.map(x=>x.id===item.id?item:x));
-          } else {
-            setSch(arr=>[...arr,{...item,id:Date.now()}]);
-          }
-          setSchModalData(null);
-        }}
+        onSave={saveNotionSch}
         onClose={()=>setSchModalData(null)}
       />}
 
