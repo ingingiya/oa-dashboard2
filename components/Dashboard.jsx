@@ -4360,17 +4360,23 @@ export default function OaDashboard(){
 
     // MetaSection과 동일한 기준으로 "잘 나온 소재" 판정
     function adQuality(ad) {
-      const isConv = isConversionCampaign(ad.objective, ad.campaign);
-      if (isConv) {
-        const adMargin = getAdMargin(ad.adName, ad.campaign, margins, margin);
-        const cpa  = cpaStatus(ad.spend, ad.purchases, adMargin, getConvCriteria(ad.adName, ad.campaign, convCriteria));
-        const lpvR = lpvRateStatus(ad.clicks, ad.lpv, getConvCriteria(ad.adName, ad.campaign, convCriteria));
-        return (cpa?.label==="유지") && (lpvR?.label==="정상") ? "good" : "normal";
-      } else {
-        const cpcOk = (ad.cpc||0)>0 && (ad.cpc||0) <= getTrafficCpcMax(ad.adName, ad.campaign, trafficCriteria);
-        const ctrOk = (ad.ctr||0) >= (trafficCriteria?.ctrMin||1);
-        const lpvOk = (ad.lpvRate||0) >= (trafficCriteria?.lpvMin||50);
-        return cpcOk && ctrOk && lpvOk ? "good" : "normal";
+      try {
+        const isConv = isConversionCampaign(ad.objective, ad.campaign);
+        if (isConv) {
+          const adMargin = getAdMargin(ad.adName||"", ad.campaign||"", margins||[], margin||30000);
+          const crit = getConvCriteria(ad.adName||"", ad.campaign||"", convCriteria||{});
+          const cpa  = cpaStatus(ad.spend||0, ad.purchases||0, adMargin, crit);
+          const lpvR = lpvRateStatus(ad.clicks||0, ad.lpv||0, crit);
+          return (cpa?.label==="유지") && (lpvR?.label==="정상") ? "good" : "normal";
+        } else {
+          const crit = trafficCriteria||{};
+          const cpcOk = (ad.cpc||0)>0 && (ad.cpc||0) <= getTrafficCpcMax(ad.adName||"", ad.campaign||"", crit);
+          const ctrOk = (ad.ctr||0) >= (crit.ctrMin||1);
+          const lpvOk = (ad.lpvRate||0) >= (crit.lpvMin||50);
+          return cpcOk && ctrOk && lpvOk ? "good" : "normal";
+        }
+      } catch(e) {
+        return "normal";
       }
     }
 
@@ -4510,7 +4516,7 @@ export default function OaDashboard(){
                   <span style={{fontSize:10,fontWeight:700,color:C.inkMid,background:C.cream,padding:"2px 8px",borderRadius:10}}>CPC {ad.cpc>0?Math.round(ad.cpc).toLocaleString()+"원":"—"}</span>
                   <span style={{fontSize:10,fontWeight:700,color:"#8b5cf6",background:"#f5f3ff",padding:"2px 8px",borderRadius:10}}>ROAS {ad.roas.toFixed(0)}%</span>
                   <span style={{fontSize:10,fontWeight:700,color:C.inkLt,background:C.cream,padding:"2px 8px",borderRadius:10}}>소진 {Math.round(ad.spend).toLocaleString()}원</span>
-                  <span style={{fontSize:10,fontWeight:700,color:C.inkLt,background:C.cream,padding:"2px 8px",borderRadius:10}}>점수 {ad._score.toFixed(0)}점</span>
+                  <span style={{fontSize:10,fontWeight:700,color:C.inkLt,background:C.cream,padding:"2px 8px",borderRadius:10}}>점수 {isFinite(ad._score)?Math.round(ad._score):0}점</span>
                 </div>
                 <div style={{display:"flex",gap:6,alignItems:"center"}}>
                   <input value={reqNote} onChange={e=>setReqNote(e.target.value)} placeholder="요청 메모 (선택)"
