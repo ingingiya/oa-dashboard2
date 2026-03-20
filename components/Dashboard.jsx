@@ -4415,7 +4415,7 @@ export default function OaDashboard(){
       setTab("library");
     }
 
-    const topAds = adList.slice(0,20);
+    const topAds = adList;
 
     function requestRecreate(ad) {
       const req = {
