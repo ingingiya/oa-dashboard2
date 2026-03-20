@@ -175,35 +175,39 @@ function reusableStatus(f){
   return {label:`~${exp.slice(5)} 활용가능`,color:C.good,bg:"#EDF7F1"};
 }
 // ── 광고 소재 판단 기준 ─────────────────────────
-function lpvCostStatus(spend, lpv){
+function lpvCostStatus(spend, lpv, c={}){
   if(!lpv||!spend) return null;
   const cost = spend/lpv;
-  if(cost<300)  return {label:"매우좋음", color:C.good,  bg:"#EDF7F1", icon:"🟢", cost:Math.round(cost)};
-  if(cost<500)  return {label:"유지",     color:C.sage,  bg:C.sageLt,  icon:"🔵", cost:Math.round(cost)};
-  if(cost<800)  return {label:"보류",     color:C.warn,  bg:"#FFF8EC", icon:"🟡", cost:Math.round(cost)};
-  return              {label:"컷",        color:C.bad,   bg:"#FEF0F0", icon:"🔴", cost:Math.round(cost)};
+  const g=c.lpvCostGood||300, ok=c.lpvCostOk||500, h=c.lpvCostHold||800;
+  if(cost<g)  return {label:"매우좋음", color:C.good, bg:"#EDF7F1", icon:"🟢", cost:Math.round(cost)};
+  if(cost<ok) return {label:"유지",     color:C.sage, bg:C.sageLt,  icon:"🔵", cost:Math.round(cost)};
+  if(cost<h)  return {label:"보류",     color:C.warn, bg:"#FFF8EC", icon:"🟡", cost:Math.round(cost)};
+  return             {label:"컷",       color:C.bad,  bg:"#FEF0F0", icon:"🔴", cost:Math.round(cost)};
 }
-function lpvRateStatus(clicks, lpv){
+function lpvRateStatus(clicks, lpv, c={}){
   if(!clicks||!lpv) return null;
   const rate = (lpv/clicks)*100;
-  if(rate>=70)  return {label:"정상",     color:C.good, bg:"#EDF7F1", icon:"✅", rate:rate.toFixed(1)};
-  if(rate>=50)  return {label:"보통",     color:C.warn, bg:"#FFF8EC", icon:"⚠️", rate:rate.toFixed(1)};
-  return              {label:"랜딩문제",  color:C.bad,  bg:"#FEF0F0", icon:"🚨", rate:rate.toFixed(1)};
+  const g=c.lpvRateGood||70, ok=c.lpvRateOk||50;
+  if(rate>=g)  return {label:"정상",    color:C.good, bg:"#EDF7F1", icon:"✅", rate:rate.toFixed(1)};
+  if(rate>=ok) return {label:"보통",    color:C.warn, bg:"#FFF8EC", icon:"⚠️", rate:rate.toFixed(1)};
+  return             {label:"랜딩문제", color:C.bad,  bg:"#FEF0F0", icon:"🚨", rate:rate.toFixed(1)};
 }
-function cpaStatus(spend, purchases, margin){
+function cpaStatus(spend, purchases, margin, c={}){
   if(!purchases||!spend||!margin) return null;
   const cpa = spend/purchases;
-  const ratio = cpa/margin;
-  if(ratio<=0.85)  return {label:"유지",  color:C.good, bg:"#EDF7F1", icon:"✅", cpa:Math.round(cpa)};
-  if(ratio<=1.0)   return {label:"보류",  color:C.warn, bg:"#FFF8EC", icon:"⚠️", cpa:Math.round(cpa)};
-  return                  {label:"컷",    color:C.bad,  bg:"#FEF0F0", icon:"🔴", cpa:Math.round(cpa)};
+  const ratio = (cpa/margin)*100;
+  const g=c.cpaGood||85, h=c.cpaHold||100;
+  if(ratio<=g)  return {label:"유지", color:C.good, bg:"#EDF7F1", icon:"✅", cpa:Math.round(cpa)};
+  if(ratio<=h)  return {label:"보류", color:C.warn, bg:"#FFF8EC", icon:"⚠️", cpa:Math.round(cpa)};
+  return              {label:"컷",   color:C.bad,  bg:"#FEF0F0", icon:"🔴", cpa:Math.round(cpa)};
 }
-function ctrStatus(clicks, impressions){
+function ctrStatus(clicks, impressions, c={}){
   if(!impressions||!clicks) return null;
   const ctr = (clicks/impressions)*100;
-  if(ctr>=2)   return {label:"좋음",     color:C.good, bg:"#EDF7F1", icon:"🟢", ctr:ctr.toFixed(2)};
-  if(ctr>=1)   return {label:"보통",     color:C.warn, bg:"#FFF8EC", icon:"🟡", ctr:ctr.toFixed(2)};
-  return             {label:"소재문제",  color:C.bad,  bg:"#FEF0F0", icon:"🔴", ctr:ctr.toFixed(2)};
+  const g=c.ctrGood||2, ok=c.ctrOk||1;
+  if(ctr>=g)  return {label:"좋음",    color:C.good, bg:"#EDF7F1", icon:"🟢", ctr:ctr.toFixed(2)};
+  if(ctr>=ok) return {label:"보통",    color:C.warn, bg:"#FFF8EC", icon:"🟡", ctr:ctr.toFixed(2)};
+  return            {label:"소재문제", color:C.bad,  bg:"#FEF0F0", icon:"🔴", ctr:ctr.toFixed(2)};
 }
 // 광고명/캠페인명에서 키워드 마진 찾기
 function getAdMargin(adName, campaignName, margins, defaultMargin){
@@ -219,13 +223,12 @@ function getTrafficCpcMax(adName, campaignName, criteria){
   return matched ? (matched.cpcMax||criteria?.cpcMax||600) : (criteria?.cpcMax||600);
 }
 
-function adScore(ad, margin){
-  // 교체 필요 광고 판단: 하나라도 "컷" or "랜딩문제" or "소재문제"면 경고
+function adScore(ad, margin, c={}){
   const issues = [];
-  const lpvC = lpvCostStatus(ad.spend, ad.lpv);
-  const lpvR = lpvRateStatus(ad.clicks, ad.lpv);
-  const cpa  = cpaStatus(ad.spend, ad.purchases, margin);
-  const ctr  = ctrStatus(ad.clicks||ad.clicksAll, ad.impressions);
+  const lpvC = lpvCostStatus(ad.spend, ad.lpv, c);
+  const lpvR = lpvRateStatus(ad.clicks, ad.lpv, c);
+  const cpa  = cpaStatus(ad.spend, ad.purchases, margin, c);
+  const ctr  = ctrStatus(ad.clicks||ad.clicksAll, ad.impressions, c);
   if(lpvC&&(lpvC.label==="컷"||lpvC.label==="보류"))   issues.push({type:"LPV단가",  ...lpvC});
   if(lpvR&&(lpvR.label==="랜딩문제"))                   issues.push({type:"LPV전환율",...lpvR});
   if(cpa &&(cpa.label==="컷"||cpa.label==="보류"))      issues.push({type:"CPA",      ...cpa});
@@ -603,6 +606,18 @@ export default function OaDashboard(){
   const [trafficCriteria, setTrafficCriteria] = useSyncState("oa_traffic_criteria_v7", {
     cpcMax: 600, ctrMin: 1.5, lpvMin: 55,
     cpcKeywords: [{id:1,keyword:"소닉플로우",cpcMax:600},{id:2,keyword:"프리온",cpcMax:800}],
+  });
+  // 전환 캠페인 기준값 (변경 가능)
+  const [convCriteria, setConvCriteria] = useSyncState("oa_conv_criteria_v7", {
+    cpaGood: 85,   // 마진 대비 % 이하 → 유지
+    cpaHold: 100,  // 마진 대비 % 이하 → 보류 (초과 → 컷)
+    lpvCostGood: 300,  // LPV 단가 이하 → 매우좋음
+    lpvCostOk:   500,  // LPV 단가 이하 → 유지
+    lpvCostHold: 800,  // LPV 단가 이하 → 보류 (초과 → 컷)
+    lpvRateGood: 70,   // LPV율 이상 → 정상
+    lpvRateOk:   50,   // LPV율 이상 → 보통 (미달 → 랜딩문제)
+    ctrGood: 2.0,      // CTR 이상 → 좋음
+    ctrOk:   1.0,      // CTR 이상 → 보통 (미달 → 소재문제)
   });
 
   const [marginModal, setMarginModal]= useState(false);
@@ -1182,11 +1197,11 @@ export default function OaDashboard(){
   }, {}) : {};
   const cutAds  = Object.values(adAlerts).filter(ad=>{
     const adMargin = getAdMargin(ad.name, ad.campaign, margins, margin);
-    const s=adScore(ad, adMargin); return s.issues.some(i=>i.label==="컷"||i.label==="랜딩문제"||i.label==="소재문제");
+    const s=adScore(ad, adMargin, convCriteria); return s.issues.some(i=>i.label==="컷"||i.label==="랜딩문제"||i.label==="소재문제");
   });
   const holdAds = Object.values(adAlerts).filter(ad=>{
     const adMargin = getAdMargin(ad.name, ad.campaign, margins, margin);
-    const s=adScore(ad, adMargin); return !cutAds.includes(ad)&&s.issues.some(i=>i.label==="보류"||i.label==="보통");
+    const s=adScore(ad, adMargin, convCriteria); return !cutAds.includes(ad)&&s.issues.some(i=>i.label==="보류"||i.label==="보통");
   });
   const totalAlerts    = overdueIns.length+dangerInv.length+overdueScheds.length+urgentScheds.length+cutAds.length+holdAds.length+orderRaw.length;
 
@@ -1979,6 +1994,99 @@ export default function OaDashboard(){
                 ))}
               </div>
 
+              {/* ── 상위 광고 소재 카드 ── */}
+              {(()=>{
+                const camps = campTab==="conversion" ? d.convCamps : d.trafficCamps;
+                const fmtW = n=>n>=10000?`₩${Math.round(n/10000).toLocaleString()}만`:`₩${Math.round(n).toLocaleString()}`;
+                const sheetMaxDate = metaRaw.map(r=>r.date).filter(Boolean).sort().pop()||"";
+
+                // 집행중 + 판정 좋은 광고만
+                const topAds = camps.filter(c=>{
+                  const lad = c.lastActiveDate;
+                  const isActive = lad && sheetMaxDate && Math.floor((new Date(sheetMaxDate)-new Date(lad))/86400000)<=1;
+                  if(!isActive) return false;
+                  if(campTab==="conversion"){
+                    const adMargin = getAdMargin(c.name,c.campaign,margins,margin);
+                    const cpa = cpaStatus(c.spend,c.purchases,adMargin,convCriteria);
+                    const lpvR = lpvRateStatus(c.clicks,c.lpv,convCriteria);
+                    return (!cpa||cpa.label==="유지") && (!lpvR||lpvR.label==="정상");
+                  } else {
+                    const cpcOk=(c.cpc||0)>0&&(c.cpc||0)<=getTrafficCpcMax(c.name,c.campaign,trafficCriteria);
+                    const ctrOk=(c.ctr||0)>=(trafficCriteria?.ctrMin||1);
+                    const lpvOk=(c.lpvRate||0)>=(trafficCriteria?.lpvMin||50);
+                    return cpcOk && ctrOk && lpvOk;
+                  }
+                }).sort((a,b)=>(b.convValue||b.clicks||0)-(a.convValue||a.clicks||0)).slice(0,6);
+
+                if(topAds.length===0) return null;
+
+                return(
+                  <div style={{background:`linear-gradient(135deg,${C.blush},${C.white})`,
+                    border:`1px solid ${C.rose}33`,borderRadius:14,padding:"16px"}}>
+                    <div style={{fontSize:12,fontWeight:800,color:C.rose,marginBottom:12}}>
+                      ⭐ 상위 광고 소재 · {campTab==="conversion"?"CPA 유지 + LPV 정상":"CPC·CTR·LPV 기준 통과"}
+                    </div>
+                    <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
+                      {topAds.map((c,i)=>{
+                        const thumb = adImages.find(img=>img.name&&c.name&&(c.name.includes(img.name)||img.name.includes(c.name)));
+                        const adMargin = campTab==="conversion"?getAdMargin(c.name,c.campaign,margins,margin):0;
+                        return(
+                          <div key={i} style={{
+                            background:C.white,borderRadius:12,padding:"12px",
+                            border:`1px solid ${C.rose}22`,
+                            width:160,flexShrink:0,
+                          }}>
+                            {/* 썸네일 */}
+                            <div style={{width:"100%",height:90,borderRadius:8,overflow:"hidden",
+                              background:C.cream,marginBottom:8,display:"flex",alignItems:"center",justifyContent:"center"}}>
+                              {thumb
+                                ? <ThumbPreview url={thumb.url} name={thumb.name}/>
+                                : <span style={{fontSize:28,opacity:0.2}}>🖼</span>
+                              }
+                            </div>
+                            {/* 광고명 */}
+                            <div style={{fontSize:10,fontWeight:700,color:C.ink,marginBottom:6,
+                              overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}} title={c.name}>
+                              {c.name}
+                            </div>
+                            {/* 지표 */}
+                            <div style={{display:"flex",flexDirection:"column",gap:3}}>
+                              {campTab==="conversion"?<>
+                                <div style={{display:"flex",justifyContent:"space-between"}}>
+                                  <span style={{fontSize:9,color:C.inkLt}}>광고비</span>
+                                  <span style={{fontSize:9,fontWeight:700,color:C.ink}}>{fmtW(c.spend)}</span>
+                                </div>
+                                <div style={{display:"flex",justifyContent:"space-between"}}>
+                                  <span style={{fontSize:9,color:C.inkLt}}>ROAS</span>
+                                  <span style={{fontSize:9,fontWeight:700,color:C.good}}>{c.spend>0?`${Math.round((c.convValue||0)/c.spend*100)}%`:"—"}</span>
+                                </div>
+                                <div style={{display:"flex",justifyContent:"space-between"}}>
+                                  <span style={{fontSize:9,color:C.inkLt}}>CPA</span>
+                                  <span style={{fontSize:9,fontWeight:700,color:C.ink}}>{c.purchases>0?fmtW(c.spend/c.purchases):"—"}</span>
+                                </div>
+                              </>:<>
+                                <div style={{display:"flex",justifyContent:"space-between"}}>
+                                  <span style={{fontSize:9,color:C.inkLt}}>광고비</span>
+                                  <span style={{fontSize:9,fontWeight:700,color:C.ink}}>{fmtW(c.spend)}</span>
+                                </div>
+                                <div style={{display:"flex",justifyContent:"space-between"}}>
+                                  <span style={{fontSize:9,color:C.inkLt}}>CPC</span>
+                                  <span style={{fontSize:9,fontWeight:700,color:C.good}}>₩{Math.round(c.cpc||0).toLocaleString()}</span>
+                                </div>
+                                <div style={{display:"flex",justifyContent:"space-between"}}>
+                                  <span style={{fontSize:9,color:C.inkLt}}>LPV율</span>
+                                  <span style={{fontSize:9,fontWeight:700,color:C.ink}}>{c.lpvRate||0}%</span>
+                                </div>
+                              </>}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })()}
+
               {(()=>{
                 const camps = campTab==="conversion" ? d.convCamps : d.trafficCamps;
                 if(!camps||camps.length===0) return(
@@ -2162,10 +2270,10 @@ export default function OaDashboard(){
                       const isConv = campTab==="conversion";
                       const classify=(c)=>{
                         const adMargin=getAdMargin(c.name,c.campaign,margins,margin);
-                        const lpvC=lpvCostStatus(c.spend,c.lpv);
-                        const lpvR=lpvRateStatus(c.clicks,c.lpv);
-                        const cpa =cpaStatus(c.spend,c.purchases,adMargin);
-                        const ct  =ctrStatus(c.clicks,c.impressions||0);
+                        const lpvC=lpvCostStatus(c.spend,c.lpv,convCriteria);
+                        const lpvR=lpvRateStatus(c.clicks,c.lpv,convCriteria);
+                        const cpa =cpaStatus(c.spend,c.purchases,adMargin,convCriteria);
+                        const ct  =ctrStatus(c.clicks,c.impressions||0,convCriteria);
                         if(isConv){
                           const isCut=(lpvC&&lpvC.label==="컷")||(cpa&&cpa.label==="컷")||(lpvR&&lpvR.label==="랜딩문제")||(ct&&ct.label==="소재문제");
                           const isHold=(lpvC&&lpvC.label==="보류")||(cpa&&cpa.label==="보류")||(ct&&ct.label==="보통");
@@ -2269,10 +2377,10 @@ export default function OaDashboard(){
                           </tr></thead>
                           <tbody>{camps.map((c,i)=>{
                             const adMargin=getAdMargin(c.name,c.campaign,margins,margin);
-                            const lpvC=lpvCostStatus(c.spend,c.lpv);
-                            const lpvR=lpvRateStatus(c.clicks,c.lpv);
-                            const cpa =cpaStatus(c.spend,c.purchases,adMargin);
-                            const ct  =ctrStatus(c.clicks,c.impressions||0);
+                            const lpvC=lpvCostStatus(c.spend,c.lpv,convCriteria);
+                            const lpvR=lpvRateStatus(c.clicks,c.lpv,convCriteria);
+                            const cpa =cpaStatus(c.spend,c.purchases,adMargin,convCriteria);
+                            const ct  =ctrStatus(c.clicks,c.impressions||0,convCriteria);
 
                             // ── 켜야/꺼야 판정 ──
                             let verdict, verdictColor, verdictBg;
@@ -2643,6 +2751,65 @@ export default function OaDashboard(){
         {/* ── 기준 설정 모달 (전환 마진 + 트래픽 기준) ── */}
         {marginModal&&(
           <Modal title="⚙️ 광고 기준 설정" onClose={()=>setMarginModal(false)} wide>
+
+            {/* ── 전환 캠페인 판단 기준 ── */}
+            <div style={{borderTop:`2px solid ${C.border}`,paddingTop:16,marginBottom:16}}>
+              <div style={{fontSize:12,fontWeight:800,color:C.ink,marginBottom:6}}>🎯 전환 캠페인 — 판단 기준값</div>
+              <div style={{background:C.goldLt,borderRadius:10,padding:"10px 14px",marginBottom:12,fontSize:10,color:C.gold,fontWeight:700}}>
+                수치를 조절해서 광고 판단 기준을 설정하세요. 낮출수록 더 엄격하게 판단해요.
+              </div>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:10}}>
+                <FR label="CPA 유지 기준 (마진 대비 %)">
+                  <Inp type="number" value={convCriteria?.cpaGood||85}
+                    onChange={v=>setConvCriteria({...convCriteria,cpaGood:+v})} placeholder="85"/>
+                  <div style={{fontSize:9,color:C.inkLt,marginTop:3}}>이하 → ✅ 유지</div>
+                </FR>
+                <FR label="CPA 보류 기준 (마진 대비 %)">
+                  <Inp type="number" value={convCriteria?.cpaHold||100}
+                    onChange={v=>setConvCriteria({...convCriteria,cpaHold:+v})} placeholder="100"/>
+                  <div style={{fontSize:9,color:C.inkLt,marginTop:3}}>이하 → ⚠️ 보류 / 초과 → 🔴 컷</div>
+                </FR>
+              </div>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:10,marginBottom:10}}>
+                <FR label="LPV 단가 좋음 (원)">
+                  <Inp type="number" value={convCriteria?.lpvCostGood||300}
+                    onChange={v=>setConvCriteria({...convCriteria,lpvCostGood:+v})} placeholder="300"/>
+                  <div style={{fontSize:9,color:C.inkLt,marginTop:3}}>미만 → 🟢 매우좋음</div>
+                </FR>
+                <FR label="LPV 단가 유지 (원)">
+                  <Inp type="number" value={convCriteria?.lpvCostOk||500}
+                    onChange={v=>setConvCriteria({...convCriteria,lpvCostOk:+v})} placeholder="500"/>
+                  <div style={{fontSize:9,color:C.inkLt,marginTop:3}}>미만 → 🔵 유지</div>
+                </FR>
+                <FR label="LPV 단가 보류 (원)">
+                  <Inp type="number" value={convCriteria?.lpvCostHold||800}
+                    onChange={v=>setConvCriteria({...convCriteria,lpvCostHold:+v})} placeholder="800"/>
+                  <div style={{fontSize:9,color:C.inkLt,marginTop:3}}>미만 → 🟡 보류 / 초과 → 🔴 컷</div>
+                </FR>
+              </div>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr 1fr",gap:10}}>
+                <FR label="LPV율 정상 (%)">
+                  <Inp type="number" value={convCriteria?.lpvRateGood||70}
+                    onChange={v=>setConvCriteria({...convCriteria,lpvRateGood:+v})} placeholder="70"/>
+                  <div style={{fontSize:9,color:C.inkLt,marginTop:3}}>이상 → ✅ 정상</div>
+                </FR>
+                <FR label="LPV율 보통 (%)">
+                  <Inp type="number" value={convCriteria?.lpvRateOk||50}
+                    onChange={v=>setConvCriteria({...convCriteria,lpvRateOk:+v})} placeholder="50"/>
+                  <div style={{fontSize:9,color:C.inkLt,marginTop:3}}>이상 → ⚠️ 보통 / 미달 → 🚨</div>
+                </FR>
+                <FR label="CTR 좋음 (%)">
+                  <Inp type="number" step="0.1" value={convCriteria?.ctrGood||2}
+                    onChange={v=>setConvCriteria({...convCriteria,ctrGood:+v})} placeholder="2.0"/>
+                  <div style={{fontSize:9,color:C.inkLt,marginTop:3}}>이상 → 🟢 좋음</div>
+                </FR>
+                <FR label="CTR 보통 (%)">
+                  <Inp type="number" step="0.1" value={convCriteria?.ctrOk||1}
+                    onChange={v=>setConvCriteria({...convCriteria,ctrOk:+v})} placeholder="1.0"/>
+                  <div style={{fontSize:9,color:C.inkLt,marginTop:3}}>이상 → 🟡 보통 / 미달 → 🔴</div>
+                </FR>
+              </div>
+            </div>
 
             {/* ── 전환 캠페인 마진 ── */}
             <div style={{fontSize:12,fontWeight:800,color:C.ink,marginBottom:10}}>🎯 전환 캠페인 — 마진 기준</div>
