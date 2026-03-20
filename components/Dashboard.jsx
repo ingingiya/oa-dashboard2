@@ -4489,7 +4489,9 @@ export default function OaDashboard(){
     const allItems  = [...notionItems];
 
     // 달력 계산
-    const [calY, calM] = calMonth.split("-").map(Number);
+    const calParts = calMonth.split("-").map(Number);
+    const calY = calParts[0];
+    const calM = calParts[1];
     const firstDay = new Date(calY, calM-1, 1).getDay(); // 0=일
     const daysInMonth = new Date(calY, calM, 0).getDate();
     const prevMonth = () => {
@@ -5289,4 +5291,3 @@ export default function OaDashboard(){
     </div>
   );
 }
-
