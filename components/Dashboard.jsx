@@ -609,9 +609,11 @@ export default function OaDashboard(){
   const [metaGoalInput, setMetaGoalInput]     = useState("");
 
   // ── 시트 URL — Supabase 저장 (팀 공유, 변경 가능) ──
-  const [invUrl, setInvUrl]   = useSyncState("oa_inv_url_v7", "https://docs.google.com/spreadsheets/d/1r9WhAOgvdIcumgrkNkTbyYSVj1ONxyXp0trwzD-xAng/edit?gid=960641453#gid=960641453");
-  const [infUrl, setInfUrl]   = useSyncState("oa_inf_url_v7", "https://docs.google.com/spreadsheets/d/1r9WhAOgvdIcumgrkNkTbyYSVj1ONxyXp0trwzD-xAng/edit?gid=503054532#gid=503054532");
-  const [sheetUrl, setSheetUrl] = useSyncState("oa_sheet_url", "https://docs.google.com/spreadsheets/d/1r9WhAOgvdIcumgrkNkTbyYSVj1ONxyXp0trwzD-xAng/edit?gid=1293104038#gid=1293104038");
+  // ── 시트 URL 코드 고정 (Supabase 저장 안 함 — 시트 내용만 fetch)
+  const invUrl    = "https://docs.google.com/spreadsheets/d/1r9WhAOgvdIcumgrkNkTbyYSVj1ONxyXp0trwzD-xAng/edit?gid=960641453#gid=960641453";
+  const infUrl    = "https://docs.google.com/spreadsheets/d/1r9WhAOgvdIcumgrkNkTbyYSVj1ONxyXp0trwzD-xAng/edit?gid=503054532#gid=503054532";
+  const sheetUrl  = "https://docs.google.com/spreadsheets/d/1r9WhAOgvdIcumgrkNkTbyYSVj1ONxyXp0trwzD-xAng/edit?gid=1293104038#gid=1293104038";
+  const setInvUrl = ()=>{}, setInfUrl = ()=>{}, setSheetUrl = ()=>{};
   const [orderUrl, setOrderUrl] = useSyncState("oa_order_url_v7", "");
   const invUrlLoaded = true; const infUrlLoaded = true;
   const sheetUrlLoaded = true; const orderUrlLoaded = true;
