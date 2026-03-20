@@ -643,11 +643,16 @@ export default function OaDashboard(){
   const [convCriteriaTab, setConvCriteriaTab] = useState("default");
 
   // 데이터 에이전트
-  const [agentOpen, setAgentOpen]     = useState(false);
-  const [agentMsgs, setAgentMsgs]     = useState([]);
-  const [agentInput, setAgentInput]   = useState("");
+  const [agentOpen, setAgentOpen]       = useState(false);
+  const [agentMsgs, setAgentMsgs]       = useState([]);
   const [agentLoading, setAgentLoading] = useState(false);
-  const agentEndRef = useRef(null); // 제품별 기준 탭
+  const [agentTab, setAgentTab]         = useState("chat"); // chat | saved
+  const [savedAnalyses, setSavedAnalyses] = useSyncState("oa_agent_saved_v7", []);
+  const [agentInput, setAgentInput]     = useState("");
+  const [agentLoading, setAgentLoading] = useState(false);
+  const [agentTab, setAgentTab]         = useState("chat"); // "chat" | "history"
+  const [savedAnalyses, setSavedAnalyses] = useSyncState("oa_agent_history_v7", []); // 저장된 분석 결과
+  const agentEndRef = useRef(null);
   // 목표 메모 (Supabase 팀 공유)
   const [metaGoal, setMetaGoal]         = useSyncState("oa_meta_goal_v7", "");
   const [metaGoalEditing, setMetaGoalEditing] = useState(false);
@@ -808,6 +813,20 @@ export default function OaDashboard(){
     return lines.join("\n");
   }
 
+  function saveAgentMsg(question, answer) {
+    const item = {
+      id: Date.now(),
+      question: question || "질문 없음",
+      answer,
+      savedAt: new Date().toISOString(),
+    };
+    setSavedAnalyses(prev => {
+      const list = Array.isArray(prev) ? prev : [];
+      return [item, ...list].slice(0, 50); // 최대 50개
+    });
+    setAgentTab("history");
+  }
+
   async function sendAgentMessage() {
     const q = agentInput.trim();
     if(!q || agentLoading) return;
@@ -827,11 +846,31 @@ export default function OaDashboard(){
       });
       const data = await res.json();
       if(data.error) throw new Error(data.error);
-      setAgentMsgs([...newMsgs, {role:"assistant", content:data.reply}]);
+      const reply = data.reply;
+      const finalMsgs = [...newMsgs, {role:"assistant", content:reply}];
+      setAgentMsgs(finalMsgs);
+
+      // 차트가 포함된 답변 자동 저장 (Supabase — 팀 공유)
+      const hasChart = reply.includes("```chart");
+      if(hasChart) {
+        const record = {
+          id: Date.now(),
+          question: q,
+          answer: reply,
+          savedAt: new Date().toISOString(),
+        };
+        setSavedAnalyses(prev=>[record, ...(Array.isArray(prev)?prev:[])].slice(0,30));
+      }
     } catch(e) {
       setAgentMsgs([...newMsgs, {role:"assistant", content:`❌ 오류: ${e.message}`}]);
     }
     setAgentLoading(false);
+  }
+
+  // 답변 수동 저장
+  function saveAgentMsg(question, answer) {
+    const record = {id:Date.now(), question, answer, savedAt:new Date().toISOString()};
+    setSavedAnalyses(prev=>[record, ...(Array.isArray(prev)?prev:[])].slice(0,30));
   }
 
   // ── 월별 성과 파일 업로드 ────────────────────────
@@ -4040,8 +4079,57 @@ export default function OaDashboard(){
               </div>
             </div>
 
+            {/* 탭 */}
+            <div style={{display:"flex",borderBottom:`1px solid ${C.border}`,background:C.cream}}>
+              {[{id:"chat",label:"💬 채팅"},{id:"history",label:`📌 저장됨 ${Array.isArray(savedAnalyses)&&savedAnalyses.length>0?`(${savedAnalyses.length})`:""}`.trim()}].map(t=>(
+                <button key={t.id} onClick={()=>setAgentTab(t.id)}
+                  style={{flex:1,padding:"8px",border:"none",background:"transparent",
+                    fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit",
+                    color:agentTab===t.id?C.rose:C.inkMid,
+                    borderBottom:agentTab===t.id?`2px solid ${C.rose}`:"2px solid transparent"}}>
+                  {t.label}
+                </button>
+              ))}
+            </div>
+
             {/* 메시지 영역 */}
             <div style={{flex:1,overflowY:"auto",padding:"14px",display:"flex",flexDirection:"column",gap:10}}>
+              {/* 히스토리 탭 */}
+              {agentTab==="history"&&(
+                Array.isArray(savedAnalyses)&&savedAnalyses.length>0 ? (
+                  savedAnalyses.map((h,i)=>(
+                    <div key={h.id||i} style={{background:C.cream,borderRadius:12,padding:"12px",border:`1px solid ${C.border}`}}>
+                      <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:8}}>
+                        <div style={{fontSize:10,fontWeight:700,color:C.ink,flex:1}}>{h.question}</div>
+                        <div style={{display:"flex",gap:4,flexShrink:0}}>
+                          <button onClick={()=>{setAgentMsgs([{role:"user",content:h.question},{role:"assistant",content:h.answer}]);setAgentTab("chat");}}
+                            style={{fontSize:9,padding:"3px 8px",borderRadius:6,border:`1px solid ${C.border}`,background:C.white,cursor:"pointer",fontFamily:"inherit",color:C.inkMid}}>
+                            불러오기
+                          </button>
+                          <button onClick={()=>setSavedAnalyses(prev=>(Array.isArray(prev)?prev:[]).filter(x=>x.id!==h.id))}
+                            style={{fontSize:9,padding:"3px 8px",borderRadius:6,border:`1px solid ${C.bad}44`,background:"#FEF0F0",cursor:"pointer",fontFamily:"inherit",color:C.bad}}>
+                            삭제
+                          </button>
+                        </div>
+                      </div>
+                      <div style={{fontSize:10,color:C.inkMid,lineHeight:1.5,whiteSpace:"pre-wrap"}}>
+                        {h.answer.replace(/```chart[\s\S]*?```/g,"[차트]").slice(0,150)}{h.answer.length>150?"...":""}
+                      </div>
+                      <div style={{fontSize:9,color:C.inkLt,marginTop:6}}>
+                        {new Date(h.savedAt).toLocaleString("ko-KR",{month:"numeric",day:"numeric",hour:"2-digit",minute:"2-digit"})}
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div style={{textAlign:"center",padding:"40px 10px",color:C.inkLt,fontSize:11}}>
+                    저장된 분석이 없어요<br/>
+                    <span style={{fontSize:10,marginTop:4,display:"block"}}>그래프 답변은 자동 저장돼요<br/>일반 답변은 💾 버튼으로 저장해요</span>
+                  </div>
+                )
+              )}
+
+              {/* 채팅 탭 */}
+              {agentTab==="chat"&&(<>
               {agentMsgs.length===0&&(
                 <div style={{textAlign:"center",padding:"20px 10px"}}>
                   <div style={{fontSize:28,marginBottom:8}}>👋</div>
@@ -4049,7 +4137,7 @@ export default function OaDashboard(){
                   <div style={{fontSize:10,color:C.inkLt,lineHeight:1.6}}>현재 메타광고 데이터를 알고 있어요.<br/>궁금한 거 뭐든 물어보세요!</div>
                   <div style={{marginTop:14,display:"flex",flexDirection:"column",gap:6}}>
                     {["ROAS 가장 높은 광고 뭐야?","오늘 광고비 얼마야?","어떤 광고 꺼야 할까?","날짜별 광고비 그래프 그려줘"].map(q=>(
-                      <button key={q} onClick={()=>{setAgentInput(q);}}
+                      <button key={q} onClick={()=>setAgentInput(q)}
                         style={{padding:"7px 12px",borderRadius:10,border:`1px solid ${C.border}`,
                           background:C.cream,color:C.inkMid,fontSize:10,fontWeight:600,
                           cursor:"pointer",fontFamily:"inherit",textAlign:"left"}}>
@@ -4061,17 +4149,16 @@ export default function OaDashboard(){
               )}
               {agentMsgs.map((m,i)=>{
                 const isUser = m.role==="user";
-                // 차트 파싱
                 const chartMatch = !isUser && m.content.match(/```chart\n([\s\S]*?)```/);
                 const chartData = chartMatch ? (() => { try { return JSON.parse(chartMatch[1]); } catch { return null; } })() : null;
                 const textContent = m.content.replace(/```chart[\s\S]*?```/g,"").trim();
+                const question = agentMsgs[i-1]?.content||"";
                 return(
-                  <div key={i} style={{display:"flex",justifyContent:isUser?"flex-end":"flex-start"}}>
+                  <div key={i} style={{display:"flex",justifyContent:isUser?"flex-end":"flex-start",flexDirection:"column",alignItems:isUser?"flex-end":"flex-start",gap:4}}>
                     <div style={{maxWidth:"85%",padding:"10px 13px",borderRadius:isUser?"16px 16px 4px 16px":"16px 16px 16px 4px",
                       background:isUser?C.rose:C.cream,color:isUser?C.white:C.ink,
                       fontSize:11,lineHeight:1.6,whiteSpace:"pre-wrap"}}>
                       {textContent}
-                      {/* 차트 렌더링 */}
                       {chartData&&(()=>{
                         const {BarChart,Bar,LineChart,Line,PieChart,Pie,Cell,XAxis,YAxis,Tooltip,ResponsiveContainer,CartesianGrid}=window.Recharts||{};
                         if(!chartData.data||!chartData.data.length) return null;
@@ -4111,6 +4198,14 @@ export default function OaDashboard(){
                         );
                       })()}
                     </div>
+                    {/* 저장 버튼 (assistant 메시지만) */}
+                    {!isUser&&(
+                      <button onClick={()=>saveAgentMsg(question, m.content)}
+                        style={{fontSize:9,padding:"3px 10px",borderRadius:6,border:`1px solid ${C.border}`,
+                          background:C.white,cursor:"pointer",fontFamily:"inherit",color:C.inkMid}}>
+                        💾 저장
+                      </button>
+                    )}
                   </div>
                 );
               })}
@@ -4122,6 +4217,7 @@ export default function OaDashboard(){
                 </div>
               )}
               <div ref={agentEndRef}/>
+              </>)}
             </div>
 
             {/* 입력창 */}
