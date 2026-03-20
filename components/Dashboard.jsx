@@ -4339,13 +4339,14 @@ export default function OaDashboard(){
     const adByName = {};
     allAdRaw.forEach(r=>{
       const n = r.adName||"(미입력)";
-      if(!adByName[n]) adByName[n]={adName:n,spend:0,impressions:0,clicks:0,purchases:0,convValue:0,lpv:0,ctr:0,cpc:0,_rows:0,campaign:"",objective:""};
+      if(!adByName[n]) adByName[n]={adName:n,spend:0,impressions:0,clicks:0,purchases:0,convValue:0,lpv:0,ctr:0,cpc:0,_rows:0,campaign:"",objective:"",adset:""};
       const d=adByName[n];
       d.spend+=r.spend||0; d.impressions+=r.impressions||0; d.clicks+=r.clicks||0;
       d.purchases+=r.purchases||0; d.convValue+=r.convValue||0; d.lpv+=r.lpv||0;
       d._rows++;
       if(!d.campaign && r.campaign) d.campaign = r.campaign;
       if(!d.objective && r.objective) d.objective = r.objective;
+      if(!d.adset && r.adset) d.adset = r.adset;
     });
     const adList = Object.values(adByName).map(d=>({
       ...d,
@@ -4420,6 +4421,8 @@ export default function OaDashboard(){
     function requestRecreate(ad) {
       const req = {
         id: Date.now()+"", adName:ad.adName,
+        adset: ad.adset||"",
+        campaign: ad.campaign||"",
         ctr: ad.ctr.toFixed(2), roas: ad.roas.toFixed(0), spend: ad.spend,
         note: reqNote, status:"pending",
         requestedAt: new Date().toISOString().slice(0,10),
@@ -4636,6 +4639,8 @@ export default function OaDashboard(){
                     <div style={{display:"flex",alignItems:"center",gap:8}}>
                       <div style={{flex:1}}>
                         <div style={{fontSize:12,fontWeight:800,color:C.ink}}>{r.adName}</div>
+                        {r.adset&&<div style={{fontSize:10,color:"#8b5cf6",marginTop:1}}>📂 {r.adset}</div>}
+                        {r.campaign&&<div style={{fontSize:10,color:C.inkMid,marginTop:1}}>📣 {r.campaign}</div>}
                         <div style={{fontSize:10,color:C.inkMid,marginTop:2}}>CTR {r.ctr}% · ROAS {r.roas}% · {r.requestedAt}</div>
                         {r.note&&<div style={{fontSize:10,color:C.inkMid,marginTop:2}}>💬 {r.note}</div>}
                       </div>
