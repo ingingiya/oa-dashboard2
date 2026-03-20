@@ -777,6 +777,10 @@ export default function OaDashboard(){
   const [isDragging, setIsDragging]   = useState(false);
 
   // 전체 광고비 파일 (xlsx — 미게재 포함) — Supabase 저장
+  // 소재 라이브러리 & 재제작 요청
+  const [creativeLib, setCreativeLib] = useSyncState("oa_creative_lib_v8", []);
+  const [recreateReqs, setRecreateReqs] = useSyncState("oa_recreate_req_v8", []);
+
   const [allAdRaw, setAllAdRaw]       = useSyncState("oa_all_ad_raw_v7", []);
   const [allAdStatus, setAllAdStatus] = useState(()=>allAdRaw?.length>0?"ok":"idle");
   const allAdFileRef                  = useRef(null);
@@ -1590,6 +1594,7 @@ export default function OaDashboard(){
     {id:"influencer",icon:"✨",label:"인플루언서"},
     {id:"inventory", icon:"📦",label:"재고"},
     {id:"schedule",  icon:"📅",label:"스케줄"},
+    {id:"creative",  icon:"🎨",label:"소재"},
   ];
 
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -1645,6 +1650,13 @@ export default function OaDashboard(){
         count:orderRaw.length, items:orderRaw,
         render:(r)=>r["SKU명"]||r["상품명"]||"",
         action:()=>{},
+      },
+      {
+        id:"recreateReqs", icon:"🎨", label:"재제작 요청", color:"#8b5cf6", bg:"#f5f3ff",
+        count:recreateReqs.filter(r=>r.status==="pending").length,
+        items:recreateReqs.filter(r=>r.status==="pending"),
+        render:(r)=>r.adName,
+        action:()=>setSec("creative"),
       },
     ].filter(g=>g.count>0);
 
@@ -4315,6 +4327,211 @@ export default function OaDashboard(){
   })();
 
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  // 🎨 소재 라이브러리 & 재제작 요청
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  const CreativeSection=(()=>{
+    const [tab, setTab] = useState("top"); // top | library | requests
+    const [libModal, setLibModal] = useState(null); // null | {mode:"add"|"edit", item}
+    const [libForm, setLibForm] = useState({name:"",link:"",product:"",note:"",tags:""});
+    const [reqNote, setReqNote] = useState("");
+
+    // 메타 데이터 소재별 집계
+    const adByName = {};
+    allAdRaw.forEach(r=>{
+      const n = r.adName||"(미입력)";
+      if(!adByName[n]) adByName[n]={adName:n,spend:0,impressions:0,clicks:0,purchases:0,convValue:0,ctr:0,cpc:0,_ctrSum:0,_rows:0};
+      const d=adByName[n];
+      d.spend+=r.spend||0; d.impressions+=r.impressions||0; d.clicks+=r.clicks||0;
+      d.purchases+=r.purchases||0; d.convValue+=r.convValue||0;
+      d._ctrSum+=(r.ctr||0); d._rows++;
+    });
+    const adList = Object.values(adByName).map(d=>({
+      ...d,
+      ctr: d.impressions>0?(d.clicks/d.impressions*100):0,
+      cpc: d.clicks>0?(d.spend/d.clicks):0,
+      roas: d.spend>0?(d.convValue/d.spend*100):0,
+    })).filter(d=>d.spend>0).sort((a,b)=>b.ctr-a.ctr);
+
+    const topAds = adList.slice(0,20);
+
+    function requestRecreate(ad) {
+      const req = {
+        id: Date.now()+"", adName:ad.adName,
+        ctr: ad.ctr.toFixed(2), roas: ad.roas.toFixed(0), spend: ad.spend,
+        note: reqNote, status:"pending",
+        requestedAt: new Date().toISOString().slice(0,10),
+      };
+      setRecreateReqs(prev=>[req,...(prev||[])]);
+      setReqNote("");
+    }
+
+    function resolveReq(id) {
+      setRecreateReqs(prev=>(prev||[]).map(r=>r.id===id?{...r,status:"done"}:r));
+    }
+
+    function addToLib(form) {
+      const item = {id:Date.now()+"", ...form, addedAt:new Date().toISOString().slice(0,10)};
+      setCreativeLib(prev=>[item,...(prev||[])]);
+      setLibModal(null);
+    }
+
+    function removeFromLib(id) {
+      setCreativeLib(prev=>(prev||[]).filter(i=>i.id!==id));
+    }
+
+    const pendingReqs = (recreateReqs||[]).filter(r=>r.status==="pending");
+    const doneReqs    = (recreateReqs||[]).filter(r=>r.status==="done");
+
+    return(
+    <div style={{display:"flex",flexDirection:"column",gap:14}}>
+      {/* 탭 */}
+      <div style={{display:"flex",gap:6,overflowX:"auto",WebkitOverflowScrolling:"touch"}}>
+        {[{k:"top",label:"📊 상위 소재"},{k:"library",label:`📁 라이브러리 (${(creativeLib||[]).length})`},{k:"requests",label:`🎨 재제작 요청 (${pendingReqs.length})`}].map(({k,label})=>(
+          <button key={k} onClick={()=>setTab(k)} style={{fontSize:11,padding:"6px 14px",borderRadius:20,whiteSpace:"nowrap",
+            border:`1px solid ${tab===k?C.rose:C.border}`,background:tab===k?C.rose:C.white,
+            color:tab===k?C.white:C.inkMid,cursor:"pointer",fontFamily:"inherit",fontWeight:700}}>
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {/* 상위 소재 */}
+      {tab==="top"&&(
+        <Card>
+          <CardTitle title="📊 상위 소재 (CTR 기준)" sub={allAdRaw.length===0?"메타 파일 업로드 필요":`${adList.length}개 소재`}/>
+          {allAdRaw.length===0&&(
+            <div style={{textAlign:"center",color:C.inkLt,fontSize:12,padding:"20px 0"}}>
+              메타광고 탭에서 전체 파일을 업로드하면 소재 성과가 표시돼요
+            </div>
+          )}
+          <div style={{display:"flex",flexDirection:"column",gap:8}}>
+            {topAds.map((ad,i)=>(
+              <div key={ad.adName} style={{padding:"10px 12px",borderRadius:10,border:`1px solid ${C.border}`,background:C.white}}>
+                <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
+                  <span style={{fontSize:11,fontWeight:900,color:i<3?C.rose:C.inkMid,
+                    background:i<3?C.blush:C.cream,borderRadius:"50%",width:22,height:22,
+                    display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>{i+1}</span>
+                  <div style={{flex:1,fontSize:12,fontWeight:800,color:C.ink,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{ad.adName}</div>
+                </div>
+                <div style={{display:"flex",gap:8,marginBottom:8,flexWrap:"wrap"}}>
+                  <span style={{fontSize:10,fontWeight:700,color:C.good,background:C.good+"18",padding:"2px 8px",borderRadius:10}}>CTR {ad.ctr.toFixed(2)}%</span>
+                  <span style={{fontSize:10,fontWeight:700,color:C.inkMid,background:C.cream,padding:"2px 8px",borderRadius:10}}>CPC {ad.cpc>0?Math.round(ad.cpc).toLocaleString()+"원":"—"}</span>
+                  <span style={{fontSize:10,fontWeight:700,color:"#8b5cf6",background:"#f5f3ff",padding:"2px 8px",borderRadius:10}}>ROAS {ad.roas.toFixed(0)}%</span>
+                  <span style={{fontSize:10,fontWeight:700,color:C.inkLt,background:C.cream,padding:"2px 8px",borderRadius:10}}>소진 {Math.round(ad.spend).toLocaleString()}원</span>
+                </div>
+                <div style={{display:"flex",gap:6,alignItems:"center"}}>
+                  <input value={reqNote} onChange={e=>setReqNote(e.target.value)} placeholder="요청 메모 (선택)"
+                    style={{flex:1,fontSize:10,padding:"4px 8px",borderRadius:8,border:`1px solid ${C.border}`,fontFamily:"inherit",outline:"none"}}/>
+                  <Btn small onClick={()=>requestRecreate(ad)}>🎨 재제작 요청</Btn>
+                  <Btn variant="sage" small onClick={()=>{setCreativeLib(prev=>[{id:Date.now()+"",name:ad.adName,link:"",product:"",note:`CTR ${ad.ctr.toFixed(2)}% · ROAS ${ad.roas.toFixed(0)}%`,tags:"상위소재",addedAt:new Date().toISOString().slice(0,10)},...(prev||[])])}}>📁 저장</Btn>
+                </div>
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
+
+      {/* 라이브러리 */}
+      {tab==="library"&&(
+        <Card>
+          <CardTitle title="📁 소재 라이브러리" sub="잘 나온 소재 모음"
+            action={<Btn small onClick={()=>{setLibForm({name:"",link:"",product:"",note:"",tags:""});setLibModal({mode:"add"});}}>+ 추가</Btn>}/>
+          {(creativeLib||[]).length===0&&(
+            <div style={{textAlign:"center",color:C.inkLt,fontSize:12,padding:"20px 0"}}>
+              상위 소재에서 📁 저장하거나 직접 추가하세요
+            </div>
+          )}
+          <div style={{display:"flex",flexDirection:"column",gap:8}}>
+            {(creativeLib||[]).map(item=>(
+              <div key={item.id} style={{padding:"10px 12px",borderRadius:10,border:`1px solid ${C.border}`,background:C.white}}>
+                <div style={{display:"flex",alignItems:"flex-start",gap:8}}>
+                  <div style={{flex:1,minWidth:0}}>
+                    <div style={{fontSize:12,fontWeight:800,color:C.ink,marginBottom:2}}>{item.name}</div>
+                    {item.product&&<div style={{fontSize:10,color:C.inkMid}}>📦 {item.product}</div>}
+                    {item.note&&<div style={{fontSize:10,color:C.inkMid,marginTop:2}}>💬 {item.note}</div>}
+                    {item.tags&&<div style={{fontSize:9,color:"#8b5cf6",marginTop:4}}>{item.tags.split(",").map(t=>(
+                      <span key={t} style={{background:"#f5f3ff",padding:"1px 6px",borderRadius:10,marginRight:4}}>{t.trim()}</span>
+                    ))}</div>}
+                    {item.link&&<a href={item.link} target="_blank" rel="noreferrer" style={{fontSize:10,color:C.rose,marginTop:4,display:"block",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>🔗 {item.link}</a>}
+                    <div style={{fontSize:9,color:C.inkLt,marginTop:2}}>{item.addedAt}</div>
+                  </div>
+                  <Btn variant="danger" small onClick={()=>removeFromLib(item.id)}>🗑</Btn>
+                </div>
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
+
+      {/* 재제작 요청 */}
+      {tab==="requests"&&(
+        <Card>
+          <CardTitle title="🎨 재제작 요청" sub={`대기 ${pendingReqs.length}건 · 완료 ${doneReqs.length}건`}/>
+          {pendingReqs.length===0&&doneReqs.length===0&&(
+            <div style={{textAlign:"center",color:C.inkLt,fontSize:12,padding:"20px 0"}}>
+              상위 소재 탭에서 재제작 요청을 보내보세요
+            </div>
+          )}
+          {pendingReqs.length>0&&(
+            <div style={{marginBottom:12}}>
+              <div style={{fontSize:10,fontWeight:700,color:C.inkLt,marginBottom:6}}>대기 중</div>
+              <div style={{display:"flex",flexDirection:"column",gap:8}}>
+                {pendingReqs.map(r=>(
+                  <div key={r.id} style={{padding:"10px 12px",borderRadius:10,border:`1px solid #8b5cf644`,background:"#f5f3ff"}}>
+                    <div style={{display:"flex",alignItems:"center",gap:8}}>
+                      <div style={{flex:1}}>
+                        <div style={{fontSize:12,fontWeight:800,color:C.ink}}>{r.adName}</div>
+                        <div style={{fontSize:10,color:C.inkMid,marginTop:2}}>CTR {r.ctr}% · ROAS {r.roas}% · {r.requestedAt}</div>
+                        {r.note&&<div style={{fontSize:10,color:C.inkMid,marginTop:2}}>💬 {r.note}</div>}
+                      </div>
+                      <Btn variant="sage" small onClick={()=>resolveReq(r.id)}>✅ 완료</Btn>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+          {doneReqs.length>0&&(
+            <div>
+              <div style={{fontSize:10,fontWeight:700,color:C.inkLt,marginBottom:6}}>완료</div>
+              <div style={{display:"flex",flexDirection:"column",gap:6}}>
+                {doneReqs.map(r=>(
+                  <div key={r.id} style={{padding:"8px 12px",borderRadius:10,border:`1px solid ${C.border}`,background:C.cream,opacity:0.7}}>
+                    <div style={{fontSize:11,fontWeight:700,color:C.inkMid,textDecoration:"line-through"}}>{r.adName}</div>
+                    <div style={{fontSize:9,color:C.inkLt}}>CTR {r.ctr}% · {r.requestedAt}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </Card>
+      )}
+
+      {/* 라이브러리 추가 모달 */}
+      {libModal&&(
+        <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.4)",zIndex:3000,display:"flex",alignItems:"center",justifyContent:"center",padding:16}}>
+          <div style={{background:C.white,borderRadius:20,padding:24,width:"100%",maxWidth:400}}>
+            <div style={{fontSize:16,fontWeight:900,marginBottom:16}}>소재 추가</div>
+            {[{key:"name",label:"소재명",placeholder:"광고 소재 이름"},{key:"link",label:"링크",placeholder:"https://"},{key:"product",label:"제품",placeholder:"제품명"},{key:"tags",label:"태그",placeholder:"상위소재, 전환, 영상"},{key:"note",label:"메모",placeholder:"성과 메모"}].map(({key,label,placeholder})=>(
+              <div key={key} style={{marginBottom:12}}>
+                <div style={{fontSize:10,fontWeight:700,color:C.inkMid,marginBottom:4}}>{label}</div>
+                <input value={libForm[key]||""} onChange={e=>setLibForm(p=>({...p,[key]:e.target.value}))}
+                  placeholder={placeholder} style={{width:"100%",fontSize:12,padding:"8px 10px",borderRadius:8,
+                  border:`1px solid ${C.border}`,fontFamily:"inherit",outline:"none",boxSizing:"border-box"}}/>
+              </div>
+            ))}
+            <div style={{display:"flex",gap:8,marginTop:16}}>
+              <Btn onClick={()=>addToLib(libForm)} style={{flex:1}}>저장</Btn>
+              <Btn variant="ghost" onClick={()=>setLibModal(null)} style={{flex:1}}>취소</Btn>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+    );
+  })();
+
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   // RENDER
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   return(
@@ -4482,6 +4699,7 @@ export default function OaDashboard(){
           {sec==="influencer"  && InfluencerSection}
           {sec==="inventory"   && InventorySection}
           {sec==="schedule"    && ScheduleSection}
+          {sec==="creative"    && CreativeSection}
         </main>
       </div>
 
