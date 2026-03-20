@@ -1602,7 +1602,6 @@ export default function OaDashboard(){
     {id:"schedule",  icon:"📅",label:"스케줄"},
     {id:"creative",  icon:"🎨",label:"소재"},
     {id:"review",    icon:"✅",label:"콘텐츠리뷰"},
-    {id:"checklist", icon:"☑️",label:"체크리스트"},
   ];
 
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -4330,6 +4329,123 @@ export default function OaDashboard(){
           </div>
         </Card>
       )}
+
+      {/* ── 반복 체크리스트 ── */}
+      {(()=>{
+        const CYCLE_LABELS={daily:"매일",weekly:"매주",monthly:"매월"};
+        const CYCLE_COLORS={daily:{bg:"#eff6ff",border:"#93c5fd",text:"#1d4ed8"},weekly:{bg:"#f5f3ff",border:"#c4b5fd",text:"#6d28d9"},monthly:{bg:"#fff7ed",border:"#fdba74",text:"#c2410c"}};
+        const todayCL=new Date();
+        const todayStrCL=`${todayCL.getFullYear()}-${String(todayCL.getMonth()+1).padStart(2,"0")}-${String(todayCL.getDate()).padStart(2,"0")}`;
+        const dow=todayCL.getDay();
+        const mondayDiff=todayCL.getDate()-dow+(dow===0?-6:1);
+        const monday=new Date(todayCL.getFullYear(),todayCL.getMonth(),mondayDiff);
+        const weekStrCL=`${monday.getFullYear()}-${String(monday.getMonth()+1).padStart(2,"0")}-W${String(Math.ceil(monday.getDate()/7)).padStart(2,"0")}`;
+        const monthStrCL=`${todayCL.getFullYear()}-${String(todayCL.getMonth()+1).padStart(2,"0")}`;
+
+        function doneKeyCL(item){
+          if(item.cycle==="daily") return item.id+"_"+todayStrCL;
+          if(item.cycle==="weekly") return item.id+"_"+weekStrCL;
+          return item.id+"_"+monthStrCL;
+        }
+
+        // 오늘 표시할 체크리스트: 매일 + 매주(월요일) + 매월(1일)
+        const todayItems=(checkItems||[]).filter(i=>{
+          if(i.cycle==="daily") return true;
+          if(i.cycle==="weekly") return dow===1; // 월요일
+          if(i.cycle==="monthly") return todayCL.getDate()===1;
+          return false;
+        });
+        const totalToday=todayItems.length;
+        const doneToday=todayItems.filter(i=>(checkDone||{})[doneKeyCL(i)]).length;
+
+        return(
+        <Card>
+          <CardTitle title="☑️ 반복 체크리스트"
+            sub={totalToday>0?`오늘 ${doneToday}/${totalToday} 완료`:`전체 ${(checkItems||[]).length}개`}
+            action={
+              <div style={{display:"flex",gap:6}}>
+                <Btn small onClick={()=>{
+                  const title=window.prompt("항목명");
+                  if(!title?.trim()) return;
+                  const cycleOpt=window.prompt("주기 입력 (daily/weekly/monthly)","weekly");
+                  const cycle=["daily","weekly","monthly"].includes(cycleOpt)?cycleOpt:"weekly";
+                  setCheckItems(prev=>[...(prev||[]),{id:Date.now()+"_"+Math.random().toString(36).slice(2),title:title.trim(),cycle,assignee:"",createdAt:todayStrCL}]);
+                }}>+ 추가</Btn>
+              </div>
+            }/>
+
+          {/* 오늘 할 항목 */}
+          {totalToday>0&&(
+            <div style={{marginBottom:14}}>
+              <div style={{fontSize:10,fontWeight:700,color:C.inkMid,marginBottom:6}}>
+                오늘 할 항목
+                {totalToday>0&&(
+                  <span style={{marginLeft:8,fontSize:10,color:doneToday===totalToday?"#4DAD7A":C.inkLt}}>
+                    {doneToday===totalToday?"🎉 모두 완료!":` ${doneToday}/${totalToday}`}
+                  </span>
+                )}
+              </div>
+              {/* 진행률 바 */}
+              <div style={{height:5,borderRadius:3,background:C.cream,overflow:"hidden",marginBottom:8}}>
+                <div style={{height:"100%",borderRadius:3,background:"#4DAD7A",
+                  width:totalToday>0?`${Math.round(doneToday/totalToday*100)}%`:"0%",transition:"width 0.3s"}}/>
+              </div>
+              <div style={{display:"flex",flexDirection:"column",gap:6}}>
+                {todayItems.map(item=>{
+                  const done=(checkDone||{})[doneKeyCL(item)];
+                  const cc=CYCLE_COLORS[item.cycle];
+                  return(
+                  <div key={item.id} onClick={()=>{const k=doneKeyCL(item);setCheckDone(prev=>({...(prev||{}),[k]:!(prev||{})[k]}))};}
+                    style={{display:"flex",alignItems:"center",gap:10,padding:"9px 12px",borderRadius:10,cursor:"pointer",
+                      border:`1px solid ${done?cc.border:C.border}`,background:done?cc.bg:C.white,transition:"all 0.15s"}}>
+                    <div style={{width:18,height:18,borderRadius:5,flexShrink:0,border:`2px solid ${done?cc.border:C.border}`,
+                      background:done?cc.border:"transparent",display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,color:"#fff"}}>
+                      {done?"✓":""}
+                    </div>
+                    <div style={{flex:1}}>
+                      <span style={{fontSize:12,fontWeight:700,color:C.ink,textDecoration:done?"line-through":"none"}}>{item.title}</span>
+                      {item.assignee&&<span style={{fontSize:10,color:C.inkMid,marginLeft:6}}>👤 {item.assignee}</span>}
+                    </div>
+                    <span style={{fontSize:9,fontWeight:700,color:cc.text,background:cc.bg,padding:"2px 7px",borderRadius:10,flexShrink:0}}>{CYCLE_LABELS[item.cycle]}</span>
+                    <button onClick={e=>{e.stopPropagation();setCheckItems(prev=>(prev||[]).filter(i=>i.id!==item.id));}}
+                      style={{fontSize:11,color:C.inkLt,background:"none",border:"none",cursor:"pointer",padding:"2px 4px"}}>🗑</button>
+                  </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* 전체 목록 */}
+          {(checkItems||[]).length>0&&(
+            <div>
+              <div style={{fontSize:10,fontWeight:700,color:C.inkLt,marginBottom:6}}>전체 반복 항목</div>
+              <div style={{display:"flex",flexDirection:"column",gap:5}}>
+                {(checkItems||[]).map(item=>{
+                  const cc=CYCLE_COLORS[item.cycle]||CYCLE_COLORS.daily;
+                  return(
+                  <div key={item.id} style={{display:"flex",alignItems:"center",gap:8,padding:"7px 10px",borderRadius:8,
+                    border:`1px solid ${C.border}`,background:C.cream}}>
+                    <span style={{fontSize:9,fontWeight:700,color:cc.text,background:cc.bg,padding:"1px 7px",borderRadius:10,flexShrink:0}}>{CYCLE_LABELS[item.cycle]}</span>
+                    <span style={{flex:1,fontSize:11,fontWeight:700,color:C.ink}}>{item.title}</span>
+                    {item.assignee&&<span style={{fontSize:10,color:C.inkMid}}>👤 {item.assignee}</span>}
+                    <button onClick={()=>setCheckItems(prev=>(prev||[]).filter(i=>i.id!==item.id))}
+                      style={{fontSize:11,color:C.inkLt,background:"none",border:"none",cursor:"pointer",padding:"2px 4px"}}>🗑</button>
+                  </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {(checkItems||[]).length===0&&(
+            <div style={{textAlign:"center",color:C.inkLt,fontSize:12,padding:"20px 0"}}>
+              + 추가 버튼으로 반복 업무를 등록해보세요
+            </div>
+          )}
+        </Card>
+        );
+      })()}
     </div>
     );
   })();
@@ -4928,170 +5044,6 @@ export default function OaDashboard(){
     );
   })();
 
-  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  // ☑️ 체크리스트
-  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  const ChecklistSection=(()=>{
-    const CYCLE_LABELS={daily:"매일",weekly:"매주",monthly:"매월"};
-    const CYCLE_COLORS={daily:{bg:"#eff6ff",border:"#93c5fd",text:"#1d4ed8"},weekly:{bg:"#f5f3ff",border:"#c4b5fd",text:"#6d28d9"},monthly:{bg:"#fff7ed",border:"#fdba74",text:"#c2410c"}};
-
-    const [clTab,setClTab]=useState("daily"); // daily|weekly|monthly
-    const [addModal,setAddModal]=useState(false);
-    const [addForm,setAddForm]=useState({title:"",cycle:"daily",assignee:""});
-    const MEMBERS=["소리","영서","경은","지수"];
-
-    const todayStr=new Date().toISOString().slice(0,10);
-    const weekStr=(()=>{const d=new Date();const day=d.getDay();const diff=d.getDate()-day+(day===0?-6:1);const mon=new Date(d.setDate(diff));return mon.toISOString().slice(0,7)+"-W"+String(Math.ceil(mon.getDate()/7)).padStart(2,"0");})();
-    const monthStr=new Date().toISOString().slice(0,7);
-
-    function doneKey(item){
-      const base=item.id;
-      if(item.cycle==="daily") return base+"_"+todayStr;
-      if(item.cycle==="weekly") return base+"_"+weekStr;
-      return base+"_"+monthStr;
-    }
-
-    function toggle(item){
-      const k=doneKey(item);
-      setCheckDone(prev=>({...(prev||{}),[k]:!(prev||{})[k]}));
-    }
-
-    function addItem(){
-      if(!addForm.title.trim()){alert("항목명을 입력해주세요");return;}
-      const item={id:Date.now()+"_"+Math.random().toString(36).slice(2),
-        title:addForm.title.trim(),cycle:addForm.cycle,assignee:addForm.assignee,
-        createdAt:todayStr};
-      setCheckItems(prev=>[...(prev||[]),item]);
-      setAddForm({title:"",cycle:"daily",assignee:""});
-      setAddModal(false);
-    }
-
-    function deleteItem(id){
-      setCheckItems(prev=>(prev||[]).filter(i=>i.id!==id));
-    }
-
-    const filtered=(checkItems||[]).filter(i=>i.cycle===clTab);
-    const doneCount=filtered.filter(i=>(checkDone||{})[doneKey(i)]).length;
-
-    return(
-    <div style={{display:"flex",flexDirection:"column",gap:14}}>
-      <Card>
-        <CardTitle title="☑️ 체크리스트" sub={`오늘 ${doneCount}/${filtered.length} 완료`}
-          action={<Btn small onClick={()=>{setAddForm({title:"",cycle:clTab,assignee:""});setAddModal(true);}}>+ 추가</Btn>}/>
-
-        {/* 주기 탭 */}
-        <div style={{display:"flex",gap:6,marginBottom:12}}>
-          {["daily","weekly","monthly"].map(k=>{
-            const cnt=(checkItems||[]).filter(i=>i.cycle===k).length;
-            const doneCnt=(checkItems||[]).filter(i=>i.cycle===k&&(checkDone||{})[doneKey(i)]).length;
-            const cc=CYCLE_COLORS[k];
-            return(
-            <button key={k} onClick={()=>setClTab(k)} style={{fontSize:11,padding:"5px 14px",borderRadius:20,
-              border:`1px solid ${clTab===k?cc.border:C.border}`,
-              background:clTab===k?cc.bg:C.white,
-              color:clTab===k?cc.text:C.inkMid,cursor:"pointer",fontFamily:"inherit",fontWeight:700}}>
-              {CYCLE_LABELS[k]} {cnt>0&&<span style={{opacity:0.8}}>({doneCnt}/{cnt})</span>}
-            </button>
-            );
-          })}
-        </div>
-
-        {/* 진행률 바 */}
-        {filtered.length>0&&(
-          <div style={{marginBottom:12}}>
-            <div style={{display:"flex",justifyContent:"space-between",fontSize:10,color:C.inkMid,marginBottom:4}}>
-              <span>{CYCLE_LABELS[clTab]} 완료율</span>
-              <span style={{fontWeight:700}}>{Math.round(doneCount/filtered.length*100)}%</span>
-            </div>
-            <div style={{height:6,borderRadius:3,background:C.cream,overflow:"hidden"}}>
-              <div style={{height:"100%",borderRadius:3,background:CYCLE_COLORS[clTab].border,
-                width:`${Math.round(doneCount/filtered.length*100)}%`,transition:"width 0.3s"}}/>
-            </div>
-          </div>
-        )}
-
-        {filtered.length===0&&(
-          <div style={{textAlign:"center",color:C.inkLt,fontSize:12,padding:"24px 0"}}>
-            + 추가 버튼으로 체크리스트를 만들어보세요
-          </div>
-        )}
-
-        <div style={{display:"flex",flexDirection:"column",gap:8}}>
-          {filtered.map(item=>{
-            const done=(checkDone||{})[doneKey(item)];
-            const cc=CYCLE_COLORS[item.cycle];
-            return(
-            <div key={item.id} onClick={()=>toggle(item)} style={{
-              display:"flex",alignItems:"center",gap:10,padding:"10px 12px",borderRadius:10,cursor:"pointer",
-              border:`1px solid ${done?cc.border:C.border}`,
-              background:done?cc.bg:C.white,
-              opacity:done?0.85:1,transition:"all 0.15s"}}>
-              <div style={{width:20,height:20,borderRadius:6,flexShrink:0,
-                border:`2px solid ${done?cc.border:C.border}`,
-                background:done?cc.border:"transparent",
-                display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,color:"#fff"}}>
-                {done?"✓":""}
-              </div>
-              <div style={{flex:1}}>
-                <div style={{fontSize:12,fontWeight:700,color:C.ink,textDecoration:done?"line-through":"none"}}>{item.title}</div>
-                {item.assignee&&<div style={{fontSize:10,color:C.inkMid}}>👤 {item.assignee}</div>}
-              </div>
-              <Btn variant="danger" small onClick={e=>{e.stopPropagation();deleteItem(item.id);}}>🗑</Btn>
-            </div>
-            );
-          })}
-        </div>
-      </Card>
-
-      {/* 추가 모달 */}
-      {addModal&&(
-        <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.4)",zIndex:3000,display:"flex",alignItems:"center",justifyContent:"center",padding:16}}>
-          <div style={{background:C.white,borderRadius:20,padding:24,width:"100%",maxWidth:380}}>
-            <div style={{fontSize:16,fontWeight:900,marginBottom:16}}>항목 추가</div>
-            <div style={{display:"flex",flexDirection:"column",gap:10}}>
-              <div>
-                <div style={{fontSize:10,fontWeight:700,color:C.inkMid,marginBottom:4}}>항목명 *</div>
-                <input value={addForm.title} onChange={e=>setAddForm(p=>({...p,title:e.target.value}))}
-                  placeholder="예: 메타 성과 확인" style={{width:"100%",fontSize:12,padding:"8px 10px",borderRadius:8,border:`1px solid ${C.border}`,fontFamily:"inherit",outline:"none",boxSizing:"border-box"}}/>
-              </div>
-              <div>
-                <div style={{fontSize:10,fontWeight:700,color:C.inkMid,marginBottom:4}}>주기</div>
-                <div style={{display:"flex",gap:6}}>
-                  {["daily","weekly","monthly"].map(k=>{
-                    const cc=CYCLE_COLORS[k];
-                    return(
-                    <button key={k} onClick={()=>setAddForm(p=>({...p,cycle:k}))} style={{flex:1,fontSize:11,padding:"6px 0",borderRadius:10,
-                      border:`1px solid ${addForm.cycle===k?cc.border:C.border}`,
-                      background:addForm.cycle===k?cc.bg:C.white,
-                      color:addForm.cycle===k?cc.text:C.inkMid,cursor:"pointer",fontFamily:"inherit",fontWeight:700}}>
-                      {CYCLE_LABELS[k]}
-                    </button>
-                    );
-                  })}
-                </div>
-              </div>
-              <div>
-                <div style={{fontSize:10,fontWeight:700,color:C.inkMid,marginBottom:4}}>담당자</div>
-                <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
-                  {["",..."소리,영서,경은,지수".split(",")].map(m=>(
-                    <button key={m} onClick={()=>setAddForm(p=>({...p,assignee:m}))} style={{fontSize:11,padding:"4px 12px",borderRadius:20,
-                      border:`1px solid ${addForm.assignee===m?C.rose:C.border}`,
-                      background:addForm.assignee===m?C.rose:C.white,
-                      color:addForm.assignee===m?C.white:C.inkMid,cursor:"pointer",fontFamily:"inherit",fontWeight:700}}>{m||"미지정"}</button>
-                  ))}
-                </div>
-              </div>
-            </div>
-            <div style={{display:"flex",gap:8,marginTop:16}}>
-              <Btn onClick={addItem} style={{flex:1}}>추가</Btn>
-              <Btn variant="ghost" onClick={()=>setAddModal(false)} style={{flex:1}}>취소</Btn>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-    );
-  })();
 
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   // RENDER
@@ -5263,7 +5215,6 @@ export default function OaDashboard(){
           {sec==="schedule"    && ScheduleSection}
           {sec==="creative"    && CreativeSection}
           {sec==="review"      && ReviewSection}
-          {sec==="checklist"   && ChecklistSection}
         </main>
       </div>
 
