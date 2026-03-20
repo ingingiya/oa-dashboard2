@@ -4237,7 +4237,7 @@ export default function OaDashboard(){
                               try {
                                 const el = document.getElementById(chartId);
                                 if(!el) return;
-                                const h2c = (await import("https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js")).default || window.html2canvas;
+                                const { default: h2c } = await import("html2canvas");
                                 const canvas = await h2c(el, {backgroundColor:"#ffffff",scale:2});
                                 const a = document.createElement("a");
                                 a.href = canvas.toDataURL("image/png");
