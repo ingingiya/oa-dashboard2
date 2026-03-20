@@ -4116,6 +4116,7 @@ export default function OaDashboard(){
     const [calMonth, setCalMonth] = useState(()=>{const n=new Date();return{y:n.getFullYear(),m:n.getMonth()};});
     const [selDay, setSelDay] = useState(null);
     const [schFilter, setSchFilter] = useState("미완료"); // 미완료 | 전체
+    const [assigneeFilter, setAssigneeFilter] = useState("전체"); // 전체 | 소리 | 영서 | 경은 | 지수
 
     function handleFilterChange(f) {
       setSchFilter(f);
@@ -4128,7 +4129,8 @@ export default function OaDashboard(){
       }
     }
 
-    const activeItems = schFilter==="전체" ? notionSch : notionSch.filter(s=>s.status!=="완료");
+    const baseItems = schFilter==="전체" ? notionSch : notionSch.filter(s=>s.status!=="완료");
+    const activeItems = assigneeFilter==="전체" ? baseItems : baseItems.filter(s=>s.assignee===assigneeFilter);
 
     // 달력 계산
     const firstDay = new Date(calMonth.y, calMonth.m, 1);
@@ -4160,12 +4162,24 @@ export default function OaDashboard(){
     <div style={{display:"flex",flexDirection:"column",gap:14}}>
       {/* 노션 상태 배너 */}
       <div style={{display:"flex",alignItems:"center",gap:10,padding:"10px 14px",background:C.white,
-        border:`1px solid ${notionError?C.bad+"44":C.good+"44"}`,borderRadius:12}}>
+        border:`1px solid ${notionError?C.bad+"44":C.good+"44"}`,borderRadius:12,flexWrap:"wrap"}}>
         <span style={{fontSize:16}}>{notionLoading?"⏳":notionError?"❌":"🟢"}</span>
-        <div style={{flex:1,fontSize:11,fontWeight:700,color:notionError?C.bad:C.good}}>
+        <div style={{flex:1,fontSize:11,fontWeight:700,color:notionError?C.bad:C.good,minWidth:120}}>
           {notionLoading?"노션 불러오는 중...":notionError?`노션 오류: ${notionError}`:`노션 연동됨 · ${schFilter==="전체"?"전체":"이번달"} ${notionSch.length}개 · 미완료 ${notionSch.filter(s=>s.status!=="완료").length}개`}
         </div>
-        <div style={{display:"flex",gap:6}}>
+        <div style={{display:"flex",gap:4,flexWrap:"wrap"}}>
+          {/* 담당자 필터 */}
+          {[{n:"전체",c:C.inkMid},{n:"소리",c:"#f472b6"},{n:"영서",c:"#60a5fa"},{n:"경은",c:"#34d399"},{n:"지수",c:"#a78bfa"}].map(({n:a,c:col})=>{
+            const active=assigneeFilter===a;
+            return(
+              <button key={a} onClick={()=>setAssigneeFilter(a)} style={{fontSize:10,padding:"3px 10px",borderRadius:20,
+                border:`1px solid ${active?col:C.border}`,background:active?col:C.cream,
+                color:active?C.white:C.inkMid,cursor:"pointer",fontFamily:"inherit",fontWeight:700}}>
+                {a==="전체"?"👥":a}
+              </button>
+            );
+          })}
+          <div style={{width:1,background:C.border,margin:"2px 2px"}}/>
           {["미완료","전체"].map(f=>(
             <button key={f} onClick={()=>handleFilterChange(f)} style={{fontSize:10,padding:"3px 10px",borderRadius:20,
               border:`1px solid ${schFilter===f?C.rose:C.border}`,background:schFilter===f?C.rose:C.cream,
@@ -4235,10 +4249,13 @@ export default function OaDashboard(){
                 </div>
                 {items.slice(0,3).map((s,j)=>{
                   const tc=schTypeColor(s.type);
+                  const ac=s.assigneeColor||C.inkLt;
                   return(
-                    <div key={j} style={{fontSize:9,fontWeight:700,padding:"1px 4px",borderRadius:4,
+                    <div key={j} onClick={e=>{e.stopPropagation();setSchModalData({mode:"edit",initial:{...s,notionId:s.id,note:s.memo}});}}
+                      style={{fontSize:9,fontWeight:700,padding:"1px 4px",borderRadius:4,
                       background:`${tc}18`,color:tc,marginBottom:1,
-                      overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
+                      overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",
+                      cursor:"pointer",borderLeft:`2px solid ${ac}`}}>
                       {s.assignee?`(${s.assignee.slice(0,1)}) `:""}{s.title.replace(/[(\[（][가-힣]{2,4}[)\]）]\s*/g,"").slice(0,10)}
                     </div>
                   );
