@@ -4463,7 +4463,7 @@ export default function OaDashboard(){
         <Card>
           <CardTitle
             title="📊 상위 소재 (종합점수 순)"
-            sub={allAdRaw.length===0?"메타 파일 업로드 필요":`${adList.length}개 소재 · CTR기준 ${ctrMin}%`}
+            sub={allAdRaw.length===0?"메타 파일 업로드 필요":`${adList.length}개 소재 · CTR기준 ${trafficCriteria?.ctrMin||1.5}%`}
             action={allAdRaw.length>0&&(
               <Btn small onClick={saveGoodAds} style={{background:"#4DAD7A",borderColor:"#4DAD7A",color:"#fff",whiteSpace:"nowrap"}}>
                 🌟 잘 나온 소재 저장
