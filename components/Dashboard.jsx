@@ -640,7 +640,14 @@ export default function OaDashboard(){
   const [newMarginVal, setNewMarginVal] = useState("");
   const [newCpcKeyword, setNewCpcKeyword] = useState("");
   const [newCpcVal, setNewCpcVal]         = useState("");
-  const [convCriteriaTab, setConvCriteriaTab] = useState("default"); // 제품별 기준 탭
+  const [convCriteriaTab, setConvCriteriaTab] = useState("default");
+
+  // 데이터 에이전트
+  const [agentOpen, setAgentOpen]     = useState(false);
+  const [agentMsgs, setAgentMsgs]     = useState([]);
+  const [agentInput, setAgentInput]   = useState("");
+  const [agentLoading, setAgentLoading] = useState(false);
+  const agentEndRef = useRef(null); // 제품별 기준 탭
   // 목표 메모 (Supabase 팀 공유)
   const [metaGoal, setMetaGoal]         = useSyncState("oa_meta_goal_v7", "");
   const [metaGoalEditing, setMetaGoalEditing] = useState(false);
@@ -725,9 +732,107 @@ export default function OaDashboard(){
     }
   }
 
+  useEffect(()=>{
+    agentEndRef.current?.scrollIntoView({behavior:"smooth"});
+  },[agentMsgs]);
+
   useEffect(() => {
     getAdImages().then(imgs => { if (imgs?.length) setAdImages(imgs); }).catch(() => {});
   }, []);
+
+  // ── 데이터 에이전트 컨텍스트 빌더 ────────────────
+  function buildAgentContext() {
+    const fmtW = n=>n>=10000?`₩${Math.round(n/10000).toLocaleString()}만`:`₩${Math.round(n).toLocaleString()}`;
+    const lines = [];
+    const dates = metaRaw.map(r=>r.date).filter(Boolean).sort();
+    const period = dates.length?`${dates[0]} ~ ${dates[dates.length-1]}`:"기간 없음";
+
+    lines.push(`## 메타광고 데이터 (${period})`);
+    lines.push(`- 총 광고비: ${fmtW(metaFiltered.reduce((s,r)=>s+(r.spend||0),0))}`);
+    lines.push(`- 총 구매: ${metaFiltered.reduce((s,r)=>s+(r.purchases||0),0)}건`);
+    lines.push(`- 총 전환값: ${fmtW(metaFiltered.reduce((s,r)=>s+(r.convValue||0),0))}`);
+    lines.push(`- 총 클릭: ${metaFiltered.reduce((s,r)=>s+(r.clicks||0),0).toLocaleString()}`);
+    lines.push(`- 총 LPV: ${metaFiltered.reduce((s,r)=>s+(r.lpv||0),0).toLocaleString()}`);
+    lines.push("");
+
+    // 광고별 성과
+    const byAd = {};
+    metaFiltered.forEach(r=>{
+      const key=(r.adName||r.campaign||"unknown")+"|||"+(r.adset||"");
+      if(!byAd[key]) byAd[key]={name:r.adName||r.campaign||"",campaign:r.campaign||"",adset:r.adset||"",spend:0,purch:0,convV:0,clicks:0,lpv:0};
+      byAd[key].spend+=r.spend||0;
+      byAd[key].purch+=r.purchases||0;
+      byAd[key].convV+=r.convValue||0;
+      byAd[key].clicks+=r.clicks||0;
+      byAd[key].lpv+=r.lpv||0;
+    });
+
+    const ads = Object.values(byAd).sort((a,b)=>b.spend-a.spend).slice(0,20);
+    lines.push("## 광고별 성과 (상위 20개, 광고비 순)");
+    lines.push("광고명 | 캠페인 | 광고비 | 구매 | ROAS | CPA | CPC | LPV율");
+    ads.forEach(a=>{
+      const roas = a.spend>0?Math.round(a.convV/a.spend*100)+"%" :"—";
+      const cpa  = a.purch>0?fmtW(a.spend/a.purch):"—";
+      const cpc  = a.clicks>0?`₩${Math.round(a.spend/a.clicks)}`:"—";
+      const lpvR = a.clicks>0?Math.round(a.lpv/a.clicks*100)+"%":"—";
+      lines.push(`${a.name} | ${a.campaign} | ${fmtW(a.spend)} | ${a.purch}건 | ${roas} | ${cpa} | ${cpc} | ${lpvR}`);
+    });
+
+    // 날짜별 추이
+    const byDate = {};
+    metaFiltered.forEach(r=>{
+      if(!r.date) return;
+      if(!byDate[r.date]) byDate[r.date]={spend:0,clicks:0,lpv:0,purch:0};
+      byDate[r.date].spend+=r.spend||0;
+      byDate[r.date].clicks+=r.clicks||0;
+      byDate[r.date].lpv+=r.lpv||0;
+      byDate[r.date].purch+=r.purchases||0;
+    });
+    lines.push("");
+    lines.push("## 날짜별 추이");
+    lines.push("날짜 | 광고비 | 구매 | CPC");
+    Object.entries(byDate).sort((a,b)=>a[0].localeCompare(b[0])).forEach(([d,v])=>{
+      lines.push(`${d} | ${fmtW(v.spend)} | ${v.purch}건 | ${v.clicks>0?`₩${Math.round(v.spend/v.clicks)}`:"—"}`);
+    });
+
+    // 재고
+    if(inv.length>0){
+      lines.push("");
+      lines.push("## 재고 현황");
+      inv.forEach(i=>{
+        const days = Math.round((i.stock-i.reserved)/Math.max(i.sold30/30,0.01));
+        lines.push(`${i.name}: 재고 ${i.stock}개, 예약 ${i.reserved}개, 월판매 ${i.sold30}개, 소진예상 ${days}일`);
+      });
+    }
+
+    return lines.join("\n");
+  }
+
+  async function sendAgentMessage() {
+    const q = agentInput.trim();
+    if(!q || agentLoading) return;
+    const userMsg = {role:"user", content:q};
+    const newMsgs = [...agentMsgs, userMsg];
+    setAgentMsgs(newMsgs);
+    setAgentInput("");
+    setAgentLoading(true);
+    try {
+      const res = await fetch("/api/agent", {
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body: JSON.stringify({
+          messages: newMsgs,
+          context: buildAgentContext(),
+        }),
+      });
+      const data = await res.json();
+      if(data.error) throw new Error(data.error);
+      setAgentMsgs([...newMsgs, {role:"assistant", content:data.reply}]);
+    } catch(e) {
+      setAgentMsgs([...newMsgs, {role:"assistant", content:`❌ 오류: ${e.message}`}]);
+    }
+    setAgentLoading(false);
+  }
 
   // ── 월별 성과 파일 업로드 ────────────────────────
   async function handleMonthlyFile(file) {
@@ -3911,6 +4016,143 @@ export default function OaDashboard(){
         }}
         onClose={()=>setSchModalData(null)}
       />}
+
+      {/* ── 데이터 에이전트 플로팅 버튼 ── */}
+      <div style={{position:"fixed",bottom:24,right:24,zIndex:1000,display:"flex",flexDirection:"column",alignItems:"flex-end",gap:10}}>
+        {/* 채팅창 */}
+        {agentOpen&&(
+          <div style={{width:360,height:520,background:C.white,borderRadius:20,
+            boxShadow:"0 20px 60px rgba(0,0,0,0.2)",display:"flex",flexDirection:"column",overflow:"hidden",
+            border:`1px solid ${C.border}`}}>
+            {/* 헤더 */}
+            <div style={{background:C.ink,padding:"14px 16px",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+              <div>
+                <div style={{fontSize:13,fontWeight:800,color:C.white}}>🤖 OA 데이터 에이전트</div>
+                <div style={{fontSize:10,opacity:0.5,color:C.white,marginTop:2}}>메타광고 · 재고 데이터 기반</div>
+              </div>
+              <div style={{display:"flex",gap:6}}>
+                <button onClick={()=>setAgentMsgs([])}
+                  style={{background:"rgba(255,255,255,0.1)",border:"none",borderRadius:6,padding:"4px 8px",
+                    color:"rgba(255,255,255,0.6)",fontSize:10,cursor:"pointer",fontFamily:"inherit"}}>초기화</button>
+                <button onClick={()=>setAgentOpen(false)}
+                  style={{background:"rgba(255,255,255,0.1)",border:"none",borderRadius:6,padding:"4px 8px",
+                    color:"rgba(255,255,255,0.6)",fontSize:14,cursor:"pointer"}}>✕</button>
+              </div>
+            </div>
+
+            {/* 메시지 영역 */}
+            <div style={{flex:1,overflowY:"auto",padding:"14px",display:"flex",flexDirection:"column",gap:10}}>
+              {agentMsgs.length===0&&(
+                <div style={{textAlign:"center",padding:"20px 10px"}}>
+                  <div style={{fontSize:28,marginBottom:8}}>👋</div>
+                  <div style={{fontSize:12,fontWeight:700,color:C.ink,marginBottom:6}}>안녕하세요! 마케팅 데이터 에이전트예요</div>
+                  <div style={{fontSize:10,color:C.inkLt,lineHeight:1.6}}>현재 메타광고 데이터를 알고 있어요.<br/>궁금한 거 뭐든 물어보세요!</div>
+                  <div style={{marginTop:14,display:"flex",flexDirection:"column",gap:6}}>
+                    {["ROAS 가장 높은 광고 뭐야?","오늘 광고비 얼마야?","어떤 광고 꺼야 할까?","날짜별 광고비 그래프 그려줘"].map(q=>(
+                      <button key={q} onClick={()=>{setAgentInput(q);}}
+                        style={{padding:"7px 12px",borderRadius:10,border:`1px solid ${C.border}`,
+                          background:C.cream,color:C.inkMid,fontSize:10,fontWeight:600,
+                          cursor:"pointer",fontFamily:"inherit",textAlign:"left"}}>
+                        {q}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {agentMsgs.map((m,i)=>{
+                const isUser = m.role==="user";
+                // 차트 파싱
+                const chartMatch = !isUser && m.content.match(/```chart\n([\s\S]*?)```/);
+                const chartData = chartMatch ? (() => { try { return JSON.parse(chartMatch[1]); } catch { return null; } })() : null;
+                const textContent = m.content.replace(/```chart[\s\S]*?```/g,"").trim();
+                return(
+                  <div key={i} style={{display:"flex",justifyContent:isUser?"flex-end":"flex-start"}}>
+                    <div style={{maxWidth:"85%",padding:"10px 13px",borderRadius:isUser?"16px 16px 4px 16px":"16px 16px 16px 4px",
+                      background:isUser?C.rose:C.cream,color:isUser?C.white:C.ink,
+                      fontSize:11,lineHeight:1.6,whiteSpace:"pre-wrap"}}>
+                      {textContent}
+                      {/* 차트 렌더링 */}
+                      {chartData&&(()=>{
+                        const {BarChart,Bar,LineChart,Line,PieChart,Pie,Cell,XAxis,YAxis,Tooltip,ResponsiveContainer,CartesianGrid}=window.Recharts||{};
+                        if(!chartData.data||!chartData.data.length) return null;
+                        const COLORS=["#f9a8d4","#93c5fd","#86efac","#fbbf24","#c4b5fd","#6ee7b7"];
+                        return(
+                          <div style={{marginTop:10,background:C.white,borderRadius:10,padding:"10px",width:280}}>
+                            <div style={{fontSize:10,fontWeight:700,color:C.ink,marginBottom:6}}>{chartData.title}</div>
+                            <ResponsiveContainer width="100%" height={160}>
+                              {chartData.type==="pie"?(
+                                <PieChart>
+                                  <Pie data={chartData.data} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={60} label={({name,value})=>`${name}: ${value}`} labelLine={false} style={{fontSize:8}}>
+                                    {chartData.data.map((_,idx)=><Cell key={idx} fill={COLORS[idx%COLORS.length]}/>)}
+                                  </Pie>
+                                  <Tooltip/>
+                                </PieChart>
+                              ):chartData.type==="line"?(
+                                <LineChart data={chartData.data}>
+                                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0"/>
+                                  <XAxis dataKey="name" tick={{fontSize:8}} axisLine={false} tickLine={false}/>
+                                  <YAxis tick={{fontSize:8}} axisLine={false} tickLine={false}/>
+                                  <Tooltip/>
+                                  <Line type="monotone" dataKey="value" stroke={C.rose} strokeWidth={2} dot={false}/>
+                                </LineChart>
+                              ):(
+                                <BarChart data={chartData.data}>
+                                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0"/>
+                                  <XAxis dataKey="name" tick={{fontSize:8}} axisLine={false} tickLine={false}/>
+                                  <YAxis tick={{fontSize:8}} axisLine={false} tickLine={false}/>
+                                  <Tooltip/>
+                                  <Bar dataKey="value" radius={[4,4,0,0]}>
+                                    {chartData.data.map((_,idx)=><Cell key={idx} fill={COLORS[idx%COLORS.length]}/>)}
+                                  </Bar>
+                                </BarChart>
+                              )}
+                            </ResponsiveContainer>
+                          </div>
+                        );
+                      })()}
+                    </div>
+                  </div>
+                );
+              })}
+              {agentLoading&&(
+                <div style={{display:"flex",justifyContent:"flex-start"}}>
+                  <div style={{padding:"10px 14px",borderRadius:"16px 16px 16px 4px",background:C.cream,fontSize:11,color:C.inkLt}}>
+                    ⏳ 분석 중...
+                  </div>
+                </div>
+              )}
+              <div ref={agentEndRef}/>
+            </div>
+
+            {/* 입력창 */}
+            <div style={{padding:"12px",borderTop:`1px solid ${C.border}`,display:"flex",gap:8}}>
+              <input
+                value={agentInput}
+                onChange={e=>setAgentInput(e.target.value)}
+                onKeyDown={e=>e.key==="Enter"&&!e.shiftKey&&sendAgentMessage()}
+                placeholder="질문을 입력하세요..."
+                style={{flex:1,padding:"9px 12px",border:`1px solid ${C.border}`,borderRadius:10,
+                  fontSize:11,fontFamily:"inherit",outline:"none",background:C.cream}}
+              />
+              <button onClick={sendAgentMessage} disabled={!agentInput.trim()||agentLoading}
+                style={{padding:"9px 14px",borderRadius:10,border:"none",
+                  background:agentInput.trim()&&!agentLoading?C.rose:"#ddd",
+                  color:C.white,fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
+                전송
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* 플로팅 버튼 */}
+        <button onClick={()=>setAgentOpen(v=>!v)}
+          style={{width:52,height:52,borderRadius:"50%",border:"none",
+            background:agentOpen?C.inkMid:C.rose,color:C.white,
+            fontSize:22,cursor:"pointer",boxShadow:"0 4px 20px rgba(0,0,0,0.2)",
+            display:"flex",alignItems:"center",justifyContent:"center",transition:"all 0.2s"}}>
+          {agentOpen?"✕":"🤖"}
+        </button>
+      </div>
     </div>
   );
 }
