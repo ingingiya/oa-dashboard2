@@ -4339,33 +4339,39 @@ export default function OaDashboard(){
     const adByName = {};
     allAdRaw.forEach(r=>{
       const n = r.adName||"(미입력)";
-      if(!adByName[n]) adByName[n]={adName:n,spend:0,impressions:0,clicks:0,purchases:0,convValue:0,ctr:0,cpc:0,_ctrSum:0,_rows:0,campaign:"",objective:""};
+      if(!adByName[n]) adByName[n]={adName:n,spend:0,impressions:0,clicks:0,purchases:0,convValue:0,lpv:0,ctr:0,cpc:0,_rows:0,campaign:"",objective:""};
       const d=adByName[n];
       d.spend+=r.spend||0; d.impressions+=r.impressions||0; d.clicks+=r.clicks||0;
-      d.purchases+=r.purchases||0; d.convValue+=r.convValue||0;
-      d._ctrSum+=(r.ctr||0); d._rows++;
+      d.purchases+=r.purchases||0; d.convValue+=r.convValue||0; d.lpv+=r.lpv||0;
+      d._rows++;
       if(!d.campaign && r.campaign) d.campaign = r.campaign;
       if(!d.objective && r.objective) d.objective = r.objective;
     });
     const adList = Object.values(adByName).map(d=>({
       ...d,
-      ctr: d.impressions>0?(d.clicks/d.impressions*100):0,
-      cpc: d.clicks>0?(d.spend/d.clicks):0,
-      roas: d.spend>0?(d.convValue/d.spend*100):0,
+      ctr:     d.impressions>0?(d.clicks/d.impressions*100):0,
+      cpc:     d.clicks>0?(d.spend/d.clicks):0,
+      roas:    d.spend>0?(d.convValue/d.spend*100):0,
+      lpvRate: d.clicks>0?(d.lpv/d.clicks*100):0,
     })).filter(d=>d.spend>0).map(d=>{
-      // 종합 점수: CTR 40% + ROAS 40% + 소진량 20%
-      const ctrScore  = Math.min(d.ctr / 3, 1) * 40;
-      const roasScore = Math.min(d.roas / 300, 1) * 40;
-      const spendScore= Math.min(d.spend / 300000, 1) * 20;
-      return {...d, _score: ctrScore + roasScore + spendScore};
+      const score = Math.min(d.ctr/3,1)*40 + Math.min(d.roas/300,1)*40 + Math.min(d.spend/300000,1)*20;
+      return {...d, _score: score};
     }).sort((a,b)=>b._score-a._score);
 
-    const ctrMin = trafficCriteria?.ctrMin || 1.5;
-    // 잘 나온 소재: CTR ≥ 기준 이상 AND 최소 1만원 이상 소진
+    // MetaSection과 동일한 기준으로 "잘 나온 소재" 판정
     function adQuality(ad) {
-      if (ad.ctr >= ctrMin * 1.5 && ad.spend >= 10000) return "great"; // 🌟 우수
-      if (ad.ctr >= ctrMin        && ad.spend >= 10000) return "good";  // ✅ 양호
-      return "normal";
+      const isConv = isConversionCampaign(ad.objective, ad.campaign);
+      if (isConv) {
+        const adMargin = getAdMargin(ad.adName, ad.campaign, margins, margin);
+        const cpa  = cpaStatus(ad.spend, ad.purchases, adMargin, getConvCriteria(ad.adName, ad.campaign, convCriteria));
+        const lpvR = lpvRateStatus(ad.clicks, ad.lpv, getConvCriteria(ad.adName, ad.campaign, convCriteria));
+        return (cpa?.label==="유지") && (lpvR?.label==="정상") ? "good" : "normal";
+      } else {
+        const cpcOk = (ad.cpc||0)>0 && (ad.cpc||0) <= getTrafficCpcMax(ad.adName, ad.campaign, trafficCriteria);
+        const ctrOk = (ad.ctr||0) >= (trafficCriteria?.ctrMin||1);
+        const lpvOk = (ad.lpvRate||0) >= (trafficCriteria?.lpvMin||50);
+        return cpcOk && ctrOk && lpvOk ? "good" : "normal";
+      }
     }
 
     const libNames = new Set((creativeLib||[]).map(i=>i.name));
@@ -4394,7 +4400,7 @@ export default function OaDashboard(){
         thumbUrl: findThumb(ad.adName),
         campaignType: isConversionCampaign(ad.objective, ad.campaign) ? "전환" : "트래픽",
         note: `CTR ${ad.ctr.toFixed(2)}% · ROAS ${ad.roas.toFixed(0)}% · 소진 ${Math.round(ad.spend).toLocaleString()}원`,
-        tags: adQuality(ad) === "great" ? "우수소재,상위소재" : "상위소재",
+        tags: "잘나온소재",
         addedAt: now,
       }));
       setCreativeLib(prev => [...newItems, ...(prev||[])]);
@@ -4464,13 +4470,15 @@ export default function OaDashboard(){
             </div>
           )}
           {allAdRaw.length>0&&(()=>{
-            const greatCount = adList.filter(a=>adQuality(a)==="great"&&!libNames.has(a.adName)).length;
-            const goodCount  = adList.filter(a=>adQuality(a)==="good" &&!libNames.has(a.adName)).length;
+            const saveableCount = adList.filter(a=>adQuality(a)==="good"&&!libNames.has(a.adName)).length;
+            const convGood = adList.filter(a=>adQuality(a)==="good"&&isConversionCampaign(a.objective,a.campaign)).length;
+            const trafficGood = adList.filter(a=>adQuality(a)==="good"&&!isConversionCampaign(a.objective,a.campaign)).length;
             return(
               <div style={{display:"flex",gap:8,marginBottom:10,flexWrap:"wrap"}}>
-                <span style={{fontSize:10,fontWeight:700,color:"#4DAD7A",background:"#4DAD7A18",padding:"3px 10px",borderRadius:10}}>🌟 우수 {adList.filter(a=>adQuality(a)==="great").length}개</span>
-                <span style={{fontSize:10,fontWeight:700,color:"#60a5fa",background:"#eff6ff",padding:"3px 10px",borderRadius:10}}>✅ 양호 {adList.filter(a=>adQuality(a)==="good").length}개</span>
-                <span style={{fontSize:10,fontWeight:700,color:C.inkMid,background:C.cream,padding:"3px 10px",borderRadius:10}}>📁 저장가능 {greatCount+goodCount}개</span>
+                <span style={{fontSize:10,fontWeight:700,color:"#4DAD7A",background:"#4DAD7A18",padding:"3px 10px",borderRadius:10}}>✅ 잘 나온 소재 {adList.filter(a=>adQuality(a)==="good").length}개</span>
+                <span style={{fontSize:10,fontWeight:700,color:"#8b5cf6",background:"#f5f3ff",padding:"3px 10px",borderRadius:10}}>전환 {convGood}개</span>
+                <span style={{fontSize:10,fontWeight:700,color:"#60a5fa",background:"#eff6ff",padding:"3px 10px",borderRadius:10}}>트래픽 {trafficGood}개</span>
+                <span style={{fontSize:10,fontWeight:700,color:C.inkMid,background:C.cream,padding:"3px 10px",borderRadius:10}}>📁 저장가능 {saveableCount}개</span>
               </div>
             );
           })()}
@@ -4478,11 +4486,9 @@ export default function OaDashboard(){
             {topAds.map((ad,i)=>{
               const quality = adQuality(ad);
               const alreadySaved = libNames.has(ad.adName);
-              const qualityStyle = quality==="great"
+              const qualityStyle = quality==="good"
                 ? {border:`1px solid #4DAD7A55`,background:"#f0fdf4"}
-                : quality==="good"
-                  ? {border:`1px solid #60a5fa55`,background:"#eff6ff"}
-                  : {border:`1px solid ${C.border}`,background:C.white};
+                : {border:`1px solid ${C.border}`,background:C.white};
               return(
               <div key={ad.adName} style={{padding:"10px 12px",borderRadius:10,...qualityStyle}}>
                 <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
@@ -4496,8 +4502,7 @@ export default function OaDashboard(){
                     ? <span style={{fontSize:9,fontWeight:700,color:"#8b5cf6",background:"#f5f3ff",padding:"2px 6px",borderRadius:8,flexShrink:0}}>전환</span>
                     : <span style={{fontSize:9,fontWeight:700,color:"#60a5fa",background:"#eff6ff",padding:"2px 6px",borderRadius:8,flexShrink:0}}>트래픽</span>
                   }
-                  {quality==="great"&&<span style={{fontSize:10,fontWeight:700,color:"#4DAD7A",background:"#4DAD7A18",padding:"2px 8px",borderRadius:10,flexShrink:0}}>🌟 우수</span>}
-                  {quality==="good" &&<span style={{fontSize:10,fontWeight:700,color:"#60a5fa",background:"#eff6ff",padding:"2px 8px",borderRadius:10,flexShrink:0}}>✅ 양호</span>}
+                  {quality==="good"&&<span style={{fontSize:10,fontWeight:700,color:"#4DAD7A",background:"#4DAD7A18",padding:"2px 8px",borderRadius:10,flexShrink:0}}>✅ 잘 나온 소재</span>}
                   {alreadySaved     &&<span style={{fontSize:10,fontWeight:700,color:C.inkLt,background:C.cream,padding:"2px 8px",borderRadius:10,flexShrink:0}}>📁 저장됨</span>}
                 </div>
                 <div style={{display:"flex",gap:8,marginBottom:8,flexWrap:"wrap"}}>
@@ -4519,7 +4524,7 @@ export default function OaDashboard(){
                       thumbUrl: thumb,
                       campaignType: isConversionCampaign(ad.objective, ad.campaign) ? "전환" : "트래픽",
                       note:`CTR ${ad.ctr.toFixed(2)}% · ROAS ${ad.roas.toFixed(0)}% · 소진 ${Math.round(ad.spend).toLocaleString()}원`,
-                      tags: quality==="great"?"우수소재,상위소재":"상위소재",
+                      tags: "잘나온소재",
                       addedAt:new Date().toISOString().slice(0,10)
                     },...(prev||[])]);
                   }}>
@@ -4550,24 +4555,21 @@ export default function OaDashboard(){
           )}
           {/* 태그 요약 */}
           {(creativeLib||[]).length>0&&(()=>{
-            const greatCnt = (creativeLib||[]).filter(i=>i.tags?.includes("우수소재")).length;
-            const goodCnt  = (creativeLib||[]).filter(i=>i.tags?.includes("상위소재")&&!i.tags?.includes("우수소재")).length;
+            const convCnt    = (creativeLib||[]).filter(i=>i.campaignType==="전환").length;
+            const trafficCnt = (creativeLib||[]).filter(i=>i.campaignType==="트래픽").length;
             return(
               <div style={{display:"flex",gap:8,marginBottom:10,flexWrap:"wrap"}}>
-                {greatCnt>0&&<span style={{fontSize:10,fontWeight:700,color:"#4DAD7A",background:"#4DAD7A18",padding:"3px 10px",borderRadius:10}}>🌟 우수 {greatCnt}개</span>}
-                {goodCnt>0 &&<span style={{fontSize:10,fontWeight:700,color:"#60a5fa",background:"#eff6ff",padding:"3px 10px",borderRadius:10}}>✅ 양호 {goodCnt}개</span>}
+                {convCnt>0   &&<span style={{fontSize:10,fontWeight:700,color:"#8b5cf6",background:"#f5f3ff",padding:"3px 10px",borderRadius:10}}>전환 {convCnt}개</span>}
+                {trafficCnt>0&&<span style={{fontSize:10,fontWeight:700,color:"#60a5fa",background:"#eff6ff",padding:"3px 10px",borderRadius:10}}>트래픽 {trafficCnt}개</span>}
               </div>
             );
           })()}
           <div style={{display:"flex",flexDirection:"column",gap:8}}>
             {(creativeLib||[]).map(item=>{
-              const isGreat = item.tags?.includes("우수소재");
-              const isGood  = item.tags?.includes("상위소재")&&!isGreat;
-              const cardStyle = isGreat
+              const isGood = item.tags?.includes("잘나온소재");
+              const cardStyle = isGood
                 ? {border:`1px solid #4DAD7A55`,background:"#f0fdf4"}
-                : isGood
-                  ? {border:`1px solid #60a5fa55`,background:"#eff6ff"}
-                  : {border:`1px solid ${C.border}`,background:C.white};
+                : {border:`1px solid ${C.border}`,background:C.white};
               return(
               <div key={item.id} style={{padding:"10px 12px",borderRadius:10,...cardStyle}}>
                 <div style={{display:"flex",alignItems:"flex-start",gap:10}}>
@@ -4584,20 +4586,15 @@ export default function OaDashboard(){
                   );})()}
                   <div style={{flex:1,minWidth:0}}>
                     <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:2,flexWrap:"wrap"}}>
-                      {isGreat&&<span style={{fontSize:10}}>🌟</span>}
-                      {isGood &&<span style={{fontSize:10}}>✅</span>}
+                      {isGood&&<span style={{fontSize:10}}>✅</span>}
                       <div style={{fontSize:12,fontWeight:800,color:C.ink,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",flex:1}}>{item.name}</div>
                       {item.campaignType==="전환" && <span style={{fontSize:9,fontWeight:700,color:"#8b5cf6",background:"#f5f3ff",padding:"2px 6px",borderRadius:8,flexShrink:0}}>전환</span>}
                       {item.campaignType==="트래픽" && <span style={{fontSize:9,fontWeight:700,color:"#60a5fa",background:"#eff6ff",padding:"2px 6px",borderRadius:8,flexShrink:0}}>트래픽</span>}
                     </div>
                     {item.product&&<div style={{fontSize:10,color:C.inkMid}}>📦 {item.product}</div>}
                     {item.note&&<div style={{fontSize:10,color:C.inkMid,marginTop:2}}>💬 {item.note}</div>}
-                    {item.tags&&<div style={{fontSize:9,color:"#8b5cf6",marginTop:4}}>{item.tags.split(",").map(t=>(
-                      <span key={t} style={{
-                        background: t.trim()==="우수소재"?"#4DAD7A18":t.trim()==="상위소재"?"#eff6ff":"#f5f3ff",
-                        color: t.trim()==="우수소재"?"#4DAD7A":t.trim()==="상위소재"?"#60a5fa":"#8b5cf6",
-                        padding:"1px 6px",borderRadius:10,marginRight:4,fontWeight:700
-                      }}>{t.trim()}</span>
+                    {item.tags&&<div style={{fontSize:9,marginTop:4}}>{item.tags.split(",").map(t=>(
+                      <span key={t} style={{background:"#4DAD7A18",color:"#4DAD7A",padding:"1px 6px",borderRadius:10,marginRight:4,fontWeight:700}}>{t.trim()}</span>
                     ))}</div>}
                     {item.link&&<a href={item.link} target="_blank" rel="noreferrer" style={{fontSize:10,color:C.rose,marginTop:4,display:"block",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>🔗 {item.link}</a>}
                     <div style={{fontSize:9,color:C.inkLt,marginTop:2}}>{item.addedAt}</div>
