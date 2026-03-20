@@ -4392,6 +4392,7 @@ export default function OaDashboard(){
         link: "",
         product: "",
         thumbUrl: findThumb(ad.adName),
+        campaignType: isConversionCampaign(ad.objective, ad.campaign) ? "전환" : "트래픽",
         note: `CTR ${ad.ctr.toFixed(2)}% · ROAS ${ad.roas.toFixed(0)}% · 소진 ${Math.round(ad.spend).toLocaleString()}원`,
         tags: adQuality(ad) === "great" ? "우수소재,상위소재" : "상위소재",
         addedAt: now,
@@ -4516,6 +4517,7 @@ export default function OaDashboard(){
                     setCreativeLib(prev=>[{
                       id:Date.now()+"",name:ad.adName,link:"",product:"",
                       thumbUrl: thumb,
+                      campaignType: isConversionCampaign(ad.objective, ad.campaign) ? "전환" : "트래픽",
                       note:`CTR ${ad.ctr.toFixed(2)}% · ROAS ${ad.roas.toFixed(0)}% · 소진 ${Math.round(ad.spend).toLocaleString()}원`,
                       tags: quality==="great"?"우수소재,상위소재":"상위소재",
                       addedAt:new Date().toISOString().slice(0,10)
@@ -4581,10 +4583,12 @@ export default function OaDashboard(){
                     </div>
                   );})()}
                   <div style={{flex:1,minWidth:0}}>
-                    <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:2}}>
+                    <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:2,flexWrap:"wrap"}}>
                       {isGreat&&<span style={{fontSize:10}}>🌟</span>}
                       {isGood &&<span style={{fontSize:10}}>✅</span>}
-                      <div style={{fontSize:12,fontWeight:800,color:C.ink,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{item.name}</div>
+                      <div style={{fontSize:12,fontWeight:800,color:C.ink,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",flex:1}}>{item.name}</div>
+                      {item.campaignType==="전환" && <span style={{fontSize:9,fontWeight:700,color:"#8b5cf6",background:"#f5f3ff",padding:"2px 6px",borderRadius:8,flexShrink:0}}>전환</span>}
+                      {item.campaignType==="트래픽" && <span style={{fontSize:9,fontWeight:700,color:"#60a5fa",background:"#eff6ff",padding:"2px 6px",borderRadius:8,flexShrink:0}}>트래픽</span>}
                     </div>
                     {item.product&&<div style={{fontSize:10,color:C.inkMid}}>📦 {item.product}</div>}
                     {item.note&&<div style={{fontSize:10,color:C.inkMid,marginTop:2}}>💬 {item.note}</div>}
