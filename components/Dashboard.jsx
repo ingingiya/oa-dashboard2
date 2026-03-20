@@ -4339,11 +4339,13 @@ export default function OaDashboard(){
     const adByName = {};
     allAdRaw.forEach(r=>{
       const n = r.adName||"(미입력)";
-      if(!adByName[n]) adByName[n]={adName:n,spend:0,impressions:0,clicks:0,purchases:0,convValue:0,ctr:0,cpc:0,_ctrSum:0,_rows:0};
+      if(!adByName[n]) adByName[n]={adName:n,spend:0,impressions:0,clicks:0,purchases:0,convValue:0,ctr:0,cpc:0,_ctrSum:0,_rows:0,campaign:"",objective:""};
       const d=adByName[n];
       d.spend+=r.spend||0; d.impressions+=r.impressions||0; d.clicks+=r.clicks||0;
       d.purchases+=r.purchases||0; d.convValue+=r.convValue||0;
       d._ctrSum+=(r.ctr||0); d._rows++;
+      if(!d.campaign && r.campaign) d.campaign = r.campaign;
+      if(!d.objective && r.objective) d.objective = r.objective;
     });
     const adList = Object.values(adByName).map(d=>({
       ...d,
@@ -4486,7 +4488,13 @@ export default function OaDashboard(){
                   <span style={{fontSize:11,fontWeight:900,color:i<3?C.rose:C.inkMid,
                     background:i<3?C.blush:C.cream,borderRadius:"50%",width:22,height:22,
                     display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>{i+1}</span>
+                  {/* 썸네일 미리보기 */}
+                  {(()=>{const t=findThumb(ad.adName);return t?<div style={{width:32,height:32,borderRadius:6,overflow:"hidden",flexShrink:0,border:`1px solid ${C.border}`}}><ThumbPreview url={t} name={ad.adName}/></div>:null;})()}
                   <div style={{flex:1,fontSize:12,fontWeight:800,color:C.ink,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{ad.adName}</div>
+                  {isConversionCampaign(ad.objective,ad.campaign)
+                    ? <span style={{fontSize:9,fontWeight:700,color:"#8b5cf6",background:"#f5f3ff",padding:"2px 6px",borderRadius:8,flexShrink:0}}>전환</span>
+                    : <span style={{fontSize:9,fontWeight:700,color:"#60a5fa",background:"#eff6ff",padding:"2px 6px",borderRadius:8,flexShrink:0}}>트래픽</span>
+                  }
                   {quality==="great"&&<span style={{fontSize:10,fontWeight:700,color:"#4DAD7A",background:"#4DAD7A18",padding:"2px 8px",borderRadius:10,flexShrink:0}}>🌟 우수</span>}
                   {quality==="good" &&<span style={{fontSize:10,fontWeight:700,color:"#60a5fa",background:"#eff6ff",padding:"2px 8px",borderRadius:10,flexShrink:0}}>✅ 양호</span>}
                   {alreadySaved     &&<span style={{fontSize:10,fontWeight:700,color:C.inkLt,background:C.cream,padding:"2px 8px",borderRadius:10,flexShrink:0}}>📁 저장됨</span>}
@@ -4561,17 +4569,17 @@ export default function OaDashboard(){
               return(
               <div key={item.id} style={{padding:"10px 12px",borderRadius:10,...cardStyle}}>
                 <div style={{display:"flex",alignItems:"flex-start",gap:10}}>
-                  {/* 썸네일 */}
-                  {item.thumbUrl ? (
+                  {/* 썸네일 - 저장된 thumbUrl 또는 실시간 매칭 */}
+                  {(()=>{const t = item.thumbUrl || findThumb(item.name); return t ? (
                     <div style={{flexShrink:0,width:56,height:56,borderRadius:8,overflow:"hidden",border:`1px solid ${C.border}`,background:C.cream}}>
-                      <ThumbPreview url={item.thumbUrl} name={item.name}/>
+                      <ThumbPreview url={t} name={item.name}/>
                     </div>
                   ) : (
                     <div style={{flexShrink:0,width:56,height:56,borderRadius:8,border:`1px dashed ${C.border}`,background:C.cream,
                       display:"flex",alignItems:"center",justifyContent:"center",fontSize:20,color:C.inkLt}}>
                       🖼
                     </div>
-                  )}
+                  );})()}
                   <div style={{flex:1,minWidth:0}}>
                     <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:2}}>
                       {isGreat&&<span style={{fontSize:10}}>🌟</span>}
