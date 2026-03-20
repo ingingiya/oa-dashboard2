@@ -4369,6 +4369,14 @@ export default function OaDashboard(){
         @media (max-width: 480px) {
           .cal-cell { min-height: 48px; }
         }
+
+        /* 챗봇 FAB — 모바일에서 하단 nav 위로 */
+        .agent-fab-wrap { bottom: 24px !important; right: 24px !important; }
+        @media (max-width: 768px) {
+          .agent-fab-wrap { bottom: 72px !important; right: 12px !important; }
+          .agent-fab-btn  { width: 44px !important; height: 44px !important; font-size: 20px !important; }
+          .agent-chat-box { width: calc(100vw - 24px) !important; right: 0 !important; left: 12px !important; height: 70vh !important; }
+        }
       `}</style>
 
       {/* ── PC 사이드바 ── */}
@@ -4535,10 +4543,10 @@ export default function OaDashboard(){
       />}
 
       {/* ── 데이터 에이전트 플로팅 버튼 ── */}
-      <div style={{position:"fixed",bottom:24,right:24,zIndex:1000,display:"flex",flexDirection:"column",alignItems:"flex-end",gap:10}}>
+      <div className="agent-fab-wrap" style={{position:"fixed",bottom:24,right:24,zIndex:1000,display:"flex",flexDirection:"column",alignItems:"flex-end",gap:10}}>
         {/* 채팅창 */}
         {agentOpen&&(
-          <div style={{width:360,height:520,background:C.white,borderRadius:20,
+          <div className="agent-chat-box" style={{width:360,height:520,background:C.white,borderRadius:20,
             boxShadow:"0 20px 60px rgba(0,0,0,0.2)",display:"flex",flexDirection:"column",overflow:"hidden",
             border:`1px solid ${C.border}`}}>
             {/* 헤더 */}
@@ -4779,7 +4787,7 @@ export default function OaDashboard(){
         )}
 
         {/* 플로팅 버튼 */}
-        <button onClick={()=>setAgentOpen(v=>!v)}
+        <button className="agent-fab-btn" onClick={()=>setAgentOpen(v=>!v)}
           style={{width:52,height:52,borderRadius:"50%",border:"none",
             background:agentOpen?C.inkMid:C.rose,color:C.white,
             fontSize:22,cursor:"pointer",boxShadow:"0 4px 20px rgba(0,0,0,0.2)",
