@@ -4105,86 +4105,163 @@ export default function OaDashboard(){
   })();
 
   const ScheduleSection=(()=>{
-    const nUpcoming = notionSch.filter(s=>s.status!=="완료").sort((a,b)=>new Date(a.date)-new Date(b.date));
-    const nDone = notionSch.filter(s=>s.status==="완료");
+    const [calMonth, setCalMonth] = useState(()=>{const n=new Date();return{y:n.getFullYear(),m:n.getMonth()};});
+    const [selDay, setSelDay] = useState(null);
+    const [schFilter, setSchFilter] = useState("미완료"); // 미완료 | 전체
+
+    const activeItems = schFilter==="전체" ? notionSch : notionSch.filter(s=>s.status!=="완료");
+
+    // 달력 계산
+    const firstDay = new Date(calMonth.y, calMonth.m, 1);
+    const lastDay  = new Date(calMonth.y, calMonth.m+1, 0);
+    const startDow = firstDay.getDay(); // 0=일
+    const daysInMonth = lastDay.getDate();
+
+    // 날짜별 항목 매핑
+    const itemsByDate = {};
+    activeItems.forEach(s => {
+      if (!s.date) return;
+      const sd = new Date(s.date); sd.setHours(0,0,0,0);
+      const ed = s.endDate ? new Date(s.endDate) : sd;
+      for (let d = new Date(sd); d <= ed; d.setDate(d.getDate()+1)) {
+        const key = d.toISOString().slice(0,10);
+        if (!itemsByDate[key]) itemsByDate[key] = [];
+        if (d.getTime()===sd.getTime()) itemsByDate[key].push(s); // 시작일에만 표시
+      }
+    });
+
+    const todayStr2 = new Date().toISOString().slice(0,10);
+    const months=["1월","2월","3월","4월","5월","6월","7월","8월","9월","10월","11월","12월"];
+    const days=["일","월","화","수","목","금","토"];
+
+    const selItems = selDay ? (itemsByDate[selDay]||[]) : [];
+
     return(
     <div style={{display:"flex",flexDirection:"column",gap:14}}>
-      {/* Notion 연동 상태 배너 */}
+      {/* 노션 상태 배너 */}
       <div style={{display:"flex",alignItems:"center",gap:10,padding:"10px 14px",background:C.white,
         border:`1px solid ${notionError?C.bad+"44":C.good+"44"}`,borderRadius:12}}>
         <span style={{fontSize:16}}>{notionLoading?"⏳":notionError?"❌":"🟢"}</span>
         <div style={{flex:1,fontSize:11,fontWeight:700,color:notionError?C.bad:C.good}}>
-          {notionLoading?"노션 불러오는 중...":notionError?`노션 오류: ${notionError}`:`노션 연동됨 · ${notionSch.length}개`}
+          {notionLoading?"노션 불러오는 중...":notionError?`노션 오류: ${notionError}`:`노션 연동됨 · 전체 ${notionSch.length}개 · 미완료 ${notionSch.filter(s=>s.status!=="완료").length}개`}
         </div>
-        <button onClick={fetchNotionSch} style={{fontSize:10,padding:"4px 10px",borderRadius:8,
-          border:`1px solid ${C.border}`,background:C.cream,cursor:"pointer",fontFamily:"inherit",fontWeight:700}}>
-          🔄 새로고침
-        </button>
+        <div style={{display:"flex",gap:6}}>
+          {["미완료","전체"].map(f=>(
+            <button key={f} onClick={()=>setSchFilter(f)} style={{fontSize:10,padding:"3px 10px",borderRadius:20,
+              border:`1px solid ${schFilter===f?C.rose:C.border}`,background:schFilter===f?C.rose:C.cream,
+              color:schFilter===f?C.white:C.inkMid,cursor:"pointer",fontFamily:"inherit",fontWeight:700}}>
+              {f}
+            </button>
+          ))}
+          <button onClick={fetchNotionSch} style={{fontSize:10,padding:"3px 10px",borderRadius:20,
+            border:`1px solid ${C.border}`,background:C.cream,cursor:"pointer",fontFamily:"inherit",fontWeight:700}}>
+            🔄
+          </button>
+        </div>
       </div>
-      <div className="content-grid-3" style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:10}}>
-        {["공구","시딩","광고","이벤트"].map(type=>{
-          const tc=schTypeColor(type);
-          return(<div key={type} style={{background:C.white,border:`1px solid ${C.border}`,borderRadius:12,padding:"12px 14px",textAlign:"center"}}>
-            <div style={{fontSize:20,marginBottom:4}}>{schTypeIcon(type)}</div>
-            <div style={{fontSize:9,color:C.inkLt,fontWeight:700,letterSpacing:"0.1em"}}>{type}</div>
-            <div style={{fontSize:22,fontWeight:900,color:tc}}>{notionSch.filter(s=>s.type===type&&s.status!=="완료").length}</div>
-            <div style={{fontSize:9,color:C.inkLt}}>진행 예정</div>
-          </div>);
-        })}
-      </div>
-      <Card>
-        <CardTitle title="📅 전체 일정" sub="노션 연동 스케줄"
-          action={<Btn small onClick={()=>{setSchModalData({mode:"add",initial:null})}}>+ 일정 추가</Btn>}/>
-        {nUpcoming.length===0&&!notionLoading&&<div style={{textAlign:"center",color:C.inkLt,fontSize:12,padding:"28px 0"}}>예정된 일정이 없습니다</div>}
-        <div style={{display:"flex",flexDirection:"column",gap:8}}>
-          {nUpcoming.map(s=>{
-            const d=daysUntil(s.date),tc=schTypeColor(s.type),isUrgent=d!==null&&d<=3&&d>=0;
-            return(<div key={s.id} style={{border:`1px solid ${isUrgent?C.rose+"66":C.border}`,borderRadius:12,
-              padding:"12px 14px",background:isUrgent?"#FFF8FC":C.white,transition:"box-shadow 0.2s"}}
-              onMouseEnter={e=>e.currentTarget.style.boxShadow=`0 4px 16px rgba(232,86,122,0.1)`}
-              onMouseLeave={e=>e.currentTarget.style.boxShadow="none"}>
-              <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",gap:8,flexWrap:"wrap"}}>
-                <div style={{display:"flex",gap:10,alignItems:"flex-start",flex:1,minWidth:0}}>
-                  <div style={{display:"flex",flexDirection:"column",alignItems:"center",minWidth:44,flexShrink:0}}>
-                    <span style={{fontSize:10,fontWeight:700,color:tc,background:`${tc}18`,padding:"2px 8px",borderRadius:20,whiteSpace:"nowrap"}}>{schTypeIcon(s.type)} {s.type}</span>
-                    {d!==null&&<span style={{fontSize:9,marginTop:4,color:d<0?C.bad:d<=3?C.rose:C.inkLt,fontWeight:700}}>{d===0?"오늘":d<0?`D+${Math.abs(d)}`:`D-${d}`}</span>}
-                  </div>
-                  <div>
-                    <div style={{fontSize:13,fontWeight:800,color:C.ink}}>{s.title}</div>
-                    <div style={{fontSize:10,color:C.inkLt,marginTop:2}}>
-                      📆 {s.date}{s.endDate?` ~ ${s.endDate}`:""}
-                      {s.assignee&&<span style={{marginLeft:6,padding:"1px 6px",borderRadius:10,background:s.assigneeColor+"22",color:s.assigneeColor,fontWeight:700}}>{s.assignee}</span>}
+
+      {/* 달력 */}
+      <div style={{background:C.white,border:`1px solid ${C.border}`,borderRadius:14,overflow:"hidden"}}>
+        {/* 달력 헤더 */}
+        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"14px 16px",
+          borderBottom:`1px solid ${C.border}`}}>
+          <button onClick={()=>setCalMonth(p=>p.m===0?{y:p.y-1,m:11}:{y:p.y,m:p.m-1})}
+            style={{background:"none",border:"none",cursor:"pointer",fontSize:18,color:C.inkMid,padding:"0 8px"}}>‹</button>
+          <div style={{fontSize:16,fontWeight:900,color:C.ink}}>
+            {calMonth.y}년 {months[calMonth.m]}
+            <span style={{fontSize:10,fontWeight:600,color:C.inkLt,marginLeft:8}}>
+              {activeItems.filter(s=>s.date&&s.date.startsWith(`${calMonth.y}-${String(calMonth.m+1).padStart(2,'0')}`)).length}개
+            </span>
+          </div>
+          <div style={{display:"flex",gap:4,alignItems:"center"}}>
+            <button onClick={()=>setCalMonth({y:new Date().getFullYear(),m:new Date().getMonth()})}
+              style={{fontSize:10,padding:"3px 10px",borderRadius:20,border:`1px solid ${C.border}`,
+                background:C.cream,cursor:"pointer",fontFamily:"inherit",fontWeight:700,color:C.inkMid}}>오늘</button>
+            <Btn small onClick={()=>{setSchModalData({mode:"add",initial:null})}}>+ 추가</Btn>
+            <button onClick={()=>setCalMonth(p=>p.m===11?{y:p.y+1,m:0}:{y:p.y,m:p.m+1})}
+              style={{background:"none",border:"none",cursor:"pointer",fontSize:18,color:C.inkMid,padding:"0 8px"}}>›</button>
+          </div>
+        </div>
+        {/* 요일 헤더 */}
+        <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",borderBottom:`1px solid ${C.border}`}}>
+          {days.map((d,i)=>(
+            <div key={d} style={{padding:"8px 0",textAlign:"center",fontSize:10,fontWeight:700,
+              color:i===0?C.bad:i===6?"#3B82F6":C.inkLt}}>{d}</div>
+          ))}
+        </div>
+        {/* 날짜 그리드 */}
+        <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)"}}>
+          {Array.from({length:startDow}).map((_,i)=>(
+            <div key={`e${i}`} style={{minHeight:80,borderRight:`1px solid ${C.border}`,borderBottom:`1px solid ${C.border}`,background:C.cream}}/>
+          ))}
+          {Array.from({length:daysInMonth}).map((_,i)=>{
+            const day=i+1;
+            const dateKey=`${calMonth.y}-${String(calMonth.m+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+            const items=itemsByDate[dateKey]||[];
+            const isToday=dateKey===todayStr2;
+            const isSel=dateKey===selDay;
+            const col=(startDow+i)%7;
+            return(
+              <div key={day} onClick={()=>setSelDay(selDay===dateKey?null:dateKey)}
+                style={{minHeight:80,padding:"6px 4px",borderRight:`1px solid ${C.border}`,borderBottom:`1px solid ${C.border}`,
+                  cursor:items.length>0||true?"pointer":"default",
+                  background:isSel?"#EFF6FF":isToday?C.blush:C.white,transition:"background 0.15s"}}>
+                <div style={{fontSize:11,fontWeight:isToday?900:600,
+                  color:isToday?C.rose:col===0?C.bad:col===6?"#3B82F6":C.ink,
+                  width:22,height:22,borderRadius:"50%",display:"flex",alignItems:"center",justifyContent:"center",
+                  background:isToday?C.rose:isSel?"#DBEAFE":"transparent",
+                  color:isToday?C.white:col===0?C.bad:col===6?"#3B82F6":C.ink,marginBottom:2}}>
+                  {day}
+                </div>
+                {items.slice(0,3).map((s,j)=>{
+                  const tc=schTypeColor(s.type);
+                  return(
+                    <div key={j} style={{fontSize:9,fontWeight:700,padding:"1px 4px",borderRadius:4,
+                      background:`${tc}18`,color:tc,marginBottom:1,
+                      overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
+                      {s.assignee?`(${s.assignee.slice(0,1)}) `:""}{s.title.replace(/[(\[（][가-힣]{2,4}[)\]）]\s*/g,"").slice(0,10)}
                     </div>
-                    {s.memo&&<div style={{fontSize:10,color:C.inkMid,marginTop:3}}>💬 {s.memo}</div>}
-                  </div>
-                </div>
-                <div style={{display:"flex",gap:6,flexShrink:0}}>
-                  <Btn variant="ghost" small onClick={()=>{setSchModalData({mode:"edit",initial:{...s,notionId:s.id,note:s.memo}})}}>✏️</Btn>
-                  <Btn variant="sage" small onClick={()=>toggleNotionDone(s.id, true)}>✅</Btn>
-                  <Btn variant="danger" small onClick={()=>deleteNotionSch(s.id)}>🗑</Btn>
-                </div>
+                  );
+                })}
+                {items.length>3&&<div style={{fontSize:8,color:C.inkLt,fontWeight:700}}>+{items.length-3}개</div>}
               </div>
-            </div>);
+            );
           })}
         </div>
-      </Card>
-      {nDone.length>0&&(
+      </div>
+
+      {/* 선택된 날짜 상세 */}
+      {selDay&&(
         <Card>
-          <CardTitle title="✅ 완료된 일정" sub={`${nDone.length}건`}/>
-          {nDone.map(s=>(
-            <div key={s.id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",
-              padding:"8px 10px",borderRadius:10,background:C.cream,opacity:0.7,marginBottom:4}}>
-              <div>
-                <span style={{fontSize:10,fontWeight:700,color:schTypeColor(s.type),background:`${schTypeColor(s.type)}18`,
-                  padding:"1px 7px",borderRadius:20,marginRight:8}}>{s.type}</span>
-                <span style={{fontSize:12,fontWeight:600,color:C.inkMid}}>{s.title}</span>
-              </div>
-              <div style={{display:"flex",gap:6,alignItems:"center"}}>
-                <span style={{fontSize:10,color:C.inkLt}}>{s.date}</span>
-                <Btn variant="danger" small onClick={()=>deleteNotionSch(s.id)}>🗑</Btn>
-              </div>
-            </div>
-          ))}
+          <CardTitle title={`📋 ${selDay} 일정`} sub={`${selItems.length}개`}
+            action={<Btn small onClick={()=>{setSchModalData({mode:"add",initial:{date:selDay}})}}>+ 추가</Btn>}/>
+          {selItems.length===0&&<div style={{textAlign:"center",color:C.inkLt,fontSize:12,padding:"16px 0"}}>이날 일정 없음</div>}
+          <div style={{display:"flex",flexDirection:"column",gap:8}}>
+            {selItems.map(s=>{
+              const d=daysUntil(s.date),tc=schTypeColor(s.type);
+              return(
+                <div key={s.id} style={{display:"flex",alignItems:"center",gap:10,padding:"10px 12px",
+                  borderRadius:10,border:`1px solid ${C.border}`,background:C.white}}>
+                  <span style={{fontSize:10,fontWeight:700,color:tc,background:`${tc}18`,padding:"2px 8px",borderRadius:20,whiteSpace:"nowrap",flexShrink:0}}>
+                    {schTypeIcon(s.type)} {s.type}
+                  </span>
+                  <div style={{flex:1,minWidth:0}}>
+                    <div style={{fontSize:12,fontWeight:800,color:C.ink,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{s.title}</div>
+                    <div style={{fontSize:10,color:C.inkLt,marginTop:1}}>
+                      {s.endDate&&s.endDate!==s.date?`${s.date} ~ ${s.endDate}`:s.date}
+                      {s.assignee&&<span style={{marginLeft:6,padding:"1px 6px",borderRadius:10,background:s.assigneeColor+"22",color:s.assigneeColor,fontWeight:700}}>{s.assignee}</span>}
+                    </div>
+                    {s.memo&&<div style={{fontSize:10,color:C.inkMid,marginTop:2}}>💬 {s.memo}</div>}
+                  </div>
+                  <div style={{display:"flex",gap:4,flexShrink:0}}>
+                    <Btn variant="ghost" small onClick={()=>setSchModalData({mode:"edit",initial:{...s,notionId:s.id,note:s.memo}})}>✏️</Btn>
+                    <Btn variant="sage" small onClick={()=>toggleNotionDone(s.id,true)}>✅</Btn>
+                    <Btn variant="danger" small onClick={()=>deleteNotionSch(s.id)}>🗑</Btn>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         </Card>
       )}
     </div>

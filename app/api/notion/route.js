@@ -27,21 +27,31 @@ export async function GET() {
   const token = process.env.NOTION_TOKEN;
   if (!token) return Response.json({ error: "NOTION_TOKEN 없음" }, { status: 500 });
   try {
-    const res = await fetch(`https://api.notion.com/v1/databases/${SCHEDULE_DB_ID}/query`, {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${token}`,
-        "Notion-Version": "2022-06-28",
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
+    // 페이지네이션으로 전체 데이터 가져오기
+    let allResults = [];
+    let cursor = undefined;
+    do {
+      const body = {
         sorts: [{ property: "날짜", direction: "ascending" }],
         page_size: 100,
-      }),
-    });
-    if (!res.ok) return Response.json({ error: `Notion 오류 ${res.status}` }, { status: res.status });
-    const data = await res.json();
-    const items = data.results.map(page => ({
+      };
+      if (cursor) body.start_cursor = cursor;
+      const res = await fetch(`https://api.notion.com/v1/databases/${SCHEDULE_DB_ID}/query`, {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${token}`,
+          "Notion-Version": "2022-06-28",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(body),
+      });
+      if (!res.ok) return Response.json({ error: `Notion 오류 ${res.status}` }, { status: res.status });
+      const data = await res.json();
+      allResults = allResults.concat(data.results);
+      cursor = data.has_more ? data.next_cursor : undefined;
+    } while (cursor);
+
+    const items = allResults.map(page => ({
       id: page.id,
       ...parseProps(page.properties),
       assigneeColor: MEMBER_COLORS[parseProps(page.properties).assignee] || "#c4b5fd",
