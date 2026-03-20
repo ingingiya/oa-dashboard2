@@ -16,8 +16,8 @@ export async function GET(request) {
     const id = match[1];
     const gidMatch = url.match(/[#&?]gid=(\d+)/);
     const gid = gidMatch ? gidMatch[1] : "0";
-    // 캐시 방지용 타임스탬프 추가
-    csvUrl = `https://docs.google.com/spreadsheets/d/${id}/export?format=csv&gid=${gid}&t=${Date.now()}`;
+    // TSV로 받기 — 쉼표 포함 셀 오류 방지
+    csvUrl = `https://docs.google.com/spreadsheets/d/${id}/export?format=tsv&gid=${gid}&t=${Date.now()}`;
   }
   try {
     const res = await fetch(csvUrl, {
@@ -35,7 +35,7 @@ export async function GET(request) {
     return new Response(text, {
       status: 200,
       headers: {
-        "Content-Type": "text/csv; charset=utf-8",
+        "Content-Type": "text/tab-separated-values; charset=utf-8",
         "Cache-Control": "no-store, no-cache, must-revalidate",
         "Pragma": "no-cache",
       },
