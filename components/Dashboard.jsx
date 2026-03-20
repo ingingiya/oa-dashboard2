@@ -4708,137 +4708,199 @@ export default function OaDashboard(){
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   const ReviewSection=(()=>{
     const MEMBERS=["소리","영서","경은","지수"];
-    const STATUS_LABELS={pending:"⏳ 검토중",approved:"✅ 승인",rejected:"❌ 반려"};
-    const STATUS_COLORS={pending:{bg:"#fef9c3",border:"#fde047",text:"#854d0e"},approved:{bg:"#f0fdf4",border:"#4ade80",text:"#166534"},rejected:{bg:"#fff1f2",border:"#fca5a5",text:"#9f1239"}};
+    const PLATFORMS={instagram:{label:"인스타그램",icon:"📸",color:"#e1306c",bg:"#fff0f5"},twitter:{label:"트위터",icon:"🐦",color:"#1da1f2",bg:"#f0f9ff"}};
+    const EMPTY_FORM={title:"",platform:"instagram",link:"",postedAt:"",views:"",likes:"",comments:"",saves:"",isAd:false,adSpend:"",isManyChat:false,assignee:"",note:""};
 
-    const [rvTab,setRvTab]=useState("all"); // all|pending|approved|rejected
-    const [modal,setModal]=useState(null);
-    const [form,setForm]=useState({title:"",type:"이미지",assignee:"",link:"",note:""});
-    const [rejectNote,setRejectNote]=useState("");
-    const [rejectTarget,setRejectTarget]=useState(null);
+    const [rvTab,setRvTab]=useState("all"); // all|instagram|twitter
+    const [modal,setModal]=useState(null); // null|"add"|{mode:"edit",item}
+    const [form,setForm]=useState(EMPTY_FORM);
 
-    const filtered=(reviewItems||[]).filter(i=>rvTab==="all"||i.status===rvTab);
+    const filtered=(reviewItems||[]).filter(i=>rvTab==="all"||i.platform===rvTab);
 
     function addItem(){
       if(!form.title.trim()){alert("콘텐츠 제목을 입력해주세요");return;}
       const item={id:Date.now()+"_"+Math.random().toString(36).slice(2),
-        title:form.title.trim(),type:form.type,assignee:form.assignee,
-        link:form.link.trim(),note:form.note.trim(),
-        status:"pending",comment:"",
-        createdAt:new Date().toISOString().slice(0,10),
-        updatedAt:new Date().toISOString().slice(0,10)};
-      setReviewItems(prev=>[item,...(prev||[])]);
-      setForm({title:"",type:"이미지",assignee:"",link:"",note:""});
-      setModal(null);
-    }
-
-    function approve(id){
-      setReviewItems(prev=>(prev||[]).map(i=>i.id===id?{...i,status:"approved",comment:"",updatedAt:new Date().toISOString().slice(0,10)}:i));
-    }
-
-    function reject(id,comment){
-      setReviewItems(prev=>(prev||[]).map(i=>i.id===id?{...i,status:"rejected",comment,updatedAt:new Date().toISOString().slice(0,10)}:i));
-      setRejectTarget(null);setRejectNote("");
-    }
-
-    function resetStatus(id){
-      setReviewItems(prev=>(prev||[]).map(i=>i.id===id?{...i,status:"pending",comment:"",updatedAt:new Date().toISOString().slice(0,10)}:i));
+        ...form,
+        title:form.title.trim(),link:form.link.trim(),note:form.note.trim(),
+        views:form.views?Number(form.views.replace(/,/g,"")):null,
+        likes:form.likes?Number(form.likes.replace(/,/g,"")):null,
+        comments:form.comments?Number(form.comments.replace(/,/g,"")):null,
+        saves:form.saves?Number(form.saves.replace(/,/g,"")):null,
+        adSpend:form.adSpend?Number(form.adSpend.replace(/,/g,"")):null,
+        createdAt:new Date().toISOString().slice(0,10)};
+      if(modal==="add"){
+        setReviewItems(prev=>[item,...(prev||[])]);
+      } else {
+        setReviewItems(prev=>(prev||[]).map(i=>i.id===modal.item.id?{...item,id:i.id,createdAt:i.createdAt}:i));
+      }
+      setForm(EMPTY_FORM);setModal(null);
     }
 
     function deleteItem(id){
       setReviewItems(prev=>(prev||[]).filter(i=>i.id!==id));
     }
 
-    const counts={all:(reviewItems||[]).length,pending:(reviewItems||[]).filter(i=>i.status==="pending").length,approved:(reviewItems||[]).filter(i=>i.status==="approved").length,rejected:(reviewItems||[]).filter(i=>i.status==="rejected").length};
+    function openEdit(item){
+      setForm({...EMPTY_FORM,...item,
+        views:item.views!=null?String(item.views):"",
+        likes:item.likes!=null?String(item.likes):"",
+        comments:item.comments!=null?String(item.comments):"",
+        saves:item.saves!=null?String(item.saves):"",
+        adSpend:item.adSpend!=null?String(item.adSpend):"",
+      });
+      setModal({mode:"edit",item});
+    }
+
+    const instaCount=(reviewItems||[]).filter(i=>i.platform==="instagram").length;
+    const twitterCount=(reviewItems||[]).filter(i=>i.platform==="twitter").length;
+
+    const inputStyle={width:"100%",fontSize:12,padding:"8px 10px",borderRadius:8,border:`1px solid ${C.border}`,fontFamily:"inherit",outline:"none",boxSizing:"border-box"};
 
     return(
     <div style={{display:"flex",flexDirection:"column",gap:14}}>
       <Card>
-        <CardTitle title="✅ 콘텐츠 리뷰" sub={`전체 ${counts.all}건 · 검토중 ${counts.pending}건`}
-          action={<Btn small onClick={()=>{setForm({title:"",type:"이미지",assignee:"",link:"",note:""});setModal("add");}}>+ 등록</Btn>}/>
+        <CardTitle title="📋 콘텐츠 리뷰" sub={`전체 ${(reviewItems||[]).length}건`}
+          action={<Btn small onClick={()=>{setForm(EMPTY_FORM);setModal("add");}}>+ 등록</Btn>}/>
 
-        {/* 탭 필터 */}
+        {/* 플랫폼 탭 */}
         <div style={{display:"flex",gap:6,marginBottom:12,flexWrap:"wrap"}}>
-          {[["all","전체"],["pending","검토중"],["approved","승인"],["rejected","반려"]].map(([k,l])=>(
+          {[["all","전체",C.rose,(reviewItems||[]).length],["instagram","📸 인스타그램","#e1306c",instaCount],["twitter","🐦 트위터","#1da1f2",twitterCount]].map(([k,l,col,cnt])=>(
             <button key={k} onClick={()=>setRvTab(k)} style={{fontSize:11,padding:"5px 14px",borderRadius:20,
-              border:`1px solid ${rvTab===k?C.rose:C.border}`,background:rvTab===k?C.rose:C.white,
+              border:`1px solid ${rvTab===k?col:C.border}`,background:rvTab===k?col:C.white,
               color:rvTab===k?C.white:C.inkMid,cursor:"pointer",fontFamily:"inherit",fontWeight:700}}>
-              {l} {counts[k]>0&&<span style={{opacity:0.8}}>({counts[k]})</span>}
+              {l} <span style={{opacity:0.8}}>({cnt})</span>
             </button>
           ))}
         </div>
 
         {filtered.length===0&&(
           <div style={{textAlign:"center",color:C.inkLt,fontSize:12,padding:"24px 0"}}>
-            {rvTab==="all"?"+ 등록 버튼으로 콘텐츠를 추가해보세요":"해당 상태의 콘텐츠가 없어요"}
+            + 등록 버튼으로 콘텐츠를 추가해보세요
           </div>
         )}
 
         <div style={{display:"flex",flexDirection:"column",gap:10}}>
           {filtered.map(item=>{
-            const sc=STATUS_COLORS[item.status]||STATUS_COLORS.pending;
-            const isRejectOpen=rejectTarget===item.id;
+            const pl=PLATFORMS[item.platform]||PLATFORMS.instagram;
             return(
-            <div key={item.id} style={{borderRadius:12,border:`1px solid ${sc.border}`,background:sc.bg,padding:"12px 14px"}}>
+            <div key={item.id} style={{borderRadius:12,border:`1px solid ${pl.color}44`,background:pl.bg,padding:"12px 14px"}}>
               <div style={{display:"flex",alignItems:"flex-start",gap:10}}>
                 <div style={{flex:1,minWidth:0}}>
-                  <div style={{display:"flex",alignItems:"center",gap:6,flexWrap:"wrap",marginBottom:4}}>
-                    <span style={{fontSize:10,fontWeight:700,color:sc.text,background:"rgba(255,255,255,0.6)",padding:"2px 8px",borderRadius:10,border:`1px solid ${sc.border}`}}>
-                      {STATUS_LABELS[item.status]}
-                    </span>
-                    <span style={{fontSize:10,fontWeight:700,color:C.inkMid,background:C.cream,padding:"2px 8px",borderRadius:10}}>{item.type}</span>
+                  {/* 뱃지 행 */}
+                  <div style={{display:"flex",alignItems:"center",gap:6,flexWrap:"wrap",marginBottom:6}}>
+                    <span style={{fontSize:11,fontWeight:700,color:pl.color}}>{pl.icon} {pl.label}</span>
+                    {item.isAd&&<span style={{fontSize:10,fontWeight:700,color:"#8b5cf6",background:"#f5f3ff",padding:"2px 8px",borderRadius:10}}>📣 광고</span>}
+                    {item.isManyChat&&<span style={{fontSize:10,fontWeight:700,color:"#f59e0b",background:"#fffbeb",padding:"2px 8px",borderRadius:10}}>🤖 매니챗</span>}
                     {item.assignee&&<span style={{fontSize:10,color:C.inkMid}}>👤 {item.assignee}</span>}
                   </div>
-                  <div style={{fontSize:13,fontWeight:800,color:C.ink,marginBottom:4}}>{item.title}</div>
-                  {item.note&&<div style={{fontSize:11,color:C.inkMid,marginBottom:4}}>💬 {item.note}</div>}
-                  {item.comment&&<div style={{fontSize:11,color:"#9f1239",background:"#fff1f2",padding:"4px 8px",borderRadius:8,marginBottom:4}}>🚫 {item.comment}</div>}
-                  {item.link&&<a href={item.link} target="_blank" rel="noreferrer" style={{fontSize:10,color:C.rose,display:"block",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>🔗 {item.link}</a>}
-                  <div style={{fontSize:9,color:C.inkLt,marginTop:4}}>{item.createdAt} 등록 {item.updatedAt!==item.createdAt&&`· ${item.updatedAt} 업데이트`}</div>
+                  {/* 제목 */}
+                  <div style={{fontSize:13,fontWeight:800,color:C.ink,marginBottom:6}}>{item.title}</div>
+                  {/* 수치 */}
+                  <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:6}}>
+                    {item.views!=null&&<span style={{fontSize:10,fontWeight:700,color:C.inkMid,background:C.cream,padding:"2px 8px",borderRadius:10}}>👁 {item.views.toLocaleString()}</span>}
+                    {item.likes!=null&&<span style={{fontSize:10,fontWeight:700,color:"#e1306c",background:"#fff0f5",padding:"2px 8px",borderRadius:10}}>❤️ {item.likes.toLocaleString()}</span>}
+                    {item.comments!=null&&<span style={{fontSize:10,fontWeight:700,color:C.inkMid,background:C.cream,padding:"2px 8px",borderRadius:10}}>💬 {item.comments.toLocaleString()}</span>}
+                    {item.saves!=null&&<span style={{fontSize:10,fontWeight:700,color:"#8b5cf6",background:"#f5f3ff",padding:"2px 8px",borderRadius:10}}>🔖 {item.saves.toLocaleString()}</span>}
+                    {item.isAd&&item.adSpend!=null&&<span style={{fontSize:10,fontWeight:700,color:"#8b5cf6",background:"#f5f3ff",padding:"2px 8px",borderRadius:10}}>💰 {item.adSpend.toLocaleString()}원</span>}
+                  </div>
+                  {item.note&&<div style={{fontSize:11,color:C.inkMid,marginBottom:4}}>📝 {item.note}</div>}
+                  <div style={{display:"flex",gap:8,alignItems:"center"}}>
+                    {item.link&&<a href={item.link} target="_blank" rel="noreferrer" style={{fontSize:10,color:pl.color,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",maxWidth:200}}>🔗 게시물 보기</a>}
+                    {item.postedAt&&<span style={{fontSize:9,color:C.inkLt}}>{item.postedAt} 게시</span>}
+                  </div>
                 </div>
                 <div style={{display:"flex",flexDirection:"column",gap:4,flexShrink:0}}>
-                  {item.status==="pending"&&(<>
-                    <Btn variant="sage" small onClick={()=>approve(item.id)}>✅ 승인</Btn>
-                    <Btn variant="danger" small onClick={()=>setRejectTarget(isRejectOpen?null:item.id)}>❌ 반려</Btn>
-                  </>)}
-                  {item.status!=="pending"&&<Btn small onClick={()=>resetStatus(item.id)} style={{fontSize:9}}>↩ 재검토</Btn>}
+                  <Btn small onClick={()=>openEdit(item)}>✏️ 수정</Btn>
                   <Btn variant="danger" small onClick={()=>deleteItem(item.id)}>🗑</Btn>
                 </div>
               </div>
-              {isRejectOpen&&(
-                <div style={{marginTop:8,display:"flex",gap:6}}>
-                  <input value={rejectNote} onChange={e=>setRejectNote(e.target.value)}
-                    placeholder="반려 사유 (선택)" style={{flex:1,fontSize:11,padding:"6px 10px",borderRadius:8,
-                    border:`1px solid ${C.border}`,fontFamily:"inherit",outline:"none"}}/>
-                  <Btn variant="danger" small onClick={()=>reject(item.id,rejectNote)}>확인</Btn>
-                </div>
-              )}
             </div>
             );
           })}
         </div>
       </Card>
 
-      {/* 등록 모달 */}
-      {modal==="add"&&(
-        <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.4)",zIndex:3000,display:"flex",alignItems:"center",justifyContent:"center",padding:16}}>
-          <div style={{background:C.white,borderRadius:20,padding:24,width:"100%",maxWidth:420}}>
-            <div style={{fontSize:16,fontWeight:900,marginBottom:16}}>콘텐츠 등록</div>
+      {/* 등록/수정 모달 */}
+      {modal&&(
+        <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.4)",zIndex:3000,display:"flex",alignItems:"center",justifyContent:"center",padding:16,overflowY:"auto"}}>
+          <div style={{background:C.white,borderRadius:20,padding:24,width:"100%",maxWidth:440,margin:"auto"}}>
+            <div style={{fontSize:16,fontWeight:900,marginBottom:16}}>{modal==="add"?"콘텐츠 등록":"콘텐츠 수정"}</div>
             <div style={{display:"flex",flexDirection:"column",gap:10}}>
+              {/* 플랫폼 */}
               <div>
-                <div style={{fontSize:10,fontWeight:700,color:C.inkMid,marginBottom:4}}>제목 *</div>
-                <input value={form.title} onChange={e=>setForm(p=>({...p,title:e.target.value}))}
-                  placeholder="콘텐츠 제목" style={{width:"100%",fontSize:12,padding:"8px 10px",borderRadius:8,border:`1px solid ${C.border}`,fontFamily:"inherit",outline:"none",boxSizing:"border-box"}}/>
-              </div>
-              <div>
-                <div style={{fontSize:10,fontWeight:700,color:C.inkMid,marginBottom:4}}>유형</div>
-                <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
-                  {["이미지","영상","릴스","스토리","기타"].map(t=>(
-                    <button key={t} onClick={()=>setForm(p=>({...p,type:t}))} style={{fontSize:11,padding:"4px 12px",borderRadius:20,
-                      border:`1px solid ${form.type===t?C.rose:C.border}`,background:form.type===t?C.rose:C.white,
-                      color:form.type===t?C.white:C.inkMid,cursor:"pointer",fontFamily:"inherit",fontWeight:700}}>{t}</button>
+                <div style={{fontSize:10,fontWeight:700,color:C.inkMid,marginBottom:4}}>플랫폼</div>
+                <div style={{display:"flex",gap:6}}>
+                  {Object.entries(PLATFORMS).map(([k,pl])=>(
+                    <button key={k} onClick={()=>setForm(p=>({...p,platform:k}))} style={{flex:1,fontSize:12,padding:"8px 0",borderRadius:10,
+                      border:`1px solid ${form.platform===k?pl.color:C.border}`,
+                      background:form.platform===k?pl.bg:C.white,
+                      color:form.platform===k?pl.color:C.inkMid,cursor:"pointer",fontFamily:"inherit",fontWeight:700}}>
+                      {pl.icon} {pl.label}
+                    </button>
                   ))}
                 </div>
               </div>
+              {/* 제목 */}
+              <div>
+                <div style={{fontSize:10,fontWeight:700,color:C.inkMid,marginBottom:4}}>제목 *</div>
+                <input value={form.title} onChange={e=>setForm(p=>({...p,title:e.target.value}))} placeholder="콘텐츠 제목" style={inputStyle}/>
+              </div>
+              {/* 링크 + 게시일 */}
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+                <div>
+                  <div style={{fontSize:10,fontWeight:700,color:C.inkMid,marginBottom:4}}>게시물 링크</div>
+                  <input value={form.link} onChange={e=>setForm(p=>({...p,link:e.target.value}))} placeholder="https://..." style={inputStyle}/>
+                </div>
+                <div>
+                  <div style={{fontSize:10,fontWeight:700,color:C.inkMid,marginBottom:4}}>게시일</div>
+                  <input type="date" value={form.postedAt} onChange={e=>setForm(p=>({...p,postedAt:e.target.value}))} style={inputStyle}/>
+                </div>
+              </div>
+              {/* 수치 */}
+              <div>
+                <div style={{fontSize:10,fontWeight:700,color:C.inkMid,marginBottom:4}}>성과 수치</div>
+                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+                  {[["views","👁 조회수"],["likes","❤️ 좋아요"],["comments","💬 댓글"],["saves","🔖 저장"]].map(([k,l])=>(
+                    <div key={k}>
+                      <div style={{fontSize:9,color:C.inkMid,marginBottom:2}}>{l}</div>
+                      <input value={form[k]} onChange={e=>setForm(p=>({...p,[k]:e.target.value}))} placeholder="0" style={inputStyle}/>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              {/* 광고 여부 */}
+              <div style={{display:"flex",gap:10,alignItems:"flex-start"}}>
+                <div style={{flex:1}}>
+                  <div style={{fontSize:10,fontWeight:700,color:C.inkMid,marginBottom:4}}>광고 진행</div>
+                  <div style={{display:"flex",gap:6}}>
+                    {[["true","📣 했음"],["false","없음"]].map(([v,l])=>(
+                      <button key={v} onClick={()=>setForm(p=>({...p,isAd:v==="true"}))} style={{flex:1,fontSize:11,padding:"6px 0",borderRadius:10,
+                        border:`1px solid ${String(form.isAd)===v?"#8b5cf6":C.border}`,
+                        background:String(form.isAd)===v?"#f5f3ff":C.white,
+                        color:String(form.isAd)===v?"#8b5cf6":C.inkMid,cursor:"pointer",fontFamily:"inherit",fontWeight:700}}>{l}</button>
+                    ))}
+                  </div>
+                  {form.isAd&&(
+                    <div style={{marginTop:6}}>
+                      <div style={{fontSize:9,color:C.inkMid,marginBottom:2}}>💰 광고 소진액</div>
+                      <input value={form.adSpend} onChange={e=>setForm(p=>({...p,adSpend:e.target.value}))} placeholder="0" style={inputStyle}/>
+                    </div>
+                  )}
+                </div>
+                {/* 매니챗 */}
+                <div style={{flex:1}}>
+                  <div style={{fontSize:10,fontWeight:700,color:C.inkMid,marginBottom:4}}>매니챗</div>
+                  <div style={{display:"flex",gap:6}}>
+                    {[["true","🤖 했음"],["false","없음"]].map(([v,l])=>(
+                      <button key={v} onClick={()=>setForm(p=>({...p,isManyChat:v==="true"}))} style={{flex:1,fontSize:11,padding:"6px 0",borderRadius:10,
+                        border:`1px solid ${String(form.isManyChat)===v?"#f59e0b":C.border}`,
+                        background:String(form.isManyChat)===v?"#fffbeb":C.white,
+                        color:String(form.isManyChat)===v?"#f59e0b":C.inkMid,cursor:"pointer",fontFamily:"inherit",fontWeight:700}}>{l}</button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+              {/* 담당자 */}
               <div>
                 <div style={{fontSize:10,fontWeight:700,color:C.inkMid,marginBottom:4}}>담당자</div>
                 <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
@@ -4849,19 +4911,14 @@ export default function OaDashboard(){
                   ))}
                 </div>
               </div>
-              <div>
-                <div style={{fontSize:10,fontWeight:700,color:C.inkMid,marginBottom:4}}>링크</div>
-                <input value={form.link} onChange={e=>setForm(p=>({...p,link:e.target.value}))}
-                  placeholder="구글드라이브, 피그마 등" style={{width:"100%",fontSize:12,padding:"8px 10px",borderRadius:8,border:`1px solid ${C.border}`,fontFamily:"inherit",outline:"none",boxSizing:"border-box"}}/>
-              </div>
+              {/* 메모 */}
               <div>
                 <div style={{fontSize:10,fontWeight:700,color:C.inkMid,marginBottom:4}}>메모</div>
-                <input value={form.note} onChange={e=>setForm(p=>({...p,note:e.target.value}))}
-                  placeholder="특이사항, 수정 요청사항 등" style={{width:"100%",fontSize:12,padding:"8px 10px",borderRadius:8,border:`1px solid ${C.border}`,fontFamily:"inherit",outline:"none",boxSizing:"border-box"}}/>
+                <input value={form.note} onChange={e=>setForm(p=>({...p,note:e.target.value}))} placeholder="특이사항, 반응 등" style={inputStyle}/>
               </div>
             </div>
             <div style={{display:"flex",gap:8,marginTop:16}}>
-              <Btn onClick={addItem} style={{flex:1}}>등록</Btn>
+              <Btn onClick={addItem} style={{flex:1}}>{modal==="add"?"등록":"저장"}</Btn>
               <Btn variant="ghost" onClick={()=>setModal(null)} style={{flex:1}}>취소</Btn>
             </div>
           </div>
