@@ -807,6 +807,30 @@ export default function OaDashboard(){
       });
     }
 
+    // 월별 성과 비교
+    if(Array.isArray(monthlyFiles) && monthlyFiles.length>0){
+      lines.push("");
+      lines.push("## 월별 성과 비교");
+      lines.push("월 | 메타광고비 | 전환광고비 | 트래픽광고비 | 구매 | ROAS | CPA | CPC | LPV율 | 매출 | 광고비율");
+      monthlyFiles.forEach(f=>{
+        const r = (f.rows||[]).filter(x=>!((x.campaign||x.adName||"").includes("Instagram 게시물")));
+        const spend  = r.reduce((s,x)=>s+(x.spend||0),0);
+        const conv   = r.filter(x=>isConversionCampaign(x.objective,x.campaign)).reduce((s,x)=>s+(x.spend||0),0);
+        const traff  = r.filter(x=>!isConversionCampaign(x.objective,x.campaign)).reduce((s,x)=>s+(x.spend||0),0);
+        const purch  = r.reduce((s,x)=>s+(x.purchases||0),0);
+        const convV  = r.reduce((s,x)=>s+(x.convValue||0),0);
+        const clicks = r.reduce((s,x)=>s+(x.clicks||0),0);
+        const lpv    = r.reduce((s,x)=>s+(x.lpv||0),0);
+        const roas   = spend>0?Math.round(convV/spend*100)+"%":"—";
+        const cpa    = purch>0?fmtW(spend/purch):"—";
+        const cpc    = clicks>0?`₩${Math.round(spend/clicks)}`:"—";
+        const lpvR   = clicks>0?Math.round(lpv/clicks*100)+"%":"—";
+        const rev    = f.revenue>0?fmtW(f.revenue):"—";
+        const ratio  = f.revenue>0?Math.round(spend/f.revenue*100)+"%":"—";
+        lines.push(`${f.label} | ${fmtW(spend)} | ${fmtW(conv)} | ${fmtW(traff)} | ${purch}건 | ${roas} | ${cpa} | ${cpc} | ${lpvR} | ${rev} | ${ratio}`);
+      });
+    }
+
     return lines.join("\n");
   }
 
