@@ -4350,7 +4350,41 @@ export default function OaDashboard(){
       ctr: d.impressions>0?(d.clicks/d.impressions*100):0,
       cpc: d.clicks>0?(d.spend/d.clicks):0,
       roas: d.spend>0?(d.convValue/d.spend*100):0,
-    })).filter(d=>d.spend>0).sort((a,b)=>b.ctr-a.ctr);
+    })).filter(d=>d.spend>0).map(d=>{
+      // 종합 점수: CTR 40% + ROAS 40% + 소진량 20%
+      const ctrScore  = Math.min(d.ctr / 3, 1) * 40;
+      const roasScore = Math.min(d.roas / 300, 1) * 40;
+      const spendScore= Math.min(d.spend / 300000, 1) * 20;
+      return {...d, _score: ctrScore + roasScore + spendScore};
+    }).sort((a,b)=>b._score-a._score);
+
+    const ctrMin = trafficCriteria?.ctrMin || 1.5;
+    // 잘 나온 소재: CTR ≥ 기준 이상 AND 최소 1만원 이상 소진
+    function adQuality(ad) {
+      if (ad.ctr >= ctrMin * 1.5 && ad.spend >= 10000) return "great"; // 🌟 우수
+      if (ad.ctr >= ctrMin        && ad.spend >= 10000) return "good";  // ✅ 양호
+      return "normal";
+    }
+
+    const libNames = new Set((creativeLib||[]).map(i=>i.name));
+
+    function saveGoodAds() {
+      const goodAds = adList.filter(ad => adQuality(ad) !== "normal" && !libNames.has(ad.adName));
+      if (goodAds.length === 0) { alert("새로 저장할 소재가 없어요 (이미 모두 저장됐거나 기준 미달)"); return; }
+      const now = new Date().toISOString().slice(0,10);
+      const newItems = goodAds.map(ad => ({
+        id: Date.now() + "_" + Math.random().toString(36).slice(2),
+        name: ad.adName,
+        link: "",
+        product: "",
+        note: `CTR ${ad.ctr.toFixed(2)}% · ROAS ${ad.roas.toFixed(0)}% · 소진 ${Math.round(ad.spend).toLocaleString()}원`,
+        tags: adQuality(ad) === "great" ? "우수소재,상위소재" : "상위소재",
+        addedAt: now,
+      }));
+      setCreativeLib(prev => [...newItems, ...(prev||[])]);
+      alert(`✅ ${newItems.length}개 소재를 라이브러리에 저장했어요!`);
+      setTab("library");
+    }
 
     const topAds = adList.slice(0,20);
 
@@ -4398,35 +4432,77 @@ export default function OaDashboard(){
       {/* 상위 소재 */}
       {tab==="top"&&(
         <Card>
-          <CardTitle title="📊 상위 소재 (CTR 기준)" sub={allAdRaw.length===0?"메타 파일 업로드 필요":`${adList.length}개 소재`}/>
+          <CardTitle
+            title="📊 상위 소재 (종합점수 순)"
+            sub={allAdRaw.length===0?"메타 파일 업로드 필요":`${adList.length}개 소재 · CTR기준 ${ctrMin}%`}
+            action={allAdRaw.length>0&&(
+              <Btn small onClick={saveGoodAds} style={{background:"#4DAD7A",borderColor:"#4DAD7A",color:"#fff",whiteSpace:"nowrap"}}>
+                🌟 잘 나온 소재 저장
+              </Btn>
+            )}
+          />
           {allAdRaw.length===0&&(
             <div style={{textAlign:"center",color:C.inkLt,fontSize:12,padding:"20px 0"}}>
               메타광고 탭에서 전체 파일을 업로드하면 소재 성과가 표시돼요
             </div>
           )}
+          {allAdRaw.length>0&&(()=>{
+            const greatCount = adList.filter(a=>adQuality(a)==="great"&&!libNames.has(a.adName)).length;
+            const goodCount  = adList.filter(a=>adQuality(a)==="good" &&!libNames.has(a.adName)).length;
+            return(
+              <div style={{display:"flex",gap:8,marginBottom:10,flexWrap:"wrap"}}>
+                <span style={{fontSize:10,fontWeight:700,color:"#4DAD7A",background:"#4DAD7A18",padding:"3px 10px",borderRadius:10}}>🌟 우수 {adList.filter(a=>adQuality(a)==="great").length}개</span>
+                <span style={{fontSize:10,fontWeight:700,color:"#60a5fa",background:"#eff6ff",padding:"3px 10px",borderRadius:10}}>✅ 양호 {adList.filter(a=>adQuality(a)==="good").length}개</span>
+                <span style={{fontSize:10,fontWeight:700,color:C.inkMid,background:C.cream,padding:"3px 10px",borderRadius:10}}>📁 저장가능 {greatCount+goodCount}개</span>
+              </div>
+            );
+          })()}
           <div style={{display:"flex",flexDirection:"column",gap:8}}>
-            {topAds.map((ad,i)=>(
-              <div key={ad.adName} style={{padding:"10px 12px",borderRadius:10,border:`1px solid ${C.border}`,background:C.white}}>
+            {topAds.map((ad,i)=>{
+              const quality = adQuality(ad);
+              const alreadySaved = libNames.has(ad.adName);
+              const qualityStyle = quality==="great"
+                ? {border:`1px solid #4DAD7A55`,background:"#f0fdf4"}
+                : quality==="good"
+                  ? {border:`1px solid #60a5fa55`,background:"#eff6ff"}
+                  : {border:`1px solid ${C.border}`,background:C.white};
+              return(
+              <div key={ad.adName} style={{padding:"10px 12px",borderRadius:10,...qualityStyle}}>
                 <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
                   <span style={{fontSize:11,fontWeight:900,color:i<3?C.rose:C.inkMid,
                     background:i<3?C.blush:C.cream,borderRadius:"50%",width:22,height:22,
                     display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>{i+1}</span>
                   <div style={{flex:1,fontSize:12,fontWeight:800,color:C.ink,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{ad.adName}</div>
+                  {quality==="great"&&<span style={{fontSize:10,fontWeight:700,color:"#4DAD7A",background:"#4DAD7A18",padding:"2px 8px",borderRadius:10,flexShrink:0}}>🌟 우수</span>}
+                  {quality==="good" &&<span style={{fontSize:10,fontWeight:700,color:"#60a5fa",background:"#eff6ff",padding:"2px 8px",borderRadius:10,flexShrink:0}}>✅ 양호</span>}
+                  {alreadySaved     &&<span style={{fontSize:10,fontWeight:700,color:C.inkLt,background:C.cream,padding:"2px 8px",borderRadius:10,flexShrink:0}}>📁 저장됨</span>}
                 </div>
                 <div style={{display:"flex",gap:8,marginBottom:8,flexWrap:"wrap"}}>
                   <span style={{fontSize:10,fontWeight:700,color:C.good,background:C.good+"18",padding:"2px 8px",borderRadius:10}}>CTR {ad.ctr.toFixed(2)}%</span>
                   <span style={{fontSize:10,fontWeight:700,color:C.inkMid,background:C.cream,padding:"2px 8px",borderRadius:10}}>CPC {ad.cpc>0?Math.round(ad.cpc).toLocaleString()+"원":"—"}</span>
                   <span style={{fontSize:10,fontWeight:700,color:"#8b5cf6",background:"#f5f3ff",padding:"2px 8px",borderRadius:10}}>ROAS {ad.roas.toFixed(0)}%</span>
                   <span style={{fontSize:10,fontWeight:700,color:C.inkLt,background:C.cream,padding:"2px 8px",borderRadius:10}}>소진 {Math.round(ad.spend).toLocaleString()}원</span>
+                  <span style={{fontSize:10,fontWeight:700,color:C.inkLt,background:C.cream,padding:"2px 8px",borderRadius:10}}>점수 {ad._score.toFixed(0)}점</span>
                 </div>
                 <div style={{display:"flex",gap:6,alignItems:"center"}}>
                   <input value={reqNote} onChange={e=>setReqNote(e.target.value)} placeholder="요청 메모 (선택)"
                     style={{flex:1,fontSize:10,padding:"4px 8px",borderRadius:8,border:`1px solid ${C.border}`,fontFamily:"inherit",outline:"none"}}/>
                   <Btn small onClick={()=>requestRecreate(ad)}>🎨 재제작 요청</Btn>
-                  <Btn variant="sage" small onClick={()=>{setCreativeLib(prev=>[{id:Date.now()+"",name:ad.adName,link:"",product:"",note:`CTR ${ad.ctr.toFixed(2)}% · ROAS ${ad.roas.toFixed(0)}%`,tags:"상위소재",addedAt:new Date().toISOString().slice(0,10)},...(prev||[])])}}>📁 저장</Btn>
+                  <Btn variant="sage" small disabled={alreadySaved} onClick={()=>{
+                    if(alreadySaved){alert("이미 라이브러리에 저장된 소재예요");return;}
+                    setCreativeLib(prev=>[{
+                      id:Date.now()+"",name:ad.adName,link:"",product:"",
+                      note:`CTR ${ad.ctr.toFixed(2)}% · ROAS ${ad.roas.toFixed(0)}% · 소진 ${Math.round(ad.spend).toLocaleString()}원`,
+                      tags: quality==="great"?"우수소재,상위소재":"상위소재",
+                      addedAt:new Date().toISOString().slice(0,10)
+                    },...(prev||[])]);
+                  }}>
+                    {alreadySaved?"📁 저장됨":"📁 저장"}
+                  </Btn>
                 </div>
               </div>
-            ))}
+              );
+            })}
           </div>
         </Card>
       )}
@@ -4434,23 +4510,55 @@ export default function OaDashboard(){
       {/* 라이브러리 */}
       {tab==="library"&&(
         <Card>
-          <CardTitle title="📁 소재 라이브러리" sub="잘 나온 소재 모음"
-            action={<Btn small onClick={()=>{setLibForm({name:"",link:"",product:"",note:"",tags:""});setLibModal({mode:"add"});}}>+ 추가</Btn>}/>
+          <CardTitle title="📁 소재 라이브러리" sub={`${(creativeLib||[]).length}개 저장됨`}
+            action={
+              <div style={{display:"flex",gap:6}}>
+                {(creativeLib||[]).length>0&&<Btn variant="danger" small onClick={()=>{if(confirm("라이브러리를 모두 비울까요?"))setCreativeLib([]);}}>전체삭제</Btn>}
+                <Btn small onClick={()=>{setLibForm({name:"",link:"",product:"",note:"",tags:""});setLibModal({mode:"add"});}}>+ 추가</Btn>
+              </div>
+            }/>
           {(creativeLib||[]).length===0&&(
             <div style={{textAlign:"center",color:C.inkLt,fontSize:12,padding:"20px 0"}}>
-              상위 소재에서 📁 저장하거나 직접 추가하세요
+              상위 소재 탭에서 🌟 잘 나온 소재 저장 또는 📁 저장을 눌러보세요
             </div>
           )}
+          {/* 태그 요약 */}
+          {(creativeLib||[]).length>0&&(()=>{
+            const greatCnt = (creativeLib||[]).filter(i=>i.tags?.includes("우수소재")).length;
+            const goodCnt  = (creativeLib||[]).filter(i=>i.tags?.includes("상위소재")&&!i.tags?.includes("우수소재")).length;
+            return(
+              <div style={{display:"flex",gap:8,marginBottom:10,flexWrap:"wrap"}}>
+                {greatCnt>0&&<span style={{fontSize:10,fontWeight:700,color:"#4DAD7A",background:"#4DAD7A18",padding:"3px 10px",borderRadius:10}}>🌟 우수 {greatCnt}개</span>}
+                {goodCnt>0 &&<span style={{fontSize:10,fontWeight:700,color:"#60a5fa",background:"#eff6ff",padding:"3px 10px",borderRadius:10}}>✅ 양호 {goodCnt}개</span>}
+              </div>
+            );
+          })()}
           <div style={{display:"flex",flexDirection:"column",gap:8}}>
-            {(creativeLib||[]).map(item=>(
-              <div key={item.id} style={{padding:"10px 12px",borderRadius:10,border:`1px solid ${C.border}`,background:C.white}}>
+            {(creativeLib||[]).map(item=>{
+              const isGreat = item.tags?.includes("우수소재");
+              const isGood  = item.tags?.includes("상위소재")&&!isGreat;
+              const cardStyle = isGreat
+                ? {border:`1px solid #4DAD7A55`,background:"#f0fdf4"}
+                : isGood
+                  ? {border:`1px solid #60a5fa55`,background:"#eff6ff"}
+                  : {border:`1px solid ${C.border}`,background:C.white};
+              return(
+              <div key={item.id} style={{padding:"10px 12px",borderRadius:10,...cardStyle}}>
                 <div style={{display:"flex",alignItems:"flex-start",gap:8}}>
                   <div style={{flex:1,minWidth:0}}>
-                    <div style={{fontSize:12,fontWeight:800,color:C.ink,marginBottom:2}}>{item.name}</div>
+                    <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:2}}>
+                      {isGreat&&<span style={{fontSize:10}}>🌟</span>}
+                      {isGood &&<span style={{fontSize:10}}>✅</span>}
+                      <div style={{fontSize:12,fontWeight:800,color:C.ink,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{item.name}</div>
+                    </div>
                     {item.product&&<div style={{fontSize:10,color:C.inkMid}}>📦 {item.product}</div>}
                     {item.note&&<div style={{fontSize:10,color:C.inkMid,marginTop:2}}>💬 {item.note}</div>}
                     {item.tags&&<div style={{fontSize:9,color:"#8b5cf6",marginTop:4}}>{item.tags.split(",").map(t=>(
-                      <span key={t} style={{background:"#f5f3ff",padding:"1px 6px",borderRadius:10,marginRight:4}}>{t.trim()}</span>
+                      <span key={t} style={{
+                        background: t.trim()==="우수소재"?"#4DAD7A18":t.trim()==="상위소재"?"#eff6ff":"#f5f3ff",
+                        color: t.trim()==="우수소재"?"#4DAD7A":t.trim()==="상위소재"?"#60a5fa":"#8b5cf6",
+                        padding:"1px 6px",borderRadius:10,marginRight:4,fontWeight:700
+                      }}>{t.trim()}</span>
                     ))}</div>}
                     {item.link&&<a href={item.link} target="_blank" rel="noreferrer" style={{fontSize:10,color:C.rose,marginTop:4,display:"block",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>🔗 {item.link}</a>}
                     <div style={{fontSize:9,color:C.inkLt,marginTop:2}}>{item.addedAt}</div>
@@ -4458,7 +4566,8 @@ export default function OaDashboard(){
                   <Btn variant="danger" small onClick={()=>removeFromLib(item.id)}>🗑</Btn>
                 </div>
               </div>
-            ))}
+              );
+            })}
           </div>
         </Card>
       )}
