@@ -672,6 +672,10 @@ export default function OaDashboard(){
   const [allAdStatus, setAllAdStatus] = useState(()=>allAdRaw?.length>0?"ok":"idle");
   const allAdFileRef                  = useRef(null);
 
+  // 월별 성과 비교 파일들 — Supabase 저장
+  const [monthlyFiles, setMonthlyFiles] = useSyncState("oa_monthly_files_v7", []); // [{label, rows}]
+  const monthlyFileRef = useRef(null);
+
   // ── 전체 광고비 xlsx 파일 읽기 → Supabase 저장 ────────────────
   async function handleAllAdFile(file) {
     if(!file) return;
@@ -695,6 +699,28 @@ export default function OaDashboard(){
   useEffect(() => {
     getAdImages().then(imgs => { if (imgs?.length) setAdImages(imgs); }).catch(() => {});
   }, []);
+
+  // ── 월별 성과 파일 업로드 ────────────────────────
+  async function handleMonthlyFile(file) {
+    if(!file) return;
+    // 파일명에서 월 추출 (예: 2월, 3월, 202502 등)
+    const name = file.name;
+    const mMatch = name.match(/(\d{4})[.\-_]?(\d{1,2})/) || name.match(/(\d{1,2})월/);
+    let label = mMatch
+      ? mMatch[0].includes('월') ? mMatch[0] : `${mMatch[1]}.${String(mMatch[2]).padStart(2,'0')}`
+      : name.replace(/\.[^.]+$/,'');
+    try {
+      const XLSX = await import("xlsx");
+      const buf = await file.arrayBuffer();
+      const wb = XLSX.read(buf, {type:"array"});
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const csv = XLSX.utils.sheet_to_csv(ws);
+      const rows = parseCSV(csv).map(mapMetaRow).filter(r=>r.date||r.campaign);
+      const next = [...monthlyFiles.filter(f=>f.label!==label), {label, rows}]
+        .sort((a,b)=>a.label.localeCompare(b.label));
+      setMonthlyFiles(next);
+    } catch(e) { console.error("월별 파일 에러:", e); }
+  }
 
   // allAdRaw Supabase에서 로드되면 status 자동 설정
   useEffect(()=>{
@@ -1038,7 +1064,10 @@ export default function OaDashboard(){
 
   // ── 메타 데이터 집계 ─────────────────────────────
   const hasSheet = metaStatus==="ok" && metaRaw.length>0;
-  const metaFiltered = metaRaw.filter(r => !deletedAds.includes(r.adName||r.campaign||""));
+  // 인스타그램 게시물 광고 = 캠페인명에 "Instagram 게시물" 포함
+  const isInstaPost = r => (r.campaign||r.adName||"").includes("Instagram 게시물");
+  const metaFiltered = metaRaw.filter(r => !deletedAds.includes(r.adName||r.campaign||"") && !isInstaPost(r));
+  const instaRaw     = metaRaw.filter(r => isInstaPost(r)); // 인스타 게시물 따로
 
   const metaAgg = hasSheet ? (() => {
     const totalSpend    = metaFiltered.reduce((s,r)=>s+r.spend,0);
@@ -1346,6 +1375,123 @@ export default function OaDashboard(){
 
       {/* 발주임박은 알림 그룹에 통합됨 — 상세 테이블은 재고 섹션에서 확인 */}
 
+      {/* ── 월별 성과 비교 ── */}
+      {(()=>{
+        const fmtW = n=>n>=10000?`₩${Math.round(n/10000).toLocaleString()}만`:`₩${Math.round(n).toLocaleString()}`;
+        const pct  = (a,b)=>b>0?+(a/b*100).toFixed(1):0;
+        const diff = (cur,prev)=>prev>0?+((cur-prev)/prev*100).toFixed(1):null;
+        const isInsta = r=>(r.campaign||r.adName||"").includes("Instagram 게시물");
+
+        // 월별 집계
+        const calcMonth = rows=>{
+          const r = rows.filter(x=>!isInsta(x));
+          const conv    = r.filter(x=>isConversionCampaign(x.objective,x.campaign));
+          const traffic = r.filter(x=>!isConversionCampaign(x.objective,x.campaign));
+          const agg = arr=>({
+            spend:  arr.reduce((s,x)=>s+(x.spend||0),0),
+            purch:  arr.reduce((s,x)=>s+(x.purchases||0),0),
+            convV:  arr.reduce((s,x)=>s+(x.convValue||0),0),
+            clicks: arr.reduce((s,x)=>s+(x.clicks||0),0),
+            lpv:    arr.reduce((s,x)=>s+(x.lpv||0),0),
+          });
+          const c=agg(conv), t=agg(traffic), all=agg(r);
+          return {
+            spend:   all.spend,
+            convSpend: c.spend, trafficSpend: t.spend,
+            roas:    pct(all.convV,all.spend),
+            cpa:     c.purch>0?c.spend/c.purch:0,
+            cpc:     all.clicks>0?all.spend/all.clicks:0,
+            lpvRate: pct(all.lpv,all.clicks),
+            purch:   all.purch,
+          };
+        };
+
+        const months = monthlyFiles.map(f=>({label:f.label, ...calcMonth(f.rows)}));
+
+        const METRICS = [
+          {key:"spend",    label:"총 광고비",   fmt:fmtW,            good:"none"},
+          {key:"convSpend",label:"전환 광고비",  fmt:fmtW,            good:"none"},
+          {key:"trafficSpend",label:"트래픽 광고비",fmt:fmtW,         good:"none"},
+          {key:"roas",     label:"ROAS",         fmt:v=>`${v}%`,     good:"high"},
+          {key:"cpa",      label:"CPA",          fmt:fmtW,            good:"low"},
+          {key:"cpc",      label:"CPC",          fmt:v=>`₩${Math.round(v).toLocaleString()}`, good:"low"},
+          {key:"lpvRate",  label:"LPV율",        fmt:v=>`${v}%`,     good:"high"},
+          {key:"purch",    label:"구매",          fmt:v=>`${v}건`,    good:"high"},
+        ];
+
+        return(
+          <div style={{background:C.white,border:`1px solid ${C.border}`,borderRadius:14,padding:"16px"}}>
+            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:14}}>
+              <div>
+                <div style={{fontSize:13,fontWeight:800,color:C.ink}}>📅 월별 성과 비교</div>
+                <div style={{fontSize:10,color:C.inkLt,marginTop:2}}>파일 업로드하면 월별로 자동 집계·비교해요</div>
+              </div>
+              <div style={{display:"flex",gap:6,alignItems:"center",flexWrap:"wrap"}}>
+                {monthlyFiles.map((f,i)=>(
+                  <div key={i} style={{display:"flex",alignItems:"center",gap:4,
+                    background:C.cream,borderRadius:8,padding:"4px 10px",fontSize:11,fontWeight:700,color:C.ink}}>
+                    {f.label}
+                    <button onClick={()=>setMonthlyFiles(monthlyFiles.filter((_,j)=>j!==i))}
+                      style={{background:"none",border:"none",cursor:"pointer",color:C.inkLt,fontSize:11,padding:0,lineHeight:1}}>✕</button>
+                  </div>
+                ))}
+                <input ref={monthlyFileRef} type="file" accept=".xlsx,.csv" style={{display:"none"}}
+                  onChange={e=>e.target.files[0]&&handleMonthlyFile(e.target.files[0])}/>
+                <button onClick={()=>monthlyFileRef.current?.click()}
+                  style={{fontSize:11,fontWeight:700,padding:"5px 14px",borderRadius:8,
+                    border:`1px solid ${C.rose}`,background:C.blush,color:C.rose,
+                    cursor:"pointer",fontFamily:"inherit"}}>
+                  + 월 추가
+                </button>
+              </div>
+            </div>
+
+            {months.length===0?(
+              <div style={{textAlign:"center",padding:"24px 0",color:C.inkLt,fontSize:11}}>
+                파일을 추가하면 월별 성과가 여기 표시돼요
+              </div>
+            ):(
+              <div style={{overflowX:"auto"}}>
+                <table style={{width:"100%",borderCollapse:"collapse",fontSize:11,minWidth:400}}>
+                  <thead>
+                    <tr style={{borderBottom:`2px solid ${C.border}`}}>
+                      <th style={{padding:"8px 10px",textAlign:"left",color:C.inkLt,fontWeight:700,fontSize:10}}>지표</th>
+                      {months.map((m,i)=>(
+                        <th key={i} style={{padding:"8px 10px",textAlign:"right",color:C.ink,fontWeight:800}}>{m.label}</th>
+                      ))}
+                      {months.length>=2&&<th style={{padding:"8px 10px",textAlign:"right",color:C.inkLt,fontWeight:700,fontSize:10}}>증감</th>}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {METRICS.map(({key,label,fmt,good})=>{
+                      const vals = months.map(m=>m[key]);
+                      const last = vals[vals.length-1];
+                      const prev = vals.length>=2?vals[vals.length-2]:null;
+                      const d = prev!==null?diff(last,prev):null;
+                      const isGood = d===null?null:good==="high"?d>0:good==="low"?d<0:null;
+                      return(
+                        <tr key={key} style={{borderBottom:`1px solid ${C.border}`}}>
+                          <td style={{padding:"8px 10px",color:C.inkMid,fontWeight:600}}>{label}</td>
+                          {vals.map((v,i)=>(
+                            <td key={i} style={{padding:"8px 10px",textAlign:"right",fontWeight:700,color:C.ink}}>{fmt(v)}</td>
+                          ))}
+                          {months.length>=2&&(
+                            <td style={{padding:"8px 10px",textAlign:"right",fontWeight:800,
+                              color:isGood===null?C.inkMid:isGood?C.good:C.bad}}>
+                              {d===null?"—":`${d>0?"+":""}${d}%`}
+                            </td>
+                          )}
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        );
+      })()}
+
       {/* 발주임박 시트 연결 모달 */}
       {orderModal&&(
         <Modal title="📦 발주임박 시트 연결" onClose={()=>setOrderModal(false)} wide>
@@ -1376,21 +1522,6 @@ export default function OaDashboard(){
     // 원 단위 포맷 (만원)
     const fmt=n=>n>=10000?`₩${Math.round(n/10000).toLocaleString()}만`:`₩${Math.round(n).toLocaleString()}`;
 
-    const metaKpi = d ? [
-      {label:"운영중 광고비", value:fmt(d.totalSpend),   change:0, good:"high",icon:"💸",note:`${d.daily.length}일 · ${[...new Set(metaFiltered.map(r=>r.adName||r.campaign||"").filter(Boolean))].length}개 광고`},
-      {label:"총 클릭수",    value:d.totalClicks.toLocaleString(), change:0,good:"high",icon:"👆",note:`일평균 ${Math.round(d.totalClicks/Math.max(d.daily.length,1)).toLocaleString()}`},
-      {label:"LPV",          value:d.totalLpv.toLocaleString(),    change:0,good:"high",icon:"🛬",note:`LPV율 ${d.lpvRate.toFixed(1)}%`},
-      {label:"CPA",          value:d.avgCpa>0?fmt(d.avgCpa):"—",  change:0, good:"low", icon:"🎯",note:"전환당 비용"},
-      {label:"CPC",          value:`₩${Math.round(d.avgCpc).toLocaleString()}`, change:0,good:"low",icon:"💡",note:"클릭당 비용"},
-      {label:"평균 CTR",     value:`${d.avgCtr.toFixed(2)}%`, change:0,good:"high",icon:"📊",note:"클릭률"},
-    ] : [
-      {label:"광고비",value:"—",change:0,good:"high",icon:"💸",note:"시트 연결 필요"},
-      {label:"클릭수",value:"—",change:0,good:"high",icon:"👆",note:"시트 연결 필요"},
-      {label:"LPV",   value:"—",change:0,good:"high",icon:"🛬",note:"시트 연결 필요"},
-      {label:"CPA",   value:"—",change:0,good:"low", icon:"🎯",note:"시트 연결 필요"},
-      {label:"CPC",   value:"—",change:0,good:"low", icon:"💡",note:"시트 연결 필요"},
-      {label:"CTR",   value:"—",change:0,good:"high",icon:"📊",note:"시트 연결 필요"},
-    ];
 
     return(
       <div style={{display:"flex",flexDirection:"column",gap:14}}>
@@ -1466,21 +1597,37 @@ export default function OaDashboard(){
           </div>
         </div>
 
-        <KpiGrid items={metaKpi} cols={6}/>
 
         {/* ── Total 카드 — 시트(게재중) / 파일(전체) ── */}
         {hasSheet&&(()=>{
           const fmtW = n=>n>=10000?`₩${Math.round(n/10000).toLocaleString()}만`:`₩${Math.round(n).toLocaleString()}`;
           const pct  = (a,b)=>b>0?`${Math.round((a/b)*100)}%`:"—";
 
-          const agg = rows=>({
-            spend:  rows.reduce((s,r)=>s+(r.spend||0),0),
-            purch:  rows.reduce((s,r)=>s+(r.purchases||0),0),
-            convV:  rows.reduce((s,r)=>s+(r.convValue||0),0),
-            clicks: rows.reduce((s,r)=>s+(r.clicks||0),0),
-            lpv:    rows.reduce((s,r)=>s+(r.lpv||0),0),
-            ads:    [...new Set(rows.map(r=>(r.adName||r.campaign||"")+"|||"+(r.adset||"")).filter(Boolean))].length,
-          });
+          // 시트 최신 날짜 계산
+          const sheetMaxDate = metaRaw.map(r=>r.date).filter(Boolean).sort().pop()||"";
+
+          const agg = rows=>{
+            // 광고별 마지막 지출 날짜 계산
+            const adLastSpend={};
+            rows.forEach(r=>{
+              const key=(r.adName||r.campaign||"")+"|||"+(r.adset||"");
+              if((r.spend||0)>0&&r.date&&(!adLastSpend[key]||r.date>adLastSpend[key])){
+                adLastSpend[key]=r.date;
+              }
+            });
+            // 최신 날짜 기준 1일 이내 지출 있으면 활성
+            const activeAds=Object.entries(adLastSpend)
+              .filter(([,d])=>sheetMaxDate&&d&&Math.floor((new Date(sheetMaxDate)-new Date(d))/86400000)<=1)
+              .map(([k])=>k);
+            return {
+              spend:  rows.reduce((s,r)=>s+(r.spend||0),0),
+              purch:  rows.reduce((s,r)=>s+(r.purchases||0),0),
+              convV:  rows.reduce((s,r)=>s+(r.convValue||0),0),
+              clicks: rows.reduce((s,r)=>s+(r.clicks||0),0),
+              lpv:    rows.reduce((s,r)=>s+(r.lpv||0),0),
+              ads:    activeAds.length, // 현재 집행중인 광고 수만
+            };
+          };
 
           // 게재중 — 시트 데이터
           const sheetConv    = agg(metaRaw.filter(r=>isConversionCampaign(r.objective,r.campaign)));
@@ -1497,32 +1644,62 @@ export default function OaDashboard(){
           const dates = metaRaw.map(r=>r.date).filter(Boolean).sort();
           const period = dates.length?`${dates[0].slice(5).replace("-","/")} ~ ${dates[dates.length-1].slice(5).replace("-","/")}`:""
 
-          const Col=({label,icon,sheet,file,accent})=>(
+          const Col=({label,icon,sheet,file,accent})=>{
+            const cpa  = (s,p)=>p>0?fmtW(s/p):"—";
+            const roas = (v,s)=>s>0?`${Math.round((v/s)*100)}%`:"—";
+            const lpvR = (l,c)=>c>0?`${Math.round((l/c)*100)}%`:"—";
+            const cpc  = (s,c)=>c>0?`₩${Math.round(s/c).toLocaleString()}`:"—";
+            return(
             <div style={{background:"rgba(255,255,255,0.07)",borderRadius:12,padding:"14px"}}>
               <div style={{display:"flex",alignItems:"center",gap:5,marginBottom:10}}>
                 <span>{icon}</span>
                 <span style={{fontSize:11,fontWeight:800,color:accent||"rgba(255,255,255,0.9)"}}>{label}</span>
               </div>
-              {/* 게재중(시트) */}
-              <div style={{marginBottom:hasFile?8:0}}>
-                <div style={{fontSize:9,opacity:0.45,marginBottom:3}}>게재중 (시트) · {sheet.ads}개</div>
-                <div style={{fontSize:16,fontWeight:900,color:"rgba(255,255,255,0.95)"}}>{fmtW(sheet.spend)}</div>
-                <div style={{fontSize:9,opacity:0.5,marginTop:2}}>
-                  구매 {sheet.purch}건 · ROAS {pct(sheet.convV,sheet.spend)} · LPV율 {pct(sheet.lpv,sheet.clicks)}
+              {/* 게재중 (시트) */}
+              <div style={{marginBottom:hasFile?10:0}}>
+                <div style={{fontSize:9,opacity:0.45,marginBottom:4,letterSpacing:"0.05em"}}>게재중 (시트) · {sheet.ads}개</div>
+                <div style={{fontSize:18,fontWeight:900,color:"rgba(255,255,255,0.95)",marginBottom:6}}>{fmtW(sheet.spend)}</div>
+                <div style={{display:"flex",flexDirection:"column",gap:3}}>
+                  {[
+                    ["구매",`${sheet.purch}건`],
+                    ["ROAS", roas(sheet.convV,sheet.spend)],
+                    ["CPA",  cpa(sheet.spend,sheet.purch)],
+                    ["CPC",  cpc(sheet.spend,sheet.clicks)],
+                    ["LPV율",lpvR(sheet.lpv,sheet.clicks)],
+                    ["클릭", sheet.clicks.toLocaleString()],
+                    ["LPV",  sheet.lpv.toLocaleString()],
+                  ].map(([l,v])=>(
+                    <div key={l} style={{display:"flex",justifyContent:"space-between"}}>
+                      <span style={{fontSize:9,opacity:0.45,fontWeight:600}}>{l}</span>
+                      <span style={{fontSize:10,fontWeight:700,color:"rgba(255,255,255,0.85)"}}>{v}</span>
+                    </div>
+                  ))}
                 </div>
               </div>
-              {/* 전체(파일) */}
+              {/* 전체 (파일) */}
               {hasFile&&(
-                <div style={{borderTop:"1px solid rgba(255,255,255,0.1)",paddingTop:8}}>
-                  <div style={{fontSize:9,opacity:0.45,marginBottom:3}}>전체 (파일) · {file.ads}개</div>
-                  <div style={{fontSize:16,fontWeight:900,color:"#fbbf24"}}>{fmtW(file.spend)}</div>
-                  <div style={{fontSize:9,opacity:0.5,marginTop:2}}>
-                    구매 {file.purch}건 · ROAS {pct(file.convV,file.spend)}
+                <div style={{borderTop:"1px solid rgba(255,255,255,0.1)",paddingTop:10}}>
+                  <div style={{fontSize:9,opacity:0.45,marginBottom:4,letterSpacing:"0.05em"}}>전체 (파일) · {file.ads}개</div>
+                  <div style={{fontSize:18,fontWeight:900,color:"#fbbf24",marginBottom:6}}>{fmtW(file.spend)}</div>
+                  <div style={{display:"flex",flexDirection:"column",gap:3}}>
+                    {[
+                      ["구매",`${file.purch}건`],
+                      ["ROAS", roas(file.convV,file.spend)],
+                      ["CPA",  cpa(file.spend,file.purch)],
+                      ["CPC",  cpc(file.spend,file.clicks)],
+                      ["LPV율",lpvR(file.lpv,file.clicks)],
+                    ].map(([l,v])=>(
+                      <div key={l} style={{display:"flex",justifyContent:"space-between"}}>
+                        <span style={{fontSize:9,opacity:0.45,fontWeight:600}}>{l}</span>
+                        <span style={{fontSize:10,fontWeight:700,color:"rgba(251,191,36,0.85)"}}>{v}</span>
+                      </div>
+                    ))}
                   </div>
                 </div>
               )}
             </div>
-          );
+            );
+          };
 
           return(
             <div style={{background:C.ink,borderRadius:14,padding:"16px 18px",color:C.white}}>
@@ -1533,6 +1710,14 @@ export default function OaDashboard(){
                   <div style={{fontSize:10,opacity:0.5,marginTop:2}}>{period}</div>
                 </div>
                 <div style={{display:"flex",gap:10,alignItems:"flex-end"}}>
+                  {/* 인스타 게시물 따로 */}
+                  {instaRaw.length>0&&(
+                    <div style={{textAlign:"right"}}>
+                      <div style={{fontSize:9,opacity:0.4}}>📸 인스타 게시물 광고</div>
+                      <div style={{fontSize:13,fontWeight:700,color:"rgba(255,255,255,0.6)"}}>{fmtW(instaRaw.reduce((s,r)=>s+(r.spend||0),0))}</div>
+                      <div style={{fontSize:9,opacity:0.35}}>{[...new Set(instaRaw.map(r=>r.adName||r.campaign||"").filter(Boolean))].length}개</div>
+                    </div>
+                  )}
                   {/* 합산 광고비 */}
                   <div style={{textAlign:"right"}}>
                     <div style={{fontSize:9,opacity:0.5}}>게재중 광고비</div>
