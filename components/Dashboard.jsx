@@ -4432,6 +4432,10 @@ export default function OaDashboard(){
       setRecreateReqs(prev=>(prev||[]).map(r=>r.id===id?{...r,status:"done"}:r));
     }
 
+    function deleteReq(id) {
+      setRecreateReqs(prev=>(prev||[]).filter(r=>r.id!==id));
+    }
+
     function addToLib(form) {
       const item = {id:Date.now()+"", ...form, addedAt:new Date().toISOString().slice(0,10)};
       setCreativeLib(prev=>[item,...(prev||[])]);
@@ -4636,6 +4640,7 @@ export default function OaDashboard(){
                         {r.note&&<div style={{fontSize:10,color:C.inkMid,marginTop:2}}>💬 {r.note}</div>}
                       </div>
                       <Btn variant="sage" small onClick={()=>resolveReq(r.id)}>✅ 완료</Btn>
+                      <Btn variant="danger" small onClick={()=>deleteReq(r.id)}>🗑</Btn>
                     </div>
                   </div>
                 ))}
@@ -4647,9 +4652,12 @@ export default function OaDashboard(){
               <div style={{fontSize:10,fontWeight:700,color:C.inkLt,marginBottom:6}}>완료</div>
               <div style={{display:"flex",flexDirection:"column",gap:6}}>
                 {doneReqs.map(r=>(
-                  <div key={r.id} style={{padding:"8px 12px",borderRadius:10,border:`1px solid ${C.border}`,background:C.cream,opacity:0.7}}>
-                    <div style={{fontSize:11,fontWeight:700,color:C.inkMid,textDecoration:"line-through"}}>{r.adName}</div>
-                    <div style={{fontSize:9,color:C.inkLt}}>CTR {r.ctr}% · {r.requestedAt}</div>
+                  <div key={r.id} style={{padding:"8px 12px",borderRadius:10,border:`1px solid ${C.border}`,background:C.cream,opacity:0.7,display:"flex",alignItems:"center",gap:8}}>
+                    <div style={{flex:1}}>
+                      <div style={{fontSize:11,fontWeight:700,color:C.inkMid,textDecoration:"line-through"}}>{r.adName}</div>
+                      <div style={{fontSize:9,color:C.inkLt}}>CTR {r.ctr}% · {r.requestedAt}</div>
+                    </div>
+                    <Btn variant="danger" small onClick={()=>deleteReq(r.id)}>🗑</Btn>
                   </div>
                 ))}
               </div>
