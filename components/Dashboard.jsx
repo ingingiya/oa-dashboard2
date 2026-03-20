@@ -1479,7 +1479,9 @@ export default function OaDashboard(){
               <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:10}}>
                 <span style={{fontSize:14}}>{icon}</span>
                 <span style={{fontSize:11,fontWeight:800,color:accent||"rgba(255,255,255,0.9)"}}>{label}</span>
-                <span style={{marginLeft:"auto",fontSize:10,opacity:0.5,fontWeight:600}}>{data.ads}개</span>
+                <span style={{marginLeft:"auto",fontSize:10,opacity:0.5,fontWeight:600}}>
+                  게재중 {data.ads}개{allData?` / 전체 ${allData.ads}개`:""}
+                </span>
               </div>
               <div style={{display:"flex",flexDirection:"column",gap:6}}>
                 {[
@@ -1514,7 +1516,11 @@ export default function OaDashboard(){
                   {/* 전체 파일 업로드 */}
                   <div style={{textAlign:"right"}}>
                     <div style={{fontSize:9,opacity:0.5}}>
-                      {allAdStatus==="ok"?`📁 전체파일 ${allAdRaw.length}행`:allAdStatus==="loading"?"⏳ 읽는중...":allAdStatus==="error"?"❌ 오류":"📁 전체파일 미업로드"}
+                      {allAdStatus==="ok"
+                        ? `📁 전체파일 · 광고 ${[...new Set(allAdRaw.map(r=>(r.adName||r.campaign||"")+"|||"+(r.adset||"")))].filter(Boolean).length}개`
+                        : allAdStatus==="loading"?"⏳ 읽는중..."
+                        : allAdStatus==="error"?"❌ 오류"
+                        : "📁 전체파일 미업로드 (미게재 포함)"}
                     </div>
                     <input ref={allAdFileRef} type="file" accept=".xlsx,.csv" style={{display:"none"}}
                       onChange={e=>e.target.files[0]&&handleAllAdFile(e.target.files[0])}/>
@@ -1526,9 +1532,19 @@ export default function OaDashboard(){
                     </button>
                   </div>
                   <div style={{textAlign:"right"}}>
-                    <div style={{fontSize:9,opacity:0.5}}>게재중 광고비</div>
-                    <div style={{fontSize:18,fontWeight:900,color:"#86efac"}}>{fmtW(total.spend)}</div>
-                    {allAdStatus==="ok"&&<div style={{fontSize:11,fontWeight:700,color:"#fbbf24"}}>전체 {fmtW(allTotal.spend)}</div>}
+                    {allAdStatus==="ok"&&(
+                      <div style={{fontSize:9,opacity:0.5}}>전체 광고비 (미게재 포함)</div>
+                    )}
+                    {allAdStatus==="ok"
+                      ? <div style={{fontSize:18,fontWeight:900,color:"#fbbf24"}}>{fmtW(allTotal.spend)}</div>
+                      : <div style={{fontSize:18,fontWeight:900,color:"#86efac"}}>{fmtW(total.spend)}</div>
+                    }
+                    {allAdStatus==="ok"&&(
+                      <div style={{fontSize:11,fontWeight:700,color:"#86efac",marginTop:2}}>게재중 {fmtW(total.spend)}</div>
+                    )}
+                    {allAdStatus!=="ok"&&(
+                      <div style={{fontSize:9,opacity:0.5}}>게재중 광고비</div>
+                    )}
                   </div>
                 </div>
               </div>
