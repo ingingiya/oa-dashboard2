@@ -643,15 +643,12 @@ export default function OaDashboard(){
   const [convCriteriaTab, setConvCriteriaTab] = useState("default");
 
   // 데이터 에이전트
-  const [agentOpen, setAgentOpen]       = useState(false);
-  const [agentMsgs, setAgentMsgs]       = useState([]);
-  const [agentLoading, setAgentLoading] = useState(false);
-  const [agentTab, setAgentTab]         = useState("chat"); // chat | saved
-  const [savedAnalyses, setSavedAnalyses] = useSyncState("oa_agent_saved_v7", []);
-  const [agentInput, setAgentInput]     = useState("");
-  const [agentLoading, setAgentLoading] = useState(false);
-  const [agentTab, setAgentTab]         = useState("chat"); // "chat" | "history"
-  const [savedAnalyses, setSavedAnalyses] = useSyncState("oa_agent_history_v7", []); // 저장된 분석 결과
+  const [agentOpen, setAgentOpen]           = useState(false);
+  const [agentMsgs, setAgentMsgs]           = useState([]);
+  const [agentInput, setAgentInput]         = useState("");
+  const [agentLoading, setAgentLoading]     = useState(false);
+  const [agentTab, setAgentTab]             = useState("chat"); // "chat" | "history"
+  const [agentHistory, setAgentHistory]     = useSyncState("oa_agent_history_v7", []);
   const agentEndRef = useRef(null);
   // 목표 메모 (Supabase 팀 공유)
   const [metaGoal, setMetaGoal]         = useSyncState("oa_meta_goal_v7", "");
@@ -820,7 +817,7 @@ export default function OaDashboard(){
       answer,
       savedAt: new Date().toISOString(),
     };
-    setSavedAnalyses(prev => {
+    setAgentHistory(prev => {
       const list = Array.isArray(prev) ? prev : [];
       return [item, ...list].slice(0, 50); // 최대 50개
     });
@@ -859,7 +856,7 @@ export default function OaDashboard(){
           answer: reply,
           savedAt: new Date().toISOString(),
         };
-        setSavedAnalyses(prev=>[record, ...(Array.isArray(prev)?prev:[])].slice(0,30));
+        setAgentHistory(prev=>[record, ...(Array.isArray(prev)?prev:[])].slice(0,30));
       }
     } catch(e) {
       setAgentMsgs([...newMsgs, {role:"assistant", content:`❌ 오류: ${e.message}`}]);
@@ -870,7 +867,7 @@ export default function OaDashboard(){
   // 답변 수동 저장
   function saveAgentMsg(question, answer) {
     const record = {id:Date.now(), question, answer, savedAt:new Date().toISOString()};
-    setSavedAnalyses(prev=>[record, ...(Array.isArray(prev)?prev:[])].slice(0,30));
+    setAgentHistory(prev=>[record, ...(Array.isArray(prev)?prev:[])].slice(0,30));
   }
 
   // ── 월별 성과 파일 업로드 ────────────────────────
@@ -4081,7 +4078,7 @@ export default function OaDashboard(){
 
             {/* 탭 */}
             <div style={{display:"flex",borderBottom:`1px solid ${C.border}`,background:C.cream}}>
-              {[{id:"chat",label:"💬 채팅"},{id:"history",label:`📌 저장됨 ${Array.isArray(savedAnalyses)&&savedAnalyses.length>0?`(${savedAnalyses.length})`:""}`.trim()}].map(t=>(
+              {[{id:"chat",label:"💬 채팅"},{id:"history",label:`📌 저장됨 ${Array.isArray(agentHistory)&&agentHistory.length>0?`(${agentHistory.length})`:""}`.trim()}].map(t=>(
                 <button key={t.id} onClick={()=>setAgentTab(t.id)}
                   style={{flex:1,padding:"8px",border:"none",background:"transparent",
                     fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit",
@@ -4096,8 +4093,8 @@ export default function OaDashboard(){
             <div style={{flex:1,overflowY:"auto",padding:"14px",display:"flex",flexDirection:"column",gap:10}}>
               {/* 히스토리 탭 */}
               {agentTab==="history"&&(
-                Array.isArray(savedAnalyses)&&savedAnalyses.length>0 ? (
-                  savedAnalyses.map((h,i)=>(
+                Array.isArray(agentHistory)&&agentHistory.length>0 ? (
+                  agentHistory.map((h,i)=>(
                     <div key={h.id||i} style={{background:C.cream,borderRadius:12,padding:"12px",border:`1px solid ${C.border}`}}>
                       <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:8}}>
                         <div style={{fontSize:10,fontWeight:700,color:C.ink,flex:1}}>{h.question}</div>
@@ -4106,7 +4103,7 @@ export default function OaDashboard(){
                             style={{fontSize:9,padding:"3px 8px",borderRadius:6,border:`1px solid ${C.border}`,background:C.white,cursor:"pointer",fontFamily:"inherit",color:C.inkMid}}>
                             불러오기
                           </button>
-                          <button onClick={()=>setSavedAnalyses(prev=>(Array.isArray(prev)?prev:[]).filter(x=>x.id!==h.id))}
+                          <button onClick={()=>setAgentHistory(prev=>(Array.isArray(prev)?prev:[]).filter(x=>x.id!==h.id))}
                             style={{fontSize:9,padding:"3px 8px",borderRadius:6,border:`1px solid ${C.bad}44`,background:"#FEF0F0",cursor:"pointer",fontFamily:"inherit",color:C.bad}}>
                             삭제
                           </button>
