@@ -650,6 +650,47 @@ export default function OaDashboard(){
   const [agentTab, setAgentTab]             = useState("chat"); // "chat" | "history"
   const [agentHistory, setAgentHistory]     = useSyncState("oa_agent_history_v7", []);
   const agentEndRef = useRef(null);
+
+  // 노션 스케줄 연동
+  const [notionSchedules, setNotionSchedules] = useState([]);
+  const [notionLoading, setNotionLoading]     = useState(false);
+  const [notionError, setNotionError]         = useState("");
+  const [notionLoaded, setNotionLoaded]       = useState(false);
+
+  // 담당자별 컬러 (고정)
+  const MEMBER_COLORS = {
+    "소리": "#f472b6",
+    "영서": "#60a5fa",
+    "경은": "#34d399",
+    "지수": "#a78bfa",
+  };
+
+  async function fetchNotionSchedules() {
+    setNotionLoading(true); setNotionError("");
+    try {
+      const res = await fetch("/api/notion");
+      const data = await res.json();
+      if(data.error) throw new Error(data.error);
+      setNotionSchedules(data.schedules||[]);
+      setNotionLoaded(true);
+    } catch(e) { setNotionError(e.message); }
+    setNotionLoading(false);
+  }
+
+  async function toggleNotionCheck(pageId, checked) {
+    // 낙관적 업데이트
+    setNotionSchedules(prev=>prev.map(s=>s.id===pageId?{...s,checked}:s));
+    try {
+      await fetch("/api/notion", {
+        method:"PATCH",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({pageId,checked}),
+      });
+    } catch(e) {
+      // 실패 시 롤백
+      setNotionSchedules(prev=>prev.map(s=>s.id===pageId?{...s,checked:!checked}:s));
+    }
+  }
   // 목표 메모 (Supabase 팀 공유)
   const [metaGoal, setMetaGoal]         = useSyncState("oa_meta_goal_v7", "");
   const [metaGoalEditing, setMetaGoalEditing] = useState(false);
@@ -741,6 +782,14 @@ export default function OaDashboard(){
   ]);
   const [quickLinksEditing, setQuickLinksEditing] = useState(false);
 
+  // 노션 스케줄
+  const [notionItems, setNotionItems]     = useState([]);
+  const [notionLoading, setNotionLoading] = useState(false);
+  const [notionError, setNotionError]     = useState("");
+  const [notionTab, setNotionTab]         = useState("todo"); // "todo" | "done"
+  const [notionAddModal, setNotionAddModal] = useState(false);
+  const [notionForm, setNotionForm]       = useState({name:"",date:"",product:"",select:""});
+
   // 새 채널 항목이 기존 Supabase 저장값에 없으면 자동 병합
   useEffect(()=>{
     const defaults = [
@@ -794,6 +843,37 @@ export default function OaDashboard(){
   useEffect(()=>{
     agentEndRef.current?.scrollIntoView({behavior:"smooth"});
   },[agentMsgs]);
+
+  // ── 노션 스케줄 함수 ─────────────────────────────
+  async function fetchNotion() {
+    setNotionLoading(true); setNotionError("");
+    try {
+      const res = await fetch("/api/notion");
+      const data = await res.json();
+      if(data.error) throw new Error(data.error);
+      setNotionItems(data.items||[]);
+    } catch(e) { setNotionError(e.message); }
+    setNotionLoading(false);
+  }
+  async function toggleNotionDone(id, done) {
+    setNotionItems(prev=>prev.map(x=>x.id===id?{...x,done}:x));
+    await fetch("/api/notion",{method:"POST",headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({action:"toggle",pageId:id,done})});
+  }
+  async function createNotionItem() {
+    if(!notionForm.name) return;
+    const res = await fetch("/api/notion",{method:"POST",headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({action:"create",data:notionForm})});
+    const data = await res.json();
+    if(data.ok){ setNotionAddModal(false); setNotionForm({name:"",date:"",product:"",select:""}); fetchNotion(); }
+  }
+  async function deleteNotionItem(id) {
+    setNotionItems(prev=>prev.filter(x=>x.id!==id));
+    await fetch("/api/notion",{method:"POST",headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({action:"delete",pageId:id})});
+  }
+
+  useEffect(()=>{ fetchNotion(); },[]);
 
   useEffect(() => {
     getAdImages().then(imgs => { if (imgs?.length) setAdImages(imgs); }).catch(() => {});
@@ -4042,8 +4122,178 @@ export default function OaDashboard(){
   })();
 
   const ScheduleSection=(()=>{
+    // 담당자 컬러맵
+    const MEMBER_COLORS = {
+      "영서": "#f9a8d4",
+      "지수": "#93c5fd",
+      "소리": "#86efac",
+      "경은": "#fbbf24",
+    };
+    const getMemberColor = name => {
+      const found = Object.entries(MEMBER_COLORS).find(([k])=>name?.includes(k));
+      return found ? found[1] : "#c4b5fd";
+    };
+
+    const todoItems = notionItems.filter(x=>!x.done);
+    const doneItems = notionItems.filter(x=>x.done);
+
     return(
     <div style={{display:"flex",flexDirection:"column",gap:14}}>
+
+      {/* ── 노션 스케줄 ── */}
+      <div style={{background:C.white,border:`1px solid ${C.border}`,borderRadius:14,padding:"16px"}}>
+        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12}}>
+          <div>
+            <div style={{fontSize:13,fontWeight:800,color:C.ink}}>📋 소재 스케줄</div>
+            <div style={{fontSize:10,color:C.inkLt,marginTop:2}}>노션 연동 · 실시간 동기화</div>
+          </div>
+          <div style={{display:"flex",gap:6}}>
+            <button onClick={fetchNotion}
+              style={{fontSize:10,padding:"5px 12px",borderRadius:8,border:`1px solid ${C.border}`,
+                background:C.cream,color:C.inkMid,cursor:"pointer",fontFamily:"inherit",fontWeight:700}}>
+              {notionLoading?"⏳":"🔄"} 새로고침
+            </button>
+            <button onClick={()=>setNotionAddModal(true)}
+              style={{fontSize:10,padding:"5px 12px",borderRadius:8,border:"none",
+                background:C.rose,color:C.white,cursor:"pointer",fontFamily:"inherit",fontWeight:700}}>
+              + 추가
+            </button>
+          </div>
+        </div>
+
+        {/* 탭 */}
+        <div style={{display:"flex",gap:4,marginBottom:12,borderBottom:`1px solid ${C.border}`,paddingBottom:8}}>
+          {[{id:"todo",label:`진행 중 (${todoItems.length})`},{id:"done",label:`완료 (${doneItems.length})`}].map(t=>(
+            <button key={t.id} onClick={()=>setNotionTab(t.id)}
+              style={{padding:"5px 14px",borderRadius:8,border:"none",cursor:"pointer",fontFamily:"inherit",
+                fontSize:11,fontWeight:700,background:notionTab===t.id?C.rose:"transparent",
+                color:notionTab===t.id?C.white:C.inkMid}}>
+              {t.label}
+            </button>
+          ))}
+        </div>
+
+        {notionError&&(
+          <div style={{background:"#FEF0F0",border:`1px solid ${C.bad}33`,borderRadius:8,padding:"10px 12px",
+            fontSize:11,color:C.bad,marginBottom:10}}>
+            ❌ {notionError} — NOTION_TOKEN 환경변수를 확인해줘요
+          </div>
+        )}
+
+        {notionLoading&&!notionItems.length?(
+          <div style={{textAlign:"center",padding:"24px",color:C.inkLt,fontSize:11}}>⏳ 노션에서 불러오는 중...</div>
+        ):(
+          <div style={{display:"flex",flexDirection:"column",gap:8}}>
+            {(notionTab==="todo"?todoItems:doneItems).map(item=>{
+              const assignee = item.assignee;
+              const memberColor = item.assigneeColor || "#c4b5fd";
+              const daysLeft = item.date ? Math.ceil((new Date(item.date)-new Date())/(1000*60*60*24)) : null;
+              const typeColor = {공구:C.rose,시딩:C.purple,광고:C.gold,이벤트:C.sage}[item.select]||C.inkMid;
+
+              return(
+                <div key={item.id} style={{
+                  display:"flex",alignItems:"flex-start",gap:10,
+                  padding:"10px 12px",borderRadius:10,
+                  border:`1px solid ${item.done?"#e5e7eb":daysLeft!==null&&daysLeft<=3&&daysLeft>=0?C.rose+"44":C.border}`,
+                  background:item.done?"#f9fafb":daysLeft!==null&&daysLeft<=3&&daysLeft>=0?"#FFF8FC":C.white,
+                  opacity:item.done?0.6:1,
+                }}>
+                  {/* 체크박스 */}
+                  <button onClick={()=>toggleNotionDone(item.id,!item.done)}
+                    style={{width:18,height:18,borderRadius:5,border:`2px solid ${item.done?C.good:C.border}`,
+                      background:item.done?C.good:"transparent",cursor:"pointer",flexShrink:0,marginTop:1,
+                      display:"flex",alignItems:"center",justifyContent:"center",color:C.white,fontSize:11}}>
+                    {item.done?"✓":""}
+                  </button>
+                  <div style={{flex:1,minWidth:0}}>
+                    <div style={{display:"flex",alignItems:"center",gap:6,flexWrap:"wrap",marginBottom:3}}>
+                      <span style={{fontSize:12,fontWeight:800,color:item.done?C.inkLt:C.ink,
+                        textDecoration:item.done?"line-through":"none"}}>
+                        {item.name||"(제목없음)"}
+                      </span>
+                      {/* 이벤트 타입 뱃지 */}
+                      {item.select&&(
+                        <span style={{fontSize:9,padding:"2px 8px",borderRadius:20,
+                          background:`${typeColor}18`,color:typeColor,fontWeight:700}}>
+                          {item.select}
+                        </span>
+                      )}
+                      {/* 제품 */}
+                      {item.product&&(
+                        <span style={{fontSize:9,padding:"2px 8px",borderRadius:20,
+                          background:`${C.rose}15`,color:C.rose,fontWeight:700}}>
+                          {item.product}
+                        </span>
+                      )}
+                      {/* 담당자 */}
+                      {assignee&&(
+                        <span style={{fontSize:9,padding:"2px 8px",borderRadius:20,
+                          background:`${memberColor}25`,color:memberColor,fontWeight:800,
+                          border:`1px solid ${memberColor}55`}}>
+                          {assignee}
+                        </span>
+                      )}
+                    </div>
+                    <div style={{display:"flex",gap:10,alignItems:"center",flexWrap:"wrap"}}>
+                      {item.date&&(
+                        <span style={{fontSize:10,color:daysLeft!==null&&daysLeft<=3&&daysLeft>=0?C.rose:C.inkLt,fontWeight:600}}>
+                          📅 {item.date}
+                          {daysLeft!==null&&<span style={{marginLeft:4,fontWeight:800}}>
+                            {daysLeft===0?"오늘":daysLeft<0?`D+${Math.abs(daysLeft)}`:`D-${daysLeft}`}
+                          </span>}
+                        </span>
+                      )}
+                      {item.status&&<span style={{fontSize:9,color:C.inkLt,background:C.cream,padding:"1px 6px",borderRadius:10}}>{item.status}</span>}
+                    </div>
+                  </div>
+                  {/* 삭제 */}
+                  <button onClick={()=>deleteNotionItem(item.id)}
+                    style={{background:"none",border:"none",cursor:"pointer",color:C.inkLt,fontSize:12,
+                      padding:"2px 4px",opacity:0.4,flexShrink:0}}
+                    onMouseEnter={e=>e.currentTarget.style.opacity="1"}
+                    onMouseLeave={e=>e.currentTarget.style.opacity="0.4"}>
+                    ✕
+                  </button>
+                </div>
+              );
+            })}
+            {(notionTab==="todo"?todoItems:doneItems).length===0&&(
+              <div style={{textAlign:"center",padding:"20px",color:C.inkLt,fontSize:11}}>
+                {notionTab==="todo"?"진행 중인 일정이 없어요 🎉":"완료된 일정이 없어요"}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* 노션 일정 추가 모달 */}
+      {notionAddModal&&(
+        <Modal title="📋 소재 일정 추가" onClose={()=>setNotionAddModal(false)}>
+          <FR label="소재명 *">
+            <Inp value={notionForm.name} onChange={v=>setNotionForm(f=>({...f,name:v}))} placeholder="소재명 입력"/>
+          </FR>
+          <FR label="시작일">
+            <Inp type="date" value={notionForm.date} onChange={v=>setNotionForm(f=>({...f,date:v}))}/>
+          </FR>
+          <FR label="제품">
+            <Inp value={notionForm.product} onChange={v=>setNotionForm(f=>({...f,product:v}))} placeholder="소닉플로우, 프리온 등"/>
+          </FR>
+          <FR label="담당자">
+            <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+              {["영서","지수","소리","경은"].map(name=>(
+                <button key={name} onClick={()=>setNotionForm(f=>({...f,select:name}))}
+                  style={{padding:"5px 14px",borderRadius:20,border:`1px solid ${notionForm.select===name?MEMBER_COLORS[name]:C.border}`,
+                    background:notionForm.select===name?`${MEMBER_COLORS[name]}22`:"transparent",
+                    color:notionForm.select===name?MEMBER_COLORS[name]:C.inkMid,
+                    fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
+                  {name}
+                </button>
+              ))}
+            </div>
+          </FR>
+          <Btn onClick={createNotionItem} style={{width:"100%",marginTop:8}}>추가하기</Btn>
+        </Modal>
+      )}
       <div className="content-grid-3" style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:10}}>
         {["공구","시딩","광고","이벤트"].map(type=>{
           const tc=schTypeColor(type);
