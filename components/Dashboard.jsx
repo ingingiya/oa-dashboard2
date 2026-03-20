@@ -4146,8 +4146,16 @@ export default function OaDashboard(){
               )}
               {agentMsgs.map((m,i)=>{
                 const isUser = m.role==="user";
-                const chartMatch = !isUser && m.content.match(/```chart\n([\s\S]*?)```/);
-                const chartData = chartMatch ? (() => { try { return JSON.parse(chartMatch[1]); } catch { return null; } })() : null;
+                const chartMatch = !isUser && m.content.match(/```chart\s*([\s\S]*?)```/);
+                const chartData = chartMatch ? (() => {
+                  try {
+                    const raw = chartMatch[1].trim();
+                    const parsed = JSON.parse(raw);
+                    // data 배열 없으면 null
+                    if(!parsed.data||!Array.isArray(parsed.data)) return null;
+                    return parsed;
+                  } catch { return null; }
+                })() : null;
                 const textContent = m.content.replace(/```chart[\s\S]*?```/g,"").trim();
                 const question = agentMsgs[i-1]?.content||"";
                 return(
@@ -4157,8 +4165,9 @@ export default function OaDashboard(){
                       fontSize:11,lineHeight:1.6,whiteSpace:"pre-wrap"}}>
                       {textContent}
                       {chartData&&(()=>{
-                        const {BarChart,Bar,LineChart,Line,PieChart,Pie,Cell,XAxis,YAxis,Tooltip,ResponsiveContainer,CartesianGrid}=window.Recharts||{};
                         if(!chartData.data||!chartData.data.length) return null;
+                        // value가 문자열이면 숫자로 변환
+                        const data = chartData.data.map(d=>({...d, value: typeof d.value==="string"?parseFloat(d.value.replace(/[^0-9.-]/g,""))||0:d.value}));
                         const COLORS=["#f9a8d4","#93c5fd","#86efac","#fbbf24","#c4b5fd","#6ee7b7"];
                         return(
                           <div style={{marginTop:10,background:C.white,borderRadius:10,padding:"10px",width:280}}>
@@ -4166,27 +4175,27 @@ export default function OaDashboard(){
                             <ResponsiveContainer width="100%" height={160}>
                               {chartData.type==="pie"?(
                                 <PieChart>
-                                  <Pie data={chartData.data} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={60} label={({name,value})=>`${name}: ${value}`} labelLine={false} style={{fontSize:8}}>
-                                    {chartData.data.map((_,idx)=><Cell key={idx} fill={COLORS[idx%COLORS.length]}/>)}
+                                  <Pie data={data} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={60} label={({name,percent})=>`${name} ${(percent*100).toFixed(0)}%`} labelLine={false} style={{fontSize:8}}>
+                                    {data.map((_,idx)=><Cell key={idx} fill={COLORS[idx%COLORS.length]}/>)}
                                   </Pie>
-                                  <Tooltip/>
+                                  <Tooltip formatter={(v)=>v.toLocaleString()}/>
                                 </PieChart>
                               ):chartData.type==="line"?(
-                                <LineChart data={chartData.data}>
+                                <LineChart data={data}>
                                   <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0"/>
                                   <XAxis dataKey="name" tick={{fontSize:8}} axisLine={false} tickLine={false}/>
-                                  <YAxis tick={{fontSize:8}} axisLine={false} tickLine={false}/>
-                                  <Tooltip/>
-                                  <Line type="monotone" dataKey="value" stroke={C.rose} strokeWidth={2} dot={false}/>
+                                  <YAxis tick={{fontSize:8}} axisLine={false} tickLine={false} width={40} tickFormatter={v=>v>=10000?`${Math.round(v/10000)}만`:v}/>
+                                  <Tooltip formatter={(v)=>v.toLocaleString()}/>
+                                  <Line type="monotone" dataKey="value" stroke={C.rose} strokeWidth={2} dot={{r:3}} activeDot={{r:5}}/>
                                 </LineChart>
                               ):(
-                                <BarChart data={chartData.data}>
+                                <BarChart data={data}>
                                   <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0"/>
                                   <XAxis dataKey="name" tick={{fontSize:8}} axisLine={false} tickLine={false}/>
-                                  <YAxis tick={{fontSize:8}} axisLine={false} tickLine={false}/>
-                                  <Tooltip/>
+                                  <YAxis tick={{fontSize:8}} axisLine={false} tickLine={false} width={40} tickFormatter={v=>v>=10000?`${Math.round(v/10000)}만`:v}/>
+                                  <Tooltip formatter={(v)=>v.toLocaleString()}/>
                                   <Bar dataKey="value" radius={[4,4,0,0]}>
-                                    {chartData.data.map((_,idx)=><Cell key={idx} fill={COLORS[idx%COLORS.length]}/>)}
+                                    {data.map((_,idx)=><Cell key={idx} fill={COLORS[idx%COLORS.length]}/>)}
                                   </Bar>
                                 </BarChart>
                               )}
