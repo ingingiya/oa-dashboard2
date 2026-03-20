@@ -265,30 +265,36 @@ function useSyncState(key, def) {
   return [data, setData];
 }
 
-// CSV 파싱 — 따옴표 안 쉼표 올바르게 처리
+// CSV 파싱 — 따옴표 안 쉼표/개행 처리, 헤더 자동 감지
 function parseCSV(text){
-  const lines = text.trim().split("\n");
-  if(lines.length<2) return [];
-
-  // CSV 한 줄 파싱 — 따옴표 안 쉼표 무시
-  const splitCSV = line => {
+  // RFC4180 CSV 파서 — 따옴표 안 쉼표/개행 정확히 처리
+  const parseLine = line => {
     const res=[]; let cur="", inQ=false;
     for(let i=0;i<line.length;i++){
       const c=line[i];
-      if(c==='"'){ inQ=!inQ; }
-      else if(c===','&&!inQ){ res.push(cur.trim()); cur=""; }
+      if(c==='"'){
+        if(inQ && line[i+1]==='"'){ cur+='"'; i++; } // escaped quote
+        else inQ=!inQ;
+      } else if(c===','&&!inQ){ res.push(cur.trim()); cur=""; }
       else cur+=c;
     }
     res.push(cur.trim());
-    return res.map(v=>v.replace(/^"|"$/g,"").trim());
+    return res;
   };
 
-  const HEADER_HINTS = ["캠페인","campaign","날짜","date","일","광고","지출","노출","impressions","spend"];
-  const firstRowStr = lines[0].toLowerCase();
-  const startIdx = HEADER_HINTS.some(h=>firstRowStr.includes(h)) ? 0 : 1;
-  const headers = splitCSV(lines[startIdx]);
+  const lines = text.trim().split("\n");
+  if(lines.length<2) return [];
+
+  // 헤더 행 찾기 — "캠페인 이름" 또는 "지출 금액" 포함한 행
+  const HEADER_HINTS = ["캠페인 이름","지출 금액","광고 이름","campaign","impressions"];
+  let startIdx = 0;
+  for(let i=0;i<Math.min(lines.length,5);i++){
+    if(HEADER_HINTS.some(h=>lines[i].includes(h))){ startIdx=i; break; }
+  }
+
+  const headers = parseLine(lines[startIdx]);
   return lines.slice(startIdx+1).filter(l=>l.trim()).map(row=>{
-    const cols = splitCSV(row);
+    const cols = parseLine(row);
     const obj={};
     headers.forEach((h,i)=>{ if(h) obj[h]=cols[i]||""; });
     return obj;
