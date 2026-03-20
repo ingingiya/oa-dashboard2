@@ -730,8 +730,12 @@ export default function OaDashboard(){
     {id:"zigzag",    name:"지그재그",   url:"", group:"channel"},
     {id:"ably",      name:"에이블리",   url:"", group:"channel"},
     {id:"musinsa",   name:"무신사",     url:"", group:"channel"},
-    {id:"erp_approval", name:"전자결재",     url:"", group:"erp"},
-    {id:"erp_main",     name:"메인대시보드", url:"", group:"erp"},
+    {id:"erp_main",      name:"ERP",       url:"", group:"erp"},
+    {id:"erp_approval",  name:"전자결재",   url:"", group:"erp"},
+    {id:"erp_purchase",  name:"발주관리",   url:"", group:"erp"},
+    {id:"erp_stock",     name:"재고관리",   url:"", group:"erp"},
+    {id:"erp_account",   name:"회계/정산",  url:"", group:"erp"},
+    {id:"erp_hr",        name:"근태/HR",    url:"", group:"erp"},
   ]);
   const [quickLinksEditing, setQuickLinksEditing] = useState(false);
 
@@ -3754,18 +3758,35 @@ export default function OaDashboard(){
         {/* ── 채널별 광고비 현황 ── */}
         {(()=>{
           const months = monthlyFiles.map(f=>f.label);
+          const isInsta = r=>(r.campaign||r.adName||"").includes("Instagram 게시물");
+
+          // 메타 광고비 — allAdRaw 파일 기준 (월별 파일 있으면 그것도 포함)
           const metaByMonth = {};
+          // 1) allAdRaw 파일에서 날짜 기반 월 추출
+          if(allAdRaw.length>0){
+            allAdRaw.filter(r=>!isInsta(r)).forEach(r=>{
+              if(!r.date) return;
+              const m = r.date.slice(0,7); // "2026-03" 형식
+              if(!metaByMonth[m]) metaByMonth[m]=0;
+              metaByMonth[m]+=(r.spend||0);
+            });
+          }
+          // 2) 월별 비교 파일에서도 읽기 (라벨 매칭)
           monthlyFiles.forEach(f=>{
-            const spend = (f.rows||[]).filter(r=>!((r.campaign||r.adName||"").includes("Instagram 게시물")))
-              .reduce((s,r)=>s+(r.spend||0),0);
-            metaByMonth[f.label] = spend;
+            const spend = (f.rows||[]).filter(r=>!isInsta(r)).reduce((s,r)=>s+(r.spend||0),0);
+            if(spend>0) metaByMonth[f.label] = spend;
           });
-          // 현재 시트 데이터도 포함 (월 라벨 없으면 "현재"로)
-          const metaCurrentSpend = metaFiltered.reduce((s,r)=>s+(r.spend||0),0);
+
+          // 표시할 월 목록 — 월별 파일 라벨 + allAdRaw 월 합집합
+          const allAdMonths = [...new Set(Object.keys(metaByMonth))].sort();
+          const displayMonths = months.length>0 ? months : allAdMonths;
+
+          // allAdRaw 전체 합산 (파일 업로드 기준)
+          const metaTotalFromFile = allAdRaw.filter(r=>!isInsta(r)).reduce((s,r)=>s+(r.spend||0),0);
 
           // 월별 채널 합산
           const totalByMonth = {};
-          months.forEach(m=>{
+          displayMonths.forEach(m=>{
             let t = metaByMonth[m]||0;
             channelSpends.forEach(ch=>{ t += +(ch.amounts?.[m]||0); });
             totalByMonth[m] = t;
@@ -3776,13 +3797,21 @@ export default function OaDashboard(){
               <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:14}}>
                 <div>
                   <div style={{fontSize:13,fontWeight:800}}>💰 채널별 광고비</div>
-                  <div style={{fontSize:10,opacity:0.5,marginTop:2}}>월별 금액 직접 입력 · Supabase 팀 공유</div>
+                  <div style={{fontSize:10,opacity:0.5,marginTop:2}}>
+                    메타: 전체파일 기준 · 기타채널: 직접입력 · Supabase 팀 공유
+                  </div>
                 </div>
+                {metaTotalFromFile>0&&(
+                  <div style={{textAlign:"right"}}>
+                    <div style={{fontSize:9,opacity:0.4}}>메타 파일 총합</div>
+                    <div style={{fontSize:16,fontWeight:900,color:"#f9a8d4"}}>{fmtW(metaTotalFromFile)}</div>
+                  </div>
+                )}
               </div>
 
-              {months.length===0?(
+              {displayMonths.length===0?(
                 <div style={{textAlign:"center",padding:"16px 0",opacity:0.3,fontSize:11}}>
-                  아래 월별 비교에서 파일을 먼저 추가하면 월 탭이 생겨요
+                  메타 전체파일을 업로드하거나 아래 월별 비교에 파일을 추가해요
                 </div>
               ):(
                 <div style={{overflowX:"auto"}}>
@@ -3790,20 +3819,21 @@ export default function OaDashboard(){
                     <thead>
                       <tr>
                         <th style={{padding:"8px 10px",textAlign:"left",opacity:0.5,fontWeight:700,fontSize:10}}>채널</th>
-                        {months.map(m=>(
+                        {displayMonths.map(m=>(
                           <th key={m} style={{padding:"8px 10px",textAlign:"right",fontWeight:800,color:"rgba(255,255,255,0.9)"}}>{m}</th>
                         ))}
                       </tr>
                     </thead>
                     <tbody>
-                      {/* 메타 */}
+                      {/* 메타 — 파일 기준 */}
                       <tr style={{borderTop:"1px solid rgba(255,255,255,0.08)"}}>
                         <td style={{padding:"8px 10px",fontWeight:700}}>
                           <span style={{marginRight:6}}>📣</span>메타광고
+                          <span style={{fontSize:9,opacity:0.4,marginLeft:4}}>(파일)</span>
                         </td>
-                        {months.map(m=>(
+                        {displayMonths.map(m=>(
                           <td key={m} style={{padding:"8px 10px",textAlign:"right",fontWeight:700,color:"#f9a8d4"}}>
-                            {metaByMonth[m]>0?fmtW(metaByMonth[m]):"—"}
+                            {(metaByMonth[m]||0)>0?fmtW(metaByMonth[m]):"—"}
                           </td>
                         ))}
                       </tr>
@@ -3813,7 +3843,7 @@ export default function OaDashboard(){
                           <td style={{padding:"8px 10px",fontWeight:700}}>
                             <span style={{marginRight:6}}>{ch.icon}</span>{ch.name}
                           </td>
-                          {months.map(m=>(
+                          {displayMonths.map(m=>(
                             <td key={m} style={{padding:"4px 6px",textAlign:"right"}}>
                               <input
                                 type="number"
@@ -3836,7 +3866,7 @@ export default function OaDashboard(){
                       {/* 합계 */}
                       <tr style={{borderTop:"2px solid rgba(255,255,255,0.2)"}}>
                         <td style={{padding:"10px 10px",fontWeight:800,fontSize:12}}>합계</td>
-                        {months.map(m=>(
+                        {displayMonths.map(m=>(
                           <td key={m} style={{padding:"10px 10px",textAlign:"right",fontWeight:900,fontSize:14,color:"#fbbf24"}}>
                             {totalByMonth[m]>0?fmtW(totalByMonth[m]):"—"}
                           </td>
@@ -3844,15 +3874,6 @@ export default function OaDashboard(){
                       </tr>
                     </tbody>
                   </table>
-                </div>
-              )}
-
-              {/* 현재 시트 (월 파일 없어도 보여줌) */}
-              {metaCurrentSpend>0&&(
-                <div style={{marginTop:12,paddingTop:12,borderTop:"1px solid rgba(255,255,255,0.1)",
-                  display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-                  <div style={{fontSize:10,opacity:0.5}}>📣 현재 시트 기준 메타광고비</div>
-                  <div style={{fontSize:16,fontWeight:900,color:"#f9a8d4"}}>{fmtW(metaCurrentSpend)}</div>
                 </div>
               )}
             </div>
