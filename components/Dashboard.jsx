@@ -4145,6 +4145,21 @@ export default function OaDashboard(){
     const [assigneeFilter, setAssigneeFilter] = useState("전체"); // 전체 | 소리 | 영서 | 경은 | 지수
     const [clModal, setClModal] = useState(false);
     const [clForm, setClForm] = useState({title:"",cycle:"weekly",weekDay:1,monthDay:1,assignee:""});
+    const [dragOverDay, setDragOverDay] = useState(null);
+    const dragRef = useRef(null);
+
+    async function handleDropOnDay(targetKey) {
+      const item = dragRef.current;
+      dragRef.current = null;
+      setDragOverDay(null);
+      if (!item || item.date === targetKey || item._isChecklist) return;
+      const delta = new Date(targetKey+"T00:00:00") - new Date(item.date+"T00:00:00");
+      const newEnd = item.endDate ? (()=>{const e=new Date(item.endDate+"T00:00:00");e.setTime(e.getTime()+delta);return toLocalKey(e);})() : null;
+      // 낙관적 업데이트
+      setNotionSch(prev=>prev.map(s=>s.id===item.id?{...s,date:targetKey,endDate:newEnd}:s));
+      await fetch("/api/notion",{method:"POST",headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({action:"update",pageId:item.id,data:{date:targetKey,endDate:newEnd}})});
+    }
 
     // 달력 월 변경 시 자동 재로드
     useEffect(() => {
@@ -4306,9 +4321,14 @@ export default function OaDashboard(){
                 const isSel=dateKey===selDay;
                 const col=(startDow+i)%7;
                 return(
-                  <div key={day} className="cal-cell" onClick={()=>setSelDay(selDay===dateKey?null:dateKey)}
+                  <div key={day} className="cal-cell"
+                    onClick={()=>setSelDay(selDay===dateKey?null:dateKey)}
+                    onDragOver={e=>{e.preventDefault();setDragOverDay(dateKey);}}
+                    onDragLeave={()=>setDragOverDay(null)}
+                    onDrop={e=>{e.preventDefault();handleDropOnDay(dateKey);}}
                     style={{padding:"6px 4px",borderRight:`1px solid ${C.border}`,borderBottom:`1px solid ${C.border}`,
-                      cursor:"pointer",background:isSel?"#EFF6FF":isToday?C.blush:C.white,transition:"background 0.15s"}}>
+                      cursor:"pointer",transition:"background 0.15s",
+                      background:dragOverDay===dateKey?"#DBEAFE":isSel?"#EFF6FF":isToday?C.blush:C.white}}>
                     <div style={{fontSize:11,fontWeight:isToday?900:600,
                       width:20,height:20,borderRadius:"50%",display:"flex",alignItems:"center",justifyContent:"center",
                       background:isToday?C.rose:isSel?"#DBEAFE":"transparent",
@@ -4319,11 +4339,14 @@ export default function OaDashboard(){
                       const tc=schTypeColor(s.type);
                       const ac=s.assigneeColor||C.inkLt;
                       return(
-                        <div key={j} className="cal-item-text" onClick={e=>{e.stopPropagation();setSchModalData({mode:"edit",initial:{...s,notionId:s.id,note:s.memo}});}}
+                        <div key={j} className="cal-item-text"
+                          draggable={!s._isChecklist}
+                          onDragStart={e=>{e.stopPropagation();dragRef.current=s;}}
+                          onClick={e=>{e.stopPropagation();setSchModalData({mode:"edit",initial:{...s,notionId:s.id,note:s.memo}});}}
                           style={{fontSize:9,fontWeight:700,padding:"1px 3px",borderRadius:3,
                           background:`${tc}18`,color:tc,marginBottom:1,
                           overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",
-                          cursor:"pointer",borderLeft:`2px solid ${ac}`}}>
+                          cursor:"grab",borderLeft:`2px solid ${ac}`}}>
                           {s.assignee?`(${s.assignee.slice(0,1)}) `:""}{s.title.replace(/[(\[（][가-힣]{2,4}[)\]）]\s*/g,"").slice(0,8)}
                         </div>
                       );
