@@ -4136,6 +4136,8 @@ export default function OaDashboard(){
     const [selDay, setSelDay] = useState(null);
     const [schFilter, setSchFilter] = useState("미완료"); // 미완료 | 전체
     const [assigneeFilter, setAssigneeFilter] = useState("전체"); // 전체 | 소리 | 영서 | 경은 | 지수
+    const [clModal, setClModal] = useState(false);
+    const [clForm, setClForm] = useState({title:"",cycle:"weekly",weekDay:1,monthDay:1,assignee:""});
 
     function handleFilterChange(f) {
       setSchFilter(f);
@@ -4180,8 +4182,8 @@ export default function OaDashboard(){
         const dow2 = d.getDay(); // 0=일,1=월
         let show = false;
         if(ci.cycle==="daily") show=true;
-        else if(ci.cycle==="weekly") show=(dow2===1); // 월요일
-        else if(ci.cycle==="monthly") show=(day===1);
+        else if(ci.cycle==="weekly") show=(dow2===(ci.weekDay??1)); // 기본 월요일
+        else if(ci.cycle==="monthly") show=(day===(ci.monthDay??1)); // 기본 1일
         if(!show) continue;
         const key=toLocalKey(d);
         if(!itemsByDate[key]) itemsByDate[key]=[];
@@ -4390,6 +4392,7 @@ export default function OaDashboard(){
       {(()=>{
         const CYCLE_LABELS={daily:"매일",weekly:"매주",monthly:"매월"};
         const CYCLE_COLORS={daily:{bg:"#eff6ff",border:"#93c5fd",text:"#1d4ed8"},weekly:{bg:"#f5f3ff",border:"#c4b5fd",text:"#6d28d9"},monthly:{bg:"#fff7ed",border:"#fdba74",text:"#c2410c"}};
+        const DOW_LABELS=["일","월","화","수","목","금","토"];
         const todayCL=new Date();
         const todayStrCL=`${todayCL.getFullYear()}-${String(todayCL.getMonth()+1).padStart(2,"0")}-${String(todayCL.getDate()).padStart(2,"0")}`;
         const dow=todayCL.getDay();
@@ -4404,47 +4407,52 @@ export default function OaDashboard(){
           return item.id+"_"+monthStrCL;
         }
 
-        // 오늘 표시할 체크리스트: 매일 + 매주(월요일) + 매월(1일)
+        function cycleSub(item){
+          if(item.cycle==="daily") return "매일";
+          if(item.cycle==="weekly") return `매주 ${DOW_LABELS[item.weekDay??1]}요일`;
+          return `매월 ${item.monthDay??1}일`;
+        }
+
+        function saveClItem(){
+          if(!clForm.title.trim()){alert("항목명을 입력해주세요");return;}
+          setCheckItems(prev=>[...(prev||[]),{
+            id:Date.now()+"_"+Math.random().toString(36).slice(2),
+            title:clForm.title.trim(),cycle:clForm.cycle,
+            weekDay:clForm.weekDay,monthDay:clForm.monthDay,
+            assignee:clForm.assignee,createdAt:todayStrCL
+          }]);
+          setClForm({title:"",cycle:"weekly",weekDay:1,monthDay:1,assignee:""});
+          setClModal(false);
+        }
+
+        // 오늘 표시할 체크리스트
         const todayItems=(checkItems||[]).filter(i=>{
           if(i.cycle==="daily") return true;
-          if(i.cycle==="weekly") return dow===1; // 월요일
-          if(i.cycle==="monthly") return todayCL.getDate()===1;
+          if(i.cycle==="weekly") return dow===(i.weekDay??1);
+          if(i.cycle==="monthly") return todayCL.getDate()===(i.monthDay??1);
           return false;
         });
         const totalToday=todayItems.length;
         const doneToday=todayItems.filter(i=>(checkDone||{})[doneKeyCL(i)]).length;
+        const inputS={width:"100%",fontSize:12,padding:"8px 10px",borderRadius:8,border:`1px solid ${C.border}`,fontFamily:"inherit",outline:"none",boxSizing:"border-box"};
 
-        return(
+        return(<>
         <Card>
           <CardTitle title="☑️ 반복 체크리스트"
             sub={totalToday>0?`오늘 ${doneToday}/${totalToday} 완료`:`전체 ${(checkItems||[]).length}개`}
-            action={
-              <div style={{display:"flex",gap:6}}>
-                <Btn small onClick={()=>{
-                  const title=window.prompt("항목명");
-                  if(!title?.trim()) return;
-                  const cycleOpt=window.prompt("주기 입력 (daily/weekly/monthly)","weekly");
-                  const cycle=["daily","weekly","monthly"].includes(cycleOpt)?cycleOpt:"weekly";
-                  setCheckItems(prev=>[...(prev||[]),{id:Date.now()+"_"+Math.random().toString(36).slice(2),title:title.trim(),cycle,assignee:"",createdAt:todayStrCL}]);
-                }}>+ 추가</Btn>
-              </div>
-            }/>
+            action={<Btn small onClick={()=>{setClForm({title:"",cycle:"weekly",weekDay:1,monthDay:1,assignee:""});setClModal(true);}}>+ 추가</Btn>}/>
 
           {/* 오늘 할 항목 */}
           {totalToday>0&&(
             <div style={{marginBottom:14}}>
               <div style={{fontSize:10,fontWeight:700,color:C.inkMid,marginBottom:6}}>
                 오늘 할 항목
-                {totalToday>0&&(
-                  <span style={{marginLeft:8,fontSize:10,color:doneToday===totalToday?"#4DAD7A":C.inkLt}}>
-                    {doneToday===totalToday?"🎉 모두 완료!":` ${doneToday}/${totalToday}`}
-                  </span>
-                )}
+                <span style={{marginLeft:8,fontSize:10,color:doneToday===totalToday?"#4DAD7A":C.inkLt}}>
+                  {doneToday===totalToday?"🎉 모두 완료!":`${doneToday}/${totalToday}`}
+                </span>
               </div>
-              {/* 진행률 바 */}
               <div style={{height:5,borderRadius:3,background:C.cream,overflow:"hidden",marginBottom:8}}>
-                <div style={{height:"100%",borderRadius:3,background:"#4DAD7A",
-                  width:totalToday>0?`${Math.round(doneToday/totalToday*100)}%`:"0%",transition:"width 0.3s"}}/>
+                <div style={{height:"100%",borderRadius:3,background:"#4DAD7A",width:`${totalToday>0?Math.round(doneToday/totalToday*100):0}%`,transition:"width 0.3s"}}/>
               </div>
               <div style={{display:"flex",flexDirection:"column",gap:6}}>
                 {todayItems.map(item=>{
@@ -4462,7 +4470,7 @@ export default function OaDashboard(){
                       <span style={{fontSize:12,fontWeight:700,color:C.ink,textDecoration:done?"line-through":"none"}}>{item.title}</span>
                       {item.assignee&&<span style={{fontSize:10,color:C.inkMid,marginLeft:6}}>👤 {item.assignee}</span>}
                     </div>
-                    <span style={{fontSize:9,fontWeight:700,color:cc.text,background:cc.bg,padding:"2px 7px",borderRadius:10,flexShrink:0}}>{CYCLE_LABELS[item.cycle]}</span>
+                    <span style={{fontSize:9,fontWeight:700,color:cc.text,background:cc.bg,padding:"2px 7px",borderRadius:10,flexShrink:0}}>{cycleSub(item)}</span>
                     <button onClick={e=>{e.stopPropagation();setCheckItems(prev=>(prev||[]).filter(i=>i.id!==item.id));}}
                       style={{fontSize:11,color:C.inkLt,background:"none",border:"none",cursor:"pointer",padding:"2px 4px"}}>🗑</button>
                   </div>
@@ -4480,9 +4488,8 @@ export default function OaDashboard(){
                 {(checkItems||[]).map(item=>{
                   const cc=CYCLE_COLORS[item.cycle]||CYCLE_COLORS.daily;
                   return(
-                  <div key={item.id} style={{display:"flex",alignItems:"center",gap:8,padding:"7px 10px",borderRadius:8,
-                    border:`1px solid ${C.border}`,background:C.cream}}>
-                    <span style={{fontSize:9,fontWeight:700,color:cc.text,background:cc.bg,padding:"1px 7px",borderRadius:10,flexShrink:0}}>{CYCLE_LABELS[item.cycle]}</span>
+                  <div key={item.id} style={{display:"flex",alignItems:"center",gap:8,padding:"7px 10px",borderRadius:8,border:`1px solid ${C.border}`,background:C.cream}}>
+                    <span style={{fontSize:9,fontWeight:700,color:cc.text,background:cc.bg,padding:"1px 7px",borderRadius:10,flexShrink:0,whiteSpace:"nowrap"}}>{cycleSub(item)}</span>
                     <span style={{flex:1,fontSize:11,fontWeight:700,color:C.ink}}>{item.title}</span>
                     {item.assignee&&<span style={{fontSize:10,color:C.inkMid}}>👤 {item.assignee}</span>}
                     <button onClick={()=>setCheckItems(prev=>(prev||[]).filter(i=>i.id!==item.id))}
@@ -4495,12 +4502,74 @@ export default function OaDashboard(){
           )}
 
           {(checkItems||[]).length===0&&(
-            <div style={{textAlign:"center",color:C.inkLt,fontSize:12,padding:"20px 0"}}>
-              + 추가 버튼으로 반복 업무를 등록해보세요
-            </div>
+            <div style={{textAlign:"center",color:C.inkLt,fontSize:12,padding:"20px 0"}}>+ 추가 버튼으로 반복 업무를 등록해보세요</div>
           )}
         </Card>
-        );
+
+        {/* 추가 모달 */}
+        {clModal&&(
+          <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.4)",zIndex:3000,display:"flex",alignItems:"center",justifyContent:"center",padding:16}}>
+            <div style={{background:C.white,borderRadius:20,padding:24,width:"100%",maxWidth:380}}>
+              <div style={{fontSize:16,fontWeight:900,marginBottom:16}}>반복 항목 추가</div>
+              <div style={{display:"flex",flexDirection:"column",gap:12}}>
+                <div>
+                  <div style={{fontSize:10,fontWeight:700,color:C.inkMid,marginBottom:4}}>항목명 *</div>
+                  <input value={clForm.title} onChange={e=>setClForm(p=>({...p,title:e.target.value}))} placeholder="예: 메타 성과 확인" style={inputS}/>
+                </div>
+                <div>
+                  <div style={{fontSize:10,fontWeight:700,color:C.inkMid,marginBottom:4}}>주기</div>
+                  <div style={{display:"flex",gap:6}}>
+                    {[["daily","매일"],["weekly","매주"],["monthly","매월"]].map(([k,l])=>{
+                      const cc=CYCLE_COLORS[k];
+                      return <button key={k} onClick={()=>setClForm(p=>({...p,cycle:k}))} style={{flex:1,fontSize:11,padding:"7px 0",borderRadius:10,
+                        border:`1px solid ${clForm.cycle===k?cc.border:C.border}`,background:clForm.cycle===k?cc.bg:C.white,
+                        color:clForm.cycle===k?cc.text:C.inkMid,cursor:"pointer",fontFamily:"inherit",fontWeight:700}}>{l}</button>;
+                    })}
+                  </div>
+                </div>
+                {clForm.cycle==="weekly"&&(
+                  <div>
+                    <div style={{fontSize:10,fontWeight:700,color:C.inkMid,marginBottom:4}}>요일</div>
+                    <div style={{display:"flex",gap:4}}>
+                      {["일","월","화","수","목","금","토"].map((d,i)=>(
+                        <button key={i} onClick={()=>setClForm(p=>({...p,weekDay:i}))} style={{flex:1,fontSize:11,padding:"6px 0",borderRadius:8,
+                          border:`1px solid ${clForm.weekDay===i?"#c4b5fd":C.border}`,background:clForm.weekDay===i?"#f5f3ff":C.white,
+                          color:clForm.weekDay===i?"#6d28d9":C.inkMid,cursor:"pointer",fontFamily:"inherit",fontWeight:700}}>{d}</button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {clForm.cycle==="monthly"&&(
+                  <div>
+                    <div style={{fontSize:10,fontWeight:700,color:C.inkMid,marginBottom:4}}>날짜</div>
+                    <div style={{display:"flex",flexWrap:"wrap",gap:4}}>
+                      {Array.from({length:31},(_,i)=>i+1).map(d=>(
+                        <button key={d} onClick={()=>setClForm(p=>({...p,monthDay:d}))} style={{width:32,height:32,fontSize:11,borderRadius:8,
+                          border:`1px solid ${clForm.monthDay===d?"#fdba74":C.border}`,background:clForm.monthDay===d?"#fff7ed":C.white,
+                          color:clForm.monthDay===d?"#c2410c":C.inkMid,cursor:"pointer",fontFamily:"inherit",fontWeight:700}}>{d}</button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                <div>
+                  <div style={{fontSize:10,fontWeight:700,color:C.inkMid,marginBottom:4}}>담당자</div>
+                  <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+                    {["","소리","영서","경은","지수"].map(m=>(
+                      <button key={m} onClick={()=>setClForm(p=>({...p,assignee:m}))} style={{fontSize:11,padding:"4px 12px",borderRadius:20,
+                        border:`1px solid ${clForm.assignee===m?C.rose:C.border}`,background:clForm.assignee===m?C.rose:C.white,
+                        color:clForm.assignee===m?C.white:C.inkMid,cursor:"pointer",fontFamily:"inherit",fontWeight:700}}>{m||"미지정"}</button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+              <div style={{display:"flex",gap:8,marginTop:16}}>
+                <Btn onClick={saveClItem} style={{flex:1}}>추가</Btn>
+                <Btn variant="ghost" onClick={()=>setClModal(false)} style={{flex:1}}>취소</Btn>
+              </div>
+            </div>
+          </div>
+        )}
+        </>);
       })()}
     </div>
     );
