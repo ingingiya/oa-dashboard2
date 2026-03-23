@@ -1852,8 +1852,8 @@ export default function OaDashboard(){
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   const MetaSection=(()=>{
     const d = metaAgg;
-    // 원 단위 포맷 (만원)
     const fmt=n=>n>=10000?`₩${Math.round(n/10000).toLocaleString()}만`:`₩${Math.round(n).toLocaleString()}`;
+    const [showDeletedPanel, setShowDeletedPanel] = useState(false);
 
 
     return(
@@ -1922,7 +1922,45 @@ export default function OaDashboard(){
           </div>
           <div style={{display:"flex",gap:6}}>
             {hasSheet&&<Btn variant="sage" small onClick={()=>fetchSheet(sheetUrl)}><MI n="refresh" size={13}/> 새로고침</Btn>}
-            {deletedAds.length>0&&<Btn variant="neutral" small onClick={()=>{ setDeletedAds([]); }}><MI n="undo" size={13}/> 숨긴 광고 복원 ({deletedAds.length})</Btn>}
+            {deletedAds.length>0&&(
+              <div style={{position:"relative"}}>
+                <Btn variant="neutral" small onClick={()=>setShowDeletedPanel(p=>!p)}>
+                  <MI n="undo" size={13}/> 숨긴 광고 ({deletedAds.length}) {showDeletedPanel?"▲":"▼"}
+                </Btn>
+                {showDeletedPanel&&(
+                  <div style={{position:"absolute",top:"calc(100% + 6px)",right:0,zIndex:200,
+                    background:"#fff",border:`1px solid ${C.border}`,borderRadius:12,
+                    boxShadow:"0 8px 24px rgba(0,0,0,0.12)",minWidth:260,padding:8}}>
+                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",
+                      padding:"4px 8px 8px",borderBottom:`1px solid ${C.border}`,marginBottom:4}}>
+                      <span style={{fontSize:11,fontWeight:700,color:C.inkMid}}>최근 숨긴 순서</span>
+                      <button onClick={()=>{setDeletedAds([]);setShowDeletedPanel(false);}}
+                        style={{fontSize:10,fontWeight:700,color:C.rose,background:"none",border:`1px solid ${C.rose}`,
+                          borderRadius:6,padding:"2px 8px",cursor:"pointer",fontFamily:"inherit"}}>
+                        전체 복원
+                      </button>
+                    </div>
+                    {[...deletedAds].reverse().map((name,i)=>(
+                      <div key={name} style={{display:"flex",alignItems:"center",gap:8,padding:"5px 8px",
+                        borderRadius:8,transition:"background 0.1s"}}>
+                        <span style={{fontSize:10,color:C.inkMid,flexShrink:0,width:16,textAlign:"right"}}>{i+1}</span>
+                        <span style={{flex:1,fontSize:11,fontWeight:600,color:C.ink,
+                          overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}} title={name}>{name}</span>
+                        <button onClick={()=>{
+                          const next=deletedAds.filter(n=>n!==name);
+                          setDeletedAds(next);
+                          if(next.length===0) setShowDeletedPanel(false);
+                        }} style={{fontSize:10,fontWeight:700,color:"#4DAD7A",background:"none",
+                          border:`1px solid #4DAD7A`,borderRadius:6,padding:"2px 8px",
+                          cursor:"pointer",fontFamily:"inherit",flexShrink:0}}>
+                          복원
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
             <Btn variant="ghost" small onClick={()=>{setMarginInput(String(margin));setMarginModal(true)}}>⚙️ 기준 설정</Btn>
             <Btn variant={hasSheet?"neutral":"gold"} small onClick={()=>{setSheetInput(sheetUrl);setSheetModal(true)}}>
               {hasSheet?"⚙️ 시트 변경":<><MI n="link" size={13}/> 시트 연결</>}
