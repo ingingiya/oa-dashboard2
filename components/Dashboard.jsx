@@ -4146,13 +4146,19 @@ export default function OaDashboard(){
     const [clModal, setClModal] = useState(false);
     const [clForm, setClForm] = useState({title:"",cycle:"weekly",weekDay:1,monthDay:1,assignee:""});
 
+    // 달력 월 변경 시 자동 재로드
+    useEffect(() => {
+      if (schFilter === "전체") return; // 전체 모드는 이미 다 로드됨
+      const month = `${calMonth.y}-${String(calMonth.m+1).padStart(2,"0")}`;
+      fetchNotionSch({ month });
+    }, [calMonth.y, calMonth.m]);
+
     function handleFilterChange(f) {
       setSchFilter(f);
       if (f === "전체") {
         fetchNotionSch({ completed: true });
       } else {
-        const now = new Date();
-        const month = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,"0")}`;
+        const month = `${calMonth.y}-${String(calMonth.m+1).padStart(2,"0")}`;
         fetchNotionSch({ month });
       }
     }
