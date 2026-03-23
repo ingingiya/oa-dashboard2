@@ -4147,6 +4147,7 @@ export default function OaDashboard(){
     const [clForm, setClForm] = useState({title:"",cycle:"weekly",weekDay:1,monthDay:1,assignee:""});
     const [dragOverDay, setDragOverDay] = useState(null);
     const dragRef = useRef(null);
+    const [moveItemId, setMoveItemId] = useState(null);
 
     async function handleDropOnDay(targetKey) {
       const item = dragRef.current;
@@ -4399,24 +4400,48 @@ export default function OaDashboard(){
                 );
               }
               return(
-                <div key={s.id} style={{display:"flex",alignItems:"center",gap:10,padding:"10px 12px",
-                  borderRadius:10,border:`1px solid ${C.border}`,background:C.white}}>
-                  <span style={{fontSize:10,fontWeight:700,color:tc,background:`${tc}18`,padding:"2px 8px",borderRadius:20,whiteSpace:"nowrap",flexShrink:0}}>
-                    <MI n={schTypeIcon(s.type)} size={12}/> {s.type}
-                  </span>
-                  <div style={{flex:1,minWidth:0}}>
-                    <div style={{fontSize:12,fontWeight:800,color:C.ink,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{s.title}</div>
-                    <div style={{fontSize:10,color:C.inkLt,marginTop:1}}>
-                      {s.endDate&&s.endDate!==s.date?`${s.date} ~ ${s.endDate}`:s.date}
-                      {s.assignee&&<span style={{marginLeft:6,padding:"1px 6px",borderRadius:10,background:s.assigneeColor+"22",color:s.assigneeColor,fontWeight:700}}>{s.assignee}</span>}
+                <div key={s.id} style={{borderRadius:10,border:`1px solid ${C.border}`,background:C.white,overflow:"hidden"}}>
+                  <div style={{display:"flex",alignItems:"center",gap:10,padding:"10px 12px"}}>
+                    <span style={{fontSize:10,fontWeight:700,color:tc,background:`${tc}18`,padding:"2px 8px",borderRadius:20,whiteSpace:"nowrap",flexShrink:0}}>
+                      <MI n={schTypeIcon(s.type)} size={12}/> {s.type}
+                    </span>
+                    <div style={{flex:1,minWidth:0}}>
+                      <div style={{fontSize:12,fontWeight:800,color:C.ink,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{s.title}</div>
+                      <div style={{fontSize:10,color:C.inkLt,marginTop:1}}>
+                        {s.endDate&&s.endDate!==s.date?`${s.date} ~ ${s.endDate}`:s.date}
+                        {s.assignee&&<span style={{marginLeft:6,padding:"1px 6px",borderRadius:10,background:s.assigneeColor+"22",color:s.assigneeColor,fontWeight:700}}>{s.assignee}</span>}
+                      </div>
+                      {s.memo&&<div style={{fontSize:10,color:C.inkMid,marginTop:2}}><MI n="chat_bubble" size={11}/> {s.memo}</div>}
                     </div>
-                    {s.memo&&<div style={{fontSize:10,color:C.inkMid,marginTop:2}}><MI n="chat_bubble" size={11}/> {s.memo}</div>}
+                    <div style={{display:"flex",gap:4,flexShrink:0}}>
+                      <Btn variant="ghost" small onClick={()=>setMoveItemId(moveItemId===s.id?null:s.id)} title="날짜 이동"><MI n="calendar_month" size={13}/></Btn>
+                      <Btn variant="ghost" small onClick={()=>setSchModalData({mode:"edit",initial:{...s,notionId:s.id,note:s.memo}})}><MI n="edit" size={13}/></Btn>
+                      <Btn variant="sage" small onClick={()=>toggleNotionDone(s.id,true)}><MI n="check_circle" size={13}/></Btn>
+                      <Btn variant="danger" small onClick={()=>deleteNotionSch(s.id)}><MI n="delete" size={13}/></Btn>
+                    </div>
                   </div>
-                  <div style={{display:"flex",gap:4,flexShrink:0}}>
-                    <Btn variant="ghost" small onClick={()=>setSchModalData({mode:"edit",initial:{...s,notionId:s.id,note:s.memo}})}><MI n="edit" size={13}/></Btn>
-                    <Btn variant="sage" small onClick={()=>toggleNotionDone(s.id,true)}><MI n="check_circle" size={13}/></Btn>
-                    <Btn variant="danger" small onClick={()=>deleteNotionSch(s.id)}><MI n="delete" size={13}/></Btn>
-                  </div>
+                  {moveItemId===s.id&&(
+                    <div style={{display:"flex",alignItems:"center",gap:8,padding:"6px 12px 10px",borderTop:`1px solid ${C.border}`,background:C.cream}}>
+                      <MI n="arrow_forward" size={13} style={{color:C.inkMid}}/>
+                      <span style={{fontSize:11,color:C.inkMid,flexShrink:0}}>이동할 날짜:</span>
+                      <input type="date" defaultValue={s.date} id={`mv_${s.id}`}
+                        style={{fontSize:11,padding:"3px 8px",borderRadius:6,border:`1px solid ${C.border}`,fontFamily:"inherit",outline:"none"}}/>
+                      <Btn small onClick={async()=>{
+                        const el=document.getElementById(`mv_${s.id}`);
+                        if(!el||!el.value) return;
+                        const newDate=el.value;
+                        if(newDate===s.date){setMoveItemId(null);return;}
+                        const delta=new Date(newDate+"T00:00:00")-new Date(s.date+"T00:00:00");
+                        const newEnd=s.endDate?(()=>{const e=new Date(s.endDate+"T00:00:00");e.setTime(e.getTime()+delta);return toLocalKey(e);})():null;
+                        setNotionSch(prev=>prev.map(x=>x.id===s.id?{...x,date:newDate,endDate:newEnd}:x));
+                        setSelDay(newDate);
+                        setMoveItemId(null);
+                        await fetch("/api/notion",{method:"POST",headers:{"Content-Type":"application/json"},
+                          body:JSON.stringify({action:"update",pageId:s.id,data:{date:newDate,endDate:newEnd}})});
+                      }}>이동</Btn>
+                      <Btn variant="ghost" small onClick={()=>setMoveItemId(null)}>취소</Btn>
+                    </div>
+                  )}
                 </div>
               );
             })}
