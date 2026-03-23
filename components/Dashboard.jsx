@@ -64,6 +64,13 @@ const C = {
 };
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// Material Symbol Icon helper
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function MI({n, size=16, style={}}) {
+  return <span className="material-symbols-outlined" style={{fontSize:size,lineHeight:1,verticalAlign:"middle",flexShrink:0,...style}}>{n}</span>;
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // 썸네일 hover 프리뷰
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 function ThumbPreview({ url, name }) {
@@ -143,10 +150,10 @@ const todayStr = "오늘"; // 하이드레이션 불일치 방지 — 날짜는 
 function addDays(ds,n){ if(!ds)return null; const d=new Date(ds); d.setDate(d.getDate()+n); return d.toISOString().slice(0,10); }
 function daysUntil(ds){ if(!ds)return null; return Math.ceil((new Date(ds)-TODAY)/86400000); }
 function insightStatus(f){
-  if(!f.postedDate) return {label:"미게시",  color:C.inkLt,bg:C.cream,   icon:"📦"};
-  if(f.reach!==null) return {label:"기록완료",color:C.good, bg:"#EDF7F1", icon:"✅"};
+  if(!f.postedDate) return {label:"미게시",  color:C.inkLt,bg:C.cream,   icon:"inventory_2"};
+  if(f.reach!==null) return {label:"기록완료",color:C.good, bg:"#EDF7F1", icon:"check_circle"};
   const due=addDays(f.postedDate,7), d=daysUntil(due);
-  if(d>0)   return {label:`D-${d} 대기`,         color:C.inkLt,bg:C.cream,  icon:"⏳"};
+  if(d>0)   return {label:`D-${d} 대기`,         color:C.inkLt,bg:C.cream,  icon:"hourglass_empty"};
   if(d===0) return {label:"오늘 입력!",           color:C.rose, bg:C.blush,  icon:"🔔"};
   return         {label:`D+${Math.abs(d)} 미입력`,color:C.bad,  bg:"#FEF0F0",icon:"❗"};
 }
@@ -179,7 +186,7 @@ function lpvCostStatus(spend, lpv, c={}){
   if(!lpv||!spend) return null;
   const cost = spend/lpv;
   const g=c.lpvCostGood||300, ok=c.lpvCostOk||500, h=c.lpvCostHold||800;
-  if(cost<g)  return {label:"매우좋음", color:C.good, bg:"#EDF7F1", icon:"🟢", cost:Math.round(cost)};
+  if(cost<g)  return {label:"매우좋음", color:C.good, bg:"#EDF7F1", icon:"circle", cost:Math.round(cost)};
   if(cost<ok) return {label:"유지",     color:C.sage, bg:C.sageLt,  icon:"🔵", cost:Math.round(cost)};
   if(cost<h)  return {label:"보류",     color:C.warn, bg:"#FFF8EC", icon:"🟡", cost:Math.round(cost)};
   return             {label:"컷",       color:C.bad,  bg:"#FEF0F0", icon:"🔴", cost:Math.round(cost)};
@@ -188,8 +195,8 @@ function lpvRateStatus(clicks, lpv, c={}){
   if(!clicks||!lpv) return null;
   const rate = (lpv/clicks)*100;
   const g=c.lpvRateGood||70, ok=c.lpvRateOk||50;
-  if(rate>=g)  return {label:"정상",    color:C.good, bg:"#EDF7F1", icon:"✅", rate:rate.toFixed(1)};
-  if(rate>=ok) return {label:"보통",    color:C.warn, bg:"#FFF8EC", icon:"⚠️", rate:rate.toFixed(1)};
+  if(rate>=g)  return {label:"정상",    color:C.good, bg:"#EDF7F1", icon:"check_circle", rate:rate.toFixed(1)};
+  if(rate>=ok) return {label:"보통",    color:C.warn, bg:"#FFF8EC", icon:"warning", rate:rate.toFixed(1)};
   return             {label:"랜딩문제", color:C.bad,  bg:"#FEF0F0", icon:"🚨", rate:rate.toFixed(1)};
 }
 function cpaStatus(spend, purchases, margin, c={}){
@@ -197,15 +204,15 @@ function cpaStatus(spend, purchases, margin, c={}){
   const cpa = spend/purchases;
   const ratio = (cpa/margin)*100;
   const g=c.cpaGood||85, h=c.cpaHold||100;
-  if(ratio<=g)  return {label:"유지", color:C.good, bg:"#EDF7F1", icon:"✅", cpa:Math.round(cpa)};
-  if(ratio<=h)  return {label:"보류", color:C.warn, bg:"#FFF8EC", icon:"⚠️", cpa:Math.round(cpa)};
+  if(ratio<=g)  return {label:"유지", color:C.good, bg:"#EDF7F1", icon:"check_circle", cpa:Math.round(cpa)};
+  if(ratio<=h)  return {label:"보류", color:C.warn, bg:"#FFF8EC", icon:"warning", cpa:Math.round(cpa)};
   return              {label:"컷",   color:C.bad,  bg:"#FEF0F0", icon:"🔴", cpa:Math.round(cpa)};
 }
 function ctrStatus(clicks, impressions, c={}){
   if(!impressions||!clicks) return null;
   const ctr = (clicks/impressions)*100;
   const g=c.ctrGood||2, ok=c.ctrOk||1;
-  if(ctr>=g)  return {label:"좋음",    color:C.good, bg:"#EDF7F1", icon:"🟢", ctr:ctr.toFixed(2)};
+  if(ctr>=g)  return {label:"좋음",    color:C.good, bg:"#EDF7F1", icon:"circle", ctr:ctr.toFixed(2)};
   if(ctr>=ok) return {label:"보통",    color:C.warn, bg:"#FFF8EC", icon:"🟡", ctr:ctr.toFixed(2)};
   return            {label:"소재문제", color:C.bad,  bg:"#FEF0F0", icon:"🔴", ctr:ctr.toFixed(2)};
 }
@@ -244,7 +251,7 @@ function adScore(ad, margin, c={}){
 }
 
 function schTypeColor(t){ return {공구:C.rose,시딩:C.purple,광고:C.gold,이벤트:C.sage,반복:"#94a3b8"}[t]||C.inkMid; }
-function schTypeIcon(t){  return {공구:"🛍",시딩:"✨",광고:"📣",이벤트:"🎉",반복:"☑️"}[t]||"📌"; }
+function schTypeIcon(t){  return {공구:"shopping_bag",시딩:"auto_awesome",광고:"campaign",이벤트:"celebration",반복:"check_box"}[t]||"push_pin"; }
 
 // useLocal은 useSupabaseState로 대체됨
 
@@ -463,7 +470,7 @@ const KpiGrid=({items,cols=6})=>(
           <div style={{position:"absolute",top:0,left:0,right:0,height:3,
             background:good?`linear-gradient(90deg,${C.good},${C.good}66)`:`linear-gradient(90deg,${C.bad},${C.bad}66)`}}/>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:6}}>
-            <div style={{fontSize:18}}>{k.icon}</div>
+            <div style={{fontSize:18}}>{k.icon&&typeof k.icon==="string"&&k.icon.length<30?<MI n={k.icon} size={18}/>:k.icon}</div>
             {k.change!==0&&(
               <span style={{fontSize:10,fontWeight:700,color:good?C.good:C.bad,
                 background:good?"#EDF7F1":"#FEF0F0",padding:"2px 6px",borderRadius:20}}>
@@ -493,7 +500,7 @@ function InfModalComp({mode, initial, onSave, onClose}){
   const [f, setF] = useState(()=>initial||eInf);
   const set = (k,v) => setF(p=>({...p,[k]:v}));
   return(
-    <Modal title={mode==="edit"?"✏️ 인플루언서 수정":"➕ 인플루언서 추가"} onClose={onClose}>
+    <Modal title={mode==="edit"?<><MI n="edit"/> 인플루언서 수정</>:<><MI n="add"/> 인플루언서 추가</>} onClose={onClose}>
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
         <FR label="실명 / 닉네임"><Inp value={f.displayName||""} onChange={v=>set("displayName",v)} placeholder="경서"/></FR>
         <FR label="계정 (핸들)"><Inp value={f.name} onChange={v=>set("name",v)} placeholder="@seoooazi"/></FR>
@@ -521,7 +528,7 @@ function InfModalComp({mode, initial, onSave, onClose}){
         ))}
       </div>
       <Btn onClick={()=>{if(!f.name)return; onSave({...f,sent:+f.sent||1,posted:+f.posted||0});}} style={{width:"100%",marginTop:4}}>
-        {mode==="edit"?"💾 저장":"➕ 추가"}
+        {mode==="edit"?<><MI n="save" size={13}/> 저장</>:<><MI n="add" size={13}/> 추가</>}
       </Btn>
     </Modal>
   );
@@ -532,7 +539,7 @@ function InsModalComp({initial, onSave, onClose}){
   const [f, setF] = useState(()=>initial||{id:null,name:"",reach:"",saves:"",clicks:"",conv:""});
   const set = (k,v) => setF(p=>({...p,[k]:v}));
   return(
-    <Modal title="📊 인사이트 기록" onClose={onClose}>
+    <Modal title={<><MI n="bar_chart"/> 인사이트 기록</>} onClose={onClose}>
       <div style={{fontSize:12,fontWeight:700,color:C.ink,marginBottom:12}}>{f.name}</div>
       <FR label="도달(Reach)"><Inp type="number" value={f.reach} onChange={v=>set("reach",v)} placeholder="0"/></FR>
       <FR label="저장수"><Inp type="number" value={f.saves} onChange={v=>set("saves",v)} placeholder="0"/></FR>
@@ -1594,14 +1601,14 @@ export default function OaDashboard(){
   async function deleteSch(id){ setSch(arr=>arr.filter(s=>s.id!==id)); }
 
   const NAVS=[
-    {id:"home",      icon:"🏠",label:"홈"},
-    {id:"meta",      icon:"📣",label:"메타광고"},
-    {id:"adspend",   icon:"💰",label:"총광고비"},
-    {id:"influencer",icon:"✨",label:"인플루언서"},
-    {id:"inventory", icon:"📦",label:"재고"},
-    {id:"schedule",  icon:"📅",label:"스케줄"},
-    {id:"creative",  icon:"🎨",label:"소재"},
-    {id:"review",    icon:"✅",label:"콘텐츠리뷰"},
+    {id:"home",      icon:"home",label:"홈"},
+    {id:"meta",      icon:"campaign",label:"메타광고"},
+    {id:"adspend",   icon:"payments",label:"총광고비"},
+    {id:"influencer",icon:"auto_awesome",label:"인플루언서"},
+    {id:"inventory", icon:"inventory_2",label:"재고"},
+    {id:"schedule",  icon:"calendar_month",label:"스케줄"},
+    {id:"creative",  icon:"palette",label:"소재"},
+    {id:"review",    icon:"check_circle",label:"콘텐츠리뷰"},
   ];
 
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -1611,55 +1618,55 @@ export default function OaDashboard(){
     // 알림 그룹 정의
     const alertGroups = [
       {
-        id:"dangerInv", icon:"🚨", label:"재고 위험", color:C.bad, bg:"#FEF0F0",
+        id:"dangerInv", icon:"warning", label:"재고 위험", color:C.bad, bg:"#FEF0F0",
         count:dangerInv.length, items:dangerInv,
         render:(item)=>`${item.name} · ${stockDays(item)}일치`,
         action:()=>setSec("inventory"),
       },
       {
-        id:"cutAds", icon:"🔴", label:"광고 끄기", color:C.bad, bg:"#FEF0F0",
+        id:"cutAds", icon:"cancel", label:"광고 끄기", color:C.bad, bg:"#FEF0F0",
         count:cutAds.length, items:cutAds,
         render:(ad)=>ad.name,
         action:()=>{setSec("meta");setCampTab("conversion");},
       },
       {
-        id:"overdueIns", icon:"❗", label:"인사이트 미입력", color:C.rose, bg:C.blush,
+        id:"overdueIns", icon:"error", label:"인사이트 미입력", color:C.rose, bg:C.blush,
         count:overdueIns.length, items:overdueIns,
         render:(f)=>f.name,
         action:()=>setSec("influencer"),
       },
       {
-        id:"cautionInv", icon:"⚠️", label:"재고 주의", color:C.warn, bg:"#FFF8EC",
+        id:"cautionInv", icon:"warning", label:"재고 주의", color:C.warn, bg:"#FFF8EC",
         count:cautionInv.length, items:cautionInv,
         render:(item)=>`${item.name} · ${stockDays(item)}일치`,
         action:()=>setSec("inventory"),
       },
       {
-        id:"holdAds", icon:"🟡", label:"광고 보류", color:C.warn, bg:"#FFF8EC",
+        id:"holdAds", icon:"pause_circle", label:"광고 보류", color:C.warn, bg:"#FFF8EC",
         count:holdAds.length, items:holdAds,
         render:(ad)=>ad.name,
         action:()=>{setSec("meta");setCampTab("conversion");},
       },
       {
-        id:"urgentScheds", icon:"🔔", label:"D-5 임박 일정", color:C.purple, bg:C.purpleLt,
+        id:"urgentScheds", icon:"notifications", label:"D-5 임박 일정", color:C.purple, bg:C.purpleLt,
         count:urgentScheds.length, items:urgentScheds,
         render:(s)=>`${daysUntil(s.date)===0?"오늘":`D-${daysUntil(s.date)}`} · ${s.title}`,
         action:()=>setSec("schedule"),
       },
       {
-        id:"overdueScheds", icon:"📅", label:"기간 초과 일정", color:C.inkMid, bg:C.cream,
+        id:"overdueScheds", icon:"calendar_month", label:"기간 초과 일정", color:C.inkMid, bg:C.cream,
         count:overdueScheds.length, items:overdueScheds,
         render:(s)=>s.title,
         action:()=>setSec("schedule"),
       },
       {
-        id:"orderRaw", icon:"📦", label:"발주 임박", color:C.sage, bg:C.sageLt,
+        id:"orderRaw", icon:"inventory_2", label:"발주 임박", color:C.sage, bg:C.sageLt,
         count:orderRaw.length, items:orderRaw,
         render:(r)=>r["SKU명"]||r["상품명"]||"",
         action:()=>{},
       },
       {
-        id:"recreateReqs", icon:"🎨", label:"재제작 요청", color:"#8b5cf6", bg:"#f5f3ff",
+        id:"recreateReqs", icon:"palette", label:"재제작 요청", color:"#8b5cf6", bg:"#f5f3ff",
         count:recreateReqs.filter(r=>r.status==="pending").length,
         items:recreateReqs.filter(r=>r.status==="pending"),
         render:(r)=>r.adName,
@@ -1756,7 +1763,7 @@ export default function OaDashboard(){
                 fontSize:10,fontWeight:700,padding:"3px 10px",borderRadius:20,
                 background:"rgba(255,255,255,0.2)",color:C.white,
                 cursor:"pointer",backdropFilter:"blur(4px)",border:"1px solid rgba(255,255,255,0.3)"}}>
-                {g.icon} {g.label} {g.count}
+                <MI n={g.icon} size={10}/> {g.label} {g.count}
               </span>
             ))}
           </div>
@@ -1767,7 +1774,7 @@ export default function OaDashboard(){
       {totalAlerts===0&&(
         <div style={{background:C.white,border:`1px solid ${C.border}`,borderRadius:14,
           padding:"28px",textAlign:"center"}}>
-          <div style={{fontSize:32,marginBottom:8}}>🎉</div>
+          <div style={{fontSize:32,marginBottom:8}}><MI n="celebration" size={32}/></div>
           <div style={{fontSize:13,fontWeight:800,color:C.ink}}>오늘은 처리할 항목이 없어요</div>
           <div style={{fontSize:11,color:C.inkLt,marginTop:4}}>재고·광고·인플루언서·일정 모두 정상</div>
         </div>
@@ -1784,7 +1791,7 @@ export default function OaDashboard(){
                 padding:"12px 16px",background:g.bg,cursor:"pointer"}}
                 onClick={g.action}>
                 <div style={{display:"flex",alignItems:"center",gap:8}}>
-                  <span style={{fontSize:16}}>{g.icon}</span>
+                  <MI n={g.icon} size={16}/>
                   <span style={{fontSize:12,fontWeight:800,color:g.color}}>{g.label}</span>
                   <span style={{fontSize:11,fontWeight:900,color:C.white,background:g.color,
                     padding:"1px 8px",borderRadius:20,minWidth:20,textAlign:"center"}}>{g.count}</span>
@@ -1820,7 +1827,7 @@ export default function OaDashboard(){
 
       {/* 발주임박 시트 연결 모달 */}
       {orderModal&&(
-        <Modal title="📦 발주임박 시트 연결" onClose={()=>setOrderModal(false)} wide>
+        <Modal title={<><MI n="inventory_2"/> 발주임박 시트 연결</>} onClose={()=>setOrderModal(false)} wide>
           <div style={{background:C.sageLt,borderRadius:10,padding:"12px 14px",marginBottom:16,fontSize:11,color:C.sage,fontWeight:700}}>
             💡 구글시트 발주분석 파일의 <b>📋발주임박목록</b> 시트 URL을 붙여넣으세요<br/>
             <span style={{fontWeight:400,color:C.inkMid}}>시트 공유 설정 → "링크 있는 모든 사용자" → 뷰어 권한</span>
@@ -1833,7 +1840,7 @@ export default function OaDashboard(){
             // URL 고정
             setOrderModal(false);
             if(url) fetchOrderSheet(url);
-          }} style={{width:"100%",marginTop:8}}>🔗 연결하기</Btn>
+          }} style={{width:"100%",marginTop:8}}><MI n="link" size={13}/> 연결하기</Btn>
         </Modal>
       )}
     </div>
@@ -1875,11 +1882,11 @@ export default function OaDashboard(){
             <div style={{display:"flex",gap:6,marginLeft:10,flexShrink:0}}>
               {metaGoalEditing ? (
                 <>
-                  <Btn small onClick={()=>{setMetaGoal(metaGoalInput);setMetaGoalEditing(false);}}>💾 저장</Btn>
+                  <Btn small onClick={()=>{setMetaGoal(metaGoalInput);setMetaGoalEditing(false);}}><MI n="save" size={13}/> 저장</Btn>
                   <Btn small variant="neutral" onClick={()=>setMetaGoalEditing(false)}>취소</Btn>
                 </>
               ) : (
-                <Btn small variant="neutral" onClick={()=>{setMetaGoalInput(metaGoal);setMetaGoalEditing(true);}}>✏️ {metaGoal?"수정":"입력"}</Btn>
+                <Btn small variant="neutral" onClick={()=>{setMetaGoalInput(metaGoal);setMetaGoalEditing(true);}}><MI n="edit" size={13}/> {metaGoal?"수정":"입력"}</Btn>
               )}
             </div>
           </div>
@@ -1891,7 +1898,7 @@ export default function OaDashboard(){
           display:"flex",alignItems:"center",justifyContent:"space-between",gap:10,flexWrap:"wrap",
         }}>
           <div style={{display:"flex",alignItems:"center",gap:10}}>
-            <span style={{fontSize:20}}>📊</span>
+            <MI n="bar_chart" size={20}/>
             <div>
               {hasSheet ? (
                 <>
@@ -1899,7 +1906,7 @@ export default function OaDashboard(){
                   <div style={{fontSize:10,color:C.inkMid,marginTop:1}}>마지막 업데이트: 방금</div>
                 </>
               ) : metaStatus==="loading" ? (
-                <div style={{fontSize:12,fontWeight:700,color:C.gold}}>⏳ 시트 불러오는 중...</div>
+                <div style={{fontSize:12,fontWeight:700,color:C.gold}}><MI n="hourglass_empty" size={13}/> 시트 불러오는 중...</div>
               ) : metaStatus==="error" ? (
                 <div>
                   <div style={{fontSize:12,fontWeight:800,color:C.bad}}>연결 실패 — {metaError}</div>
@@ -1914,11 +1921,11 @@ export default function OaDashboard(){
             </div>
           </div>
           <div style={{display:"flex",gap:6}}>
-            {hasSheet&&<Btn variant="sage" small onClick={()=>fetchSheet(sheetUrl)}>🔄 새로고침</Btn>}
-            {deletedAds.length>0&&<Btn variant="neutral" small onClick={()=>{ setDeletedAds([]); }}>↩ 숨긴 광고 복원 ({deletedAds.length})</Btn>}
+            {hasSheet&&<Btn variant="sage" small onClick={()=>fetchSheet(sheetUrl)}><MI n="refresh" size={13}/> 새로고침</Btn>}
+            {deletedAds.length>0&&<Btn variant="neutral" small onClick={()=>{ setDeletedAds([]); }}><MI n="undo" size={13}/> 숨긴 광고 복원 ({deletedAds.length})</Btn>}
             <Btn variant="ghost" small onClick={()=>{setMarginInput(String(margin));setMarginModal(true)}}>⚙️ 기준 설정</Btn>
             <Btn variant={hasSheet?"neutral":"gold"} small onClick={()=>{setSheetInput(sheetUrl);setSheetModal(true)}}>
-              {hasSheet?"⚙️ 시트 변경":"🔗 시트 연결"}
+              {hasSheet?"⚙️ 시트 변경":<><MI n="link" size={13}/> 시트 연결</>}
             </Btn>
           </div>
         </div>
@@ -1967,7 +1974,7 @@ export default function OaDashboard(){
             return(
             <div style={{background:"rgba(255,255,255,0.07)",borderRadius:12,padding:"14px"}}>
               <div style={{display:"flex",alignItems:"center",gap:5,marginBottom:10}}>
-                <span>{icon}</span>
+                {typeof icon==="string"&&icon.length<30?<MI n={icon} size={14}/>:<span>{icon}</span>}
                 <span style={{fontSize:11,fontWeight:800,color:accent||"rgba(255,255,255,0.9)"}}>{label}</span>
                 <span style={{marginLeft:"auto",fontSize:10,opacity:0.4}}>{data.ads}개</span>
               </div>
@@ -1996,13 +2003,13 @@ export default function OaDashboard(){
             <div style={{background:C.ink,borderRadius:14,padding:"16px 18px",color:C.white}}>
               <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12,gap:8,flexWrap:"wrap"}}>
                 <div>
-                  <div style={{fontSize:12,fontWeight:800,letterSpacing:"0.05em"}}>📊 집행중 광고 성과</div>
+                  <div style={{fontSize:12,fontWeight:800,letterSpacing:"0.05em"}}><MI n="bar_chart" size={14}/> 집행중 광고 성과</div>
                   <div style={{fontSize:10,opacity:0.5,marginTop:2}}>{period} · 집행중 {activeKeys.size}개</div>
                 </div>
                 <div style={{display:"flex",gap:10,alignItems:"flex-end"}}>
                   {instaRaw.length>0&&(
                     <div style={{textAlign:"right"}}>
-                      <div style={{fontSize:9,opacity:0.4}}>📸 인스타 게시물</div>
+                      <div style={{fontSize:9,opacity:0.4}}><MI n="photo_camera" size={10}/> 인스타 게시물</div>
                       <div style={{fontSize:13,fontWeight:700,color:"rgba(255,255,255,0.5)"}}>{fmtW(instaRaw.reduce((s,r)=>s+(r.spend||0),0))}</div>
                     </div>
                   )}
@@ -2013,9 +2020,9 @@ export default function OaDashboard(){
                 </div>
               </div>
               <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:10}}>
-                <Col label="전환" icon="🎯" data={conv} accent="#f9a8d4"/>
-                <Col label="트래픽" icon="🚦" data={traffic} accent="#93c5fd"/>
-                <Col label="합산" icon="📊" data={total} accent="#86efac"/>
+                <Col label="전환" icon="track_changes" data={conv} accent="#f9a8d4"/>
+                <Col label="트래픽" icon="traffic" data={traffic} accent="#93c5fd"/>
+                <Col label="합산" icon="bar_chart" data={total} accent="#86efac"/>
               </div>
             </div>
           );
@@ -2039,7 +2046,7 @@ export default function OaDashboard(){
               border:"1px solid rgba(255,255,255,0.08)"}}>
               <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12,gap:8,flexWrap:"wrap"}}>
                 <div>
-                  <div style={{fontSize:12,fontWeight:800,letterSpacing:"0.05em"}}>💰 전체 광고비</div>
+                  <div style={{fontSize:12,fontWeight:800,letterSpacing:"0.05em"}}><MI n="payments" size={14}/> 전체 광고비</div>
                   <div style={{fontSize:10,opacity:0.4,marginTop:2}}>미게재 포함 · 파일 업로드</div>
                 </div>
                 <div style={{display:"flex",gap:8,alignItems:"center"}}>
@@ -2056,7 +2063,7 @@ export default function OaDashboard(){
                         color:hasFile?"#fbbf24":"rgba(255,255,255,0.5)",
                         border:`1px solid ${hasFile?"rgba(251,191,36,0.3)":"rgba(255,255,255,0.12)"}`,
                         cursor:"pointer",fontFamily:"inherit"}}>
-                      {allAdStatus==="loading"?"⏳":hasFile?"🔄 파일 변경":"📂 파일 업로드"}
+                      {allAdStatus==="loading"?<MI n="hourglass_empty" size={13}/>:hasFile?<><MI n="refresh" size={13}/> 파일 변경</>:<><MI n="folder_open" size={13}/> 파일 업로드</>}
                     </button>
                   </div>
                 </div>
@@ -2064,13 +2071,13 @@ export default function OaDashboard(){
               {hasFile?(
                 <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:10}}>
                   {[
-                    {label:"전환",icon:"🎯",rows:fileConv,accent:"#f9a8d4"},
-                    {label:"트래픽",icon:"🚦",rows:fileTraffic,accent:"#93c5fd"},
-                    {label:"합산",icon:"📊",rows:fileRows,accent:"#fbbf24"},
+                    {label:"전환",icon:"track_changes",rows:fileConv,accent:"#f9a8d4"},
+                    {label:"트래픽",icon:"traffic",rows:fileTraffic,accent:"#93c5fd"},
+                    {label:"합산",icon:"bar_chart",rows:fileRows,accent:"#fbbf24"},
                   ].map(({label,icon,rows,accent})=>(
                     <div key={label} style={{background:"rgba(255,255,255,0.05)",borderRadius:12,padding:"12px"}}>
                       <div style={{display:"flex",alignItems:"center",gap:5,marginBottom:8}}>
-                        <span>{icon}</span>
+                        <MI n={icon} size={14}/>
                         <span style={{fontSize:11,fontWeight:800,color:accent}}>{label}</span>
                         <span style={{marginLeft:"auto",fontSize:10,opacity:0.35}}>{ads(rows)}개</span>
                       </div>
@@ -2104,8 +2111,8 @@ export default function OaDashboard(){
           <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:10}}>
             <div style={{fontWeight:700,fontSize:13,color:C.ink}}>🎬 광고 소재</div>
             <div style={{display:"flex",gap:6,alignItems:"center"}}>
-              {imgUploading&&<span style={{fontSize:10,color:C.inkLt}}>⏳ 업로드 중...</span>}
-              {imgError&&<span style={{fontSize:10,color:C.bad,maxWidth:200,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}} title={imgError}>❌ {imgError}</span>}
+              {imgUploading&&<span style={{fontSize:10,color:C.inkLt}}><MI n="hourglass_empty" size={13}/> 업로드 중...</span>}
+              {imgError&&<span style={{fontSize:10,color:C.bad,maxWidth:200,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}} title={imgError}><MI n="cancel" size={13}/> {imgError}</span>}
               <input ref={fileInputRef} type="file" accept="image/*,video/*" multiple style={{display:"none"}}
                 onChange={e=>handleAdImageUpload(e.target.files)}/>
               <button onClick={()=>fileInputRef.current?.click()}
@@ -2134,7 +2141,7 @@ export default function OaDashboard(){
           >
             {adImages.length===0?(
               <div style={{textAlign:"center",pointerEvents:"none"}}>
-                <div style={{fontSize:24,marginBottom:6}}>📂</div>
+                <div style={{fontSize:24,marginBottom:6}}><MI n="folder_open" size={24}/></div>
                 <div style={{fontSize:11,fontWeight:700,color:isDragging?C.rose:C.inkMid}}>
                   {isDragging?"여기에 놓으세요!":"파일을 드래그해서 놓거나 클릭해서 추가"}
                 </div>
@@ -2169,7 +2176,7 @@ export default function OaDashboard(){
 
         {/* 탭 */}
         <div style={{display:"flex",gap:6,overflowX:"auto",paddingBottom:2}}>
-          {[{id:"overview",label:"📈 추이"},{id:"campaign",label:"📣 캠페인"},{id:"weekly",label:"📅 주별"},{id:"monthly",label:"🗓️ 월별"},{id:"product",label:"📦 제품별"}].map(t=>(
+          {[{id:"overview",label:<><MI n="trending_up" size={12}/> 추이</>},{id:"campaign",label:<><MI n="campaign" size={12}/> 캠페인</>},{id:"weekly",label:<><MI n="calendar_month" size={12}/> 주별</>},{id:"monthly",label:<><MI n="date_range" size={12}/> 월별</>},{id:"product",label:<><MI n="inventory_2" size={12}/> 제품별</>}].map(t=>(
             <button key={t.id} onClick={()=>setMetaTab(t.id)} style={{
               padding:"6px 16px",borderRadius:8,cursor:"pointer",border:`1px solid ${metaTab===t.id?C.rose:C.border}`,
               background:metaTab===t.id?C.blush:C.white,color:metaTab===t.id?C.rose:C.inkMid,
@@ -2182,10 +2189,10 @@ export default function OaDashboard(){
           <>
             {!hasSheet&&(
               <div style={{textAlign:"center",padding:"40px 0",color:C.inkLt}}>
-                <div style={{fontSize:36,marginBottom:10}}>📊</div>
+                <div style={{fontSize:36,marginBottom:10}}><MI n="bar_chart" size={36}/></div>
                 <div style={{fontSize:13,fontWeight:700,color:C.inkMid}}>구글 시트를 연결해주세요</div>
                 <div style={{fontSize:11,marginTop:4,marginBottom:16}}>메타 광고관리자 데이터를 시트에 붙여넣으면 자동으로 차트가 그려져요</div>
-                <Btn onClick={()=>{setSheetInput(sheetUrl);setSheetModal(true)}}>🔗 지금 연결하기</Btn>
+                <Btn onClick={()=>{setSheetInput(sheetUrl);setSheetModal(true)}}><MI n="link" size={13}/> 지금 연결하기</Btn>
               </div>
             )}
             {hasSheet&&d&&(<>
@@ -2289,10 +2296,10 @@ export default function OaDashboard(){
           <div style={{display:"flex",flexDirection:"column",gap:14}}>
             {!hasSheet&&(
               <div style={{textAlign:"center",padding:"40px 0",color:C.inkLt}}>
-                <div style={{fontSize:36,marginBottom:10}}>📣</div>
+                <div style={{fontSize:36,marginBottom:10}}><MI n="campaign" size={36}/></div>
                 <div style={{fontSize:13,fontWeight:700,color:C.inkMid}}>시트 연결 후 캠페인 데이터가 표시됩니다</div>
                 <div style={{fontSize:11,marginTop:4,marginBottom:16}}>캠페인 목적(전환/트래픽)에 따라 자동 분류돼요</div>
-                <Btn onClick={()=>{setSheetInput(sheetUrl);setSheetModal(true)}}>🔗 지금 연결하기</Btn>
+                <Btn onClick={()=>{setSheetInput(sheetUrl);setSheetModal(true)}}><MI n="link" size={13}/> 지금 연결하기</Btn>
               </div>
             )}
             {hasSheet&&d&&(<>
@@ -2352,7 +2359,7 @@ export default function OaDashboard(){
                               background:C.cream,marginBottom:8,display:"flex",alignItems:"center",justifyContent:"center"}}>
                               {thumb
                                 ? <ThumbPreview url={thumb.url} name={thumb.name}/>
-                                : <span style={{fontSize:28,opacity:0.2}}>🖼</span>
+                                : <MI n="image" size={28} style={{opacity:0.2}}/>
                               }
                             </div>
                             {/* 광고명 */}
@@ -2483,7 +2490,7 @@ export default function OaDashboard(){
                       return(
                         <div style={{marginBottom:14}}>
                           <div style={{fontSize:11,fontWeight:800,color:C.ink,marginBottom:8,display:"flex",alignItems:"center",gap:6}}>
-                            💰 광고세트 예산 현황
+                            <MI n="payments" size={13}/> 광고세트 예산 현황
                             <span style={{fontSize:9,color:C.inkLt,fontWeight:500}}>최신 날짜 기준 일일 예산 · 끈 광고 제외 권장예산 자동 계산</span>
                           </div>
                           <div style={{display:"flex",flexDirection:"column",gap:8}}>
@@ -2513,7 +2520,7 @@ export default function OaDashboard(){
                                         </span>
                                         <span style={{fontSize:9,fontWeight:700,padding:"2px 8px",borderRadius:20,
                                           background:"#EDF7F1",color:C.good,border:`1px solid ${C.good}33`}}>
-                                          🟢 활성 {activeAds}개
+                                          <MI n="circle" size={9} style={{color:C.good}}/> 활성 {activeAds}개
                                         </span>
                                         {offAds.length>0&&(
                                           <span style={{fontSize:9,fontWeight:700,padding:"2px 8px",borderRadius:20,
@@ -2771,11 +2778,11 @@ export default function OaDashboard(){
                                       color:isActive?C.good:C.inkLt,
                                       background:isActive?"#EDF7F1":C.cream,
                                       border:`1px solid ${isActive?C.good+"44":C.border}`}}>
-                                      {isActive?`🟢 D+${adAge}집행중`:`⏹ D+${adAge} (${lastAgo}일전종료)`}
+                                      {isActive?<><MI n="circle" size={9} style={{color:C.good}}/> D+{adAge}집행중</>:`⏹ D+${adAge} (${lastAgo}일전종료)`}
                                     </span>
                                   )}
                                   {/* 복제 추천 */}
-                                  {cloneable&&<span style={{fontSize:9,fontWeight:800,padding:"2px 7px",borderRadius:20,color:C.purple,background:C.purpleLt,border:`1px solid ${C.purple}33`}}>📋복제추천</span>}
+                                  {cloneable&&<span style={{fontSize:9,fontWeight:800,padding:"2px 7px",borderRadius:20,color:C.purple,background:C.purpleLt,border:`1px solid ${C.purple}33`,display:"inline-flex",alignItems:"center",gap:2}}><MI n="assignment" size={9}/>복제추천</span>}
                                   {/* LPV 원인 */}
                                   {lpvIssue&&<span style={{fontSize:9,fontWeight:700,padding:"2px 7px",borderRadius:20,color:C.warn,background:"#FFF8EC",border:`1px solid ${C.warn}33`}}>⚡{lpvIssue}</span>}
                                 </div>
@@ -2846,7 +2853,7 @@ export default function OaDashboard(){
           <div style={{display:"flex",flexDirection:"column",gap:14}}>
             {!hasSheet?(
               <div style={{textAlign:"center",padding:"40px 0",color:C.inkLt}}>
-                <div style={{fontSize:36,marginBottom:10}}>📅</div>
+                <div style={{fontSize:36,marginBottom:10}}><MI n="calendar_month" size={36}/></div>
                 <div style={{fontSize:13,fontWeight:700,color:C.inkMid}}>시트 연결 후 주별 데이터가 표시됩니다</div>
               </div>
             ):(()=>{
@@ -2868,7 +2875,7 @@ export default function OaDashboard(){
               const weeks = Object.values(weekMap).sort((a,b)=>a.week.localeCompare(b.week));
               return(
                 <Card>
-                  <CardTitle title="📅 주별 성과" sub="주차별 광고비·구매·ROAS"/>
+                  <CardTitle title={<><MI n="calendar_month" size={14}/> 주별 성과</>} sub="주차별 광고비·구매·ROAS"/>
                   <div style={{overflowX:"auto"}}>
                     <table style={{width:"100%",borderCollapse:"collapse",fontSize:11}}>
                       <thead><tr style={{borderBottom:`2px solid ${C.border}`}}>
@@ -2904,7 +2911,7 @@ export default function OaDashboard(){
           <div style={{display:"flex",flexDirection:"column",gap:14}}>
             {!hasSheet?(
               <div style={{textAlign:"center",padding:"40px 0",color:C.inkLt}}>
-                <div style={{fontSize:36,marginBottom:10}}>🗓️</div>
+                <div style={{fontSize:36,marginBottom:10}}><MI n="date_range" size={36}/></div>
                 <div style={{fontSize:13,fontWeight:700,color:C.inkMid}}>시트 연결 후 월별 데이터가 표시됩니다</div>
               </div>
             ):(()=>{
@@ -2922,7 +2929,7 @@ export default function OaDashboard(){
               const months = Object.values(monthMap).sort((a,b)=>a.month.localeCompare(b.month));
               return(
                 <Card>
-                  <CardTitle title="🗓️ 월별 성과" sub="월별 광고비·구매·ROAS"/>
+                  <CardTitle title={<><MI n="date_range" size={14}/> 월별 성과</>} sub="월별 광고비·구매·ROAS"/>
                   <div style={{overflowX:"auto"}}>
                     <table style={{width:"100%",borderCollapse:"collapse",fontSize:11}}>
                       <thead><tr style={{borderBottom:`2px solid ${C.border}`}}>
@@ -2959,7 +2966,7 @@ export default function OaDashboard(){
           <div style={{display:"flex",flexDirection:"column",gap:14}}>
             {!hasSheet?(
               <div style={{textAlign:"center",padding:"40px 0",color:C.inkLt}}>
-                <div style={{fontSize:36,marginBottom:10}}>📦</div>
+                <div style={{fontSize:36,marginBottom:10}}><MI n="inventory_2" size={36}/></div>
                 <div style={{fontSize:13,fontWeight:700,color:C.inkMid}}>시트 연결 후 제품별 데이터가 표시됩니다</div>
               </div>
             ):(()=>{
@@ -2981,7 +2988,7 @@ export default function OaDashboard(){
               const products = Object.values(productMap).sort((a,b)=>b.spend-a.spend);
               return(
                 <Card>
-                  <CardTitle title="📦 제품별 성과" sub="광고명 키워드 기준 자동 분류"/>
+                  <CardTitle title={<><MI n="inventory_2" size={14}/> 제품별 성과</>} sub="광고명 키워드 기준 자동 분류"/>
                   <div style={{overflowX:"auto"}}>
                     <table style={{width:"100%",borderCollapse:"collapse",fontSize:11}}>
                       <thead><tr style={{borderBottom:`2px solid ${C.border}`}}>
@@ -3017,10 +3024,10 @@ export default function OaDashboard(){
 
         {/* 구글 시트 연결 모달 */}
         {sheetModal&&(
-          <Modal title="📊 구글 시트 연결" onClose={()=>setSheetModal(false)} wide>
+          <Modal title={<><MI n="bar_chart"/> 구글 시트 연결</>} onClose={()=>setSheetModal(false)} wide>
             {/* 사용 방법 안내 */}
             <div style={{background:C.cream,border:`1px solid ${C.border}`,borderRadius:12,padding:"16px",marginBottom:20}}>
-              <div style={{fontSize:12,fontWeight:800,color:C.ink,marginBottom:12}}>📋 연결 방법 (3단계)</div>
+              <div style={{fontSize:12,fontWeight:800,color:C.ink,marginBottom:12}}><MI n="assignment" size={14}/> 연결 방법 (3단계)</div>
               {[
                 {n:"1",title:"메타 광고관리자에서 내보내기",desc:"광고관리자 → 보고서 → CSV 다운로드 (날짜·캠페인·목적·노출·클릭·LPV·전환·지출 컬럼 포함)"},
                 {n:"2",title:"구글 시트에 붙여넣기",desc:"구글 드라이브에서 새 시트 만들고 → A1 셀에 그대로 붙여넣기 (헤더 포함). 시트명은 아무거나 OK"},
@@ -3048,12 +3055,12 @@ export default function OaDashboard(){
               공유 링크 또는 편집 링크 모두 가능해요
             </div>
             <Btn onClick={saveSheetUrl} disabled={!sheetInput.trim()} style={{width:"100%"}}>
-              🔗 연결하기
+              <MI n="link" size={13}/> 연결하기
             </Btn>
             {sheetUrl&&(
               <Btn variant="danger" onClick={()=>{setMetaRaw([]);setMetaStatus("idle");setSheetModal(false);}}
                 style={{width:"100%",marginTop:8}}>
-                🗑 연결 해제
+                <MI n="delete" size={13}/> 연결 해제
               </Btn>
             )}
           </Modal>
@@ -3092,7 +3099,7 @@ export default function OaDashboard(){
                         style={{padding:"6px 14px",borderRadius:8,border:`1px solid ${selTab===t.id?C.rose:C.border}`,
                           background:selTab===t.id?C.blush:C.white,color:selTab===t.id?C.rose:C.inkMid,
                           fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
-                        {t.id==='default'?'🔧 기본값':`📦 ${t.label}`}
+                        {t.id==='default'?'🔧 기본값':<><MI n="inventory_2" size={11}/> {t.label}</>}
                       </button>
                     ))}
                     {/* 제품 추가 */}
@@ -3116,7 +3123,7 @@ export default function OaDashboard(){
                         setSelTab('default');
                       }} style={{padding:"6px 14px",borderRadius:8,border:`1px solid ${C.bad}44`,
                         background:"#FEF0F0",color:C.bad,fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
-                        🗑 삭제
+                        <MI n="delete" size={13}/> 삭제
                       </button>
                     )}
                   </div>
@@ -3210,8 +3217,8 @@ export default function OaDashboard(){
                       </div>
                       <span style={{fontSize:13,fontWeight:800,color:C.rose}}>₩{(+m.margin||0).toLocaleString()}</span>
                       <span style={{fontSize:10,color:C.inkLt}}>원</span>
-                      <Btn small variant="neutral" onClick={()=>setEditingMargin({...m})}>✏️</Btn>
-                      <Btn small variant="danger" onClick={()=>setMargins(margins.filter(x=>x.id!==m.id))}>🗑</Btn>
+                      <Btn small variant="neutral" onClick={()=>setEditingMargin({...m})}><MI n="edit" size={13}/></Btn>
+                      <Btn small variant="danger" onClick={()=>setMargins(margins.filter(x=>x.id!==m.id))}><MI n="delete" size={13}/></Btn>
                     </>
                   )}
                 </div>
@@ -3279,7 +3286,7 @@ export default function OaDashboard(){
                   <Btn small variant="danger" onClick={()=>setTrafficCriteria({
                     ...trafficCriteria,
                     cpcKeywords:(trafficCriteria.cpcKeywords||[]).filter(x=>x.id!==k.id)
-                  })}>🗑</Btn>
+                  })}><MI n="delete" size={13}/></Btn>
                 </div>
               ))}
               {/* 새 키워드 추가 */}
@@ -3311,10 +3318,10 @@ export default function OaDashboard(){
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   const infKpi=[
     {label:"유료",         value:`${infs.filter(f=>f.tier==="유료").length}명`,change:0,good:"high",icon:"💸",note:`무료 ${infs.filter(f=>f.tier==="무료").length}명`},
-    {label:"게시 완료",    value:`${infs.filter(f=>f.posted>0).length}/${infs.length}명`,change:0,good:"high",icon:"📸",note:"게시 확인 기준"},
+    {label:"게시 완료",    value:`${infs.filter(f=>f.posted>0).length}/${infs.length}명`,change:0,good:"high",icon:"photo_camera",note:"게시 확인 기준"},
     {label:"2차 활용가능", value:`${infs.filter(f=>f.reusable).length}명`,change:0,good:"high",icon:"♻️",note:"활용 가능"},
-    {label:"💰 입금완료",  value:`${infs.filter(f=>f.reusable&&f.paid).length}명`,change:0,good:"high",icon:"✅",note:`미입금 ${infs.filter(f=>f.reusable&&!f.paid).length}명`},
-    {label:"메타 활용",    value:`${infs.filter(f=>f.metaUsed).length}명`,change:0,good:"high",icon:"📣",note:"광고 소재 활용"},
+    {label:"💰 입금완료",  value:`${infs.filter(f=>f.reusable&&f.paid).length}명`,change:0,good:"high",icon:"check_circle",note:`미입금 ${infs.filter(f=>f.reusable&&!f.paid).length}명`},
+    {label:"메타 활용",    value:`${infs.filter(f=>f.metaUsed).length}명`,change:0,good:"high",icon:"campaign",note:"광고 소재 활용"},
   ];
   // 인플루언서 모달 — 별도 컴포넌트로 분리해서 리렌더 차단
   // InfModal
@@ -3343,13 +3350,13 @@ export default function OaDashboard(){
         display:"flex",alignItems:"center",justifyContent:"space-between",gap:10,flexWrap:"wrap",
       }}>
         <div style={{display:"flex",alignItems:"center",gap:10}}>
-          <span style={{fontSize:20}}>{infSheetStatus==="ok"?"🟢":"📋"}</span>
+          {infSheetStatus==="ok"?<MI n="circle" size={20} style={{color:C.good}}/>:<MI n="assignment" size={20}/>}
           <div>
             {infSheetStatus==="ok"
               ? <><div style={{fontSize:12,fontWeight:800,color:C.good}}>구글 시트 연결됨 · {infs.length}명 로드</div>
                   <div style={{fontSize:10,color:C.inkMid,marginTop:1}}>시트 변경 시 자동 반영</div></>
               : infSheetStatus==="loading"
-              ? <div style={{fontSize:12,fontWeight:700,color:C.gold}}>⏳ 불러오는 중...</div>
+              ? <div style={{fontSize:12,fontWeight:700,color:C.gold}}><MI n="hourglass_empty" size={13}/> 불러오는 중...</div>
               : infSheetStatus==="error"
               ? <div style={{fontSize:12,fontWeight:800,color:C.bad}}>연결 실패 — 시트 공유 설정 또는 URL을 확인하세요</div>
               : <><div style={{fontSize:12,fontWeight:800,color:C.gold}}>구글 시트 연결하면 인플루언서 데이터가 자동 동기화돼요</div>
@@ -3358,17 +3365,17 @@ export default function OaDashboard(){
           </div>
         </div>
         <div style={{display:"flex",gap:6}}>
-          {infSheetStatus==="ok"&&<Btn variant="sage" small onClick={()=>fetchInfSheet(infUrl)}>🔄 새로고침</Btn>}
-          {infSheetStatus==="error"&&<Btn variant="danger" small onClick={()=>{setInfSheetStatus("idle");}}>🗑 URL 초기화</Btn>}
+          {infSheetStatus==="ok"&&<Btn variant="sage" small onClick={()=>fetchInfSheet(infUrl)}><MI n="refresh" size={13}/> 새로고침</Btn>}
+          {infSheetStatus==="error"&&<Btn variant="danger" small onClick={()=>{setInfSheetStatus("idle");}}><MI n="delete" size={13}/> URL 초기화</Btn>}
           <Btn variant={infSheetStatus==="ok"?"neutral":"gold"} small onClick={()=>{setInfUrlInput(infUrl);setInfUrlModal(true)}}>
-            {infSheetStatus==="ok"?"⚙️ 시트 변경":"🔗 시트 연결"}
+            {infSheetStatus==="ok"?"⚙️ 시트 변경":<><MI n="link" size={13}/> 시트 연결</>}
           </Btn>
         </div>
       </div>
 
       {/* 시트 URL 입력 모달 */}
       {infUrlModal&&(
-        <Modal title="📋 인플루언서 시트 연결" onClose={()=>setInfUrlModal(false)}>
+        <Modal title={<><MI n="assignment"/> 인플루언서 시트 연결</>} onClose={()=>setInfUrlModal(false)}>
           <div style={{background:C.cream,borderRadius:10,padding:"14px",marginBottom:16,fontSize:11,color:C.inkMid,lineHeight:1.7}}>
             <b style={{color:C.ink}}>시트 1행 헤더 그대로 사용 가능</b><br/>
             담당자 · 제품명 · 이름 · 인스타그램 아이디 · 매체 · 링크 · 제품 발송 · 제품발송일자 · 작성마감일 · 포스팅 확인 · 비고 · 기간연장<br/>
@@ -3378,7 +3385,7 @@ export default function OaDashboard(){
             <Inp value={infUrlInput} onChange={v=>setInfUrlInput(v)} placeholder="https://docs.google.com/spreadsheets/d/..."/>
           </FR>
           <div style={{display:"flex",gap:8,marginTop:4}}>
-            <Btn onClick={()=>{setInfUrl(infUrlInput);setInfUrlModal(false);fetchInfSheet(infUrlInput);}} style={{flex:1}}>🔗 연결</Btn>
+            <Btn onClick={()=>{setInfUrl(infUrlInput);setInfUrlModal(false);fetchInfSheet(infUrlInput);}} style={{flex:1}}><MI n="link" size={13}/> 연결</Btn>
             {infUrl&&<Btn variant="danger" onClick={()=>{setInfSheetStatus("idle");setInfUrlModal(false);}}>연결 해제</Btn>}
           </div>
         </Modal>
@@ -3398,9 +3405,9 @@ export default function OaDashboard(){
       <div className="content-grid-2" style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
         {/* 💰 2차활용 미입금 카드 */}
         <Card>
-          <CardTitle title="💰 2차활용 입금 현황" sub={`미입금 ${infs.filter(f=>f.reusable&&!f.paid).length}명`}/>
+          <CardTitle title={<><MI n="payments" size={14}/> 2차활용 입금 현황</>} sub={`미입금 ${infs.filter(f=>f.reusable&&!f.paid).length}명`}/>
           {infs.filter(f=>f.reusable&&!f.paid).length===0?(
-            <div style={{textAlign:"center",padding:"24px 0",color:C.good,fontSize:12,fontWeight:700}}>✅ 모두 입금 완료</div>
+            <div style={{textAlign:"center",padding:"24px 0",color:C.good,fontSize:12,fontWeight:700}}><MI n="check_circle" size={14}/> 모두 입금 완료</div>
           ):(
             <div style={{display:"flex",flexDirection:"column",gap:6,maxHeight:220,overflowY:"auto"}}>
               {infs.filter(f=>f.reusable&&!f.paid).map((f,i)=>(
@@ -3500,7 +3507,7 @@ export default function OaDashboard(){
                   <div style={{display:"flex",gap:10,alignItems:"center",flex:1,minWidth:0}}>
                     <div style={{width:34,height:34,borderRadius:10,background:`${tc}22`,flexShrink:0,
                       display:"flex",alignItems:"center",justifyContent:"center",fontSize:15}}>
-                      {f.platform==="인스타"?"📸":f.platform==="유튜브"?"▶️":"🎵"}
+                      {f.platform==="인스타"?<MI n="photo_camera" size={15}/>:f.platform==="유튜브"?"▶️":"🎵"}
                     </div>
                     <div>
                       <div style={{fontSize:12,fontWeight:800,color:C.ink}}>
@@ -3529,15 +3536,15 @@ export default function OaDashboard(){
                   </div>
                   <div style={{display:"flex",alignItems:"center",gap:6,flexShrink:0,flexWrap:"wrap"}}>
                     <span style={{fontSize:10,fontWeight:700,color:st.color,background:st.bg,
-                      padding:"3px 10px",borderRadius:20,whiteSpace:"nowrap"}}>{st.icon} {st.label}</span>
+                      padding:"3px 10px",borderRadius:20,whiteSpace:"nowrap",display:"inline-flex",alignItems:"center",gap:3}}><MI n={st.icon} size={12}/> {st.label}</span>
                     {st.label!=="기록완료"&&st.label!=="미게시"&&(
                       <Btn variant="ghost" small onClick={()=>{
                         setInsModalData({initial:{id:f.id,name:f.name,reach:"",saves:"",clicks:"",conv:""}});
                         setInsModalData({initial:true});
-                      }}>✏️ 기록</Btn>
+                      }}><MI n="edit_note" size={13}/> 기록</Btn>
                     )}
                     <Btn variant="neutral" small onClick={()=>{setInfModalData({mode:"edit",initial:f})}}>수정</Btn>
-                    <Btn variant="danger" small onClick={()=>setInfs(infs.filter(x=>x.id!==f.id))}>🗑</Btn>
+                    <Btn variant="danger" small onClick={()=>setInfs(infs.filter(x=>x.id!==f.id))}><MI n="delete" size={14}/></Btn>
                   </div>
                 </div>
                 {f.postedDate&&(
@@ -3576,7 +3583,7 @@ export default function OaDashboard(){
                         color:f.paid?C.good:C.warn,
                         background:f.paid?"#EDF7F1":"#FFF8EC",
                         border:`1px solid ${f.paid?C.good+"44":C.warn+"44"}`}}>
-                      💰 {f.paid?"입금완료":"미입금"}
+                      <MI n="payments" size={12}/> {f.paid?"입금완료":"미입금"}
                     </span>
                   )}
                   {/* 메타 광고 활용 */}
@@ -3585,7 +3592,7 @@ export default function OaDashboard(){
                       color:f.metaUsed?C.purple:C.inkLt,
                       background:f.metaUsed?C.purpleLt:C.cream,
                       border:`1px solid ${f.metaUsed?C.purple+"44":C.border}`}}>
-                    📣 {f.metaUsed?"메타광고 활용":"미활용"}
+                    <MI n="campaign" size={12}/> {f.metaUsed?"메타광고 활용":"미활용"}
                   </span>
                 </div>
                 {/* 메모 */}
@@ -3619,12 +3626,12 @@ export default function OaDashboard(){
   // 📦 재고 + 📅 스케줄 (이전 v5와 동일)
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   const invKpi=[
-    {label:"전체 SKU",    value:`${inv.length}종`,change:0,good:"high",icon:"📋",note:"활성 상품"},
-    {label:"위험 재고",   value:`${dangerInv.length}종`,change:dangerInv.length>0?1:0,good:"low",icon:"🚨",note:"즉시 발주"},
-    {label:"주의 재고",   value:`${cautionInv.length}종`,change:0,good:"low",icon:"⚠️",note:"21일 내 소진"},
-    {label:"30일 판매",   value:inv.reduce((s,i)=>s+i.sold30,0).toLocaleString(),change:+18.4,good:"high",icon:"📈",note:"전월 대비"},
-    {label:"총 재고",     value:inv.reduce((s,i)=>s+i.stock,0).toLocaleString(),change:-3.2,good:"high",icon:"📦",note:"전체 수량"},
-    {label:"주문 재고",   value:inv.reduce((s,i)=>s+(i.ordered||0),0).toLocaleString(),change:0,good:"high",icon:"🚚",note:"입고 예정"},
+    {label:"전체 SKU",    value:`${inv.length}종`,change:0,good:"high",icon:"assignment",note:"활성 상품"},
+    {label:"위험 재고",   value:`${dangerInv.length}종`,change:dangerInv.length>0?1:0,good:"low",icon:"warning",note:"즉시 발주"},
+    {label:"주의 재고",   value:`${cautionInv.length}종`,change:0,good:"low",icon:"warning",note:"21일 내 소진"},
+    {label:"30일 판매",   value:inv.reduce((s,i)=>s+i.sold30,0).toLocaleString(),change:+18.4,good:"high",icon:"trending_up",note:"전월 대비"},
+    {label:"총 재고",     value:inv.reduce((s,i)=>s+i.stock,0).toLocaleString(),change:-3.2,good:"high",icon:"inventory_2",note:"전체 수량"},
+    {label:"주문 재고",   value:inv.reduce((s,i)=>s+(i.ordered||0),0).toLocaleString(),change:0,good:"high",icon:"local_shipping",note:"입고 예정"},
   ];
   const stockTrend=[
     {week:"W1",세럼30:1680,선크림:2480,토너패드:380},
@@ -3688,7 +3695,7 @@ export default function OaDashboard(){
       <div style={{display:"flex",alignItems:"center",gap:10,padding:"12px 16px",
         background:C.white,border:`1px solid ${invSheetStatus==="ok"?C.good+"66":C.border}`,
         borderRadius:12,flexWrap:"wrap"}}>
-        <span style={{fontSize:18}}>{invSheetStatus==="ok"?"🟢":"📋"}</span>
+        {invSheetStatus==="ok"?<MI n="circle" size={18} style={{color:C.good}}/>:<MI n="assignment" size={18}/>}
         <div style={{flex:1}}>
           {invSheetStatus==="ok"
             ? <div style={{fontSize:12,fontWeight:700,color:C.good}}>구글시트 연결됨 · {inv.length}개 상품 로드</div>
@@ -3696,19 +3703,19 @@ export default function OaDashboard(){
                <div style={{fontSize:10,color:C.inkLt}}>재고원본 시트 URL을 연결하면 자동으로 재고가 업데이트돼요</div></>
           }
         </div>
-        {invSheetStatus==="loading"&&<span style={{fontSize:11,color:C.inkLt}}>⏳ 불러오는 중...</span>}
-        {invSheetStatus==="error"&&<span style={{fontSize:11,color:C.bad,fontWeight:700}}>❌ 연결 실패</span>}
-        {invSheetStatus==="ok"&&<Btn variant="sage" small onClick={()=>fetchInvSheet(invUrl)}>🔄</Btn>}
+        {invSheetStatus==="loading"&&<span style={{fontSize:11,color:C.inkLt}}><MI n="hourglass_empty" size={13}/> 불러오는 중...</span>}
+        {invSheetStatus==="error"&&<span style={{fontSize:11,color:C.bad,fontWeight:700}}><MI n="cancel" size={13}/> 연결 실패</span>}
+        {invSheetStatus==="ok"&&<Btn variant="sage" small onClick={()=>fetchInvSheet(invUrl)}><MI n="refresh" size={13}/></Btn>}
         <Btn variant={invSheetStatus==="ok"?"neutral":"gold"} small
           onClick={()=>{setInvUrlInput(invUrl);setInvUrlModal(true)}}>
-          {invSheetStatus==="ok"?"⚙️ 시트변경":"🔗 시트연결"}
+          {invSheetStatus==="ok"?"⚙️ 시트변경":<><MI n="link" size={13}/> 시트연결</>}
         </Btn>
       </div>
 
       {/* CSV 파일 업로드 (대안) */}
       <div style={{display:"flex",alignItems:"center",gap:10,padding:"10px 14px",
         background:C.cream,border:`1px dashed ${C.border}`,borderRadius:10,flexWrap:"wrap"}}>
-        <span style={{fontSize:12,color:C.inkLt}}>📂 또는 CSV 파일로 업로드</span>
+        <span style={{fontSize:12,color:C.inkLt}}><MI n="folder_open" size={14}/> 또는 CSV 파일로 업로드</span>
         {uploadMsg&&<span style={{fontSize:11,fontWeight:700,
           color:uploadMsg.startsWith("✅")?C.good:C.bad}}>{uploadMsg}</span>}
         <label style={{cursor:"pointer",marginLeft:"auto"}}>
@@ -3722,7 +3729,7 @@ export default function OaDashboard(){
 
       {/* 재고원본 시트 연결 모달 */}
       {invUrlModal&&(
-        <Modal title="📋 재고원본 시트 연결" onClose={()=>setInvUrlModal(false)} wide>
+        <Modal title={<><MI n="assignment"/> 재고원본 시트 연결</>} onClose={()=>setInvUrlModal(false)} wide>
           <div style={{background:C.sageLt,borderRadius:10,padding:"12px 14px",marginBottom:16,fontSize:11,color:C.sage,fontWeight:700}}>
             💡 구글시트 발주분석 파일의 <b>재고원본</b> 시트 URL을 붙여넣으세요<br/>
             <span style={{fontWeight:400,color:C.inkMid}}>시트 공유 설정 → "링크 있는 모든 사용자" → 뷰어 권한</span>
@@ -3740,7 +3747,7 @@ export default function OaDashboard(){
             if(url) setInvUrl(url);
             setInvUrlModal(false);
             if(url) fetchInvSheet(url);
-          }} style={{width:"100%",marginTop:8}}>🔗 연결하기</Btn>
+          }} style={{width:"100%",marginTop:8}}><MI n="link" size={13}/> 연결하기</Btn>
         </Modal>
       )}
       {dangerInv.length>0&&(<div style={{background:"#FEF0F0",border:`1px solid ${C.bad}44`,borderRadius:12,padding:"12px 14px",display:"flex",gap:10}}><span style={{fontSize:18}}>🚨</span><div><div style={{fontSize:12,fontWeight:800,color:C.bad}}>즉시 발주 — {dangerInv.map(i=>i.name).join(", ")}</div><div style={{fontSize:10,color:C.inkMid,marginTop:2}}>가용 재고 7일치 미만</div></div></div>)}
@@ -3774,7 +3781,7 @@ export default function OaDashboard(){
                 <td style={{padding:"10px 8px",textAlign:"right"}}>
                   <div style={{display:"flex",gap:4,justifyContent:"flex-end"}}>
                     <Btn variant="ghost" small onClick={()=>{setInvModalData({mode:"edit",initial:item})}}>수정</Btn>
-                    <Btn variant="danger" small onClick={()=>setInv(inv.filter(v=>v.id!==item.id))}>🗑</Btn>
+                    <Btn variant="danger" small onClick={()=>setInv(inv.filter(v=>v.id!==item.id))}><MI n="delete" size={14}/></Btn>
                   </div>
                 </td>
               </tr>);
@@ -3798,7 +3805,7 @@ export default function OaDashboard(){
         </ResponsiveContainer>
       </Card>
       <div style={{background:`linear-gradient(135deg,${C.goldLt},#fff)`,border:`1px solid ${C.gold}44`,borderRadius:14,padding:"16px"}}>
-        <div style={{fontSize:12,fontWeight:800,color:C.gold,marginBottom:10}}>📋 발주 권고 리스트</div>
+        <div style={{fontSize:12,fontWeight:800,color:C.gold,marginBottom:10}}><MI n="assignment" size={14}/> 발주 권고 리스트</div>
         {inv.filter(i=>stockStatus(i).label!=="정상").sort((a,b)=>stockDays(a)-stockDays(b)).map((item,i,arr)=>{
           const st=stockStatus(item);
           return(<div key={item.id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"8px 0",borderBottom:i<arr.length-1?`1px solid ${C.gold}22`:"none"}}>
@@ -3911,7 +3918,7 @@ export default function OaDashboard(){
             <div style={{background:C.ink,borderRadius:14,padding:"16px 18px",color:C.white}}>
               <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:14}}>
                 <div>
-                  <div style={{fontSize:13,fontWeight:800}}>💰 채널별 광고비</div>
+                  <div style={{fontSize:13,fontWeight:800}}><MI n="payments" size={15}/> 채널별 광고비</div>
                   <div style={{fontSize:10,opacity:0.5,marginTop:2}}>
                     메타: 전체파일 기준 · 기타채널: 직접입력 · Supabase 팀 공유
                   </div>
@@ -3943,7 +3950,7 @@ export default function OaDashboard(){
                       {/* 메타 — 파일 기준 */}
                       <tr style={{borderTop:"1px solid rgba(255,255,255,0.08)"}}>
                         <td style={{padding:"8px 10px",fontWeight:700}}>
-                          <span style={{marginRight:6}}>📣</span>메타광고
+                          <MI n="campaign" size={14} style={{marginRight:6}}/>메타광고
                           <span style={{fontSize:9,opacity:0.4,marginLeft:4}}>(파일)</span>
                         </td>
                         {displayMonths.map(m=>(
@@ -4032,7 +4039,7 @@ export default function OaDashboard(){
         <div style={{background:C.white,border:`1px solid ${C.border}`,borderRadius:14,padding:"16px"}}>
           <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:14}}>
             <div>
-              <div style={{fontSize:13,fontWeight:800,color:C.ink}}>📅 월별 성과 비교</div>
+              <div style={{fontSize:13,fontWeight:800,color:C.ink}}><MI n="calendar_month" size={15}/> 월별 성과 비교</div>
               <div style={{fontSize:10,color:C.inkLt,marginTop:2}}>파일 업로드하면 월별로 자동 집계·비교해요</div>
             </div>
             <div style={{display:"flex",gap:6,alignItems:"center",flexWrap:"wrap"}}>
@@ -4212,13 +4219,13 @@ export default function OaDashboard(){
       <div style={{background:C.white,border:`1px solid ${notionError?C.bad+"44":C.good+"44"}`,borderRadius:12,padding:"10px 12px"}}>
         {/* 상태 + 새로고침 */}
         <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}>
-          <span style={{fontSize:15}}>{notionLoading?"⏳":notionError?"❌":"🟢"}</span>
+          {notionLoading?<MI n="hourglass_empty" size={15}/>:notionError?<MI n="cancel" size={15}/>:<MI n="circle" size={15} style={{color:C.good}}/>}
           <div style={{flex:1,fontSize:11,fontWeight:700,color:notionError?C.bad:C.good}}>
             {notionLoading?"노션 불러오는 중...":notionError?`노션 오류: ${notionError}`:`노션 연동됨 · ${schFilter==="전체"?"전체":"이번달"} ${notionSch.length}개 · 미완료 ${notionSch.filter(s=>s.status!=="완료").length}개`}
           </div>
           <button onClick={()=>handleFilterChange(schFilter)} style={{fontSize:12,padding:"4px 10px",borderRadius:20,
             border:`1px solid ${C.border}`,background:C.cream,cursor:"pointer",fontFamily:"inherit",fontWeight:700,flexShrink:0}}>
-            🔄
+            <MI n="refresh" size={14}/>
           </button>
         </div>
         {/* 필터 버튼 — 가로 스크롤 */}
@@ -4231,7 +4238,7 @@ export default function OaDashboard(){
                 <button key={a} onClick={()=>setAssigneeFilter(a)} style={{fontSize:10,padding:"4px 12px",borderRadius:20,
                   border:`1px solid ${active?col:C.border}`,background:active?col:C.cream,
                   color:active?C.white:C.inkMid,cursor:"pointer",fontFamily:"inherit",fontWeight:700,whiteSpace:"nowrap"}}>
-                  {a==="전체"?"👥 전체":a}
+                  {a==="전체"?<><MI n="group" size={12}/> 전체</>:a}
                 </button>
               );
             })}
@@ -4327,7 +4334,7 @@ export default function OaDashboard(){
       {/* 선택된 날짜 상세 */}
       {selDay&&(
         <Card>
-          <CardTitle title={`📋 ${selDay} 일정`} sub={`${selItems.length}개`}
+          <CardTitle title={<><MI n="assignment" size={14}/> {selDay} 일정</>} sub={`${selItems.length}개`}
             action={<Btn small onClick={()=>{setSchModalData({mode:"add",initial:{date:selDay}})}}>+ 추가</Btn>}/>
           {selItems.length===0&&<div style={{textAlign:"center",color:C.inkLt,fontSize:12,padding:"16px 0"}}>이날 일정 없음</div>}
           <div style={{display:"flex",flexDirection:"column",gap:8}}>
@@ -4350,7 +4357,7 @@ export default function OaDashboard(){
                     style={{display:"flex",alignItems:"center",gap:10,padding:"10px 12px",cursor:"pointer",
                       borderRadius:10,border:`1px solid ${isDone?"#94a3b8":C.border}`,background:isDone?"#f8fafc":C.white}}>
                     <span style={{fontSize:10,fontWeight:700,color:"#94a3b8",background:"#94a3b818",padding:"2px 8px",borderRadius:20,whiteSpace:"nowrap",flexShrink:0}}>
-                      ☑️ 반복
+                      <MI n="check_box" size={12}/> 반복
                     </span>
                     <div style={{flex:1,minWidth:0}}>
                       <div style={{fontSize:12,fontWeight:800,color:C.ink,textDecoration:isDone?"line-through":"none",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{s.title}</div>
@@ -4366,7 +4373,7 @@ export default function OaDashboard(){
                 <div key={s.id} style={{display:"flex",alignItems:"center",gap:10,padding:"10px 12px",
                   borderRadius:10,border:`1px solid ${C.border}`,background:C.white}}>
                   <span style={{fontSize:10,fontWeight:700,color:tc,background:`${tc}18`,padding:"2px 8px",borderRadius:20,whiteSpace:"nowrap",flexShrink:0}}>
-                    {schTypeIcon(s.type)} {s.type}
+                    <MI n={schTypeIcon(s.type)} size={12}/> {s.type}
                   </span>
                   <div style={{flex:1,minWidth:0}}>
                     <div style={{fontSize:12,fontWeight:800,color:C.ink,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{s.title}</div>
@@ -4374,12 +4381,12 @@ export default function OaDashboard(){
                       {s.endDate&&s.endDate!==s.date?`${s.date} ~ ${s.endDate}`:s.date}
                       {s.assignee&&<span style={{marginLeft:6,padding:"1px 6px",borderRadius:10,background:s.assigneeColor+"22",color:s.assigneeColor,fontWeight:700}}>{s.assignee}</span>}
                     </div>
-                    {s.memo&&<div style={{fontSize:10,color:C.inkMid,marginTop:2}}>💬 {s.memo}</div>}
+                    {s.memo&&<div style={{fontSize:10,color:C.inkMid,marginTop:2}}><MI n="chat_bubble" size={11}/> {s.memo}</div>}
                   </div>
                   <div style={{display:"flex",gap:4,flexShrink:0}}>
-                    <Btn variant="ghost" small onClick={()=>setSchModalData({mode:"edit",initial:{...s,notionId:s.id,note:s.memo}})}>✏️</Btn>
-                    <Btn variant="sage" small onClick={()=>toggleNotionDone(s.id,true)}>✅</Btn>
-                    <Btn variant="danger" small onClick={()=>deleteNotionSch(s.id)}>🗑</Btn>
+                    <Btn variant="ghost" small onClick={()=>setSchModalData({mode:"edit",initial:{...s,notionId:s.id,note:s.memo}})}><MI n="edit" size={13}/></Btn>
+                    <Btn variant="sage" small onClick={()=>toggleNotionDone(s.id,true)}><MI n="check_circle" size={13}/></Btn>
+                    <Btn variant="danger" small onClick={()=>deleteNotionSch(s.id)}><MI n="delete" size={13}/></Btn>
                   </div>
                 </div>
               );
@@ -4438,7 +4445,7 @@ export default function OaDashboard(){
 
         return(<>
         <Card>
-          <CardTitle title="☑️ 반복 체크리스트"
+          <CardTitle title={<><MI n="check_box" size={14}/> 반복 체크리스트</>}
             sub={totalToday>0?`오늘 ${doneToday}/${totalToday} 완료`:`전체 ${(checkItems||[]).length}개`}
             action={<Btn small onClick={()=>{setClForm({title:"",cycle:"weekly",weekDay:1,monthDay:1,assignee:""});setClModal(true);}}>+ 추가</Btn>}/>
 
@@ -4448,7 +4455,7 @@ export default function OaDashboard(){
               <div style={{fontSize:10,fontWeight:700,color:C.inkMid,marginBottom:6}}>
                 오늘 할 항목
                 <span style={{marginLeft:8,fontSize:10,color:doneToday===totalToday?"#4DAD7A":C.inkLt}}>
-                  {doneToday===totalToday?"🎉 모두 완료!":`${doneToday}/${totalToday}`}
+                  {doneToday===totalToday?<><MI n="celebration" size={12}/> 모두 완료!</>:`${doneToday}/${totalToday}`}
                 </span>
               </div>
               <div style={{height:5,borderRadius:3,background:C.cream,overflow:"hidden",marginBottom:8}}>
@@ -4468,11 +4475,11 @@ export default function OaDashboard(){
                     </div>
                     <div style={{flex:1}}>
                       <span style={{fontSize:12,fontWeight:700,color:C.ink,textDecoration:done?"line-through":"none"}}>{item.title}</span>
-                      {item.assignee&&<span style={{fontSize:10,color:C.inkMid,marginLeft:6}}>👤 {item.assignee}</span>}
+                      {item.assignee&&<span style={{fontSize:10,color:C.inkMid,marginLeft:6}}><MI n="person" size={12}/> {item.assignee}</span>}
                     </div>
                     <span style={{fontSize:9,fontWeight:700,color:cc.text,background:cc.bg,padding:"2px 7px",borderRadius:10,flexShrink:0}}>{cycleSub(item)}</span>
                     <button onClick={e=>{e.stopPropagation();setCheckItems(prev=>(prev||[]).filter(i=>i.id!==item.id));}}
-                      style={{fontSize:11,color:C.inkLt,background:"none",border:"none",cursor:"pointer",padding:"2px 4px"}}>🗑</button>
+                      style={{fontSize:11,color:C.inkLt,background:"none",border:"none",cursor:"pointer",padding:"2px 4px"}}><MI n="delete" size={13}/></button>
                   </div>
                   );
                 })}
@@ -4491,9 +4498,9 @@ export default function OaDashboard(){
                   <div key={item.id} style={{display:"flex",alignItems:"center",gap:8,padding:"7px 10px",borderRadius:8,border:`1px solid ${C.border}`,background:C.cream}}>
                     <span style={{fontSize:9,fontWeight:700,color:cc.text,background:cc.bg,padding:"1px 7px",borderRadius:10,flexShrink:0,whiteSpace:"nowrap"}}>{cycleSub(item)}</span>
                     <span style={{flex:1,fontSize:11,fontWeight:700,color:C.ink}}>{item.title}</span>
-                    {item.assignee&&<span style={{fontSize:10,color:C.inkMid}}>👤 {item.assignee}</span>}
+                    {item.assignee&&<span style={{fontSize:10,color:C.inkMid}}><MI n="person" size={12}/> {item.assignee}</span>}
                     <button onClick={()=>setCheckItems(prev=>(prev||[]).filter(i=>i.id!==item.id))}
-                      style={{fontSize:11,color:C.inkLt,background:"none",border:"none",cursor:"pointer",padding:"2px 4px"}}>🗑</button>
+                      style={{fontSize:11,color:C.inkLt,background:"none",border:"none",cursor:"pointer",padding:"2px 4px"}}><MI n="delete" size={13}/></button>
                   </div>
                   );
                 })}
@@ -4705,7 +4712,7 @@ export default function OaDashboard(){
     <div style={{display:"flex",flexDirection:"column",gap:14}}>
       {/* 탭 */}
       <div style={{display:"flex",gap:6,overflowX:"auto",WebkitOverflowScrolling:"touch"}}>
-        {[{k:"top",label:"📊 상위 소재"},{k:"library",label:`📁 라이브러리 (${(creativeLib||[]).length})`},{k:"requests",label:`🎨 재제작 요청 (${pendingReqs.length})`}].map(({k,label})=>(
+        {[{k:"top",label:<><MI n="bar_chart" size={12}/> 상위 소재</>},{k:"library",label:<><MI n="folder" size={12}/> 라이브러리 ({(creativeLib||[]).length})</>},{k:"requests",label:<><MI n="palette" size={12}/> 재제작 요청 ({pendingReqs.length})</>}].map(({k,label})=>(
           <button key={k} onClick={()=>setTab(k)} style={{fontSize:11,padding:"6px 14px",borderRadius:20,whiteSpace:"nowrap",
             border:`1px solid ${tab===k?C.rose:C.border}`,background:tab===k?C.rose:C.white,
             color:tab===k?C.white:C.inkMid,cursor:"pointer",fontFamily:"inherit",fontWeight:700}}>
@@ -4718,11 +4725,11 @@ export default function OaDashboard(){
       {tab==="top"&&(
         <Card>
           <CardTitle
-            title="📊 상위 소재 (종합점수 순)"
+            title={<><MI n="bar_chart" size={14}/> 상위 소재 (종합점수 순)</>}
             sub={allAdRaw.length===0?"메타 파일 업로드 필요":`${adList.length}개 소재 · CTR기준 ${trafficCriteria?.ctrMin||1.5}%`}
             action={allAdRaw.length>0&&(
               <Btn small onClick={saveGoodAds} style={{background:"#4DAD7A",borderColor:"#4DAD7A",color:"#fff",whiteSpace:"nowrap"}}>
-                🌟 잘 나온 소재 저장
+                <MI n="star" size={13}/> 잘 나온 소재 저장
               </Btn>
             )}
           />
@@ -4737,10 +4744,10 @@ export default function OaDashboard(){
             const trafficGood = adList.filter(a=>adQuality(a)==="good"&&!isConversionCampaign(a.objective,a.campaign)).length;
             return(
               <div style={{display:"flex",gap:8,marginBottom:10,flexWrap:"wrap"}}>
-                <span style={{fontSize:10,fontWeight:700,color:"#4DAD7A",background:"#4DAD7A18",padding:"3px 10px",borderRadius:10}}>✅ 잘 나온 소재 {adList.filter(a=>adQuality(a)==="good").length}개</span>
+                <span style={{fontSize:10,fontWeight:700,color:"#4DAD7A",background:"#4DAD7A18",padding:"3px 10px",borderRadius:10}}><MI n="check_circle" size={11}/> 잘 나온 소재 {adList.filter(a=>adQuality(a)==="good").length}개</span>
                 <span style={{fontSize:10,fontWeight:700,color:"#8b5cf6",background:"#f5f3ff",padding:"3px 10px",borderRadius:10}}>전환 {convGood}개</span>
                 <span style={{fontSize:10,fontWeight:700,color:"#60a5fa",background:"#eff6ff",padding:"3px 10px",borderRadius:10}}>트래픽 {trafficGood}개</span>
-                <span style={{fontSize:10,fontWeight:700,color:C.inkMid,background:C.cream,padding:"3px 10px",borderRadius:10}}>📁 저장가능 {saveableCount}개</span>
+                <span style={{fontSize:10,fontWeight:700,color:C.inkMid,background:C.cream,padding:"3px 10px",borderRadius:10}}><MI n="folder" size={11}/> 저장가능 {saveableCount}개</span>
               </div>
             );
           })()}
@@ -4764,8 +4771,8 @@ export default function OaDashboard(){
                     ? <span style={{fontSize:9,fontWeight:700,color:"#8b5cf6",background:"#f5f3ff",padding:"2px 6px",borderRadius:8,flexShrink:0}}>전환</span>
                     : <span style={{fontSize:9,fontWeight:700,color:"#60a5fa",background:"#eff6ff",padding:"2px 6px",borderRadius:8,flexShrink:0}}>트래픽</span>
                   }
-                  {quality==="good"&&<span style={{fontSize:10,fontWeight:700,color:"#4DAD7A",background:"#4DAD7A18",padding:"2px 8px",borderRadius:10,flexShrink:0}}>✅ 잘 나온 소재</span>}
-                  {alreadySaved     &&<span style={{fontSize:10,fontWeight:700,color:C.inkLt,background:C.cream,padding:"2px 8px",borderRadius:10,flexShrink:0}}>📁 저장됨</span>}
+                  {quality==="good"&&<span style={{fontSize:10,fontWeight:700,color:"#4DAD7A",background:"#4DAD7A18",padding:"2px 8px",borderRadius:10,flexShrink:0}}><MI n="check_circle" size={11}/> 잘 나온 소재</span>}
+                  {alreadySaved     &&<span style={{fontSize:10,fontWeight:700,color:C.inkLt,background:C.cream,padding:"2px 8px",borderRadius:10,flexShrink:0}}><MI n="folder" size={11}/> 저장됨</span>}
                 </div>
                 <div style={{display:"flex",gap:8,marginBottom:8,flexWrap:"wrap"}}>
                   <span style={{fontSize:10,fontWeight:700,color:C.good,background:C.good+"18",padding:"2px 8px",borderRadius:10}}>CTR {ad.ctr.toFixed(2)}%</span>
@@ -4777,7 +4784,7 @@ export default function OaDashboard(){
                 <div style={{display:"flex",gap:6,alignItems:"center"}}>
                   <input value={reqNote} onChange={e=>setReqNote(e.target.value)} placeholder="요청 메모 (선택)"
                     style={{flex:1,fontSize:10,padding:"4px 8px",borderRadius:8,border:`1px solid ${C.border}`,fontFamily:"inherit",outline:"none"}}/>
-                  <Btn small onClick={()=>requestRecreate(ad)}>🎨 재제작 요청</Btn>
+                  <Btn small onClick={()=>requestRecreate(ad)}><MI n="palette" size={13}/> 재제작 요청</Btn>
                   <Btn variant="sage" small disabled={alreadySaved} onClick={()=>{
                     if(alreadySaved){alert("이미 라이브러리에 저장된 소재예요");return;}
                     const thumb = findThumb(ad.adName);
@@ -4790,7 +4797,7 @@ export default function OaDashboard(){
                       addedAt:new Date().toISOString().slice(0,10)
                     },...(prev||[])]);
                   }}>
-                    {alreadySaved?"📁 저장됨":"📁 저장"}
+                    {alreadySaved?<><MI n="folder" size={11}/> 저장됨</>:<><MI n="folder" size={11}/> 저장</>}
                   </Btn>
                 </div>
               </div>
@@ -4803,7 +4810,7 @@ export default function OaDashboard(){
       {/* 라이브러리 */}
       {tab==="library"&&(
         <Card>
-          <CardTitle title="📁 소재 라이브러리" sub={`${(creativeLib||[]).length}개 저장됨`}
+          <CardTitle title={<><MI n="folder" size={14}/> 소재 라이브러리</>} sub={`${(creativeLib||[]).length}개 저장됨`}
             action={
               <div style={{display:"flex",gap:6}}>
                 {(creativeLib||[]).length>0&&<Btn variant="danger" small onClick={()=>{if(confirm("라이브러리를 모두 비울까요?"))setCreativeLib([]);}}>전체삭제</Btn>}
@@ -4812,7 +4819,7 @@ export default function OaDashboard(){
             }/>
           {(creativeLib||[]).length===0&&(
             <div style={{textAlign:"center",color:C.inkLt,fontSize:12,padding:"20px 0"}}>
-              상위 소재 탭에서 🌟 잘 나온 소재 저장 또는 📁 저장을 눌러보세요
+              상위 소재 탭에서 <MI n="star" size={12}/> 잘 나온 소재 저장 또는 <MI n="folder" size={12}/> 저장을 눌러보세요
             </div>
           )}
           {/* 태그 요약 */}
@@ -4843,25 +4850,25 @@ export default function OaDashboard(){
                   ) : (
                     <div style={{flexShrink:0,width:56,height:56,borderRadius:8,border:`1px dashed ${C.border}`,background:C.cream,
                       display:"flex",alignItems:"center",justifyContent:"center",fontSize:20,color:C.inkLt}}>
-                      🖼
+                      <MI n="image" size={20}/>
                     </div>
                   );})()}
                   <div style={{flex:1,minWidth:0}}>
                     <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:2,flexWrap:"wrap"}}>
-                      {isGood&&<span style={{fontSize:10}}>✅</span>}
+                      {isGood&&<MI n="check_circle" size={12}/>}
                       <div style={{fontSize:12,fontWeight:800,color:C.ink,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",flex:1}}>{item.name}</div>
                       {item.campaignType==="전환" && <span style={{fontSize:9,fontWeight:700,color:"#8b5cf6",background:"#f5f3ff",padding:"2px 6px",borderRadius:8,flexShrink:0}}>전환</span>}
                       {item.campaignType==="트래픽" && <span style={{fontSize:9,fontWeight:700,color:"#60a5fa",background:"#eff6ff",padding:"2px 6px",borderRadius:8,flexShrink:0}}>트래픽</span>}
                     </div>
-                    {item.product&&<div style={{fontSize:10,color:C.inkMid}}>📦 {item.product}</div>}
-                    {item.note&&<div style={{fontSize:10,color:C.inkMid,marginTop:2}}>💬 {item.note}</div>}
+                    {item.product&&<div style={{fontSize:10,color:C.inkMid}}><MI n="inventory_2" size={11}/> {item.product}</div>}
+                    {item.note&&<div style={{fontSize:10,color:C.inkMid,marginTop:2}}><MI n="chat_bubble" size={11}/> {item.note}</div>}
                     {item.tags&&<div style={{fontSize:9,marginTop:4}}>{item.tags.split(",").map(t=>(
                       <span key={t} style={{background:"#4DAD7A18",color:"#4DAD7A",padding:"1px 6px",borderRadius:10,marginRight:4,fontWeight:700}}>{t.trim()}</span>
                     ))}</div>}
-                    {item.link&&<a href={item.link} target="_blank" rel="noreferrer" style={{fontSize:10,color:C.rose,marginTop:4,display:"block",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>🔗 {item.link}</a>}
+                    {item.link&&<a href={item.link} target="_blank" rel="noreferrer" style={{fontSize:10,color:C.rose,marginTop:4,display:"block",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}><MI n="link" size={11}/> {item.link}</a>}
                     <div style={{fontSize:9,color:C.inkLt,marginTop:2}}>{item.addedAt}</div>
                   </div>
-                  <Btn variant="danger" small onClick={()=>removeFromLib(item.id)}>🗑</Btn>
+                  <Btn variant="danger" small onClick={()=>removeFromLib(item.id)}><MI n="delete" size={14}/></Btn>
                 </div>
               </div>
               );
@@ -4873,7 +4880,7 @@ export default function OaDashboard(){
       {/* 재제작 요청 */}
       {tab==="requests"&&(
         <Card>
-          <CardTitle title="🎨 재제작 요청" sub={`대기 ${pendingReqs.length}건 · 완료 ${doneReqs.length}건`}/>
+          <CardTitle title={<><MI n="palette" size={14}/> 재제작 요청</>} sub={`대기 ${pendingReqs.length}건 · 완료 ${doneReqs.length}건`}/>
           {pendingReqs.length===0&&doneReqs.length===0&&(
             <div style={{textAlign:"center",color:C.inkLt,fontSize:12,padding:"20px 0"}}>
               상위 소재 탭에서 재제작 요청을 보내보세요
@@ -4888,13 +4895,13 @@ export default function OaDashboard(){
                     <div style={{display:"flex",alignItems:"center",gap:8}}>
                       <div style={{flex:1}}>
                         <div style={{fontSize:12,fontWeight:800,color:C.ink}}>{r.adName}</div>
-                        {r.adset&&<div style={{fontSize:10,color:"#8b5cf6",marginTop:1}}>📂 {r.adset}</div>}
-                        {r.campaign&&<div style={{fontSize:10,color:C.inkMid,marginTop:1}}>📣 {r.campaign}</div>}
+                        {r.adset&&<div style={{fontSize:10,color:"#8b5cf6",marginTop:1}}><MI n="folder_open" size={11}/> {r.adset}</div>}
+                        {r.campaign&&<div style={{fontSize:10,color:C.inkMid,marginTop:1}}><MI n="campaign" size={11}/> {r.campaign}</div>}
                         <div style={{fontSize:10,color:C.inkMid,marginTop:2}}>CTR {r.ctr}% · ROAS {r.roas}% · {r.requestedAt}</div>
-                        {r.note&&<div style={{fontSize:10,color:C.inkMid,marginTop:2}}>💬 {r.note}</div>}
+                        {r.note&&<div style={{fontSize:10,color:C.inkMid,marginTop:2}}><MI n="chat_bubble" size={11}/> {r.note}</div>}
                       </div>
-                      <Btn variant="sage" small onClick={()=>resolveReq(r.id)}>✅ 완료</Btn>
-                      <Btn variant="danger" small onClick={()=>deleteReq(r.id)}>🗑</Btn>
+                      <Btn variant="sage" small onClick={()=>resolveReq(r.id)}><MI n="check_circle" size={13}/> 완료</Btn>
+                      <Btn variant="danger" small onClick={()=>deleteReq(r.id)}><MI n="delete" size={13}/></Btn>
                     </div>
                   </div>
                 ))}
@@ -4911,7 +4918,7 @@ export default function OaDashboard(){
                       <div style={{fontSize:11,fontWeight:700,color:C.inkMid,textDecoration:"line-through"}}>{r.adName}</div>
                       <div style={{fontSize:9,color:C.inkLt}}>CTR {r.ctr}% · {r.requestedAt}</div>
                     </div>
-                    <Btn variant="danger" small onClick={()=>deleteReq(r.id)}>🗑</Btn>
+                    <Btn variant="danger" small onClick={()=>deleteReq(r.id)}><MI n="delete" size={13}/></Btn>
                   </div>
                 ))}
               </div>
@@ -4949,7 +4956,7 @@ export default function OaDashboard(){
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   const ReviewSection=(()=>{
     const MEMBERS=["소리","영서","경은","지수"];
-    const PLATFORMS={instagram:{label:"인스타그램",icon:"📸",color:"#e1306c",bg:"#fff0f5"},twitter:{label:"트위터",icon:"🐦",color:"#1da1f2",bg:"#f0f9ff"}};
+    const PLATFORMS={instagram:{label:"인스타그램",icon:"photo_camera",color:"#e1306c",bg:"#fff0f5"},twitter:{label:"트위터",icon:"flutter_dash",color:"#1da1f2",bg:"#f0f9ff"}};
     const EMPTY_FORM={title:"",platform:"instagram",link:"",postedAt:"",views:"",likes:"",comments:"",saves:"",isAd:false,adSpend:"",isManyChat:false,assignee:"",note:""};
 
     const [rvTab,setRvTab]=useState("all"); // all|instagram|twitter
@@ -5000,12 +5007,12 @@ export default function OaDashboard(){
     return(
     <div style={{display:"flex",flexDirection:"column",gap:14}}>
       <Card>
-        <CardTitle title="📋 콘텐츠 리뷰" sub={`전체 ${(reviewItems||[]).length}건`}
+        <CardTitle title={<><MI n="assignment" size={14}/> 콘텐츠 리뷰</>} sub={`전체 ${(reviewItems||[]).length}건`}
           action={<Btn small onClick={()=>{setForm(EMPTY_FORM);setModal("add");}}>+ 등록</Btn>}/>
 
         {/* 플랫폼 탭 */}
         <div style={{display:"flex",gap:6,marginBottom:12,flexWrap:"wrap"}}>
-          {[["all","전체",C.rose,(reviewItems||[]).length],["instagram","📸 인스타그램","#e1306c",instaCount],["twitter","🐦 트위터","#1da1f2",twitterCount]].map(([k,l,col,cnt])=>(
+          {[["all","전체",C.rose,(reviewItems||[]).length],["instagram",<><MI n="photo_camera" size={12}/> 인스타그램</>,"#e1306c",instaCount],["twitter",<><MI n="flutter_dash" size={12}/> 트위터</>,"#1da1f2",twitterCount]].map(([k,l,col,cnt])=>(
             <button key={k} onClick={()=>setRvTab(k)} style={{fontSize:11,padding:"5px 14px",borderRadius:20,
               border:`1px solid ${rvTab===k?col:C.border}`,background:rvTab===k?col:C.white,
               color:rvTab===k?C.white:C.inkMid,cursor:"pointer",fontFamily:"inherit",fontWeight:700}}>
@@ -5029,30 +5036,30 @@ export default function OaDashboard(){
                 <div style={{flex:1,minWidth:0}}>
                   {/* 뱃지 행 */}
                   <div style={{display:"flex",alignItems:"center",gap:6,flexWrap:"wrap",marginBottom:6}}>
-                    <span style={{fontSize:11,fontWeight:700,color:pl.color}}>{pl.icon} {pl.label}</span>
-                    {item.isAd&&<span style={{fontSize:10,fontWeight:700,color:"#8b5cf6",background:"#f5f3ff",padding:"2px 8px",borderRadius:10}}>📣 광고</span>}
-                    {item.isManyChat&&<span style={{fontSize:10,fontWeight:700,color:"#f59e0b",background:"#fffbeb",padding:"2px 8px",borderRadius:10}}>🤖 매니챗</span>}
-                    {item.assignee&&<span style={{fontSize:10,color:C.inkMid}}>👤 {item.assignee}</span>}
+                    <span style={{fontSize:11,fontWeight:700,color:pl.color}}><MI n={pl.icon} size={13}/> {pl.label}</span>
+                    {item.isAd&&<span style={{fontSize:10,fontWeight:700,color:"#8b5cf6",background:"#f5f3ff",padding:"2px 8px",borderRadius:10}}><MI n="campaign" size={11}/> 광고</span>}
+                    {item.isManyChat&&<span style={{fontSize:10,fontWeight:700,color:"#f59e0b",background:"#fffbeb",padding:"2px 8px",borderRadius:10}}><MI n="smart_toy" size={11}/> 매니챗</span>}
+                    {item.assignee&&<span style={{fontSize:10,color:C.inkMid}}><MI n="person" size={12}/> {item.assignee}</span>}
                   </div>
                   {/* 제목 */}
                   <div style={{fontSize:13,fontWeight:800,color:C.ink,marginBottom:6}}>{item.title}</div>
                   {/* 수치 */}
                   <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:6}}>
-                    {item.views!=null&&<span style={{fontSize:10,fontWeight:700,color:C.inkMid,background:C.cream,padding:"2px 8px",borderRadius:10}}>👁 {item.views.toLocaleString()}</span>}
-                    {item.likes!=null&&<span style={{fontSize:10,fontWeight:700,color:"#e1306c",background:"#fff0f5",padding:"2px 8px",borderRadius:10}}>❤️ {item.likes.toLocaleString()}</span>}
-                    {item.comments!=null&&<span style={{fontSize:10,fontWeight:700,color:C.inkMid,background:C.cream,padding:"2px 8px",borderRadius:10}}>💬 {item.comments.toLocaleString()}</span>}
-                    {item.saves!=null&&<span style={{fontSize:10,fontWeight:700,color:"#8b5cf6",background:"#f5f3ff",padding:"2px 8px",borderRadius:10}}>🔖 {item.saves.toLocaleString()}</span>}
-                    {item.isAd&&item.adSpend!=null&&<span style={{fontSize:10,fontWeight:700,color:"#8b5cf6",background:"#f5f3ff",padding:"2px 8px",borderRadius:10}}>💰 {item.adSpend.toLocaleString()}원</span>}
+                    {item.views!=null&&<span style={{fontSize:10,fontWeight:700,color:C.inkMid,background:C.cream,padding:"2px 8px",borderRadius:10}}><MI n="visibility" size={11}/> {item.views.toLocaleString()}</span>}
+                    {item.likes!=null&&<span style={{fontSize:10,fontWeight:700,color:"#e1306c",background:"#fff0f5",padding:"2px 8px",borderRadius:10}}><MI n="favorite" size={11}/> {item.likes.toLocaleString()}</span>}
+                    {item.comments!=null&&<span style={{fontSize:10,fontWeight:700,color:C.inkMid,background:C.cream,padding:"2px 8px",borderRadius:10}}><MI n="chat_bubble" size={11}/> {item.comments.toLocaleString()}</span>}
+                    {item.saves!=null&&<span style={{fontSize:10,fontWeight:700,color:"#8b5cf6",background:"#f5f3ff",padding:"2px 8px",borderRadius:10}}><MI n="bookmark" size={11}/> {item.saves.toLocaleString()}</span>}
+                    {item.isAd&&item.adSpend!=null&&<span style={{fontSize:10,fontWeight:700,color:"#8b5cf6",background:"#f5f3ff",padding:"2px 8px",borderRadius:10}}><MI n="payments" size={11}/> {item.adSpend.toLocaleString()}원</span>}
                   </div>
-                  {item.note&&<div style={{fontSize:11,color:C.inkMid,marginBottom:4}}>📝 {item.note}</div>}
+                  {item.note&&<div style={{fontSize:11,color:C.inkMid,marginBottom:4}}><MI n="edit_note" size={12}/> {item.note}</div>}
                   <div style={{display:"flex",gap:8,alignItems:"center"}}>
-                    {item.link&&<a href={item.link} target="_blank" rel="noreferrer" style={{fontSize:10,color:pl.color,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",maxWidth:200}}>🔗 게시물 보기</a>}
+                    {item.link&&<a href={item.link} target="_blank" rel="noreferrer" style={{fontSize:10,color:pl.color,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",maxWidth:200}}><MI n="link" size={11}/> 게시물 보기</a>}
                     {item.postedAt&&<span style={{fontSize:9,color:C.inkLt}}>{item.postedAt} 게시</span>}
                   </div>
                 </div>
                 <div style={{display:"flex",flexDirection:"column",gap:4,flexShrink:0}}>
-                  <Btn small onClick={()=>openEdit(item)}>✏️ 수정</Btn>
-                  <Btn variant="danger" small onClick={()=>deleteItem(item.id)}>🗑</Btn>
+                  <Btn small onClick={()=>openEdit(item)}><MI n="edit" size={13}/> 수정</Btn>
+                  <Btn variant="danger" small onClick={()=>deleteItem(item.id)}><MI n="delete" size={13}/></Btn>
                 </div>
               </div>
             </div>
@@ -5076,7 +5083,7 @@ export default function OaDashboard(){
                       border:`1px solid ${form.platform===k?pl.color:C.border}`,
                       background:form.platform===k?pl.bg:C.white,
                       color:form.platform===k?pl.color:C.inkMid,cursor:"pointer",fontFamily:"inherit",fontWeight:700}}>
-                      {pl.icon} {pl.label}
+                      <MI n={pl.icon} size={13}/> {pl.label}
                     </button>
                   ))}
                 </div>
@@ -5101,7 +5108,7 @@ export default function OaDashboard(){
               <div>
                 <div style={{fontSize:10,fontWeight:700,color:C.inkMid,marginBottom:4}}>성과 수치</div>
                 <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
-                  {[["views","👁 조회수"],["likes","❤️ 좋아요"],["comments","💬 댓글"],["saves","🔖 저장"]].map(([k,l])=>(
+                  {[["views",<><MI n="visibility" size={11}/> 조회수</>],["likes",<><MI n="favorite" size={11}/> 좋아요</>],["comments",<><MI n="chat_bubble" size={11}/> 댓글</>],["saves",<><MI n="bookmark" size={11}/> 저장</>]].map(([k,l])=>(
                     <div key={k}>
                       <div style={{fontSize:9,color:C.inkMid,marginBottom:2}}>{l}</div>
                       <input value={form[k]} onChange={e=>setForm(p=>({...p,[k]:e.target.value}))} placeholder="0" style={inputStyle}/>
@@ -5114,7 +5121,7 @@ export default function OaDashboard(){
                 <div style={{flex:1}}>
                   <div style={{fontSize:10,fontWeight:700,color:C.inkMid,marginBottom:4}}>광고 진행</div>
                   <div style={{display:"flex",gap:6}}>
-                    {[["true","📣 했음"],["false","없음"]].map(([v,l])=>(
+                    {[["true",<><MI n="campaign" size={11}/> 했음</>],["false","없음"]].map(([v,l])=>(
                       <button key={v} onClick={()=>setForm(p=>({...p,isAd:v==="true"}))} style={{flex:1,fontSize:11,padding:"6px 0",borderRadius:10,
                         border:`1px solid ${String(form.isAd)===v?"#8b5cf6":C.border}`,
                         background:String(form.isAd)===v?"#f5f3ff":C.white,
@@ -5123,7 +5130,7 @@ export default function OaDashboard(){
                   </div>
                   {form.isAd&&(
                     <div style={{marginTop:6}}>
-                      <div style={{fontSize:9,color:C.inkMid,marginBottom:2}}>💰 광고 소진액</div>
+                      <div style={{fontSize:9,color:C.inkMid,marginBottom:2}}><MI n="payments" size={11}/> 광고 소진액</div>
                       <input value={form.adSpend} onChange={e=>setForm(p=>({...p,adSpend:e.target.value}))} placeholder="0" style={inputStyle}/>
                     </div>
                   )}
@@ -5132,7 +5139,7 @@ export default function OaDashboard(){
                 <div style={{flex:1}}>
                   <div style={{fontSize:10,fontWeight:700,color:C.inkMid,marginBottom:4}}>매니챗</div>
                   <div style={{display:"flex",gap:6}}>
-                    {[["true","🤖 했음"],["false","없음"]].map(([v,l])=>(
+                    {[["true",<><MI n="smart_toy" size={11}/> 했음</>],["false","없음"]].map(([v,l])=>(
                       <button key={v} onClick={()=>setForm(p=>({...p,isManyChat:v==="true"}))} style={{flex:1,fontSize:11,padding:"6px 0",borderRadius:10,
                         border:`1px solid ${String(form.isManyChat)===v?"#f59e0b":C.border}`,
                         background:String(form.isManyChat)===v?"#fffbeb":C.white,
@@ -5177,6 +5184,8 @@ export default function OaDashboard(){
     <div className="oa-layout" style={{background:"#F4F4F5",minHeight:"100vh",fontFamily:"'Noto Sans KR',sans-serif",color:C.ink}}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;600;700;800;900&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200');
+        .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
         *{box-sizing:border-box;margin:0;padding:0;} button{font-family:inherit;}
         input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
         ::-webkit-scrollbar{height:4px;width:6px;}::-webkit-scrollbar-thumb{background:${C.border};border-radius:3px;}
@@ -5279,7 +5288,7 @@ export default function OaDashboard(){
               }}
               onMouseEnter={e=>{ if(!active){ e.currentTarget.style.background=C.cream; } }}
               onMouseLeave={e=>{ if(!active){ e.currentTarget.style.background="transparent"; } }}>
-                <span style={{fontSize:18,lineHeight:1}}>{n.icon}</span>
+                <MI n={n.icon} size={18}/>
                 <span>{n.label}</span>
                 {n.id==="home"&&totalAlerts>0&&(
                   <span style={{marginLeft:"auto",minWidth:20,height:20,borderRadius:10,
@@ -5298,13 +5307,13 @@ export default function OaDashboard(){
           <div style={{margin:"0 12px 20px",padding:"12px",background:"#FFF8EC",
             border:`1px solid ${C.warn}33`,borderRadius:12}}>
             <div style={{fontSize:11,fontWeight:800,color:C.warn,marginBottom:6}}>🔔 확인 필요</div>
-            {orderStatus==="ok"&&orderRaw.length>0&&<div style={{fontSize:10,color:C.bad,fontWeight:700,marginBottom:3}}>📦 발주임박 {orderRaw.length}개</div>}
-            {cutAds.length>0&&<div style={{fontSize:10,color:C.bad,fontWeight:700,marginBottom:3}}>🔴 광고교체 {cutAds.length}개</div>}
-            {holdAds.length>0&&<div style={{fontSize:10,color:C.warn,marginBottom:3}}>🟡 광고보류 {holdAds.length}개</div>}
-            {dangerInv.length>0&&<div style={{fontSize:10,color:C.inkMid,marginBottom:3}}>🚨 재고위험 {dangerInv.length}종</div>}
-            {overdueIns.length>0&&<div style={{fontSize:10,color:C.inkMid,marginBottom:3}}>❗ 인사이트 {overdueIns.length}명</div>}
-            {overdueScheds.length>0&&<div style={{fontSize:10,color:C.inkMid,marginBottom:3}}>📅 기간초과 {overdueScheds.length}건</div>}
-            {urgentScheds.length>0&&<div style={{fontSize:10,color:C.inkMid}}>🔔 D-5임박 {urgentScheds.length}건</div>}
+            {orderStatus==="ok"&&orderRaw.length>0&&<div style={{fontSize:10,color:C.bad,fontWeight:700,marginBottom:3}}><MI n="inventory_2" size={11}/> 발주임박 {orderRaw.length}개</div>}
+            {cutAds.length>0&&<div style={{fontSize:10,color:C.bad,fontWeight:700,marginBottom:3}}><MI n="cancel" size={11}/> 광고교체 {cutAds.length}개</div>}
+            {holdAds.length>0&&<div style={{fontSize:10,color:C.warn,marginBottom:3}}><MI n="pause_circle" size={11}/> 광고보류 {holdAds.length}개</div>}
+            {dangerInv.length>0&&<div style={{fontSize:10,color:C.inkMid,marginBottom:3}}><MI n="warning" size={11}/> 재고위험 {dangerInv.length}종</div>}
+            {overdueIns.length>0&&<div style={{fontSize:10,color:C.inkMid,marginBottom:3}}><MI n="error" size={11}/> 인사이트 {overdueIns.length}명</div>}
+            {overdueScheds.length>0&&<div style={{fontSize:10,color:C.inkMid,marginBottom:3}}><MI n="calendar_month" size={11}/> 기간초과 {overdueScheds.length}건</div>}
+            {urgentScheds.length>0&&<div style={{fontSize:10,color:C.inkMid}}><MI n="notifications" size={11}/> D-5임박 {urgentScheds.length}건</div>}
           </div>
         )}
       </aside>
@@ -5352,7 +5361,7 @@ export default function OaDashboard(){
             flex:1,display:"flex",flexDirection:"column",alignItems:"center",gap:2,
             background:"transparent",border:"none",cursor:"pointer",padding:"4px 0",
             fontFamily:"inherit",position:"relative"}}>
-            <span style={{fontSize:18}}>{n.icon}</span>
+            <MI n={n.icon} size={18}/>
             <span style={{fontSize:9,fontWeight:700,color:sec===n.id?C.rose:C.inkLt}}>{n.label}</span>
             {sec===n.id&&<div style={{width:18,height:2,background:C.rose,borderRadius:2,marginTop:1}}/>}
             {n.id==="home"&&totalAlerts>0&&(
@@ -5416,7 +5425,7 @@ export default function OaDashboard(){
             {/* 헤더 */}
             <div style={{background:C.ink,padding:"14px 16px",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
               <div>
-                <div style={{fontSize:13,fontWeight:800,color:C.white}}>🤖 OA 데이터 에이전트</div>
+                <div style={{fontSize:13,fontWeight:800,color:C.white}}><MI n="smart_toy" size={14}/> OA 데이터 에이전트</div>
                 <div style={{fontSize:10,opacity:0.5,color:C.white,marginTop:2}}>메타광고 · 재고 데이터 기반</div>
               </div>
               <div style={{display:"flex",gap:6}}>
@@ -5431,7 +5440,7 @@ export default function OaDashboard(){
 
             {/* 탭 */}
             <div style={{display:"flex",borderBottom:`1px solid ${C.border}`,background:C.cream}}>
-              {[{id:"chat",label:"💬 채팅"},{id:"history",label:`📌 저장됨 ${Array.isArray(agentHistory)&&agentHistory.length>0?`(${agentHistory.length})`:""}`.trim()}].map(t=>(
+              {[{id:"chat",label:<><MI n="chat_bubble" size={12}/> 채팅</>},{id:"history",label:<><MI n="bookmark" size={12}/> 저장됨 {Array.isArray(agentHistory)&&agentHistory.length>0?`(${agentHistory.length})`:""}</>}].map(t=>(
                 <button key={t.id} onClick={()=>setAgentTab(t.id)}
                   style={{flex:1,padding:"8px",border:"none",background:"transparent",
                     fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit",
@@ -5487,13 +5496,13 @@ export default function OaDashboard(){
                   <div style={{fontSize:10,color:C.inkLt,lineHeight:1.6}}>현재 메타광고 · 재고 데이터를 알고 있어요.<br/>아래 질문을 눌러보세요!</div>
                   <div style={{marginTop:14,display:"flex",flexDirection:"column",gap:10,textAlign:"left"}}>
                     {[
-                      {label:"📊 성과 분석", qs:[
+                      {label:<><MI n="bar_chart" size={12}/> 성과 분석</>, qs:[
                         "ROAS 가장 높은 광고 TOP 3 알려줘",
                         "CPA 가장 낮은 광고 뭐야?",
                         "LPV율 낮은 광고 있어? 랜딩 문제 의심되는 거",
                         "CTR 낮아서 소재 문제인 광고 찾아줘",
                       ]},
-                      {label:"💰 광고비 현황", qs:[
+                      {label:<><MI n="payments" size={12}/> 광고비 현황</>, qs:[
                         "날짜별 광고비 추이 그래프 그려줘",
                         "전환 vs 트래픽 광고비 비율 파이차트로 보여줘",
                         "광고별 광고비 바차트 그려줘",
@@ -5504,7 +5513,7 @@ export default function OaDashboard(){
                         "소닉플로우 광고 중에 성과 좋은 거 뭐야?",
                         "프리온 광고 CPA 어때?",
                       ]},
-                      {label:"📦 재고", qs:[
+                      {label:<><MI n="inventory_2" size={12}/> 재고</>, qs:[
                         "재고 소진 임박한 제품 있어?",
                         "재고 현황 전체 알려줘",
                       ]},
@@ -5611,7 +5620,7 @@ export default function OaDashboard(){
                             } catch(e) { alert("저장 실패: "+e.message); }
                           }} style={{fontSize:9,padding:"3px 10px",borderRadius:6,border:`1px solid ${C.border}`,
                             background:C.white,cursor:"pointer",fontFamily:"inherit",color:C.inkMid}}>
-                            🖼 이미지
+                            <MI n="image" size={11}/> 이미지
                           </button>
                         )}
                       </div>
@@ -5622,7 +5631,7 @@ export default function OaDashboard(){
               {agentLoading&&(
                 <div style={{display:"flex",justifyContent:"flex-start"}}>
                   <div style={{padding:"10px 14px",borderRadius:"16px 16px 16px 4px",background:C.cream,fontSize:11,color:C.inkLt}}>
-                    ⏳ 분석 중...
+                    <MI n="hourglass_empty" size={13}/> 분석 중...
                   </div>
                 </div>
               )}
@@ -5656,7 +5665,7 @@ export default function OaDashboard(){
             background:agentOpen?C.inkMid:C.rose,color:C.white,
             fontSize:22,cursor:"pointer",boxShadow:"0 4px 20px rgba(0,0,0,0.2)",
             display:"flex",alignItems:"center",justifyContent:"center",transition:"all 0.2s"}}>
-          {agentOpen?"✕":"🤖"}
+          {agentOpen?"✕":<MI n="smart_toy" size={22}/>}
         </button>
       </div>
     </div>
