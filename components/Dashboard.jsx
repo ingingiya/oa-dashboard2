@@ -4644,6 +4644,8 @@ export default function OaDashboard(){
     const [libModal, setLibModal] = useState(null); // null | {mode:"add"|"edit", item}
     const [libForm, setLibForm] = useState({name:"",link:"",product:"",note:"",tags:""});
     const [reqNote, setReqNote] = useState("");
+    const [crFilter, setCrFilter] = useState("전체"); // 전체 | 우수 | 전환 | 트래픽
+    const [crSort, setCrSort] = useState("점수");
 
     // 메타 데이터 소재별 집계
     const adByName = {};
@@ -4726,7 +4728,19 @@ export default function OaDashboard(){
       setTab("library");
     }
 
-    const topAds = adList;
+    const topAds = adList
+      .filter(ad=>{
+        if(crFilter==="우수") return adQuality(ad)==="good";
+        if(crFilter==="전환") return isConversionCampaign(ad.objective,ad.campaign);
+        if(crFilter==="트래픽") return !isConversionCampaign(ad.objective,ad.campaign);
+        return true;
+      })
+      .sort((a,b)=>{
+        if(crSort==="CTR") return b.ctr-a.ctr;
+        if(crSort==="ROAS") return b.roas-a.roas;
+        if(crSort==="소진") return b.spend-a.spend;
+        return b._score-a._score; // 점수 (기본)
+      });
 
     function requestRecreate(ad) {
       const req = {
@@ -4805,6 +4819,27 @@ export default function OaDashboard(){
               </div>
             );
           })()}
+          {/* 필터 / 정렬 바 */}
+          <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:8}}>
+            {["전체","우수","전환","트래픽"].map(f=>(
+              <button key={f} onClick={()=>setCrFilter(f)} style={{fontSize:10,padding:"4px 12px",borderRadius:20,
+                border:`1px solid ${crFilter===f?"#4DAD7A":C.border}`,
+                background:crFilter===f?"#4DAD7A":C.cream,
+                color:crFilter===f?C.white:C.inkMid,cursor:"pointer",fontFamily:"inherit",fontWeight:700}}>
+                {f==="우수"?<><MI n="check_circle" size={11}/> 잘 나온 소재만</>:f}
+              </button>
+            ))}
+            <div style={{width:1,background:C.border,margin:"0 2px",flexShrink:0}}/>
+            {["점수","CTR","ROAS","소진"].map(s=>(
+              <button key={s} onClick={()=>setCrSort(s)} style={{fontSize:10,padding:"4px 12px",borderRadius:20,
+                border:`1px solid ${crSort===s?C.rose:C.border}`,
+                background:crSort===s?C.rose:C.cream,
+                color:crSort===s?C.white:C.inkMid,cursor:"pointer",fontFamily:"inherit",fontWeight:700}}>
+                {s}순
+              </button>
+            ))}
+          </div>
+          <div style={{fontSize:10,color:C.inkMid,marginBottom:8}}>{topAds.length}개 표시</div>
           <div style={{display:"flex",flexDirection:"column",gap:8}}>
             {topAds.map((ad,i)=>{
               const quality = adQuality(ad);
