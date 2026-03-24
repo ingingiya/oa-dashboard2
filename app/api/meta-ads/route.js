@@ -42,16 +42,21 @@ function normalize(row) {
   const actionValues  = row.action_values || [];
   const uniqueActions = row.unique_actions || [];
   const costPerAction = row.cost_per_action_type || [];
+  // 협업광고(스마트스토어) 전용 필드
+  const collabActions = row.collaborative_ads_segment_action_counts || [];
+  const collabValues  = row.collaborative_ads_segment_action_values || [];
 
-  // 구매수: actions → unique_actions fallback
+  // 구매수: actions → collaborative_ads → unique_actions fallback
   let purchases = getActionAny(actions, PURCHASE_TYPES);
+  if (!purchases) purchases = getActionAny(collabActions, PURCHASE_TYPES);
   if (!purchases) purchases = getActionAny(uniqueActions, PURCHASE_TYPES);
 
-  const cart = getActionAny(actions, CART_TYPES);
+  const cart = getActionAny(actions, CART_TYPES) || getActionAny(collabActions, CART_TYPES);
   const lpv  = getAction(actions, "landing_page_view") || getAction(actions, "omni_landing_page_view");
 
-  // 전환값: action_values → website_purchase_roas * spend fallback
+  // 전환값: action_values → collaborative_ads_values → website_purchase_roas * spend fallback
   let convValue = getActionAny(actionValues, PURCHASE_TYPES);
+  if (!convValue) convValue = getActionAny(collabValues, PURCHASE_TYPES);
   const roasMultiplier = getRoas(row);
   const spend = parseFloat(row.spend) || 0;
   if (!convValue && roasMultiplier > 0) convValue = roasMultiplier * spend;
@@ -107,6 +112,8 @@ export async function GET(request) {
     "actions", "action_values", "cost_per_action_type",
     "website_purchase_roas",
     "unique_actions",
+    "collaborative_ads_segment_action_counts",
+    "collaborative_ads_segment_action_values",
     "date_start", "date_stop",
   ].join(",");
 
@@ -154,6 +161,8 @@ export async function GET(request) {
     convRows.forEach(r => {
       (r.actions||[]).forEach(a => allActionTypes.add(a.action_type));
       (r.action_values||[]).forEach(a => allActionTypes.add("value:"+a.action_type));
+      (r.collaborative_ads_segment_action_counts||[]).forEach(a => allActionTypes.add("collab:"+a.action_type));
+      (r.collaborative_ads_segment_action_values||[]).forEach(a => allActionTypes.add("collab_val:"+a.action_type));
     });
     return Response.json({
       conv_sample: convRows.map(r => ({
@@ -162,6 +171,8 @@ export async function GET(request) {
         actions: r.actions,
         action_values: r.action_values,
         unique_actions: r.unique_actions,
+        collab_counts: r.collaborative_ads_segment_action_counts,
+        collab_values: r.collaborative_ads_segment_action_values,
         website_purchase_roas: r.website_purchase_roas,
       })),
       all_action_types: [...allActionTypes],
