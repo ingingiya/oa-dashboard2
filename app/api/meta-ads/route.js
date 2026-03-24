@@ -30,18 +30,38 @@ function getActionAny(arr, types) {
   return 0;
 }
 
+function getRoas(row) {
+  // website_purchase_roas / purchase_roas 필드 직접 사용
+  const wr = row.website_purchase_roas;
+  if (Array.isArray(wr) && wr.length > 0) return parseFloat(wr[0].value) || 0;
+  const pr = row.purchase_roas;
+  if (Array.isArray(pr) && pr.length > 0) return parseFloat(pr[0].value) || 0;
+  return 0;
+}
+
 function normalize(row) {
-  const actions      = row.actions || [];
-  const actionValues = row.action_values || [];
+  const actions       = row.actions || [];
+  const actionValues  = row.action_values || [];
+  const uniqueActions = row.unique_actions || [];
   const costPerAction = row.cost_per_action_type || [];
 
-  const purchases = getActionAny(actions, PURCHASE_TYPES);
-  const cart      = getActionAny(actions, CART_TYPES);
-  const convValue = getActionAny(actionValues, PURCHASE_TYPES);
-  const lpv       = getAction(actions, "landing_page_view") || getAction(actions, "omni_landing_page_view");
+  // 구매수: actions → unique_actions fallback
+  let purchases = getActionAny(actions, PURCHASE_TYPES);
+  if (!purchases) purchases = getActionAny(uniqueActions, PURCHASE_TYPES);
 
+  const cart = getActionAny(actions, CART_TYPES);
+  const lpv  = getAction(actions, "landing_page_view") || getAction(actions, "omni_landing_page_view");
+
+  // 전환값: action_values → website_purchase_roas * spend fallback
+  let convValue = getActionAny(actionValues, PURCHASE_TYPES);
+  const roasMultiplier = getRoas(row);
+  const spend = parseFloat(row.spend) || 0;
+  if (!convValue && roasMultiplier > 0) convValue = roasMultiplier * spend;
+
+  // CPA: cost_per_action_type → spend/purchases 계산
   const cpaCand = costPerAction.find(c => PURCHASE_TYPES.includes(c.action_type));
-  const cpa = cpaCand ? parseFloat(cpaCand.value) || 0 : 0;
+  let cpa = cpaCand ? parseFloat(cpaCand.value) || 0 : 0;
+  if (!cpa && purchases > 0) cpa = Math.round(spend / purchases);
 
   return {
     date:        row.date_start || "",
@@ -50,7 +70,7 @@ function normalize(row) {
     adName:      row.ad_name || "",
     objective:   row.objective || "",
     resultType:  purchases > 0 ? "purchase" : "",
-    spend:       parseFloat(row.spend) || 0,
+    spend,
     impressions: parseInt(row.impressions) || 0,
     clicks:      parseInt(row.inline_link_clicks) || 0,
     clicksAll:   parseInt(row.clicks) || 0,
@@ -87,6 +107,9 @@ export async function GET(request) {
     "spend", "impressions", "clicks", "inline_link_clicks",
     "ctr", "cpm", "cost_per_inline_link_click", "cost_per_unique_click",
     "actions", "action_values", "cost_per_action_type",
+    "website_purchase_roas",
+    "purchase_roas",
+    "unique_actions",
     "date_start", "date_stop",
   ].join(",");
 
@@ -139,7 +162,11 @@ export async function GET(request) {
       conv_sample: convRows.map(r => ({
         ad: r.ad_name, campaign: r.campaign_name, objective: r.objective,
         spend: r.spend,
-        actions: r.actions, action_values: r.action_values,
+        actions: r.actions,
+        action_values: r.action_values,
+        unique_actions: r.unique_actions,
+        website_purchase_roas: r.website_purchase_roas,
+        purchase_roas: r.purchase_roas,
       })),
       all_action_types: [...allActionTypes],
     });
