@@ -4786,6 +4786,7 @@ export default function OaDashboard(){
         adset: ad.adset||"",
         campaign: ad.campaign||"",
         ctr: ad.ctr.toFixed(2), roas: ad.roas.toFixed(0), spend: ad.spend,
+        thumbUrl: findThumb(ad.adName)||"",
         note: reqNote, status:"pending",
         requestedAt: new Date().toISOString().slice(0,10),
       };
@@ -5020,15 +5021,23 @@ export default function OaDashboard(){
                 {pendingReqs.map(r=>(
                   <div key={r.id} style={{padding:"10px 12px",borderRadius:10,border:`1px solid #8b5cf644`,background:"#f5f3ff"}}>
                     <div style={{display:"flex",alignItems:"center",gap:8}}>
-                      <div style={{flex:1}}>
-                        <div style={{fontSize:12,fontWeight:800,color:C.ink}}>{r.adName}</div>
+                      {r.thumbUrl&&(
+                        <div style={{width:56,height:56,borderRadius:8,overflow:"hidden",flexShrink:0,
+                          border:`1px solid #8b5cf633`,background:C.cream}}>
+                          <ThumbPreview url={r.thumbUrl} name={r.adName}/>
+                        </div>
+                      )}
+                      <div style={{flex:1,minWidth:0}}>
+                        <div style={{fontSize:12,fontWeight:800,color:C.ink,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{r.adName}</div>
                         {r.adset&&<div style={{fontSize:10,color:"#8b5cf6",marginTop:1}}><MI n="folder_open" size={11}/> {r.adset}</div>}
                         {r.campaign&&<div style={{fontSize:10,color:C.inkMid,marginTop:1}}><MI n="campaign" size={11}/> {r.campaign}</div>}
                         <div style={{fontSize:10,color:C.inkMid,marginTop:2}}>CTR {r.ctr}% · ROAS {r.roas}% · {r.requestedAt}</div>
                         {r.note&&<div style={{fontSize:10,color:C.inkMid,marginTop:2}}><MI n="chat_bubble" size={11}/> {r.note}</div>}
                       </div>
-                      <Btn variant="sage" small onClick={()=>resolveReq(r.id)}><MI n="check_circle" size={13}/> 완료</Btn>
-                      <Btn variant="danger" small onClick={()=>deleteReq(r.id)}><MI n="delete" size={13}/></Btn>
+                      <div style={{display:"flex",flexDirection:"column",gap:4,flexShrink:0}}>
+                        <Btn variant="sage" small onClick={()=>resolveReq(r.id)}><MI n="check_circle" size={13}/> 완료</Btn>
+                        <Btn variant="danger" small onClick={()=>deleteReq(r.id)}><MI n="delete" size={13}/></Btn>
+                      </div>
                     </div>
                   </div>
                 ))}
