@@ -760,7 +760,7 @@ export default function OaDashboard(){
   // ── 시트 URL 코드 고정 (Supabase 저장 안 함 — 시트 내용만 fetch)
   const invUrl    = "https://docs.google.com/spreadsheets/d/1r9WhAOgvdIcumgrkNkTbyYSVj1ONxyXp0trwzD-xAng/edit?gid=960641453#gid=960641453";
   const infUrl    = "https://docs.google.com/spreadsheets/d/1r9WhAOgvdIcumgrkNkTbyYSVj1ONxyXp0trwzD-xAng/edit?gid=503054532#gid=503054532";
-  const [sheetUrl, setSheetUrl]   = useSyncState("oa_conv_sheet_url_v1", "");
+  const sheetUrl = ""; const setSheetUrl = ()=>{};
   const setInvUrl = ()=>{}, setInfUrl = ()=>{};
   const [orderUrl, setOrderUrl] = useSyncState("oa_order_url_v7", "");
   const invUrlLoaded = true; const infUrlLoaded = true;
@@ -824,14 +824,10 @@ export default function OaDashboard(){
   const [infUrlModal, setInfUrlModal]   = useState(false);
   const [infUrlInput, setInfUrlInput]   = useState("");
 
-  // 메타 구글 시트 (하이브리드: API 트래픽 + 시트 전환)
+  // 메타
   const [metaRaw,setMetaRaw]         = useState([]);
-  const [metaApiRaw,setMetaApiRaw]   = useState([]); // Meta API 원본
-  const [sheetConvRaw,setSheetConvRaw] = useState([]); // 시트 전환캠페인 원본
   const [metaStatus,setMetaStatus]   = useState("idle");
   const [metaError,setMetaError]     = useState("");
-  const [sheetModal,setSheetModal]   = useState(false);
-  const [sheetInput,setSheetInput]   = useState("");
   const [deletedAds, setDeletedAdsRaw] = useState([]);
   // 마운트 시 Supabase에서 삭제 목록 로드
   useEffect(()=>{
@@ -854,6 +850,7 @@ export default function OaDashboard(){
   // 소재 라이브러리 & 재제작 요청
   const [creativeLib, setCreativeLib] = useSyncState("oa_creative_lib_v8", []);
   const [recreateReqs, setRecreateReqs] = useSyncState("oa_recreate_req_v8", []);
+  const [kwData, setKwData] = useSyncState("oa_kw_v1", { keywords: [], logs: [] });
 
   const [allAdRaw, setAllAdRaw]       = useSyncState("oa_all_ad_raw_v7", []);
   const [allAdStatus, setAllAdStatus] = useState(()=>allAdRaw?.length>0?"ok":"idle");
@@ -1209,7 +1206,8 @@ export default function OaDashboard(){
       const res = await fetch(`/api/meta-ads?datePreset=${preset||metaDatePreset}`);
       const data = await res.json();
       if (data.error) throw new Error(data.error);
-      setMetaApiRaw(data.rows || []);
+      setMetaRaw(data.rows || []);
+      setMetaStatus("ok");
       setMetaApiStatus("ok");
     } catch(e) {
       setMetaApiStatus("error");
@@ -1221,77 +1219,6 @@ export default function OaDashboard(){
   useEffect(() => {
     fetchMetaAds();
   }, []); // eslint-disable-line
-
-  // 시트 URL 로드되면 자동 fetch
-  useEffect(() => {
-    if(sheetUrl) fetchSheet(sheetUrl);
-  }, [sheetUrl]); // eslint-disable-line
-
-  // ── 하이브리드 병합: API 기본 + 시트 전환필드 덮어쓰기 ──────────────
-  useEffect(() => {
-    if(sheetConvRaw.length > 0 && metaApiRaw.length > 0) {
-      // 시트 조회: date+campaign+adName 키로 빠르게 찾기
-      const sheetMap = {};
-      sheetConvRaw.forEach(r => {
-        const k = `${r.date}||${r.campaign}||${r.adName}`;
-        sheetMap[k] = r;
-        // adName 없는 시트 행은 campaign+date 키로도 저장
-        const k2 = `${r.date}||${r.campaign}||`;
-        if(!sheetMap[k2]) sheetMap[k2] = r;
-      });
-      // API 각 행에 시트 전환필드 오버레이
-      const merged = metaApiRaw.map(apiRow => {
-        const k  = `${apiRow.date}||${apiRow.campaign}||${apiRow.adName}`;
-        const k2 = `${apiRow.date}||${apiRow.campaign}||`;
-        const s  = sheetMap[k] || sheetMap[k2];
-        if(!s) return apiRow;
-        return {
-          ...apiRow,
-          purchases:  s.purchases  || apiRow.purchases,
-          convValue:  s.convValue  || apiRow.convValue,
-          cpa:        s.cpa        || apiRow.cpa,
-          cart:       s.cart       || apiRow.cart,
-        };
-      });
-      setMetaRaw(merged);
-      setMetaStatus("ok");
-    } else if(sheetConvRaw.length > 0) {
-      // API 없고 시트만 있는 경우
-      setMetaRaw(sheetConvRaw);
-      setMetaStatus("ok");
-    } else {
-      // 시트 없음: API 전체 사용
-      setMetaRaw(metaApiRaw);
-    }
-  }, [metaApiRaw, sheetConvRaw]); // eslint-disable-line
-
-  // ── 구글 시트 fetch (전환캠페인용) ──────────────────────────────
-  async function fetchSheet(url){
-    if(!url) return;
-    setMetaStatus("loading");
-    setMetaError("");
-    try{
-      // 공유 URL → CSV export URL 변환
-      const res = await fetch(`/api/sheet?url=${encodeURIComponent(url)}`);
-      if(!res.ok) throw new Error(`HTTP ${res.status}`);
-      const text = await res.text();
-      const rows = parseCSV(text).map(mapMetaRow).filter(r=>r.date||r.campaign);
-      // 시트 전체를 그대로 사용 — 병합 시 캠페인명 기준으로 API와 중복 제거
-      setSheetConvRaw(rows);
-      setMetaStatus("ok");
-    }catch(e){
-      setMetaStatus("error");
-      setMetaError(e.message);
-    }
-  }
-
-  function saveSheetUrl(){
-    const url = sheetInput.trim();
-    if(!url) return;
-    setSheetUrl(url);
-    setSheetModal(false);
-    fetchSheet(url);
-  }
 
   // ── 발주임박 시트 fetch ─────────────────────────────
   async function fetchOrderSheet(url){
@@ -1734,6 +1661,7 @@ export default function OaDashboard(){
     {id:"influencer",icon:"auto_awesome",label:"인플루언서"},
     {id:"schedule",  icon:"calendar_month",label:"스케줄"},
     {id:"creative",  icon:"palette",label:"소재"},
+    {id:"keyword",   icon:"search",label:"키워드"},
     {id:"review",    icon:"check_circle",label:"콘텐츠리뷰"},
   ];
 
@@ -2014,10 +1942,6 @@ export default function OaDashboard(){
                   <div style={{fontSize:12,fontWeight:800,color:C.good}}>Meta API 연결됨 · {metaRaw.length}건{deletedAds.length>0&&<span style={{color:C.inkLt,fontWeight:600}}> ({deletedAds.length}개 숨김)</span>}</div>
                   <div style={{fontSize:10,color:C.inkMid,marginTop:1}}>
                     기간: {{last_7d:"최근 7일",last_14d:"최근 14일",last_30d:"최근 30일",last_90d:"최근 90일"}[metaDatePreset]||metaDatePreset}
-                    {sheetConvRaw.length>0&&<span style={{color:C.good,fontWeight:700,marginLeft:8}}>· 시트 전환데이터 연결됨 ({sheetConvRaw.length}건)</span>}
-                    {sheetConvRaw.length===0&&sheetUrl&&metaStatus==="loading"&&<span style={{color:C.gold,marginLeft:8}}>· 시트 불러오는 중...</span>}
-                    {sheetConvRaw.length===0&&sheetUrl&&metaStatus==="error"&&<span style={{color:C.bad,marginLeft:8}}>· 시트 오류: {metaError}</span>}
-                    {!sheetUrl&&<span style={{color:C.inkLt,marginLeft:8}}>· 전환데이터: 시트 없음 (아래 연결 버튼)</span>}
                   </div>
                 </>
               ) : metaApiStatus==="loading" ? (
@@ -2043,9 +1967,6 @@ export default function OaDashboard(){
               </button>
             ))}
             <Btn variant="sage" small onClick={()=>fetchMetaAds()}><MI n="refresh" size={13}/> 새로고침</Btn>
-            <Btn variant={sheetConvRaw.length>0?"neutral":"gold"} small onClick={()=>{setSheetInput(sheetUrl);setSheetModal(true);}}>
-              <MI n="table_chart" size={13}/> {sheetConvRaw.length>0?"전환 시트":"전환 시트 연결"}
-            </Btn>
             {deletedAds.length>0&&(
               <div style={{position:"relative"}}>
                 <Btn variant="neutral" small onClick={()=>setShowDeletedPanel(p=>!p)}>
@@ -3155,55 +3076,6 @@ export default function OaDashboard(){
               );
             })()}
           </div>
-        )}
-
-        {/* 구글 시트 연결 모달 */}
-        {sheetModal&&(
-          <Modal title={<><MI n="table_chart"/> 전환 시트 연결 (구매·전환값·CPA·ROAS)</>} onClose={()=>setSheetModal(false)} wide>
-            {/* 안내 배너 */}
-            <div style={{background:"#EFF6FF",border:"1px solid #BFDBFE",borderRadius:10,padding:"10px 14px",marginBottom:16,fontSize:11,color:"#1D4ED8",fontWeight:700}}>
-              📊 트래픽 데이터(노출·클릭·LPV 등)는 Meta API에서 자동으로 불러와요.<br/>
-              <span style={{fontWeight:400,color:"#3B82F6"}}>구매·전환값·CPA·ROAS는 스마트스토어 협업광고 특성상 API 미지원 → 광고관리자 시트에서 가져와요.</span>
-            </div>
-            {/* 사용 방법 안내 */}
-            <div style={{background:C.cream,border:`1px solid ${C.border}`,borderRadius:12,padding:"16px",marginBottom:20}}>
-              <div style={{fontSize:12,fontWeight:800,color:C.ink,marginBottom:12}}><MI n="assignment" size={14}/> 연결 방법 (3단계)</div>
-              {[
-                {n:"1",title:"메타 광고관리자에서 내보내기",desc:"광고관리자 → 보고서 → CSV 다운로드 (날짜·캠페인·목적·노출·클릭·LPV·전환·지출 컬럼 포함)"},
-                {n:"2",title:"구글 시트에 붙여넣기",desc:"구글 드라이브에서 새 시트 만들고 → A1 셀에 그대로 붙여넣기 (헤더 포함). 시트명은 아무거나 OK"},
-                {n:"3",title:"공유 설정 변경",desc:"시트 우상단 '공유' → '링크가 있는 모든 사용자' → '뷰어'로 설정 후 링크 복사"},
-              ].map(s=>(
-                <div key={s.n} style={{display:"flex",gap:10,marginBottom:10}}>
-                  <div style={{width:22,height:22,borderRadius:"50%",background:C.rose,color:C.white,
-                    display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:900,flexShrink:0}}>{s.n}</div>
-                  <div>
-                    <div style={{fontSize:11,fontWeight:700,color:C.ink}}>{s.title}</div>
-                    <div style={{fontSize:10,color:C.inkMid,marginTop:2}}>{s.desc}</div>
-                  </div>
-                </div>
-              ))}
-              <div style={{marginTop:8,padding:"8px 12px",background:C.goldLt,borderRadius:8,fontSize:10,color:C.gold,fontWeight:700}}>
-                💡 메타 광고관리자 컬럼 이름이 한국어·영어 둘 다 자동으로 인식돼요
-              </div>
-            </div>
-
-            <FR label="구글 시트 URL">
-              <Inp value={sheetInput} onChange={setSheetInput}
-                placeholder="https://docs.google.com/spreadsheets/d/..."/>
-            </FR>
-            <div style={{fontSize:10,color:C.inkLt,marginBottom:16,marginTop:-6}}>
-              공유 링크 또는 편집 링크 모두 가능해요
-            </div>
-            <Btn onClick={saveSheetUrl} disabled={!sheetInput.trim()} style={{width:"100%"}}>
-              <MI n="link" size={13}/> 연결하기
-            </Btn>
-            {sheetUrl&&(
-              <Btn variant="danger" onClick={()=>{setSheetConvRaw([]);setSheetUrl("");setMetaStatus("idle");setSheetModal(false);}}
-                style={{width:"100%",marginTop:8}}>
-                <MI n="delete" size={13}/> 연결 해제
-              </Btn>
-            )}
-          </Modal>
         )}
 
         {/* ── 기준 설정 모달 (전환 마진 + 트래픽 기준) ── */}
@@ -5011,6 +4883,281 @@ export default function OaDashboard(){
 
 
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  // 🔍 경쟁사 키워드 트래킹
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  const KeywordSection = (() => {
+    const keywords = kwData?.keywords || [];
+    const logs = kwData?.logs || [];
+    const [addKwModal, setAddKwModal] = useState(false);
+    const [kwInput, setKwInput] = useState("");
+    const [compInput, setCompInput] = useState("");
+    const [kwTab, setKwTab] = useState("all"); // all | my | competitor
+    const [selectedKw, setSelectedKw] = useState(null);
+    const [logModal, setLogModal] = useState(false);
+    const [logKwId, setLogKwId] = useState(null);
+    const [logRank, setLogRank] = useState("");
+    const [logVol, setLogVol] = useState("");
+    const [logNote, setLogNote] = useState("");
+    const [logDate, setLogDate] = useState(new Date().toISOString().slice(0,10));
+
+    const COLORS = ["#2563EB","#16A34A","#EA580C","#8B5CF6","#EC4899","#0891B2","#D97706","#DC2626"];
+
+    function addKeyword() {
+      if (!kwInput.trim()) return;
+      const newKw = {
+        id: Date.now()+"",
+        name: kwInput.trim(),
+        competitor: compInput.trim(),
+        color: COLORS[keywords.length % COLORS.length],
+        type: compInput.trim() ? "competitor" : "my",
+        addedAt: new Date().toISOString().slice(0,10),
+      };
+      setKwData({ ...kwData, keywords: [...keywords, newKw] });
+      setKwInput(""); setCompInput(""); setAddKwModal(false);
+    }
+
+    function deleteKeyword(id) {
+      setKwData({
+        keywords: keywords.filter(k=>k.id!==id),
+        logs: logs.filter(l=>l.keywordId!==id),
+      });
+    }
+
+    function addLog() {
+      if (!logKwId || !logRank) return;
+      const newLog = {
+        id: Date.now()+"",
+        keywordId: logKwId,
+        date: logDate,
+        rank: parseInt(logRank) || 0,
+        volume: parseInt(logVol) || 0,
+        note: logNote.trim(),
+      };
+      setKwData({ ...kwData, logs: [...logs, newLog] });
+      setLogRank(""); setLogVol(""); setLogNote(""); setLogModal(false);
+    }
+
+    // 키워드별 최신 순위 + 이전 대비 변화
+    const kwStats = keywords.map(kw => {
+      const kwLogs = logs.filter(l=>l.keywordId===kw.id).sort((a,b)=>a.date.localeCompare(b.date));
+      const latest = kwLogs[kwLogs.length-1];
+      const prev   = kwLogs[kwLogs.length-2];
+      const change = latest && prev ? prev.rank - latest.rank : null; // 양수=순위 올라감
+      return { ...kw, latest, prev, change, logs: kwLogs };
+    });
+
+    const filtered = kwTab==="my" ? kwStats.filter(k=>k.type==="my")
+      : kwTab==="competitor" ? kwStats.filter(k=>k.type==="competitor")
+      : kwStats;
+
+    // 차트용 데이터: 선택된 키워드들의 날짜별 순위
+    const chartKws = selectedKw ? kwStats.filter(k=>k.id===selectedKw) : kwStats.slice(0,5);
+    const allDates = [...new Set(logs.map(l=>l.date))].sort();
+    const chartData = allDates.map(date => {
+      const entry = { date: date.slice(5) }; // MM-DD
+      chartKws.forEach(kw => {
+        const log = kw.logs.find(l=>l.date===date);
+        if(log) entry[kw.name] = log.rank;
+      });
+      return entry;
+    });
+
+    const fmtChange = c => {
+      if(c===null) return null;
+      if(c>0) return { text:`▲${c}`, color:C.good };
+      if(c<0) return { text:`▼${Math.abs(c)}`, color:C.bad };
+      return { text:"—", color:C.inkLt };
+    };
+
+    return (
+      <div style={{display:"flex",flexDirection:"column",gap:16}}>
+        {/* 헤더 */}
+        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:8}}>
+          <div>
+            <div style={{fontSize:20,fontWeight:900,color:C.ink}}>경쟁사 키워드 트래킹</div>
+            <div style={{fontSize:12,color:C.inkMid,marginTop:2}}>키워드 순위 변화를 직접 기록하고 추이를 확인해요</div>
+          </div>
+          <div style={{display:"flex",gap:8}}>
+            <Btn variant="sage" small onClick={()=>{setLogKwId(keywords[0]?.id||null);setLogModal(true);}}>
+              <MI n="edit_note" size={13}/> 순위 기록
+            </Btn>
+            <Btn small onClick={()=>setAddKwModal(true)}>
+              <MI n="add" size={13}/> 키워드 추가
+            </Btn>
+          </div>
+        </div>
+
+        {/* 탭 */}
+        <div style={{display:"flex",gap:4,background:C.cream,borderRadius:12,padding:4,width:"fit-content"}}>
+          {[{id:"all",label:"전체"},
+            {id:"my",label:"우리 브랜드"},
+            {id:"competitor",label:"경쟁사"}
+          ].map(t=>(
+            <button key={t.id} onClick={()=>setKwTab(t.id)} style={{
+              fontSize:11,fontWeight:700,padding:"5px 14px",borderRadius:8,border:"none",cursor:"pointer",
+              background:kwTab===t.id?C.rose:"transparent",
+              color:kwTab===t.id?"#fff":C.inkMid,fontFamily:"inherit",
+            }}>{t.label}</button>
+          ))}
+        </div>
+
+        {keywords.length===0 ? (
+          <Card>
+            <div style={{textAlign:"center",padding:"40px 0",color:C.inkLt}}>
+              <MI n="search" size={40} style={{display:"block",margin:"0 auto 12px"}}/>
+              <div style={{fontSize:14,fontWeight:700,color:C.inkMid,marginBottom:6}}>아직 키워드가 없어요</div>
+              <div style={{fontSize:12,color:C.inkLt,marginBottom:16}}>추적할 키워드를 추가하고 매주 순위를 기록해보세요</div>
+              <Btn onClick={()=>setAddKwModal(true)}><MI n="add" size={13}/> 첫 키워드 추가</Btn>
+            </div>
+          </Card>
+        ) : (
+          <>
+            {/* 키워드 카드 목록 */}
+            <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(200px,1fr))",gap:10}}>
+              {filtered.map(kw => {
+                const ch = fmtChange(kw.change);
+                return (
+                  <div key={kw.id} onClick={()=>setSelectedKw(selectedKw===kw.id?null:kw.id)}
+                    style={{
+                      background:"#fff",border:`2px solid ${selectedKw===kw.id?kw.color:C.border}`,
+                      borderRadius:14,padding:"14px 16px",cursor:"pointer",
+                      boxShadow:selectedKw===kw.id?`0 0 0 3px ${kw.color}22`:"none",
+                      transition:"all 0.15s",
+                    }}>
+                    <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:6}}>
+                      <div style={{display:"flex",alignItems:"center",gap:6}}>
+                        <div style={{width:10,height:10,borderRadius:"50%",background:kw.color,flexShrink:0}}/>
+                        <div style={{fontSize:13,fontWeight:800,color:C.ink,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",maxWidth:110}}>{kw.name}</div>
+                      </div>
+                      <button onClick={e=>{e.stopPropagation();deleteKeyword(kw.id);}}
+                        style={{background:"none",border:"none",cursor:"pointer",color:C.inkLt,padding:2,fontSize:12}}>✕</button>
+                    </div>
+                    {kw.competitor&&<div style={{fontSize:10,color:C.inkLt,marginBottom:6}}>{kw.competitor}</div>}
+                    <div style={{display:"flex",alignItems:"flex-end",gap:8}}>
+                      <div style={{fontSize:28,fontWeight:900,color:kw.latest?kw.color:C.inkLt,lineHeight:1}}>
+                        {kw.latest ? `${kw.latest.rank}위` : "—"}
+                      </div>
+                      {ch&&<div style={{fontSize:11,fontWeight:800,color:ch.color,marginBottom:2}}>{ch.text}</div>}
+                    </div>
+                    {kw.latest&&<div style={{fontSize:10,color:C.inkLt,marginTop:4}}>{kw.latest.date} 기준</div>}
+                    <button onClick={e=>{e.stopPropagation();setLogKwId(kw.id);setLogModal(true);}}
+                      style={{marginTop:8,width:"100%",padding:"5px 0",borderRadius:8,border:`1px solid ${C.border}`,
+                        background:C.cream,color:C.inkMid,fontSize:10,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
+                      + 순위 기록
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* 순위 추이 차트 */}
+            {chartData.length > 0 && (
+              <Card>
+                <CardTitle title="순위 추이" sub={selectedKw?"선택 키워드":"상위 5개 키워드 · 클릭으로 선택"}/>
+                <div style={{fontSize:10,color:C.inkLt,marginBottom:8}}>낮을수록 상위 노출 (1위가 최상위)</div>
+                <ResponsiveContainer width="100%" height={200}>
+                  <LineChart data={chartData}>
+                    <CartesianGrid strokeDasharray="3 3" stroke={C.border}/>
+                    <XAxis dataKey="date" tick={{fontSize:10}} stroke={C.border}/>
+                    <YAxis reversed tick={{fontSize:10}} stroke={C.border} domain={['dataMin - 2','dataMax + 2']}/>
+                    <Tooltip formatter={(v,n)=>[`${v}위`,n]}/>
+                    {chartKws.map(kw=>(
+                      <Line key={kw.id} type="monotone" dataKey={kw.name}
+                        stroke={kw.color} strokeWidth={2} dot={{r:4}} connectNulls/>
+                    ))}
+                  </LineChart>
+                </ResponsiveContainer>
+              </Card>
+            )}
+
+            {/* 최근 기록 */}
+            {logs.length > 0 && (
+              <Card>
+                <CardTitle title="최근 기록" sub="최신 20개"/>
+                <div style={{overflowX:"auto"}}>
+                  <table style={{width:"100%",borderCollapse:"collapse",fontSize:12}}>
+                    <thead>
+                      <tr style={{background:C.cream}}>
+                        {["날짜","키워드","순위","검색량","메모"].map(h=>(
+                          <th key={h} style={{padding:"6px 10px",textAlign:"left",fontWeight:700,color:C.inkMid,
+                            borderBottom:`1px solid ${C.border}`,whiteSpace:"nowrap"}}>{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {[...logs].sort((a,b)=>b.date.localeCompare(a.date)).slice(0,20).map(log=>{
+                        const kw = keywords.find(k=>k.id===log.keywordId);
+                        return (
+                          <tr key={log.id} style={{borderBottom:`1px solid ${C.border}`}}>
+                            <td style={{padding:"7px 10px",color:C.inkMid}}>{log.date}</td>
+                            <td style={{padding:"7px 10px"}}>
+                              <span style={{display:"inline-flex",alignItems:"center",gap:5}}>
+                                <span style={{width:8,height:8,borderRadius:"50%",background:kw?.color||C.inkLt,flexShrink:0}}/>
+                                <span style={{fontWeight:700,color:C.ink}}>{kw?.name||"삭제됨"}</span>
+                                {kw?.competitor&&<span style={{fontSize:10,color:C.inkLt}}>({kw.competitor})</span>}
+                              </span>
+                            </td>
+                            <td style={{padding:"7px 10px",fontWeight:800,color:C.ink}}>{log.rank}위</td>
+                            <td style={{padding:"7px 10px",color:C.inkMid}}>{log.volume?log.volume.toLocaleString():"—"}</td>
+                            <td style={{padding:"7px 10px",color:C.inkMid,maxWidth:160,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{log.note||"—"}</td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </Card>
+            )}
+          </>
+        )}
+
+        {/* 키워드 추가 모달 */}
+        {addKwModal&&(
+          <Modal title={<><MI n="add_circle"/> 키워드 추가</>} onClose={()=>{setAddKwModal(false);setKwInput("");setCompInput("");}}>
+            <FR label="키워드 *">
+              <Inp value={kwInput} onChange={setKwInput} placeholder="예: 전동칫솔, 음파칫솔" autoFocus/>
+            </FR>
+            <FR label="경쟁사 이름 (선택)">
+              <Inp value={compInput} onChange={setCompInput} placeholder="비워두면 '우리 브랜드' 키워드로 분류"/>
+            </FR>
+            <Btn onClick={addKeyword} disabled={!kwInput.trim()} style={{width:"100%",marginTop:4}}>
+              <MI n="add" size={13}/> 추가하기
+            </Btn>
+          </Modal>
+        )}
+
+        {/* 순위 기록 모달 */}
+        {logModal&&(
+          <Modal title={<><MI n="edit_note"/> 순위 기록</>} onClose={()=>setLogModal(false)}>
+            <FR label="키워드">
+              <select value={logKwId||""} onChange={e=>setLogKwId(e.target.value)}
+                style={{width:"100%",padding:"9px 12px",borderRadius:8,border:`1px solid ${C.border}`,
+                  fontSize:13,fontFamily:"inherit",background:"#fff",color:C.ink}}>
+                {keywords.map(k=><option key={k.id} value={k.id}>{k.name}{k.competitor?` (${k.competitor})`:""}</option>)}
+              </select>
+            </FR>
+            <FR label="날짜">
+              <Inp value={logDate} onChange={setLogDate} placeholder="YYYY-MM-DD"/>
+            </FR>
+            <FR label="순위 *">
+              <Inp value={logRank} onChange={setLogRank} placeholder="예: 3"/>
+            </FR>
+            <FR label="검색량 (선택)">
+              <Inp value={logVol} onChange={setLogVol} placeholder="예: 12000"/>
+            </FR>
+            <FR label="메모 (선택)">
+              <Inp value={logNote} onChange={setLogNote} placeholder="예: 주말 이벤트 영향"/>
+            </FR>
+            <Btn onClick={addLog} disabled={!logKwId||!logRank} style={{width:"100%",marginTop:4}}>
+              <MI n="save" size={13}/> 저장
+            </Btn>
+          </Modal>
+        )}
+      </div>
+    );
+  })();
+
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   // RENDER
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   return(
@@ -5178,6 +5325,7 @@ export default function OaDashboard(){
           {sec==="influencer"  && InfluencerSection}
           {sec==="schedule"    && ScheduleSection}
           {sec==="creative"    && CreativeSection}
+          {sec==="keyword"     && KeywordSection}
           {sec==="review"      && ReviewSection}
         </main>
       </div>
