@@ -1227,14 +1227,37 @@ export default function OaDashboard(){
     if(sheetUrl) fetchSheet(sheetUrl);
   }, [sheetUrl]); // eslint-disable-line
 
-  // ── 하이브리드 병합: 시트 캠페인 우선 + API 나머지 ──────────────────
+  // ── 하이브리드 병합: API 기본 + 시트 전환필드 덮어쓰기 ──────────────
   useEffect(() => {
-    if(sheetConvRaw.length > 0) {
-      // 시트에 있는 캠페인명 목록
-      const sheetCampaigns = new Set(sheetConvRaw.map(r=>r.campaign).filter(Boolean));
-      // API에서 시트에 없는 캠페인만 추가 (중복 방지)
-      const apiOnly = metaApiRaw.filter(r => !sheetCampaigns.has(r.campaign));
-      setMetaRaw([...sheetConvRaw, ...apiOnly]);
+    if(sheetConvRaw.length > 0 && metaApiRaw.length > 0) {
+      // 시트 조회: date+campaign+adName 키로 빠르게 찾기
+      const sheetMap = {};
+      sheetConvRaw.forEach(r => {
+        const k = `${r.date}||${r.campaign}||${r.adName}`;
+        sheetMap[k] = r;
+        // adName 없는 시트 행은 campaign+date 키로도 저장
+        const k2 = `${r.date}||${r.campaign}||`;
+        if(!sheetMap[k2]) sheetMap[k2] = r;
+      });
+      // API 각 행에 시트 전환필드 오버레이
+      const merged = metaApiRaw.map(apiRow => {
+        const k  = `${apiRow.date}||${apiRow.campaign}||${apiRow.adName}`;
+        const k2 = `${apiRow.date}||${apiRow.campaign}||`;
+        const s  = sheetMap[k] || sheetMap[k2];
+        if(!s) return apiRow;
+        return {
+          ...apiRow,
+          purchases:  s.purchases  || apiRow.purchases,
+          convValue:  s.convValue  || apiRow.convValue,
+          cpa:        s.cpa        || apiRow.cpa,
+          cart:       s.cart       || apiRow.cart,
+        };
+      });
+      setMetaRaw(merged);
+      setMetaStatus("ok");
+    } else if(sheetConvRaw.length > 0) {
+      // API 없고 시트만 있는 경우
+      setMetaRaw(sheetConvRaw);
       setMetaStatus("ok");
     } else {
       // 시트 없음: API 전체 사용
