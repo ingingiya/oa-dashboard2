@@ -1688,12 +1688,6 @@ export default function OaDashboard(){
         action:()=>{setSec("meta");setCampTab("conversion");},
       },
       {
-        id:"overdueIns", icon:"error", label:"인사이트 미입력", color:C.rose, bg:C.blush,
-        count:overdueIns.length, items:overdueIns,
-        render:(f)=>f.name,
-        action:()=>setSec("influencer"),
-      },
-      {
         id:"cautionInv", icon:"warning", label:"재고 주의", color:C.warn, bg:"#FFF8EC",
         count:cautionInv.length, items:cautionInv,
         render:(item)=>`${item.name} · ${stockDays(item)}일치`,
