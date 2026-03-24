@@ -4613,12 +4613,12 @@ export default function OaDashboard(){
                 {pendingReqs.map(r=>(
                   <div key={r.id} style={{borderRadius:10,border:`1px solid #8b5cf644`,background:"#f5f3ff",overflow:"hidden"}}>
                     <div style={{display:"flex",alignItems:"center",gap:8,padding:"10px 12px"}}>
-                      {r.thumbUrl&&(
+                      {(()=>{const t=r.thumbUrl||findThumb(r.adName);return t?(
                         <div style={{width:56,height:56,borderRadius:8,overflow:"hidden",flexShrink:0,
                           border:`1px solid #8b5cf633`,background:C.cream}}>
-                          <ThumbPreview url={r.thumbUrl} name={r.adName}/>
+                          <ThumbPreview url={t} name={r.adName}/>
                         </div>
-                      )}
+                      ):null;})()}
                       <div style={{flex:1,minWidth:0}}>
                         <div style={{fontSize:12,fontWeight:800,color:C.ink,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{r.adName}</div>
                         {r.adset&&<div style={{fontSize:10,color:"#8b5cf6",marginTop:1}}><MI n="folder_open" size={11}/> {r.adset}</div>}
