@@ -365,8 +365,8 @@ function mapMetaRow(row){
 function isConversionCampaign(objective, campaignName=""){
   const obj = (objective||"").toUpperCase();
   // 목표 컬럼으로 정확히 분류 (OUTCOME_SALES / LINK_CLICKS)
-  if(obj==="OUTCOME_SALES"||obj==="OUTCOME_ENGAGEMENT"||obj==="CONVERSIONS") return true;
-  if(obj==="LINK_CLICKS"||obj==="OUTCOME_TRAFFIC"||obj==="REACH"||obj==="BRAND_AWARENESS") return false;
+  if(["OUTCOME_SALES","OUTCOME_ENGAGEMENT","CONVERSIONS","SALES","WEBSITE_CONVERSIONS","PRODUCT_CATALOG_SALES"].includes(obj)) return true;
+  if(["LINK_CLICKS","OUTCOME_TRAFFIC","REACH","BRAND_AWARENESS","OUTCOME_AWARENESS","OUTCOME_LEADS"].includes(obj)) return false;
   // 목표가 없을 때 캠페인명으로 fallback
   const name=(campaignName||"").toLowerCase();
   if(["전환","conversion","purchase","구매","sales"].some(k=>name.includes(k))) return true;

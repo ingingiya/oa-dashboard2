@@ -8,19 +8,39 @@ function getAction(actions, type) {
   return a ? parseFloat(a.value) || 0 : 0;
 }
 
+const PURCHASE_TYPES = [
+  "purchase",
+  "offsite_conversion.fb_pixel_purchase",
+  "omni_purchase",
+  "web_in_store_purchase",
+  "website_purchase",
+];
+const CART_TYPES = [
+  "add_to_cart",
+  "offsite_conversion.fb_pixel_add_to_cart",
+  "omni_add_to_cart",
+];
+
+function getActionAny(arr, types) {
+  if (!Array.isArray(arr)) return 0;
+  for (const type of types) {
+    const a = arr.find(a => a.action_type === type);
+    if (a) return parseFloat(a.value) || 0;
+  }
+  return 0;
+}
+
 function normalize(row) {
   const actions      = row.actions || [];
   const actionValues = row.action_values || [];
   const costPerAction = row.cost_per_action_type || [];
 
-  const purchases  = getAction(actions, "purchase") || getAction(actions, "offsite_conversion.fb_pixel_purchase");
-  const cart       = getAction(actions, "add_to_cart") || getAction(actions, "offsite_conversion.fb_pixel_add_to_cart");
-  const convValue  = getAction(actionValues, "purchase") || getAction(actionValues, "offsite_conversion.fb_pixel_purchase");
-  const lpv        = getAction(actions, "landing_page_view");
+  const purchases = getActionAny(actions, PURCHASE_TYPES);
+  const cart      = getActionAny(actions, CART_TYPES);
+  const convValue = getActionAny(actionValues, PURCHASE_TYPES);
+  const lpv       = getAction(actions, "landing_page_view") || getAction(actions, "omni_landing_page_view");
 
-  const cpaCand = costPerAction.find(c =>
-    c.action_type === "purchase" || c.action_type === "offsite_conversion.fb_pixel_purchase"
-  );
+  const cpaCand = costPerAction.find(c => PURCHASE_TYPES.includes(c.action_type));
   const cpa = cpaCand ? parseFloat(cpaCand.value) || 0 : 0;
 
   return {
