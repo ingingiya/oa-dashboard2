@@ -743,6 +743,42 @@ export default function OaDashboard(){
   const invUrlLoaded = true; const infUrlLoaded = true;
   const sheetUrlLoaded = true; const orderUrlLoaded = true;
 
+  // Figma 파일 연동
+  const [figmaFileKey, setFigmaFileKey] = useSyncState("oa_figma_key_v7", "IzWkfCEUljK2E3utjpJxRa");
+  const [figmaFrames, setFigmaFrames] = useState([]); // [{name, nodeId}]
+  const [figmaLoading, setFigmaLoading] = useState(false);
+
+  const fetchFigmaFrames = useCallback(async (key) => {
+    const k = key || figmaFileKey;
+    if (!k) return;
+    setFigmaLoading(true);
+    try {
+      const res = await fetch(`/api/figma?fileKey=${k}`);
+      const data = await res.json();
+      if (data.frames) setFigmaFrames(data.frames);
+    } catch(e) {}
+    setFigmaLoading(false);
+  }, [figmaFileKey]);
+
+  useEffect(() => { if (figmaFileKey) fetchFigmaFrames(figmaFileKey); }, [figmaFileKey]);
+
+  function matchFigmaFrame(adName) {
+    if (!figmaFrames.length || !adName) return null;
+    const norm = s => s.toLowerCase().replace(/[\s_\-\(\)\[\]]/g, "");
+    const needle = norm(adName);
+    // 완전일치 우선
+    let found = figmaFrames.find(f => norm(f.name) === needle);
+    if (!found) found = figmaFrames.find(f => {
+      const hay = norm(f.name);
+      return hay.includes(needle) || needle.includes(hay);
+    });
+    return found || null;
+  }
+
+  function figmaLink(nodeId) {
+    return `https://www.figma.com/design/${figmaFileKey}?node-id=${nodeId.replace(":", "-")}`;
+  }
+
   // 콘텐츠 리뷰
   const [reviewItems, setReviewItems] = useSyncState("oa_review_v7", []);
   // 체크리스트
@@ -4913,9 +4949,18 @@ export default function OaDashboard(){
                   <span style={{fontSize:10,fontWeight:700,color:C.inkLt,background:C.cream,padding:"2px 8px",borderRadius:10}}>소진 {Math.round(ad.spend).toLocaleString()}원</span>
                   <span style={{fontSize:10,fontWeight:700,color:C.inkLt,background:C.cream,padding:"2px 8px",borderRadius:10}}>점수 {isFinite(ad._score)?Math.round(ad._score):0}점</span>
                 </div>
-                <div style={{display:"flex",gap:6,alignItems:"center"}}>
+                <div style={{display:"flex",gap:6,alignItems:"center",flexWrap:"wrap"}}>
+                  {(()=>{const fm=matchFigmaFrame(ad.adName);return fm?(
+                    <a href={figmaLink(fm.nodeId)} target="_blank" rel="noreferrer"
+                      style={{display:"flex",alignItems:"center",gap:4,fontSize:10,fontWeight:800,
+                        padding:"4px 10px",borderRadius:8,background:"#1ABCFE22",color:"#0d7fa8",
+                        border:"1px solid #1ABCFE55",textDecoration:"none",whiteSpace:"nowrap",flexShrink:0}}>
+                      <svg width="11" height="11" viewBox="0 0 38 57" fill="none"><path d="M10 28.5a9.5 9.5 0 0 1 9.5-9.5h9.5v19H19.5A9.5 9.5 0 0 1 10 28.5Z" fill="#1ABCFE"/><path d="M1 47.5A9.5 9.5 0 0 1 10.5 38H20v9.5a9.5 9.5 0 0 1-19 0Z" fill="#0ACF83"/><path d="M20 1v19h9.5a9.5 9.5 0 0 0 0-19H20Z" fill="#FF7262"/><path d="M1 9.5A9.5 9.5 0 0 0 10.5 19H20V1H10.5A9.5 9.5 0 0 0 1 9.5Z" fill="#F24E1E"/><path d="M1 28.5A9.5 9.5 0 0 0 10.5 38H20V19H10.5A9.5 9.5 0 0 0 1 28.5Z" fill="#A259FF"/></svg>
+                      Figma
+                    </a>
+                  ):null;})()}
                   <input value={reqNote} onChange={e=>setReqNote(e.target.value)} placeholder="요청 메모 (선택)"
-                    style={{flex:1,fontSize:10,padding:"4px 8px",borderRadius:8,border:`1px solid ${C.border}`,fontFamily:"inherit",outline:"none"}}/>
+                    style={{flex:1,minWidth:80,fontSize:10,padding:"4px 8px",borderRadius:8,border:`1px solid ${C.border}`,fontFamily:"inherit",outline:"none"}}/>
                   <Btn small onClick={()=>requestRecreate(ad)}><MI n="palette" size={13}/> 재제작 요청</Btn>
                   <Btn variant="sage" small disabled={alreadySaved} onClick={()=>{
                     if(alreadySaved){alert("이미 라이브러리에 저장된 소재예요");return;}
@@ -5001,27 +5046,28 @@ export default function OaDashboard(){
                     <div style={{fontSize:9,color:C.inkLt,marginTop:2}}>{item.addedAt}</div>
                   </div>
                   <div style={{display:"flex",flexDirection:"column",gap:4,flexShrink:0}}>
-                    {item.figmaUrl?(
-                      <a href={item.figmaUrl} target="_blank" rel="noreferrer"
-                        style={{display:"flex",alignItems:"center",gap:4,fontSize:10,fontWeight:800,
-                          padding:"4px 8px",borderRadius:8,background:"#1ABCFE22",color:"#0d7fa8",
-                          border:"1px solid #1ABCFE55",textDecoration:"none",whiteSpace:"nowrap"}}>
-                        <svg width="11" height="11" viewBox="0 0 38 57" fill="none" xmlns="http://www.w3.org/2000/svg">
-                          <path d="M10 28.5a9.5 9.5 0 0 1 9.5-9.5h9.5v19H19.5A9.5 9.5 0 0 1 10 28.5Z" fill="#1ABCFE"/>
-                          <path d="M1 47.5A9.5 9.5 0 0 1 10.5 38H20v9.5a9.5 9.5 0 0 1-19 0Z" fill="#0ACF83"/>
-                          <path d="M20 1v19h9.5a9.5 9.5 0 0 0 0-19H20Z" fill="#FF7262"/>
-                          <path d="M1 9.5A9.5 9.5 0 0 0 10.5 19H20V1H10.5A9.5 9.5 0 0 0 1 9.5Z" fill="#F24E1E"/>
-                          <path d="M1 28.5A9.5 9.5 0 0 0 10.5 38H20V19H10.5A9.5 9.5 0 0 0 1 28.5Z" fill="#A259FF"/>
-                        </svg>
-                        Figma
-                      </a>
-                    ):(
-                      <button onClick={()=>{setLibForm({name:item.name,link:item.link||"",figmaUrl:"",product:item.product||"",note:item.note||"",tags:item.tags||""});setLibModal({mode:"edit",item});}}
-                        style={{fontSize:10,fontWeight:700,padding:"4px 8px",borderRadius:8,border:`1px dashed ${C.border}`,
-                          background:"none",color:C.inkLt,cursor:"pointer",fontFamily:"inherit",whiteSpace:"nowrap"}}>
-                        + Figma
-                      </button>
-                    )}
+                    {(()=>{
+                      const url = item.figmaUrl || (()=>{const fm=matchFigmaFrame(item.name);return fm?figmaLink(fm.nodeId):"";})();
+                      const isAuto = !item.figmaUrl && !!url;
+                      return url?(
+                        <a href={url} target="_blank" rel="noreferrer"
+                          title={isAuto?"자동 매칭":"직접 입력한 링크"}
+                          style={{display:"flex",alignItems:"center",gap:4,fontSize:10,fontWeight:800,
+                            padding:"4px 8px",borderRadius:8,
+                            background:isAuto?"#1ABCFE11":"#1ABCFE22",color:"#0d7fa8",
+                            border:`1px solid ${isAuto?"#1ABCFE33":"#1ABCFE55"}`,
+                            textDecoration:"none",whiteSpace:"nowrap"}}>
+                          <svg width="11" height="11" viewBox="0 0 38 57" fill="none"><path d="M10 28.5a9.5 9.5 0 0 1 9.5-9.5h9.5v19H19.5A9.5 9.5 0 0 1 10 28.5Z" fill="#1ABCFE"/><path d="M1 47.5A9.5 9.5 0 0 1 10.5 38H20v9.5a9.5 9.5 0 0 1-19 0Z" fill="#0ACF83"/><path d="M20 1v19h9.5a9.5 9.5 0 0 0 0-19H20Z" fill="#FF7262"/><path d="M1 9.5A9.5 9.5 0 0 0 10.5 19H20V1H10.5A9.5 9.5 0 0 0 1 9.5Z" fill="#F24E1E"/><path d="M1 28.5A9.5 9.5 0 0 0 10.5 38H20V19H10.5A9.5 9.5 0 0 0 1 28.5Z" fill="#A259FF"/></svg>
+                          Figma{isAuto&&<span style={{fontSize:8,opacity:0.7}}> 자동</span>}
+                        </a>
+                      ):(
+                        <button onClick={()=>{setLibForm({name:item.name,link:item.link||"",figmaUrl:"",product:item.product||"",note:item.note||"",tags:item.tags||""});setLibModal({mode:"edit",item});}}
+                          style={{fontSize:10,fontWeight:700,padding:"4px 8px",borderRadius:8,border:`1px dashed ${C.border}`,
+                            background:"none",color:C.inkLt,cursor:"pointer",fontFamily:"inherit",whiteSpace:"nowrap"}}>
+                          + Figma
+                        </button>
+                      );
+                    })()}
                     <Btn variant="ghost" small onClick={()=>{setLibForm({name:item.name,link:item.link||"",figmaUrl:item.figmaUrl||"",product:item.product||"",note:item.note||"",tags:item.tags||""});setLibModal({mode:"edit",item});}}><MI n="edit" size={13}/></Btn>
                     <Btn variant="danger" small onClick={()=>removeFromLib(item.id)}><MI n="delete" size={13}/></Btn>
                   </div>
