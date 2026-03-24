@@ -4949,18 +4949,9 @@ export default function OaDashboard(){
                   <span style={{fontSize:10,fontWeight:700,color:C.inkLt,background:C.cream,padding:"2px 8px",borderRadius:10}}>소진 {Math.round(ad.spend).toLocaleString()}원</span>
                   <span style={{fontSize:10,fontWeight:700,color:C.inkLt,background:C.cream,padding:"2px 8px",borderRadius:10}}>점수 {isFinite(ad._score)?Math.round(ad._score):0}점</span>
                 </div>
-                <div style={{display:"flex",gap:6,alignItems:"center",flexWrap:"wrap"}}>
-                  {(()=>{const fm=matchFigmaFrame(ad.adName);return fm?(
-                    <a href={figmaLink(fm.nodeId)} target="_blank" rel="noreferrer"
-                      style={{display:"flex",alignItems:"center",gap:4,fontSize:10,fontWeight:800,
-                        padding:"4px 10px",borderRadius:8,background:"#1ABCFE22",color:"#0d7fa8",
-                        border:"1px solid #1ABCFE55",textDecoration:"none",whiteSpace:"nowrap",flexShrink:0}}>
-                      <svg width="11" height="11" viewBox="0 0 38 57" fill="none"><path d="M10 28.5a9.5 9.5 0 0 1 9.5-9.5h9.5v19H19.5A9.5 9.5 0 0 1 10 28.5Z" fill="#1ABCFE"/><path d="M1 47.5A9.5 9.5 0 0 1 10.5 38H20v9.5a9.5 9.5 0 0 1-19 0Z" fill="#0ACF83"/><path d="M20 1v19h9.5a9.5 9.5 0 0 0 0-19H20Z" fill="#FF7262"/><path d="M1 9.5A9.5 9.5 0 0 0 10.5 19H20V1H10.5A9.5 9.5 0 0 0 1 9.5Z" fill="#F24E1E"/><path d="M1 28.5A9.5 9.5 0 0 0 10.5 38H20V19H10.5A9.5 9.5 0 0 0 1 28.5Z" fill="#A259FF"/></svg>
-                      Figma
-                    </a>
-                  ):null;})()}
+                <div style={{display:"flex",gap:6,alignItems:"center"}}>
                   <input value={reqNote} onChange={e=>setReqNote(e.target.value)} placeholder="요청 메모 (선택)"
-                    style={{flex:1,minWidth:80,fontSize:10,padding:"4px 8px",borderRadius:8,border:`1px solid ${C.border}`,fontFamily:"inherit",outline:"none"}}/>
+                    style={{flex:1,fontSize:10,padding:"4px 8px",borderRadius:8,border:`1px solid ${C.border}`,fontFamily:"inherit",outline:"none"}}/>
                   <Btn small onClick={()=>requestRecreate(ad)}><MI n="palette" size={13}/> 재제작 요청</Btn>
                   <Btn variant="sage" small disabled={alreadySaved} onClick={()=>{
                     if(alreadySaved){alert("이미 라이브러리에 저장된 소재예요");return;}
@@ -5046,28 +5037,21 @@ export default function OaDashboard(){
                     <div style={{fontSize:9,color:C.inkLt,marginTop:2}}>{item.addedAt}</div>
                   </div>
                   <div style={{display:"flex",flexDirection:"column",gap:4,flexShrink:0}}>
-                    {(()=>{
-                      const url = item.figmaUrl || (()=>{const fm=matchFigmaFrame(item.name);return fm?figmaLink(fm.nodeId):"";})();
-                      const isAuto = !item.figmaUrl && !!url;
-                      return url?(
-                        <a href={url} target="_blank" rel="noreferrer"
-                          title={isAuto?"자동 매칭":"직접 입력한 링크"}
-                          style={{display:"flex",alignItems:"center",gap:4,fontSize:10,fontWeight:800,
-                            padding:"4px 8px",borderRadius:8,
-                            background:isAuto?"#1ABCFE11":"#1ABCFE22",color:"#0d7fa8",
-                            border:`1px solid ${isAuto?"#1ABCFE33":"#1ABCFE55"}`,
-                            textDecoration:"none",whiteSpace:"nowrap"}}>
-                          <svg width="11" height="11" viewBox="0 0 38 57" fill="none"><path d="M10 28.5a9.5 9.5 0 0 1 9.5-9.5h9.5v19H19.5A9.5 9.5 0 0 1 10 28.5Z" fill="#1ABCFE"/><path d="M1 47.5A9.5 9.5 0 0 1 10.5 38H20v9.5a9.5 9.5 0 0 1-19 0Z" fill="#0ACF83"/><path d="M20 1v19h9.5a9.5 9.5 0 0 0 0-19H20Z" fill="#FF7262"/><path d="M1 9.5A9.5 9.5 0 0 0 10.5 19H20V1H10.5A9.5 9.5 0 0 0 1 9.5Z" fill="#F24E1E"/><path d="M1 28.5A9.5 9.5 0 0 0 10.5 38H20V19H10.5A9.5 9.5 0 0 0 1 28.5Z" fill="#A259FF"/></svg>
-                          Figma{isAuto&&<span style={{fontSize:8,opacity:0.7}}> 자동</span>}
-                        </a>
-                      ):(
-                        <button onClick={()=>{setLibForm({name:item.name,link:item.link||"",figmaUrl:"",product:item.product||"",note:item.note||"",tags:item.tags||""});setLibModal({mode:"edit",item});}}
-                          style={{fontSize:10,fontWeight:700,padding:"4px 8px",borderRadius:8,border:`1px dashed ${C.border}`,
-                            background:"none",color:C.inkLt,cursor:"pointer",fontFamily:"inherit",whiteSpace:"nowrap"}}>
-                          + Figma
-                        </button>
-                      );
-                    })()}
+                    {item.figmaUrl?(
+                      <a href={item.figmaUrl}
+                        style={{display:"flex",alignItems:"center",gap:4,fontSize:10,fontWeight:800,
+                          padding:"4px 8px",borderRadius:8,background:"#1ABCFE22",color:"#0d7fa8",
+                          border:"1px solid #1ABCFE55",textDecoration:"none",whiteSpace:"nowrap"}}>
+                        <svg width="11" height="11" viewBox="0 0 38 57" fill="none"><path d="M10 28.5a9.5 9.5 0 0 1 9.5-9.5h9.5v19H19.5A9.5 9.5 0 0 1 10 28.5Z" fill="#1ABCFE"/><path d="M1 47.5A9.5 9.5 0 0 1 10.5 38H20v9.5a9.5 9.5 0 0 1-19 0Z" fill="#0ACF83"/><path d="M20 1v19h9.5a9.5 9.5 0 0 0 0-19H20Z" fill="#FF7262"/><path d="M1 9.5A9.5 9.5 0 0 0 10.5 19H20V1H10.5A9.5 9.5 0 0 0 1 9.5Z" fill="#F24E1E"/><path d="M1 28.5A9.5 9.5 0 0 0 10.5 38H20V19H10.5A9.5 9.5 0 0 0 1 28.5Z" fill="#A259FF"/></svg>
+                        Figma
+                      </a>
+                    ):(
+                      <button onClick={()=>{setLibForm({name:item.name,link:item.link||"",figmaUrl:"",product:item.product||"",note:item.note||"",tags:item.tags||""});setLibModal({mode:"edit",item});}}
+                        style={{fontSize:10,fontWeight:700,padding:"4px 8px",borderRadius:8,border:`1px dashed ${C.border}`,
+                          background:"none",color:C.inkLt,cursor:"pointer",fontFamily:"inherit",whiteSpace:"nowrap"}}>
+                        + Figma
+                      </button>
+                    )}
                     <Btn variant="ghost" small onClick={()=>{setLibForm({name:item.name,link:item.link||"",figmaUrl:item.figmaUrl||"",product:item.product||"",note:item.note||"",tags:item.tags||""});setLibModal({mode:"edit",item});}}><MI n="edit" size={13}/></Btn>
                     <Btn variant="danger" small onClick={()=>removeFromLib(item.id)}><MI n="delete" size={13}/></Btn>
                   </div>
@@ -5109,28 +5093,27 @@ export default function OaDashboard(){
                         {r.note&&<div style={{fontSize:10,color:C.inkMid,marginTop:2}}><MI n="chat_bubble" size={11}/> {r.note}</div>}
                       </div>
                       <div style={{display:"flex",flexDirection:"column",gap:4,flexShrink:0,alignItems:"flex-end"}}>
-                        {r.figmaUrl?(
-                          <a href={r.figmaUrl} target="_blank" rel="noreferrer"
-                            style={{display:"flex",alignItems:"center",gap:4,fontSize:10,fontWeight:800,
-                              padding:"4px 8px",borderRadius:8,background:"#1ABCFE22",color:"#0d7fa8",
-                              border:"1px solid #1ABCFE55",textDecoration:"none",whiteSpace:"nowrap"}}>
-                            <svg width="11" height="11" viewBox="0 0 38 57" fill="none" xmlns="http://www.w3.org/2000/svg">
-                              <path d="M10 28.5a9.5 9.5 0 0 1 9.5-9.5h9.5v19H19.5A9.5 9.5 0 0 1 10 28.5Z" fill="#1ABCFE"/>
-                              <path d="M1 47.5A9.5 9.5 0 0 1 10.5 38H20v9.5a9.5 9.5 0 0 1-19 0Z" fill="#0ACF83"/>
-                              <path d="M20 1v19h9.5a9.5 9.5 0 0 0 0-19H20Z" fill="#FF7262"/>
-                              <path d="M1 9.5A9.5 9.5 0 0 0 10.5 19H20V1H10.5A9.5 9.5 0 0 0 1 9.5Z" fill="#F24E1E"/>
-                              <path d="M1 28.5A9.5 9.5 0 0 0 10.5 38H20V19H10.5A9.5 9.5 0 0 0 1 28.5Z" fill="#A259FF"/>
-                            </svg>
-                            Figma 열기
-                          </a>
-                        ):(
-                          <button onClick={()=>setReqFigmaId(reqFigmaId===r.id?null:r.id)}
-                            style={{fontSize:10,fontWeight:700,padding:"4px 8px",borderRadius:8,
-                              border:`1px dashed #8b5cf6`,background:"none",color:"#8b5cf6",
-                              cursor:"pointer",fontFamily:"inherit",whiteSpace:"nowrap"}}>
-                            + Figma 연결
-                          </button>
-                        )}
+                        {(()=>{
+                          const autoFm = !r.figmaUrl ? matchFigmaFrame(r.adName) : null;
+                          const href = r.figmaUrl || (autoFm ? figmaLink(autoFm.nodeId) : null);
+                          const isAuto = !r.figmaUrl && !!autoFm;
+                          const FigSVG = ()=><svg width="11" height="11" viewBox="0 0 38 57" fill="none"><path d="M10 28.5a9.5 9.5 0 0 1 9.5-9.5h9.5v19H19.5A9.5 9.5 0 0 1 10 28.5Z" fill="#1ABCFE"/><path d="M1 47.5A9.5 9.5 0 0 1 10.5 38H20v9.5a9.5 9.5 0 0 1-19 0Z" fill="#0ACF83"/><path d="M20 1v19h9.5a9.5 9.5 0 0 0 0-19H20Z" fill="#FF7262"/><path d="M1 9.5A9.5 9.5 0 0 0 10.5 19H20V1H10.5A9.5 9.5 0 0 0 1 9.5Z" fill="#F24E1E"/><path d="M1 28.5A9.5 9.5 0 0 0 10.5 38H20V19H10.5A9.5 9.5 0 0 0 1 28.5Z" fill="#A259FF"/></svg>;
+                          return href ? (
+                            <a href={href} title={isAuto?`자동 매칭: ${autoFm.name}`:"직접 입력"}
+                              style={{display:"flex",alignItems:"center",gap:4,fontSize:10,fontWeight:800,
+                                padding:"4px 8px",borderRadius:8,background:"#1ABCFE22",color:"#0d7fa8",
+                                border:"1px solid #1ABCFE55",textDecoration:"none",whiteSpace:"nowrap"}}>
+                              <FigSVG/> Figma{isAuto&&<span style={{fontSize:8,opacity:0.6}}> 자동</span>}
+                            </a>
+                          ) : (
+                            <button onClick={()=>setReqFigmaId(reqFigmaId===r.id?null:r.id)}
+                              style={{fontSize:10,fontWeight:700,padding:"4px 8px",borderRadius:8,
+                                border:`1px dashed #8b5cf6`,background:"none",color:"#8b5cf6",
+                                cursor:"pointer",fontFamily:"inherit",whiteSpace:"nowrap"}}>
+                              + Figma
+                            </button>
+                          );
+                        })()}
                         <Btn variant="sage" small onClick={()=>resolveReq(r.id)}><MI n="check_circle" size={13}/> 완료</Btn>
                         <Btn variant="danger" small onClick={()=>deleteReq(r.id)}><MI n="delete" size={13}/></Btn>
                       </div>
