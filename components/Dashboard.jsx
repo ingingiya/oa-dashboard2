@@ -1750,8 +1750,45 @@ export default function OaDashboard(){
 
     const activeGroups = alertGroups.filter(g=>g.count>0);
 
+    // 전날 광고비 계산
+    const yesterday = new Date(); yesterday.setDate(yesterday.getDate()-1);
+    const yStr = yesterday.toISOString().slice(0,10);
+    const yRows = metaRaw.filter(r=>r.date===yStr);
+    const ySpend = yRows.reduce((s,r)=>s+(r.spend||0),0);
+    const yConv  = yRows.filter(r=>isConversionCampaign(r.objective,r.campaign)).reduce((s,r)=>s+(r.spend||0),0);
+    const yTraff = yRows.filter(r=>!isConversionCampaign(r.objective,r.campaign)).reduce((s,r)=>s+(r.spend||0),0);
+    const fmtW = n=>n>=10000?`₩${Math.round(n/10000).toLocaleString()}만`:`₩${Math.round(n).toLocaleString()}`;
+
     return(
     <div style={{display:"flex",flexDirection:"column",gap:12}}>
+
+      {/* ── 전날 광고비 카드 ── */}
+      {(metaApiStatus==="ok"||sheetConvRaw.length>0)&&(
+        <div onClick={()=>setSec("meta")} style={{
+          background: ySpend>0 ? "linear-gradient(135deg,#1D4ED8 0%,#2563EB 100%)" : C.cream,
+          borderRadius:14, padding:"14px 18px", cursor:"pointer",
+          border:`1px solid ${ySpend>0?"#1D4ED8":C.border}`,
+          display:"flex", alignItems:"center", justifyContent:"space-between",
+          boxShadow: ySpend>0?"0 4px 20px rgba(37,99,235,0.25)":"none",
+        }}>
+          <div>
+            <div style={{fontSize:11,fontWeight:700,color:ySpend>0?"rgba(255,255,255,0.75)":C.inkMid,marginBottom:4}}>
+              전날 광고비 · {yStr}
+              {ySpend===0&&metaRaw.length>0&&<span style={{marginLeft:6,fontSize:10}}>({metaRaw.map(r=>r.date).sort().pop()||"—"} 기준)</span>}
+            </div>
+            <div style={{fontSize:28,fontWeight:900,color:ySpend>0?"#fff":C.inkLt,lineHeight:1}}>
+              {ySpend>0 ? fmtW(ySpend) : metaRaw.length===0 ? "데이터 없음" : "어제 데이터 없음"}
+            </div>
+            {ySpend>0&&(
+              <div style={{display:"flex",gap:12,marginTop:6}}>
+                <span style={{fontSize:11,color:"rgba(255,255,255,0.8)"}}>전환 {fmtW(yConv)}</span>
+                <span style={{fontSize:11,color:"rgba(255,255,255,0.8)"}}>트래픽 {fmtW(yTraff)}</span>
+              </div>
+            )}
+          </div>
+          <MI n="arrow_forward_ios" size={16} style={{color:ySpend>0?"rgba(255,255,255,0.6)":C.inkLt}}/>
+        </div>
+      )}
 
       {/* ── 채널 바로가기 + ERP ── */}
       <div style={{background:C.white,border:`1px solid ${C.border}`,borderRadius:12,padding:"12px 14px"}}>
@@ -1979,7 +2016,7 @@ export default function OaDashboard(){
                 <>
                   <div style={{fontSize:12,fontWeight:800,color:C.good}}>Meta API 연결됨 · {metaRaw.length}건{deletedAds.length>0&&<span style={{color:C.inkLt,fontWeight:600}}> ({deletedAds.length}개 숨김)</span>}</div>
                   <div style={{fontSize:10,color:C.inkMid,marginTop:1}}>
-                    기간: {{last_7d:"최근 7일",last_14d:"최근 14일",last_30d:"최근 30일",last_90d:"최근 90일"}[metaDatePreset]||metaDatePreset}
+                    기간: {{yesterday:"어제",last_7d:"최근 7일",last_14d:"최근 14일",last_30d:"최근 30일",last_90d:"최근 90일"}[metaDatePreset]||metaDatePreset}
                   </div>
                 </>
               ) : metaApiStatus==="loading" ? (
@@ -1996,12 +2033,12 @@ export default function OaDashboard(){
           </div>
           <div style={{display:"flex",gap:6,flexWrap:"wrap",alignItems:"center"}}>
             {/* 기간 선택 */}
-            {["last_7d","last_14d","last_30d","last_90d"].map(p=>(
+            {["yesterday","last_7d","last_14d","last_30d","last_90d"].map(p=>(
               <button key={p} onClick={()=>{setMetaDatePreset(p);fetchMetaAds(p);}}
                 style={{fontSize:10,padding:"3px 9px",borderRadius:20,border:`1px solid ${metaDatePreset===p?C.rose:C.border}`,
                   background:metaDatePreset===p?C.rose:"#fff",color:metaDatePreset===p?"#fff":C.inkMid,
                   cursor:"pointer",fontFamily:"inherit",fontWeight:700}}>
-                {{"last_7d":"7일","last_14d":"14일","last_30d":"30일","last_90d":"90일"}[p]}
+                {{"yesterday":"어제","last_7d":"7일","last_14d":"14일","last_30d":"30일","last_90d":"90일"}[p]}
               </button>
             ))}
             <Btn variant="sage" small onClick={()=>fetchMetaAds()}><MI n="refresh" size={13}/> 새로고침</Btn>
