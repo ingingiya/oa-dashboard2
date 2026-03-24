@@ -1615,7 +1615,7 @@ export default function OaDashboard(){
     const adMargin = getAdMargin(ad.name, ad.campaign, margins, margin);
     const s=adScore(ad, adMargin, getConvCriteria(ad.name, ad.campaign, convCriteria)); return !cutAds.includes(ad)&&s.issues.some(i=>i.label==="보류"||i.label==="보통");
   });
-  const totalAlerts    = overdueIns.length+overdueScheds.length+urgentScheds.length+cutAds.length+holdAds.length+orderRaw.length;
+  const totalAlerts    = overdueScheds.length+urgentScheds.length+cutAds.length+holdAds.length+orderRaw.length;
 
   // ── CRUD 콜백 (모달 컴포넌트에서 onSave로 호출) ─────
   async function saveInf(item){
@@ -3472,16 +3472,6 @@ export default function OaDashboard(){
         </Modal>
       )}
 
-      {overdueIns.length>0&&(
-        <div style={{background:"#FFFBF0",border:`2px solid ${C.warn}66`,borderRadius:14,
-          padding:"12px 16px",display:"flex",alignItems:"center",gap:12,flexWrap:"wrap"}}>
-          <span style={{fontSize:20}}>⏰</span>
-          <div style={{flex:1,minWidth:140}}>
-            <div style={{fontSize:12,fontWeight:800,color:C.warn}}>인사이트 기록 필요 · {overdueIns.length}명</div>
-            <div style={{fontSize:10,color:C.inkMid,marginTop:2}}>{overdueIns.map(f=>f.name).join(" · ")}</div>
-          </div>
-        </div>
-      )}
       <KpiGrid items={infKpi} cols={6}/>
       <div className="content-grid-2" style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
         {/* 💰 2차활용 미입금 카드 */}
@@ -5091,7 +5081,6 @@ export default function OaDashboard(){
             {orderStatus==="ok"&&orderRaw.length>0&&<div style={{fontSize:10,color:C.bad,fontWeight:700,marginBottom:3}}><MI n="inventory_2" size={11}/> 발주임박 {orderRaw.length}개</div>}
             {cutAds.length>0&&<div style={{fontSize:10,color:C.bad,fontWeight:700,marginBottom:3}}><MI n="cancel" size={11}/> 광고교체 {cutAds.length}개</div>}
             {holdAds.length>0&&<div style={{fontSize:10,color:C.warn,marginBottom:3}}><MI n="pause_circle" size={11}/> 광고보류 {holdAds.length}개</div>}
-            {overdueIns.length>0&&<div style={{fontSize:10,color:C.inkMid,marginBottom:3}}><MI n="error" size={11}/> 인사이트 {overdueIns.length}명</div>}
             {overdueScheds.length>0&&<div style={{fontSize:10,color:C.inkMid,marginBottom:3}}><MI n="calendar_month" size={11}/> 기간초과 {overdueScheds.length}건</div>}
             {urgentScheds.length>0&&<div style={{fontSize:10,color:C.inkMid}}><MI n="notifications" size={11}/> D-5임박 {urgentScheds.length}건</div>}
           </div>
