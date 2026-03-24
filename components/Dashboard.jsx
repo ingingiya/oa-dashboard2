@@ -1219,9 +1219,9 @@ export default function OaDashboard(){
     }
   }
 
-  // 마운트 시 Meta API 자동 로드 (시트 없을 때)
+  // 마운트 시 Meta API 자동 로드
   useEffect(() => {
-    if (!sheetUrl) fetchMetaAds();
+    fetchMetaAds();
   }, []); // eslint-disable-line
 
   // ── 구글 시트 fetch ──────────────────────────────
@@ -1995,7 +1995,6 @@ export default function OaDashboard(){
               </button>
             ))}
             <Btn variant="sage" small onClick={()=>fetchMetaAds()}><MI n="refresh" size={13}/> 새로고침</Btn>
-            {hasSheet&&<Btn variant="neutral" small onClick={()=>fetchSheet(sheetUrl)}><MI n="table" size={13}/> 시트</Btn>}
             {deletedAds.length>0&&(
               <div style={{position:"relative"}}>
                 <Btn variant="neutral" small onClick={()=>setShowDeletedPanel(p=>!p)}>
@@ -2036,9 +2035,6 @@ export default function OaDashboard(){
               </div>
             )}
             <Btn variant="ghost" small onClick={()=>{setMarginInput(String(margin));setMarginModal(true)}}>⚙️ 기준 설정</Btn>
-            <Btn variant={hasSheet?"neutral":"gold"} small onClick={()=>{setSheetInput(sheetUrl);setSheetModal(true)}}>
-              {hasSheet?"⚙️ 시트 변경":<><MI n="link" size={13}/> 시트 연결</>}
-            </Btn>
           </div>
         </div>
 
@@ -2140,14 +2136,12 @@ export default function OaDashboard(){
           );
         })()}
 
-        {/* ── 카드2: 전체 광고비 (파일 업로드) ── */}
+        {/* ── 카드2: 전체 광고비 (Meta API) ── */}
         {hasSheet&&(()=>{
           const fmtW = n=>n>=10000?`₩${Math.round(n/10000).toLocaleString()}만`:`₩${Math.round(n).toLocaleString()}`;
-          const hasFile = allAdStatus==="ok" && allAdRaw.length>0;
-          const isInsta = r=>(r.campaign||r.adName||"").includes("Instagram 게시물");
-          const fileRows = allAdRaw.filter(r=>!isInsta(r));
-          const fileConv    = fileRows.filter(r=>isConversionCampaign(r.objective,r.campaign));
-          const fileTraffic = fileRows.filter(r=>!isConversionCampaign(r.objective,r.campaign));
+          const allRows = metaRaw.filter(r=>!isInstaPost(r));
+          const allConv    = allRows.filter(r=>isConversionCampaign(r.objective,r.campaign));
+          const allTraffic = allRows.filter(r=>!isConversionCampaign(r.objective,r.campaign));
           const spend = arr=>arr.reduce((s,r)=>s+(r.spend||0),0);
           const purch = arr=>arr.reduce((s,r)=>s+(r.purchases||0),0);
           const convV = arr=>arr.reduce((s,r)=>s+(r.convValue||0),0);
@@ -2159,61 +2153,41 @@ export default function OaDashboard(){
               <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12,gap:8,flexWrap:"wrap"}}>
                 <div>
                   <div style={{fontSize:12,fontWeight:800,letterSpacing:"0.05em"}}><MI n="payments" size={14}/> 전체 광고비</div>
-                  <div style={{fontSize:10,opacity:0.4,marginTop:2}}>미게재 포함 · 파일 업로드</div>
+                  <div style={{fontSize:10,opacity:0.4,marginTop:2}}>Meta API · {{"last_7d":"최근 7일","last_14d":"최근 14일","last_30d":"최근 30일","last_90d":"최근 90일"}[metaDatePreset]||metaDatePreset}</div>
                 </div>
-                <div style={{display:"flex",gap:8,alignItems:"center"}}>
-                  {hasFile&&<div style={{textAlign:"right"}}>
-                    <div style={{fontSize:9,opacity:0.5}}>총 광고비</div>
-                    <div style={{fontSize:20,fontWeight:900,color:"#fbbf24"}}>{fmtW(spend(fileRows))}</div>
-                  </div>}
-                  <div>
-                    <input ref={allAdFileRef} type="file" accept=".xlsx,.csv" style={{display:"none"}}
-                      onChange={e=>e.target.files[0]&&handleAllAdFile(e.target.files[0])}/>
-                    <button onClick={()=>allAdFileRef.current?.click()}
-                      style={{fontSize:10,fontWeight:700,padding:"6px 14px",borderRadius:8,
-                        background:hasFile?"rgba(251,191,36,0.15)":"rgba(255,255,255,0.08)",
-                        color:hasFile?"#fbbf24":"rgba(255,255,255,0.5)",
-                        border:`1px solid ${hasFile?"rgba(251,191,36,0.3)":"rgba(255,255,255,0.12)"}`,
-                        cursor:"pointer",fontFamily:"inherit"}}>
-                      {allAdStatus==="loading"?<MI n="hourglass_empty" size={13}/>:hasFile?<><MI n="refresh" size={13}/> 파일 변경</>:<><MI n="folder_open" size={13}/> 파일 업로드</>}
-                    </button>
-                  </div>
+                <div style={{textAlign:"right"}}>
+                  <div style={{fontSize:9,opacity:0.5}}>총 광고비</div>
+                  <div style={{fontSize:20,fontWeight:900,color:"#fbbf24"}}>{fmtW(spend(allRows))}</div>
                 </div>
               </div>
-              {hasFile?(
-                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:10}}>
-                  {[
-                    {label:"전환",icon:"track_changes",rows:fileConv,accent:"#f9a8d4"},
-                    {label:"트래픽",icon:"traffic",rows:fileTraffic,accent:"#93c5fd"},
-                    {label:"합산",icon:"bar_chart",rows:fileRows,accent:"#fbbf24"},
-                  ].map(({label,icon,rows,accent})=>(
-                    <div key={label} style={{background:"rgba(255,255,255,0.05)",borderRadius:12,padding:"12px"}}>
-                      <div style={{display:"flex",alignItems:"center",gap:5,marginBottom:8}}>
-                        <MI n={icon} size={14}/>
-                        <span style={{fontSize:11,fontWeight:800,color:accent}}>{label}</span>
-                        <span style={{marginLeft:"auto",fontSize:10,opacity:0.35}}>{ads(rows)}개</span>
-                      </div>
-                      <div style={{fontSize:16,fontWeight:900,color:"rgba(255,255,255,0.9)",marginBottom:6}}>{fmtW(spend(rows))}</div>
-                      <div style={{display:"flex",flexDirection:"column",gap:3}}>
-                        {[
-                          ["구매",`${purch(rows)}건`],
-                          ["ROAS",spend(rows)>0?`${Math.round((convV(rows)/spend(rows))*100)}%`:"—"],
-                          ["CPA", purch(rows)>0?fmtW(spend(rows)/purch(rows)):"—"],
-                        ].map(([l,v])=>(
-                          <div key={l} style={{display:"flex",justifyContent:"space-between"}}>
-                            <span style={{fontSize:9,opacity:0.4,fontWeight:600}}>{l}</span>
-                            <span style={{fontSize:10,fontWeight:700,color:"rgba(255,255,255,0.7)"}}>{v}</span>
-                          </div>
-                        ))}
-                      </div>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:10}}>
+                {[
+                  {label:"전환",icon:"track_changes",rows:allConv,accent:"#f9a8d4"},
+                  {label:"트래픽",icon:"traffic",rows:allTraffic,accent:"#93c5fd"},
+                  {label:"합산",icon:"bar_chart",rows:allRows,accent:"#fbbf24"},
+                ].map(({label,icon,rows,accent})=>(
+                  <div key={label} style={{background:"rgba(255,255,255,0.05)",borderRadius:12,padding:"12px"}}>
+                    <div style={{display:"flex",alignItems:"center",gap:5,marginBottom:8}}>
+                      <MI n={icon} size={14}/>
+                      <span style={{fontSize:11,fontWeight:800,color:accent}}>{label}</span>
+                      <span style={{marginLeft:"auto",fontSize:10,opacity:0.35}}>{ads(rows)}개</span>
                     </div>
-                  ))}
-                </div>
-              ):(
-                <div style={{textAlign:"center",padding:"20px 0",opacity:0.3,fontSize:11}}>
-                  파일 업로드하면 전체 광고비가 표시돼요
-                </div>
-              )}
+                    <div style={{fontSize:16,fontWeight:900,color:"rgba(255,255,255,0.9)",marginBottom:6}}>{fmtW(spend(rows))}</div>
+                    <div style={{display:"flex",flexDirection:"column",gap:3}}>
+                      {[
+                        ["구매",`${purch(rows)}건`],
+                        ["ROAS",spend(rows)>0?`${Math.round((convV(rows)/spend(rows))*100)}%`:"—"],
+                        ["CPA", purch(rows)>0?fmtW(spend(rows)/purch(rows)):"—"],
+                      ].map(([l,v])=>(
+                        <div key={l} style={{display:"flex",justifyContent:"space-between"}}>
+                          <span style={{fontSize:9,opacity:0.4,fontWeight:600}}>{l}</span>
+                          <span style={{fontSize:10,fontWeight:700,color:"rgba(255,255,255,0.7)"}}>{v}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           );
         })()}
