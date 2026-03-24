@@ -96,5 +96,14 @@ export async function GET(request) {
     url = data.paging?.next || null;
   }
 
+  // 디버그: ?debug=1 이면 첫 3개 raw 반환
+  if (searchParams.get("debug") === "1") {
+    const debugRows = [];
+    let debugUrl = `${GRAPH}/${accountId}/insights?level=ad&fields=${fields}&time_increment=1${timeRange}&limit=3&access_token=${token}`;
+    const debugRes = await fetch(debugUrl);
+    const debugData = await debugRes.json();
+    return Response.json({ raw: (debugData.data || []).slice(0, 3) });
+  }
+
   return Response.json({ rows: allRows, total: allRows.length });
 }
