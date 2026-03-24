@@ -640,19 +640,28 @@ export default function OaDashboard(){
     fetchNotionSch({ month });
   }, [fetchNotionSch]);
 
+  const NOTION_ASSIGNEE_COLORS = {"소리":"#f472b6","영서":"#60a5fa","경은":"#34d399","지수":"#a78bfa"};
+
   async function saveNotionSch(item) {
-    if (schModalData?.mode === "edit" && item.notionId) {
-      await fetch("/api/notion", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "update", pageId: item.notionId, data: {
-          title: item.title, date: item.date, endDate: item.endDate || null,
-          assignee: item.assignee || null, type: item.type, status: item.status,
-          memo: item.note || "",
-        }}),
-      });
+    const isEdit = schModalData?.mode === "edit" && item.notionId;
+
+    // 옵티미스틱 업데이트 — 모달 즉시 닫기
+    if (isEdit) {
+      setNotionSch(prev => prev.map(s => s.id === item.notionId ? {
+        ...s, title: item.title, date: item.date, endDate: item.endDate || null,
+        assignee: item.assignee || null, type: item.type, status: item.status,
+        memo: item.note || "", assigneeColor: NOTION_ASSIGNEE_COLORS[item.assignee] || "#94a3b8",
+      } : s));
     } else {
-      await fetch("/api/notion", {
+      const tempId = `temp_${Date.now()}`;
+      setNotionSch(prev => [...prev, {
+        id: tempId, title: item.title, date: item.date, endDate: item.endDate || null,
+        assignee: item.assignee || null, type: item.type, status: item.status || "예정",
+        memo: item.note || "", done: false,
+        assigneeColor: NOTION_ASSIGNEE_COLORS[item.assignee] || "#94a3b8",
+      }]);
+      // 백그라운드 저장 후 실제 ID로 교체
+      fetch("/api/notion", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action: "create", data: {
@@ -660,10 +669,24 @@ export default function OaDashboard(){
           assignee: item.assignee || null, type: item.type, status: item.status || "예정",
           memo: item.note || "",
         }}),
+      }).then(r => r.json()).then(data => {
+        if (data.id) setNotionSch(prev => prev.map(s => s.id === tempId ? { ...s, id: data.id } : s));
       });
+      setSchModalData(null);
+      return;
     }
-    await fetchNotionSch();
     setSchModalData(null);
+
+    // 편집은 백그라운드 저장
+    fetch("/api/notion", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "update", pageId: item.notionId, data: {
+        title: item.title, date: item.date, endDate: item.endDate || null,
+        assignee: item.assignee || null, type: item.type, status: item.status,
+        memo: item.note || "",
+      }}),
+    });
   }
 
   async function deleteNotionSch(notionId) {
