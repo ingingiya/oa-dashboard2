@@ -776,7 +776,7 @@ export default function OaDashboard(){
   }
 
   function figmaLink(nodeId) {
-    return `https://www.figma.com/design/${figmaFileKey}?node-id=${nodeId.replace(":", "-")}`;
+    return `figma://file/${figmaFileKey}?node-id=${nodeId.replace(":", "-")}`;
   }
 
   // 콘텐츠 리뷰
