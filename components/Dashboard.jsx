@@ -3406,6 +3406,9 @@ export default function OaDashboard(){
 
 
   const InfluencerSection=(()=>{
+    const [infSearch, setInfSearch] = useState("");
+    const [infStatusFilter, setInfStatusFilter] = useState("전체");
+    const [expandedRow, setExpandedRow] = useState(null);
     const tierData=[
       {name:"매크로",value:infs.filter(f=>f.tier==="매크로").length,color:C.rose},
       {name:"미드",  value:infs.filter(f=>f.tier==="미드").length,  color:C.gold},
@@ -3554,142 +3557,151 @@ export default function OaDashboard(){
       </div>
 
       <Card>
-        <CardTitle title="인플루언서별 시딩 현황" sub="게시일 최근순"
-          action={<Btn small onClick={()=>{setInfModalData({mode:"add",initial:null})}}>+ 추가</Btn>}/>
+        <CardTitle title={<><MI n="table_rows" size={14}/> 인플루언서 목록</>}
+          sub={`${infs.length}명`}
+          action={<Btn small onClick={()=>setInfModalData({mode:"add",initial:null})}>+ 추가</Btn>}/>
+
+        {/* 검색 + 필터 */}
+        <div style={{display:"flex",gap:8,marginBottom:10,flexWrap:"wrap"}}>
+          <input value={infSearch} onChange={e=>setInfSearch(e.target.value)} placeholder="이름 · 제품 검색"
+            style={{flex:1,minWidth:120,fontSize:11,padding:"6px 10px",borderRadius:8,
+              border:`1px solid ${C.border}`,fontFamily:"inherit",outline:"none"}}/>
+          {["전체","미게시","대기중","완료필요","기록완료"].map(f=>(
+            <button key={f} onClick={()=>setInfStatusFilter(f)}
+              style={{fontSize:10,padding:"4px 12px",borderRadius:20,border:`1px solid ${infStatusFilter===f?C.rose:C.border}`,
+                background:infStatusFilter===f?C.rose:C.cream,color:infStatusFilter===f?C.white:C.inkMid,
+                cursor:"pointer",fontFamily:"inherit",fontWeight:700,whiteSpace:"nowrap"}}>
+              {f}
+            </button>
+          ))}
+        </div>
+
         {infs.length===0&&(
           <div style={{textAlign:"center",padding:"32px 0",color:C.inkLt,fontSize:12}}>
             아직 등록된 인플루언서가 없어요<br/>
-            <Btn style={{marginTop:12}} onClick={()=>{setInfModalData({mode:"add",initial:null})}}>+ 첫 번째 추가</Btn>
+            <Btn style={{marginTop:12}} onClick={()=>setInfModalData({mode:"add",initial:null})}>+ 첫 번째 추가</Btn>
           </div>
         )}
-        <div style={{display:"flex",flexDirection:"column",gap:8}}>
-          {[...infs].sort((a,b)=>{
-            if(!a.postedDate&&!b.postedDate) return 0;
-            if(!a.postedDate) return 1;
-            if(!b.postedDate) return -1;
-            return new Date(b.postedDate)-new Date(a.postedDate);
-          }).map(f=>{
-            const st=insightStatus(f);
-            const tc={유료:C.rose,무료:C.sage,매크로:C.rose,미드:C.gold,마이크로:C.sage,나노:C.purple}[f.tier]||C.inkMid;
-            const due=addDays(f.postedDate,7);
-            const elapsed=f.postedDate&&due?Math.min(Math.max((TODAY-new Date(f.postedDate))/(new Date(due)-new Date(f.postedDate)),0),1):0;
-            return(
-              <div key={f.id} style={{border:`1px solid ${st.label.includes("미입력")||st.label==="오늘 입력!"?C.warn+"66":C.border}`,
-                borderRadius:12,padding:"12px 14px",background:st.label.includes("미입력")?"#FFF8F8":C.white}}>
-                <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",gap:8,flexWrap:"wrap"}}>
-                  <div style={{display:"flex",gap:10,alignItems:"center",flex:1,minWidth:0}}>
-                    <div style={{width:34,height:34,borderRadius:10,background:`${tc}22`,flexShrink:0,
-                      display:"flex",alignItems:"center",justifyContent:"center",fontSize:15}}>
-                      {f.platform==="인스타"?<MI n="photo_camera" size={15}/>:f.platform==="유튜브"?"▶️":"🎵"}
-                    </div>
-                    <div>
-                      <div style={{fontSize:12,fontWeight:800,color:C.ink}}>
-                        {(()=>{
-                          const handle = f.name.replace(/^@/,"");
-                          const url = f.platform==="유튜브"
-                            ? `https://www.youtube.com/@${handle}`
-                            : f.platform==="틱톡"
-                            ? `https://www.tiktok.com/@${handle}`
-                            : `https://www.instagram.com/${handle}`;
-                          return(
-                            <a href={url} target="_blank" rel="noopener noreferrer"
-                              style={{color:C.ink,textDecoration:"none",cursor:"pointer",
-                                borderBottom:`1px dashed ${C.border}`}}
-                              onMouseEnter={e=>{e.currentTarget.style.color=C.rose;e.currentTarget.style.borderBottomColor=C.rose;}}
-                              onMouseLeave={e=>{e.currentTarget.style.color=C.ink;e.currentTarget.style.borderBottomColor=C.border;}}>
-                              {f.displayName||f.name}
-                            </a>
-                          );
-                        })()}
-                      </div>
-                      <div style={{fontSize:10,color:C.inkLt}}>
-                        <span style={{color:tc,fontWeight:700}}>{f.tier}</span>{" · "}{f.name}{" · "}{f.product}
-                      </div>
-                    </div>
-                  </div>
-                  <div style={{display:"flex",alignItems:"center",gap:6,flexShrink:0,flexWrap:"wrap"}}>
-                    <span style={{fontSize:10,fontWeight:700,color:st.color,background:st.bg,
-                      padding:"3px 10px",borderRadius:20,whiteSpace:"nowrap",display:"inline-flex",alignItems:"center",gap:3}}><MI n={st.icon} size={12}/> {st.label}</span>
-                    {st.label!=="기록완료"&&st.label!=="미게시"&&(
-                      <Btn variant="ghost" small onClick={()=>{
-                        setInsModalData({initial:{id:f.id,name:f.name,reach:"",saves:"",clicks:"",conv:""}});
-                        setInsModalData({initial:true});
-                      }}><MI n="edit_note" size={13}/> 기록</Btn>
+
+        {infs.length>0&&(()=>{
+          const norm = s => (s||"").toLowerCase();
+          const filtered = [...infs]
+            .filter(f=>{
+              if(infSearch){
+                const q=norm(infSearch);
+                if(!norm(f.displayName).includes(q)&&!norm(f.name).includes(q)&&!norm(f.product).includes(q)) return false;
+              }
+              if(infStatusFilter!=="전체"){
+                const st=insightStatus(f);
+                if(infStatusFilter==="미게시"&&f.posted) return false;
+                if(infStatusFilter==="미게시"&&!f.posted) return true;
+                if(infStatusFilter==="기록완료"&&st.label!=="기록완료") return false;
+                if(infStatusFilter==="완료필요"&&!st.label.includes("미입력")&&st.label!=="오늘 입력!") return false;
+                if(infStatusFilter==="대기중"&&f.posted&&(st.label==="기록완료"||st.label.includes("미입력")||st.label==="오늘 입력!")) return false;
+              }
+              return true;
+            })
+            .sort((a,b)=>{
+              if(!a.postedDate&&!b.postedDate) return 0;
+              if(!a.postedDate) return 1; if(!b.postedDate) return -1;
+              return new Date(b.postedDate)-new Date(a.postedDate);
+            });
+
+          const TC = {유료:C.rose,무료:C.sage,매크로:C.rose,미드:C.gold,마이크로:C.sage,나노:C.purple};
+          const platIcon = p => p==="유튜브"?<MI n="play_circle" size={14}/>:p==="틱톡"?<MI n="music_note" size={14}/>:<MI n="photo_camera" size={14}/>;
+
+          return(
+          <div style={{overflowX:"auto",WebkitOverflowScrolling:"touch"}}>
+            <table style={{width:"100%",borderCollapse:"collapse",minWidth:520}}>
+              <thead>
+                <tr style={{background:C.cream,borderBottom:`2px solid ${C.border}`}}>
+                  {["이름","플랫폼","제품","상태","게시일","발송",""].map(h=>(
+                    <th key={h} style={{padding:"7px 10px",textAlign:"left",fontSize:10,fontWeight:700,
+                      color:C.inkMid,whiteSpace:"nowrap"}}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {filtered.map(f=>{
+                  const st=insightStatus(f);
+                  const tc=TC[f.tier]||C.inkMid;
+                  const isExp=expandedRow===f.id;
+                  const handle=f.name.replace(/^@/,"");
+                  const profileUrl=f.platform==="유튜브"?`https://www.youtube.com/@${handle}`:f.platform==="틱톡"?`https://www.tiktok.com/@${handle}`:`https://www.instagram.com/${handle}`;
+                  const urgent=st.label.includes("미입력")||st.label==="오늘 입력!";
+                  return(<>
+                    <tr key={f.id} onClick={()=>setExpandedRow(isExp?null:f.id)}
+                      style={{borderBottom:`1px solid ${C.border}`,cursor:"pointer",
+                        background:isExp?"#EFF6FF":urgent?"#FFF8F8":C.white,
+                        transition:"background 0.1s"}}>
+                      <td style={{padding:"9px 10px",whiteSpace:"nowrap"}}>
+                        <div style={{fontSize:12,fontWeight:800,color:C.ink}}>
+                          <a href={profileUrl} target="_blank" rel="noreferrer"
+                            onClick={e=>e.stopPropagation()}
+                            style={{color:C.ink,textDecoration:"none",borderBottom:`1px dashed ${C.border}`}}>
+                            {f.displayName||f.name}
+                          </a>
+                        </div>
+                        <div style={{fontSize:9,color:C.inkLt}}>{f.name}</div>
+                      </td>
+                      <td style={{padding:"9px 10px"}}>
+                        <span style={{color:tc,display:"flex",alignItems:"center",gap:3,fontSize:10,fontWeight:700}}>
+                          {platIcon(f.platform)}
+                        </span>
+                      </td>
+                      <td style={{padding:"9px 10px",fontSize:11,color:C.inkMid,maxWidth:100,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{f.product||"—"}</td>
+                      <td style={{padding:"9px 10px"}}>
+                        <span style={{fontSize:10,fontWeight:700,color:st.color,background:st.bg,
+                          padding:"2px 8px",borderRadius:20,whiteSpace:"nowrap",display:"inline-flex",alignItems:"center",gap:3}}>
+                          <MI n={st.icon} size={11}/> {st.label}
+                        </span>
+                      </td>
+                      <td style={{padding:"9px 10px",fontSize:11,color:C.inkMid,whiteSpace:"nowrap"}}>{f.postedDate||"—"}</td>
+                      <td style={{padding:"9px 10px"}}>
+                        <MI n={f.sent?"check_circle":"radio_button_unchecked"} size={14} style={{color:f.sent?C.good:C.border}}/>
+                      </td>
+                      <td style={{padding:"9px 10px"}}>
+                        <div style={{display:"flex",gap:4}} onClick={e=>e.stopPropagation()}>
+                          <Btn variant="neutral" small onClick={()=>setInfModalData({mode:"edit",initial:f})}><MI n="edit" size={12}/></Btn>
+                          <Btn variant="danger" small onClick={()=>setInfs(infs.filter(x=>x.id!==f.id))}><MI n="delete" size={12}/></Btn>
+                        </div>
+                      </td>
+                    </tr>
+                    {isExp&&(
+                      <tr key={f.id+"_exp"} style={{background:"#F0F7FF"}}>
+                        <td colSpan={7} style={{padding:"12px 14px"}}>
+                          <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:8}}>
+                            {[
+                              {label:f.videoReceived?"🎬 영상수령":"🎬 미수령",active:f.videoReceived,onClick:()=>setInfs(arr=>arr.map(x=>x.id===f.id?{...x,videoReceived:!x.videoReceived}:x))},
+                              {label:f.reusable?"♻️ 2차활용":"♻️ 미허용",active:f.reusable,onClick:()=>setInfs(arr=>arr.map(x=>x.id===f.id?{...x,reusable:!x.reusable}:x))},
+                              ...(f.reusable?[{label:f.paid?"💰 입금완료":"💰 미입금",active:f.paid,onClick:()=>setInfs(arr=>arr.map(x=>x.id===f.id?{...x,paid:!x.paid}:x))}]:[]),
+                              {label:f.metaUsed?"📢 메타활용":"📢 미활용",active:f.metaUsed,onClick:()=>setInfs(arr=>arr.map(x=>x.id===f.id?{...x,metaUsed:!x.metaUsed}:x))},
+                            ].map(({label,active,onClick})=>(
+                              <span key={label} onClick={onClick} style={{fontSize:10,fontWeight:700,padding:"3px 10px",
+                                borderRadius:20,cursor:"pointer",userSelect:"none",
+                                background:active?"#EDF7F1":C.cream,color:active?C.good:C.inkMid,
+                                border:`1px solid ${active?C.good+"44":C.border}`}}>{label}</span>
+                            ))}
+                          </div>
+                          {f.reach!==null&&(
+                            <div style={{display:"flex",gap:16,marginBottom:6}}>
+                              {[{l:"도달",v:(f.reach/1000).toFixed(0)+"K",c:C.rose},{l:"저장",v:f.saves?.toLocaleString(),c:C.gold},{l:"클릭",v:f.clicks?.toLocaleString(),c:C.purple},{l:"전환",v:f.conv,c:C.good}].map(({l,v,c})=>(
+                                <div key={l}><div style={{fontSize:9,color:C.inkLt}}>{l}</div><div style={{fontSize:13,fontWeight:800,color:c}}>{v}</div></div>
+                              ))}
+                            </div>
+                          )}
+                          {f.note&&<div style={{fontSize:10,color:C.inkMid,background:"#fff",padding:"4px 10px",borderRadius:8,display:"inline-block"}}>{f.note}</div>}
+                        </td>
+                      </tr>
                     )}
-                    <Btn variant="neutral" small onClick={()=>{setInfModalData({mode:"edit",initial:f})}}>수정</Btn>
-                    <Btn variant="danger" small onClick={()=>setInfs(infs.filter(x=>x.id!==f.id))}><MI n="delete" size={14}/></Btn>
-                  </div>
-                </div>
-                {f.postedDate&&(
-                  <div style={{marginTop:10}}>
-                    <div style={{display:"flex",justifyContent:"space-between",fontSize:9,color:C.inkLt,marginBottom:3}}>
-                      <span>게시 {f.postedDate}</span><span>D+7 기록 {due}</span>
-                    </div>
-                    <div style={{height:4,background:C.border,borderRadius:2,overflow:"hidden"}}>
-                      <div style={{height:"100%",width:`${elapsed*100}%`,borderRadius:2,
-                        background:st.label==="기록완료"?C.good:elapsed>=1?C.bad:`linear-gradient(90deg,${C.rose},${C.gold})`}}/>
-                    </div>
-                  </div>
-                )}
-                {/* 콘텐츠 활용 현황 */}
-                <div style={{display:"flex",gap:6,marginTop:10,flexWrap:"wrap"}}>
-                  {/* 영상 수령 */}
-                  <span onClick={()=>setInfs(arr=>arr.map(x=>x.id===f.id?{...x,videoReceived:!x.videoReceived}:x))}
-                    style={{fontSize:10,fontWeight:700,padding:"3px 10px",borderRadius:20,cursor:"pointer",
-                      color:f.videoReceived?C.good:C.inkLt,
-                      background:f.videoReceived?"#EDF7F1":C.cream,
-                      border:`1px solid ${f.videoReceived?C.good+"44":C.border}`}}>
-                    🎬 {f.videoReceived?"영상수령":"미수령"}
-                  </span>
-                  {/* 2차 활용 가능 여부 */}
-                  {(()=>{ const rs=reusableStatus(f); return(
-                    <span onClick={()=>setInfs(arr=>arr.map(x=>x.id===f.id?{...x,reusable:!x.reusable}:x))}
-                      style={{fontSize:10,fontWeight:700,padding:"3px 10px",borderRadius:20,cursor:"pointer",
-                        color:rs.color,background:rs.bg,border:`1px solid ${rs.color}44`}}>
-                      ♻️ {rs.label}
-                    </span>
-                  );})()}
-                  {/* 2차활용 입금 여부 */}
-                  {f.reusable&&(
-                    <span onClick={()=>setInfs(arr=>arr.map(x=>x.id===f.id?{...x,paid:!x.paid}:x))}
-                      style={{fontSize:10,fontWeight:700,padding:"3px 10px",borderRadius:20,cursor:"pointer",
-                        color:f.paid?C.good:C.warn,
-                        background:f.paid?"#EDF7F1":"#FFF8EC",
-                        border:`1px solid ${f.paid?C.good+"44":C.warn+"44"}`}}>
-                      <MI n="payments" size={12}/> {f.paid?"입금완료":"미입금"}
-                    </span>
-                  )}
-                  {/* 메타 광고 활용 */}
-                  <span onClick={()=>setInfs(arr=>arr.map(x=>x.id===f.id?{...x,metaUsed:!x.metaUsed}:x))}
-                    style={{fontSize:10,fontWeight:700,padding:"3px 10px",borderRadius:20,cursor:"pointer",
-                      color:f.metaUsed?C.purple:C.inkLt,
-                      background:f.metaUsed?C.purpleLt:C.cream,
-                      border:`1px solid ${f.metaUsed?C.purple+"44":C.border}`}}>
-                    <MI n="campaign" size={12}/> {f.metaUsed?"메타광고 활용":"미활용"}
-                  </span>
-                </div>
-                {/* 메모 */}
-                {f.note&&(
-                  <div style={{marginTop:6,fontSize:10,color:C.inkMid,padding:"4px 10px",
-                    background:C.cream,borderRadius:8,display:"inline-block"}}>
-                    {f.note}
-                  </div>
-                )}
-                {f.reach!==null&&(
-                  <div style={{display:"flex",gap:14,marginTop:10,flexWrap:"wrap"}}>
-                    {[{l:"도달",v:(f.reach/1000).toFixed(0)+"K",c:C.rose},{l:"저장",v:f.saves?.toLocaleString(),c:C.gold},
-                      {l:"클릭",v:f.clicks?.toLocaleString(),c:C.purple},{l:"전환",v:f.conv,c:C.good}].map(({l,v,c})=>(
-                      <div key={l} style={{textAlign:"center"}}>
-                        <div style={{fontSize:9,color:C.inkLt}}>{l}</div>
-                        <div style={{fontSize:13,fontWeight:800,color:c}}>{v}</div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
+                  </>);
+                })}
+              </tbody>
+            </table>
+            {filtered.length===0&&<div style={{textAlign:"center",padding:"24px 0",color:C.inkLt,fontSize:12}}>검색 결과 없음</div>}
+          </div>
+          );
+        })()}
       </Card>
 
     </div>
