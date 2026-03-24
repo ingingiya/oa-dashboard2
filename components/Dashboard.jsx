@@ -760,7 +760,7 @@ export default function OaDashboard(){
   // ── 시트 URL 코드 고정 (Supabase 저장 안 함 — 시트 내용만 fetch)
   const invUrl    = "https://docs.google.com/spreadsheets/d/1r9WhAOgvdIcumgrkNkTbyYSVj1ONxyXp0trwzD-xAng/edit?gid=960641453#gid=960641453";
   const infUrl    = "https://docs.google.com/spreadsheets/d/1r9WhAOgvdIcumgrkNkTbyYSVj1ONxyXp0trwzD-xAng/edit?gid=503054532#gid=503054532";
-  const sheetUrl  = "https://docs.google.com/spreadsheets/d/1r9WhAOgvdIcumgrkNkTbyYSVj1ONxyXp0trwzD-xAng/edit?gid=1293104038#gid=1293104038";
+  const sheetUrl  = "";
   const setInvUrl = ()=>{}, setInfUrl = ()=>{}, setSheetUrl = ()=>{};
   const [orderUrl, setOrderUrl] = useSyncState("oa_order_url_v7", "");
   const invUrlLoaded = true; const infUrlLoaded = true;
@@ -1191,10 +1191,7 @@ export default function OaDashboard(){
     getSetting("oa_infs_v7").then(v=>{ if(Array.isArray(v)&&v.length>0) setInfs(v); }).catch(()=>{});
   },[]);
 
-  // 시트 URL 로드되면 자동 fetch (새로고침해도 자동 연동)
-  useEffect(()=>{
-    if(sheetUrlLoaded && sheetUrl) fetchSheet(sheetUrl);
-  },[sheetUrl, sheetUrlLoaded]);
+  // 시트 자동 fetch 제거 — Meta API 사용
 
   // 자동 갱신 없음 — 수동 새로고침만
 
@@ -1516,7 +1513,7 @@ export default function OaDashboard(){
   },[infUrl, infUrlLoaded]);
 
   // ── 메타 데이터 집계 ─────────────────────────────
-  const hasSheet = metaStatus==="ok" && metaRaw.length>0;
+  const hasSheet = metaApiStatus==="ok" && metaRaw.length>0;
   // 인스타그램 게시물 광고 = 캠페인명에 "Instagram 게시물" 포함
   const isInstaPost = r => (r.campaign||r.adName||"").includes("Instagram 게시물");
   const metaFiltered = metaRaw.filter(r => !deletedAds.includes(r.adName||r.campaign||"") && !isInstaPost(r));
@@ -2276,9 +2273,8 @@ export default function OaDashboard(){
             {!hasSheet&&(
               <div style={{textAlign:"center",padding:"40px 0",color:C.inkLt}}>
                 <div style={{fontSize:36,marginBottom:10}}><MI n="bar_chart" size={36}/></div>
-                <div style={{fontSize:13,fontWeight:700,color:C.inkMid}}>구글 시트를 연결해주세요</div>
-                <div style={{fontSize:11,marginTop:4,marginBottom:16}}>메타 광고관리자 데이터를 시트에 붙여넣으면 자동으로 차트가 그려져요</div>
-                <Btn onClick={()=>{setSheetInput(sheetUrl);setSheetModal(true)}}><MI n="link" size={13}/> 지금 연결하기</Btn>
+                <div style={{fontSize:13,fontWeight:700,color:C.inkMid}}>{metaApiStatus==="loading"?"데이터 불러오는 중...":metaApiStatus==="error"?`오류: ${metaApiError}`:"데이터 없음"}</div>
+                {metaApiStatus==="error"&&<Btn style={{marginTop:12}} onClick={()=>fetchMetaAds()}><MI n="refresh" size={13}/> 다시 시도</Btn>}
               </div>
             )}
             {hasSheet&&d&&(<>
@@ -2383,9 +2379,8 @@ export default function OaDashboard(){
             {!hasSheet&&(
               <div style={{textAlign:"center",padding:"40px 0",color:C.inkLt}}>
                 <div style={{fontSize:36,marginBottom:10}}><MI n="campaign" size={36}/></div>
-                <div style={{fontSize:13,fontWeight:700,color:C.inkMid}}>시트 연결 후 캠페인 데이터가 표시됩니다</div>
-                <div style={{fontSize:11,marginTop:4,marginBottom:16}}>캠페인 목적(전환/트래픽)에 따라 자동 분류돼요</div>
-                <Btn onClick={()=>{setSheetInput(sheetUrl);setSheetModal(true)}}><MI n="link" size={13}/> 지금 연결하기</Btn>
+                <div style={{fontSize:13,fontWeight:700,color:C.inkMid}}>{metaApiStatus==="loading"?"데이터 불러오는 중...":metaApiStatus==="error"?`오류: ${metaApiError}`:"데이터 없음"}</div>
+                {metaApiStatus==="error"&&<Btn style={{marginTop:12}} onClick={()=>fetchMetaAds()}><MI n="refresh" size={13}/> 다시 시도</Btn>}
               </div>
             )}
             {hasSheet&&d&&(<>
