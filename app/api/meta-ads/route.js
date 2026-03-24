@@ -34,8 +34,6 @@ function getRoas(row) {
   // website_purchase_roas / purchase_roas 필드 직접 사용
   const wr = row.website_purchase_roas;
   if (Array.isArray(wr) && wr.length > 0) return parseFloat(wr[0].value) || 0;
-  const pr = row.purchase_roas;
-  if (Array.isArray(pr) && pr.length > 0) return parseFloat(pr[0].value) || 0;
   return 0;
 }
 
@@ -108,7 +106,6 @@ export async function GET(request) {
     "ctr", "cpm", "cost_per_inline_link_click", "cost_per_unique_click",
     "actions", "action_values", "cost_per_action_type",
     "website_purchase_roas",
-    "purchase_roas",
     "unique_actions",
     "date_start", "date_stop",
   ].join(",");
@@ -166,7 +163,6 @@ export async function GET(request) {
         action_values: r.action_values,
         unique_actions: r.unique_actions,
         website_purchase_roas: r.website_purchase_roas,
-        purchase_roas: r.purchase_roas,
       })),
       all_action_types: [...allActionTypes],
     });
