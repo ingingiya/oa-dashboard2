@@ -1198,6 +1198,32 @@ export default function OaDashboard(){
 
   // 자동 갱신 없음 — 수동 새로고침만
 
+  // ── Meta Ads API fetch ───────────────────────────
+  const [metaApiStatus, setMetaApiStatus] = useState("idle"); // idle | loading | ok | error
+  const [metaApiError, setMetaApiError]   = useState("");
+  const [metaDatePreset, setMetaDatePreset] = useSyncState("oa_meta_date_preset_v1", "last_30d");
+
+  async function fetchMetaAds(preset) {
+    setMetaApiStatus("loading");
+    setMetaApiError("");
+    try {
+      const res = await fetch(`/api/meta-ads?datePreset=${preset||metaDatePreset}`);
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+      setMetaRaw(data.rows || []);
+      setMetaStatus("ok");
+      setMetaApiStatus("ok");
+    } catch(e) {
+      setMetaApiStatus("error");
+      setMetaApiError(e.message);
+    }
+  }
+
+  // 마운트 시 Meta API 자동 로드 (시트 없을 때)
+  useEffect(() => {
+    if (!sheetUrl) fetchMetaAds();
+  }, []); // eslint-disable-line
+
   // ── 구글 시트 fetch ──────────────────────────────
   async function fetchSheet(url){
     if(!url) return;
@@ -1931,37 +1957,45 @@ export default function OaDashboard(){
             </div>
           </div>
         </div>
+        {/* Meta API 상태 배너 */}
         <div style={{
-          background: hasSheet ? "#EDF7F1" : C.goldLt,
-          border:`1px solid ${hasSheet?C.good+"55":C.gold+"66"}`,
+          background: metaApiStatus==="ok" ? "#EDF7F1" : metaApiStatus==="error" ? "#FEF0F0" : C.goldLt,
+          border:`1px solid ${metaApiStatus==="ok"?C.good+"55":metaApiStatus==="error"?C.bad+"55":C.gold+"66"}`,
           borderRadius:12,padding:"12px 16px",
           display:"flex",alignItems:"center",justifyContent:"space-between",gap:10,flexWrap:"wrap",
         }}>
           <div style={{display:"flex",alignItems:"center",gap:10}}>
             <MI n="bar_chart" size={20}/>
             <div>
-              {hasSheet ? (
+              {metaApiStatus==="ok" ? (
                 <>
-                  <div style={{fontSize:12,fontWeight:800,color:C.good}}>구글 시트 연결됨 · {metaRaw.length}행 로드{deletedAds.length>0&&<span style={{color:C.inkLt,fontWeight:600}}> ({deletedAds.length}개 숨김)</span>}</div>
-                  <div style={{fontSize:10,color:C.inkMid,marginTop:1}}>마지막 업데이트: 방금</div>
+                  <div style={{fontSize:12,fontWeight:800,color:C.good}}>Meta API 연결됨 · {metaRaw.length}건{deletedAds.length>0&&<span style={{color:C.inkLt,fontWeight:600}}> ({deletedAds.length}개 숨김)</span>}</div>
+                  <div style={{fontSize:10,color:C.inkMid,marginTop:1}}>기간: {{last_7d:"최근 7일",last_14d:"최근 14일",last_30d:"최근 30일",last_90d:"최근 90일"}[metaDatePreset]||metaDatePreset}</div>
                 </>
-              ) : metaStatus==="loading" ? (
-                <div style={{fontSize:12,fontWeight:700,color:C.gold}}><MI n="hourglass_empty" size={13}/> 시트 불러오는 중...</div>
-              ) : metaStatus==="error" ? (
+              ) : metaApiStatus==="loading" ? (
+                <div style={{fontSize:12,fontWeight:700,color:C.gold}}><MI n="hourglass_empty" size={13}/> Meta API 불러오는 중...</div>
+              ) : metaApiStatus==="error" ? (
                 <div>
-                  <div style={{fontSize:12,fontWeight:800,color:C.bad}}>연결 실패 — {metaError}</div>
-                  <div style={{fontSize:10,color:C.inkMid,marginTop:1}}>시트 공유 설정을 확인하세요</div>
+                  <div style={{fontSize:12,fontWeight:800,color:C.bad}}>Meta API 오류 — {metaApiError}</div>
+                  <div style={{fontSize:10,color:C.inkMid,marginTop:1}}>토큰 또는 계정 ID를 확인하세요</div>
                 </div>
               ) : (
-                <>
-                  <div style={{fontSize:12,fontWeight:800,color:C.gold}}>구글 시트를 연결하면 자동으로 데이터를 읽어요</div>
-                  <div style={{fontSize:10,color:C.inkMid,marginTop:1}}>메타 광고관리자에서 복붙 → 시트에 저장 → 대시보드 자동 반영</div>
-                </>
+                <div style={{fontSize:12,fontWeight:700,color:C.gold}}><MI n="hourglass_empty" size={13}/> 불러오는 중...</div>
               )}
             </div>
           </div>
-          <div style={{display:"flex",gap:6}}>
-            {hasSheet&&<Btn variant="sage" small onClick={()=>fetchSheet(sheetUrl)}><MI n="refresh" size={13}/> 새로고침</Btn>}
+          <div style={{display:"flex",gap:6,flexWrap:"wrap",alignItems:"center"}}>
+            {/* 기간 선택 */}
+            {["last_7d","last_14d","last_30d","last_90d"].map(p=>(
+              <button key={p} onClick={()=>{setMetaDatePreset(p);fetchMetaAds(p);}}
+                style={{fontSize:10,padding:"3px 9px",borderRadius:20,border:`1px solid ${metaDatePreset===p?C.rose:C.border}`,
+                  background:metaDatePreset===p?C.rose:"#fff",color:metaDatePreset===p?"#fff":C.inkMid,
+                  cursor:"pointer",fontFamily:"inherit",fontWeight:700}}>
+                {{"last_7d":"7일","last_14d":"14일","last_30d":"30일","last_90d":"90일"}[p]}
+              </button>
+            ))}
+            <Btn variant="sage" small onClick={()=>fetchMetaAds()}><MI n="refresh" size={13}/> 새로고침</Btn>
+            {hasSheet&&<Btn variant="neutral" small onClick={()=>fetchSheet(sheetUrl)}><MI n="table" size={13}/> 시트</Btn>}
             {deletedAds.length>0&&(
               <div style={{position:"relative"}}>
                 <Btn variant="neutral" small onClick={()=>setShowDeletedPanel(p=>!p)}>
