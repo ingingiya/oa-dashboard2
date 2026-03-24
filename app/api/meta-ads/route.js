@@ -97,11 +97,12 @@ export async function GET(request) {
   // 캠페인 이름 필터 (env 또는 기본값)
   const campaignFilter = (process.env.META_CAMPAIGN_FILTER || "뷰티").toLowerCase();
 
-  // Ads Manager 기본값과 동일한 귀속 기간 (7일 클릭 + 1일 조회)
-  const attrWindows = "action_attribution_windows=%5B%221d_view%22%2C%227d_click%22%5D"; // ["1d_view","7d_click"]
+  // Ads Manager 기본값과 동일한 귀속 기간 + 통합 귀속 설정
+  const attrWindows = "action_attribution_windows=%5B%221d_view%22%2C%227d_click%22%5D";
+  const unifiedAttr = "use_unified_attribution_setting=true";
 
   let allRows = [];
-  let url = `${GRAPH}/${accountId}/insights?level=ad&fields=${fields}&time_increment=1${timeRange}&${attrWindows}&limit=500&access_token=${token}`;
+  let url = `${GRAPH}/${accountId}/insights?level=ad&fields=${fields}&time_increment=1${timeRange}&${attrWindows}&${unifiedAttr}&limit=500&access_token=${token}`;
 
   // 페이징 처리
   while (url) {
@@ -121,20 +122,26 @@ export async function GET(request) {
 
   // 디버그: ?debug=1 이면 전환 캠페인 첫 2개 raw 반환 (action_type 확인용)
   if (searchParams.get("debug") === "1") {
-    let debugUrl = `${GRAPH}/${accountId}/insights?level=ad&fields=${fields}&time_increment=1&date_preset=last_30d&${attrWindows}&limit=100&access_token=${token}`;
+    const debugUrl = `${GRAPH}/${accountId}/insights?level=ad&fields=${fields}&time_increment=1&date_preset=last_30d&${attrWindows}&${unifiedAttr}&limit=100&access_token=${token}`;
     const debugRes = await fetch(debugUrl);
     const debugData = await debugRes.json();
     const convRows = (debugData.data || []).filter(r =>
-      (r.campaign_name||"").includes(campaignFilter) &&
+      (r.campaign_name||"").toLowerCase().includes(campaignFilter) &&
       (r.objective||"") !== "LINK_CLICKS"
     ).slice(0, 2);
-    const allFiltered = (debugData.data || []).filter(r =>
-      (r.campaign_name||"").includes(campaignFilter)
-    );
+    // 전환 캠페인에서 나온 action_type 전체 목록
+    const allActionTypes = new Set();
+    convRows.forEach(r => {
+      (r.actions||[]).forEach(a => allActionTypes.add(a.action_type));
+      (r.action_values||[]).forEach(a => allActionTypes.add("value:"+a.action_type));
+    });
     return Response.json({
-      conv_sample: convRows,
-      total_matching: allFiltered.length,
-      objectives: [...new Set(allFiltered.map(r => r.objective))],
+      conv_sample: convRows.map(r => ({
+        ad: r.ad_name, campaign: r.campaign_name, objective: r.objective,
+        spend: r.spend,
+        actions: r.actions, action_values: r.action_values,
+      })),
+      all_action_types: [...allActionTypes],
     });
   }
 
