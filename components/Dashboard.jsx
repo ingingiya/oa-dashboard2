@@ -760,7 +760,7 @@ export default function OaDashboard(){
   // ── 시트 URL 코드 고정 (Supabase 저장 안 함 — 시트 내용만 fetch)
   const invUrl    = "https://docs.google.com/spreadsheets/d/1r9WhAOgvdIcumgrkNkTbyYSVj1ONxyXp0trwzD-xAng/edit?gid=960641453#gid=960641453";
   const infUrl    = "https://docs.google.com/spreadsheets/d/1r9WhAOgvdIcumgrkNkTbyYSVj1ONxyXp0trwzD-xAng/edit?gid=503054532#gid=503054532";
-  const sheetUrl = ""; const setSheetUrl = ()=>{};
+  const [sheetUrl, setSheetUrl] = useSyncState("oa_conv_sheet_url_v1", "");
   const setInvUrl = ()=>{}, setInfUrl = ()=>{};
   const [orderUrl, setOrderUrl] = useSyncState("oa_order_url_v7", "");
   const invUrlLoaded = true; const infUrlLoaded = true;
@@ -824,8 +824,12 @@ export default function OaDashboard(){
   const [infUrlModal, setInfUrlModal]   = useState(false);
   const [infUrlInput, setInfUrlInput]   = useState("");
 
-  // 메타
+  // 메타 (하이브리드: API 트래픽 + 시트 전환)
   const [metaRaw,setMetaRaw]         = useState([]);
+  const [metaApiRaw,setMetaApiRaw]   = useState([]);
+  const [sheetConvRaw,setSheetConvRaw] = useState([]);
+  const [sheetModal,setSheetModal]   = useState(false);
+  const [sheetInput,setSheetInput]   = useState("");
   const [metaStatus,setMetaStatus]   = useState("idle");
   const [metaError,setMetaError]     = useState("");
   const [deletedAds, setDeletedAdsRaw] = useState([]);
@@ -1206,8 +1210,7 @@ export default function OaDashboard(){
       const res = await fetch(`/api/meta-ads?datePreset=${preset||metaDatePreset}`);
       const data = await res.json();
       if (data.error) throw new Error(data.error);
-      setMetaRaw(data.rows || []);
-      setMetaStatus("ok");
+      setMetaApiRaw(data.rows || []);
       setMetaApiStatus("ok");
     } catch(e) {
       setMetaApiStatus("error");
@@ -1216,9 +1219,45 @@ export default function OaDashboard(){
   }
 
   // 마운트 시 Meta API 자동 로드
+  useEffect(() => { fetchMetaAds(); }, []); // eslint-disable-line
+
+  // 시트 URL 로드 시 자동 fetch
+  useEffect(() => { if(sheetUrl) fetchSheet(sheetUrl); }, [sheetUrl]); // eslint-disable-line
+
+  // 하이브리드 병합: 시트 전환 + API 트래픽
   useEffect(() => {
-    fetchMetaAds();
-  }, []); // eslint-disable-line
+    if(sheetConvRaw.length > 0) {
+      // 시트에 있는 캠페인은 시트 우선, 나머지는 API
+      const sheetCamps = new Set(sheetConvRaw.map(r=>r.campaign).filter(Boolean));
+      const apiOnly = metaApiRaw.filter(r => !sheetCamps.has(r.campaign));
+      setMetaRaw([...sheetConvRaw, ...apiOnly]);
+      setMetaStatus("ok");
+    } else {
+      setMetaRaw(metaApiRaw);
+    }
+  }, [metaApiRaw, sheetConvRaw]); // eslint-disable-line
+
+  // 시트 fetch
+  async function fetchSheet(url) {
+    if(!url) return;
+    setMetaStatus("loading"); setMetaError("");
+    try {
+      const res = await fetch(`/api/sheet?url=${encodeURIComponent(url)}`);
+      if(!res.ok) throw new Error(`HTTP ${res.status}`);
+      const text = await res.text();
+      const rows = parseCSV(text).map(mapMetaRow).filter(r=>r.date||r.campaign);
+      setSheetConvRaw(rows);
+      setMetaStatus("ok");
+    } catch(e) {
+      setMetaStatus("error"); setMetaError(e.message);
+    }
+  }
+
+  function saveSheetUrl() {
+    const url = sheetInput.trim();
+    if(!url) return;
+    setSheetUrl(url); setSheetModal(false); fetchSheet(url);
+  }
 
   // ── 발주임박 시트 fetch ─────────────────────────────
   async function fetchOrderSheet(url){
@@ -1967,6 +2006,9 @@ export default function OaDashboard(){
               </button>
             ))}
             <Btn variant="sage" small onClick={()=>fetchMetaAds()}><MI n="refresh" size={13}/> 새로고침</Btn>
+            <Btn variant={sheetConvRaw.length>0?"neutral":"gold"} small onClick={()=>{setSheetInput(sheetUrl);setSheetModal(true);}}>
+              <MI n="table_chart" size={13}/> {sheetConvRaw.length>0?`전환 시트 (${sheetConvRaw.length}건)`:"전환 시트 연결"}
+            </Btn>
             {deletedAds.length>0&&(
               <div style={{position:"relative"}}>
                 <Btn variant="neutral" small onClick={()=>setShowDeletedPanel(p=>!p)}>
@@ -3076,6 +3118,32 @@ export default function OaDashboard(){
               );
             })()}
           </div>
+        )}
+
+        {/* ── 전환 시트 연결 모달 ── */}
+        {sheetModal&&(
+          <Modal title={<><MI n="table_chart"/> 전환캠페인 시트 연결</>} onClose={()=>setSheetModal(false)} wide>
+            <div style={{background:"#EFF6FF",border:"1px solid #BFDBFE",borderRadius:10,padding:"10px 14px",marginBottom:16,fontSize:11,color:"#1D4ED8",fontWeight:700}}>
+              📊 전환캠페인(구매·전환값·CPA·ROAS)은 시트에서, 트래픽캠페인은 Meta API에서 자동 병합돼요.
+            </div>
+            <div style={{background:C.cream,border:`1px solid ${C.border}`,borderRadius:10,padding:"14px",marginBottom:16,fontSize:11,color:C.inkMid,lineHeight:1.8}}>
+              <b style={{color:C.ink}}>연결 방법</b><br/>
+              1. 메타 광고관리자 → 보고서 → CSV 내보내기<br/>
+              2. 구글 시트에 붙여넣기<br/>
+              3. 시트 공유 → "링크 있는 모든 사용자" → 뷰어 → URL 복사
+            </div>
+            <FR label="구글 시트 URL">
+              <Inp value={sheetInput} onChange={setSheetInput} placeholder="https://docs.google.com/spreadsheets/d/..."/>
+            </FR>
+            <Btn onClick={saveSheetUrl} disabled={!sheetInput.trim()} style={{width:"100%"}}>
+              <MI n="link" size={13}/> 연결하기
+            </Btn>
+            {sheetUrl&&(
+              <Btn variant="danger" onClick={()=>{setSheetConvRaw([]);setSheetUrl("");setMetaStatus("idle");setSheetModal(false);}} style={{width:"100%",marginTop:8}}>
+                <MI n="delete" size={13}/> 연결 해제
+              </Btn>
+            )}
+          </Modal>
         )}
 
         {/* ── 기준 설정 모달 (전환 마진 + 트래픽 기준) ── */}
