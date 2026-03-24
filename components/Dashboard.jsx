@@ -1590,7 +1590,7 @@ export default function OaDashboard(){
   const overdueIns     = infs.filter(f=>{const s=insightStatus(f);return s.label.includes("미입력")||s.label==="오늘 입력!";});
   const dangerInv      = inv.filter(i=>stockStatus(i).label==="위험");
   const cautionInv     = inv.filter(i=>stockStatus(i).label==="주의");
-  const overdueScheds  = notionSch.filter(s=>{const d=daysUntil(s.endDate||s.date);return d!==null&&d<0&&s.status!=="완료";});
+  const overdueScheds  = notionSch.filter(s=>{const d=daysUntil(s.endDate||s.date);return d!==null&&d<0&&d>=-14&&s.status!=="완료";});
   const urgentScheds   = notionSch.filter(s=>{const d=daysUntil(s.date);return d!==null&&d>=0&&d<=5&&s.status!=="완료";});
   // 광고 교체/보류 알림 — 시트 데이터 있을 때만
   const adAlerts = hasSheet ? metaFiltered.reduce((acc, r)=>{
@@ -1615,7 +1615,7 @@ export default function OaDashboard(){
     const adMargin = getAdMargin(ad.name, ad.campaign, margins, margin);
     const s=adScore(ad, adMargin, getConvCriteria(ad.name, ad.campaign, convCriteria)); return !cutAds.includes(ad)&&s.issues.some(i=>i.label==="보류"||i.label==="보통");
   });
-  const totalAlerts    = overdueIns.length+dangerInv.length+overdueScheds.length+urgentScheds.length+cutAds.length+holdAds.length+orderRaw.length;
+  const totalAlerts    = overdueIns.length+overdueScheds.length+urgentScheds.length+cutAds.length+holdAds.length+orderRaw.length;
 
   // ── CRUD 콜백 (모달 컴포넌트에서 onSave로 호출) ─────
   async function saveInf(item){
@@ -1676,22 +1676,10 @@ export default function OaDashboard(){
     // 알림 그룹 정의
     const alertGroups = [
       {
-        id:"dangerInv", icon:"warning", label:"재고 위험", color:C.bad, bg:"#FEF0F0",
-        count:dangerInv.length, items:dangerInv,
-        render:(item)=>`${item.name} · ${stockDays(item)}일치`,
-        action:()=>setSec("inventory"),
-      },
-      {
         id:"cutAds", icon:"cancel", label:"광고 끄기", color:C.bad, bg:"#FEF0F0",
         count:cutAds.length, items:cutAds,
         render:(ad)=>ad.name,
         action:()=>{setSec("meta");setCampTab("conversion");},
-      },
-      {
-        id:"cautionInv", icon:"warning", label:"재고 주의", color:C.warn, bg:"#FFF8EC",
-        count:cautionInv.length, items:cautionInv,
-        render:(item)=>`${item.name} · ${stockDays(item)}일치`,
-        action:()=>setSec("inventory"),
       },
       {
         id:"holdAds", icon:"pause_circle", label:"광고 보류", color:C.warn, bg:"#FFF8EC",
@@ -5103,7 +5091,6 @@ export default function OaDashboard(){
             {orderStatus==="ok"&&orderRaw.length>0&&<div style={{fontSize:10,color:C.bad,fontWeight:700,marginBottom:3}}><MI n="inventory_2" size={11}/> 발주임박 {orderRaw.length}개</div>}
             {cutAds.length>0&&<div style={{fontSize:10,color:C.bad,fontWeight:700,marginBottom:3}}><MI n="cancel" size={11}/> 광고교체 {cutAds.length}개</div>}
             {holdAds.length>0&&<div style={{fontSize:10,color:C.warn,marginBottom:3}}><MI n="pause_circle" size={11}/> 광고보류 {holdAds.length}개</div>}
-            {dangerInv.length>0&&<div style={{fontSize:10,color:C.inkMid,marginBottom:3}}><MI n="warning" size={11}/> 재고위험 {dangerInv.length}종</div>}
             {overdueIns.length>0&&<div style={{fontSize:10,color:C.inkMid,marginBottom:3}}><MI n="error" size={11}/> 인사이트 {overdueIns.length}명</div>}
             {overdueScheds.length>0&&<div style={{fontSize:10,color:C.inkMid,marginBottom:3}}><MI n="calendar_month" size={11}/> 기간초과 {overdueScheds.length}건</div>}
             {urgentScheds.length>0&&<div style={{fontSize:10,color:C.inkMid}}><MI n="notifications" size={11}/> D-5임박 {urgentScheds.length}건</div>}
