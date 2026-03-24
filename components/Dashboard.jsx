@@ -2137,7 +2137,7 @@ export default function OaDashboard(){
         })()}
 
         {/* ── 카드2: 전체 광고비 (Meta API) ── */}
-        {hasSheet&&(()=>{
+        {(metaApiStatus==="ok"||metaApiStatus==="loading")&&(()=>{
           const fmtW = n=>n>=10000?`₩${Math.round(n/10000).toLocaleString()}만`:`₩${Math.round(n).toLocaleString()}`;
           const allRows = metaRaw.filter(r=>!isInstaPost(r));
           const allConv    = allRows.filter(r=>isConversionCampaign(r.objective,r.campaign));
