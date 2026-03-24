@@ -116,13 +116,23 @@ export async function GET(request) {
     url = data.paging?.next || null;
   }
 
-  // 디버그: ?debug=1 이면 첫 3개 raw 반환
+  // 디버그: ?debug=1 이면 전환 캠페인 첫 2개 raw 반환 (action_type 확인용)
   if (searchParams.get("debug") === "1") {
-    const debugRows = [];
-    let debugUrl = `${GRAPH}/${accountId}/insights?level=ad&fields=${fields}&time_increment=1${timeRange}&limit=3&access_token=${token}`;
+    let debugUrl = `${GRAPH}/${accountId}/insights?level=ad&fields=${fields}&time_increment=1&date_preset=last_30d&limit=100&access_token=${token}`;
     const debugRes = await fetch(debugUrl);
     const debugData = await debugRes.json();
-    return Response.json({ raw: (debugData.data || []).slice(0, 3) });
+    const convRows = (debugData.data || []).filter(r =>
+      (r.campaign_name||"").includes(campaignFilter) &&
+      (r.objective||"") !== "LINK_CLICKS"
+    ).slice(0, 2);
+    const allFiltered = (debugData.data || []).filter(r =>
+      (r.campaign_name||"").includes(campaignFilter)
+    );
+    return Response.json({
+      conv_sample: convRows,
+      total_matching: allFiltered.length,
+      objectives: [...new Set(allFiltered.map(r => r.objective))],
+    });
   }
 
   return Response.json({ rows: allRows, total: allRows.length });
