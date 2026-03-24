@@ -1696,7 +1696,6 @@ export default function OaDashboard(){
   const NAVS=[
     {id:"home",      icon:"home",label:"홈"},
     {id:"meta",      icon:"campaign",label:"메타광고"},
-    {id:"adspend",   icon:"payments",label:"총광고비"},
     {id:"influencer",icon:"auto_awesome",label:"인플루언서"},
     {id:"schedule",  icon:"calendar_month",label:"스케줄"},
     {id:"creative",  icon:"palette",label:"소재"},
@@ -5389,7 +5388,6 @@ export default function OaDashboard(){
         <main className="oa-main">
           {sec==="home"        && <HomeSection/>}
           {sec==="meta"        && MetaSection}
-          {sec==="adspend"     && AdSpendSection}
           {sec==="influencer"  && InfluencerSection}
           {sec==="schedule"    && ScheduleSection}
           {sec==="creative"    && CreativeSection}
