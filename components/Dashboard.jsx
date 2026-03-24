@@ -4680,7 +4680,8 @@ export default function OaDashboard(){
   const CreativeSection=(()=>{
     const [tab, setTab] = useState("top"); // top | library | requests
     const [libModal, setLibModal] = useState(null); // null | {mode:"add"|"edit", item}
-    const [libForm, setLibForm] = useState({name:"",link:"",product:"",note:"",tags:""});
+    const [libForm, setLibForm] = useState({name:"",link:"",figmaUrl:"",product:"",note:"",tags:""});
+    const [reqFigmaId, setReqFigmaId] = useState(null);
     const [reqNote, setReqNote] = useState("");
     const [crFilter, setCrFilter] = useState("전체"); // 전체 | 우수 | 전환 | 트래픽
     const [crSort, setCrSort] = useState("점수");
@@ -4803,8 +4804,11 @@ export default function OaDashboard(){
     }
 
     function addToLib(form) {
-      const item = {id:Date.now()+"", ...form, addedAt:new Date().toISOString().slice(0,10)};
-      setCreativeLib(prev=>[item,...(prev||[])]);
+      if (libModal?.mode==="edit" && libModal?.item) {
+        setCreativeLib(prev=>prev.map(i=>i.id===libModal.item.id?{...i,...form}:i));
+      } else {
+        setCreativeLib(prev=>[{id:Date.now()+"_"+Math.random().toString(36).slice(2),...form,addedAt:new Date().toISOString().slice(0,10)},...(prev||[])]);
+      }
       setLibModal(null);
     }
 
@@ -4942,7 +4946,7 @@ export default function OaDashboard(){
             action={
               <div style={{display:"flex",gap:6}}>
                 {(creativeLib||[]).length>0&&<Btn variant="danger" small onClick={()=>{if(confirm("라이브러리를 모두 비울까요?"))setCreativeLib([]);}}>전체삭제</Btn>}
-                <Btn small onClick={()=>{setLibForm({name:"",link:"",product:"",note:"",tags:""});setLibModal({mode:"add"});}}>+ 추가</Btn>
+                <Btn small onClick={()=>{setLibForm({name:"",link:"",figmaUrl:"",product:"",note:"",tags:""});setLibModal({mode:"add"});}}>+ 추가</Btn>
               </div>
             }/>
           {(creativeLib||[]).length===0&&(
@@ -4996,7 +5000,31 @@ export default function OaDashboard(){
                     {item.link&&<a href={item.link} target="_blank" rel="noreferrer" style={{fontSize:10,color:C.rose,marginTop:4,display:"block",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}><MI n="link" size={11}/> {item.link}</a>}
                     <div style={{fontSize:9,color:C.inkLt,marginTop:2}}>{item.addedAt}</div>
                   </div>
-                  <Btn variant="danger" small onClick={()=>removeFromLib(item.id)}><MI n="delete" size={14}/></Btn>
+                  <div style={{display:"flex",flexDirection:"column",gap:4,flexShrink:0}}>
+                    {item.figmaUrl?(
+                      <a href={item.figmaUrl} target="_blank" rel="noreferrer"
+                        style={{display:"flex",alignItems:"center",gap:4,fontSize:10,fontWeight:800,
+                          padding:"4px 8px",borderRadius:8,background:"#1ABCFE22",color:"#0d7fa8",
+                          border:"1px solid #1ABCFE55",textDecoration:"none",whiteSpace:"nowrap"}}>
+                        <svg width="11" height="11" viewBox="0 0 38 57" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <path d="M10 28.5a9.5 9.5 0 0 1 9.5-9.5h9.5v19H19.5A9.5 9.5 0 0 1 10 28.5Z" fill="#1ABCFE"/>
+                          <path d="M1 47.5A9.5 9.5 0 0 1 10.5 38H20v9.5a9.5 9.5 0 0 1-19 0Z" fill="#0ACF83"/>
+                          <path d="M20 1v19h9.5a9.5 9.5 0 0 0 0-19H20Z" fill="#FF7262"/>
+                          <path d="M1 9.5A9.5 9.5 0 0 0 10.5 19H20V1H10.5A9.5 9.5 0 0 0 1 9.5Z" fill="#F24E1E"/>
+                          <path d="M1 28.5A9.5 9.5 0 0 0 10.5 38H20V19H10.5A9.5 9.5 0 0 0 1 28.5Z" fill="#A259FF"/>
+                        </svg>
+                        Figma
+                      </a>
+                    ):(
+                      <button onClick={()=>{setLibForm({name:item.name,link:item.link||"",figmaUrl:"",product:item.product||"",note:item.note||"",tags:item.tags||""});setLibModal({mode:"edit",item});}}
+                        style={{fontSize:10,fontWeight:700,padding:"4px 8px",borderRadius:8,border:`1px dashed ${C.border}`,
+                          background:"none",color:C.inkLt,cursor:"pointer",fontFamily:"inherit",whiteSpace:"nowrap"}}>
+                        + Figma
+                      </button>
+                    )}
+                    <Btn variant="ghost" small onClick={()=>{setLibForm({name:item.name,link:item.link||"",figmaUrl:item.figmaUrl||"",product:item.product||"",note:item.note||"",tags:item.tags||""});setLibModal({mode:"edit",item});}}><MI n="edit" size={13}/></Btn>
+                    <Btn variant="danger" small onClick={()=>removeFromLib(item.id)}><MI n="delete" size={13}/></Btn>
+                  </div>
                 </div>
               </div>
               );
@@ -5019,8 +5047,8 @@ export default function OaDashboard(){
               <div style={{fontSize:10,fontWeight:700,color:C.inkLt,marginBottom:6}}>대기 중</div>
               <div style={{display:"flex",flexDirection:"column",gap:8}}>
                 {pendingReqs.map(r=>(
-                  <div key={r.id} style={{padding:"10px 12px",borderRadius:10,border:`1px solid #8b5cf644`,background:"#f5f3ff"}}>
-                    <div style={{display:"flex",alignItems:"center",gap:8}}>
+                  <div key={r.id} style={{borderRadius:10,border:`1px solid #8b5cf644`,background:"#f5f3ff",overflow:"hidden"}}>
+                    <div style={{display:"flex",alignItems:"center",gap:8,padding:"10px 12px"}}>
                       {r.thumbUrl&&(
                         <div style={{width:56,height:56,borderRadius:8,overflow:"hidden",flexShrink:0,
                           border:`1px solid #8b5cf633`,background:C.cream}}>
@@ -5034,11 +5062,48 @@ export default function OaDashboard(){
                         <div style={{fontSize:10,color:C.inkMid,marginTop:2}}>CTR {r.ctr}% · ROAS {r.roas}% · {r.requestedAt}</div>
                         {r.note&&<div style={{fontSize:10,color:C.inkMid,marginTop:2}}><MI n="chat_bubble" size={11}/> {r.note}</div>}
                       </div>
-                      <div style={{display:"flex",flexDirection:"column",gap:4,flexShrink:0}}>
+                      <div style={{display:"flex",flexDirection:"column",gap:4,flexShrink:0,alignItems:"flex-end"}}>
+                        {r.figmaUrl?(
+                          <a href={r.figmaUrl} target="_blank" rel="noreferrer"
+                            style={{display:"flex",alignItems:"center",gap:4,fontSize:10,fontWeight:800,
+                              padding:"4px 8px",borderRadius:8,background:"#1ABCFE22",color:"#0d7fa8",
+                              border:"1px solid #1ABCFE55",textDecoration:"none",whiteSpace:"nowrap"}}>
+                            <svg width="11" height="11" viewBox="0 0 38 57" fill="none" xmlns="http://www.w3.org/2000/svg">
+                              <path d="M10 28.5a9.5 9.5 0 0 1 9.5-9.5h9.5v19H19.5A9.5 9.5 0 0 1 10 28.5Z" fill="#1ABCFE"/>
+                              <path d="M1 47.5A9.5 9.5 0 0 1 10.5 38H20v9.5a9.5 9.5 0 0 1-19 0Z" fill="#0ACF83"/>
+                              <path d="M20 1v19h9.5a9.5 9.5 0 0 0 0-19H20Z" fill="#FF7262"/>
+                              <path d="M1 9.5A9.5 9.5 0 0 0 10.5 19H20V1H10.5A9.5 9.5 0 0 0 1 9.5Z" fill="#F24E1E"/>
+                              <path d="M1 28.5A9.5 9.5 0 0 0 10.5 38H20V19H10.5A9.5 9.5 0 0 0 1 28.5Z" fill="#A259FF"/>
+                            </svg>
+                            Figma 열기
+                          </a>
+                        ):(
+                          <button onClick={()=>setReqFigmaId(reqFigmaId===r.id?null:r.id)}
+                            style={{fontSize:10,fontWeight:700,padding:"4px 8px",borderRadius:8,
+                              border:`1px dashed #8b5cf6`,background:"none",color:"#8b5cf6",
+                              cursor:"pointer",fontFamily:"inherit",whiteSpace:"nowrap"}}>
+                            + Figma 연결
+                          </button>
+                        )}
                         <Btn variant="sage" small onClick={()=>resolveReq(r.id)}><MI n="check_circle" size={13}/> 완료</Btn>
                         <Btn variant="danger" small onClick={()=>deleteReq(r.id)}><MI n="delete" size={13}/></Btn>
                       </div>
                     </div>
+                    {reqFigmaId===r.id&&(
+                      <div style={{display:"flex",gap:8,padding:"6px 12px 10px",borderTop:`1px solid #8b5cf622`,background:"#ede9fe"}}>
+                        <input autoFocus placeholder="https://www.figma.com/..." id={`figma_${r.id}`}
+                          defaultValue={r.figmaUrl||""}
+                          style={{flex:1,fontSize:11,padding:"6px 10px",borderRadius:8,
+                            border:`1px solid #a78bfa`,outline:"none",fontFamily:"inherit"}}/>
+                        <Btn small onClick={()=>{
+                          const el=document.getElementById(`figma_${r.id}`);
+                          if(!el) return;
+                          setRecreateReqs(prev=>prev.map(x=>x.id===r.id?{...x,figmaUrl:el.value.trim()}:x));
+                          setReqFigmaId(null);
+                        }}>저장</Btn>
+                        <Btn variant="ghost" small onClick={()=>setReqFigmaId(null)}>취소</Btn>
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
@@ -5067,8 +5132,8 @@ export default function OaDashboard(){
       {libModal&&(
         <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.4)",zIndex:3000,display:"flex",alignItems:"center",justifyContent:"center",padding:16}}>
           <div style={{background:C.white,borderRadius:20,padding:24,width:"100%",maxWidth:400}}>
-            <div style={{fontSize:16,fontWeight:900,marginBottom:16}}>소재 추가</div>
-            {[{key:"name",label:"소재명",placeholder:"광고 소재 이름"},{key:"link",label:"링크",placeholder:"https://"},{key:"product",label:"제품",placeholder:"제품명"},{key:"tags",label:"태그",placeholder:"상위소재, 전환, 영상"},{key:"note",label:"메모",placeholder:"성과 메모"}].map(({key,label,placeholder})=>(
+            <div style={{fontSize:16,fontWeight:900,marginBottom:16}}>{libModal?.mode==="edit"?"소재 편집":"소재 추가"}</div>
+            {[{key:"name",label:"소재명",placeholder:"광고 소재 이름"},{key:"figmaUrl",label:"피그마 링크",placeholder:"https://www.figma.com/..."},{key:"link",label:"기타 링크",placeholder:"https://"},{key:"product",label:"제품",placeholder:"제품명"},{key:"tags",label:"태그",placeholder:"상위소재, 전환, 영상"},{key:"note",label:"메모",placeholder:"성과 메모"}].map(({key,label,placeholder})=>(
               <div key={key} style={{marginBottom:12}}>
                 <div style={{fontSize:10,fontWeight:700,color:C.inkMid,marginBottom:4}}>{label}</div>
                 <input value={libForm[key]||""} onChange={e=>setLibForm(p=>({...p,[key]:e.target.value}))}
