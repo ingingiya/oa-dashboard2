@@ -74,6 +74,9 @@ export async function GET(request) {
     ? `&time_range={"since":"${since}","until":"${until}"}`
     : `&date_preset=${datePreset}`;
 
+  // 캠페인 이름 필터 (env 또는 기본값)
+  const campaignFilter = (process.env.META_CAMPAIGN_FILTER || "뷰티").toLowerCase();
+
   let allRows = [];
   let url = `${GRAPH}/${accountId}/insights?level=ad&fields=${fields}&time_increment=1${timeRange}&limit=500&access_token=${token}`;
 
@@ -85,7 +88,11 @@ export async function GET(request) {
     if (data.error)
       return Response.json({ error: data.error.message }, { status: 400 });
 
-    allRows = allRows.concat((data.data || []).map(normalize));
+    const filtered = (data.data || [])
+      .filter(r => (r.campaign_name || "").toLowerCase().includes(campaignFilter))
+      .map(normalize);
+
+    allRows = allRows.concat(filtered);
     url = data.paging?.next || null;
   }
 
