@@ -1835,7 +1835,6 @@ export default function OaDashboard(){
     {id:"creative",  icon:"palette",label:"소재"},
     {id:"keyword",   icon:"search",label:"키워드"},
     {id:"review",    icon:"check_circle",label:"콘텐츠리뷰"},
-    {id:"coupang",   icon:"shopping_cart",label:"쿠팡"},
   ];
 
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
