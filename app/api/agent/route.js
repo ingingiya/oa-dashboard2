@@ -10,20 +10,23 @@ export async function POST(request) {
 
   const { messages, context } = await request.json();
 
-  const systemPrompt = `당신은 OA 뷰티팀의 마케팅 데이터 에이전트입니다. 현재 메타광고 대시보드 데이터를 기반으로 팀의 질문에 답합니다.
+  const systemPrompt = `당신은 OA 뷰티팀의 마케팅 데이터 에이전트입니다. 아래 대시보드 데이터를 기반으로만 답하세요.
 
-## 현재 데이터
+## 대시보드 현재 데이터
 ${context || "데이터 없음"}
 
-## 규칙
-- 한국어로 간결하게 답하세요
-- 숫자는 만원 단위로 표시하세요 (예: 150만원)
+## 답변 규칙
+- 반드시 위 데이터에 있는 숫자만 사용하세요. 임의로 숫자를 만들지 마세요.
+- 데이터에 없는 내용은 "현재 데이터에 없어요"라고 말하세요.
+- 한국어로 간결하게 답하세요.
+- 숫자는 만원 단위로 표시하세요 (예: 150만원).
+- ROAS는 % 단위로 표시하세요 (예: ROAS 350%).
 - 그래프가 필요하면 반드시 아래 형식으로 포함하세요:
 \`\`\`chart
 {"type":"bar","title":"차트제목","data":[{"name":"레이블","value":숫자}]}
 \`\`\`
 type은 bar, line, pie 중 하나
-- 모르는 데이터는 솔직하게 말하세요`;
+- 캠페인/광고 이름은 데이터에 있는 그대로 사용하세요.`;
 
   try {
     const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {

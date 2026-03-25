@@ -310,10 +310,57 @@ function parseCSV(text){
   }
 
   const headers = parseLine(lines[startIdx]);
+
+  // 숫자여야 할 헤더 목록 (노출, 지출금액 등)
+  const NUMERIC_HEADERS = new Set(["노출","노출 수","클릭(전체)","지출 금액 (KRW)","지출 금액","impressions","spend"]);
+
   return lines.slice(startIdx+1).filter(l=>l.trim()).map(row=>{
     const cols = parseLine(row);
     const obj={};
-    headers.forEach((h,i)=>{ if(h) obj[h]=cols[i]||""; });
+
+    // 컬럼 수가 맞지 않으면 오프셋 자동 감지:
+    // 헤더가 숫자를 기대하는 위치에 텍스트가 오면 그 위치부터 1칸 밀어서 읽음
+    let offset = 0;
+    if(cols.length > headers.length) {
+      // 데이터가 헤더보다 많은 경우 - 어느 위치에 extra 컬럼이 있는지 탐색
+      for(let i=0;i<headers.length;i++){
+        if(NUMERIC_HEADERS.has(headers[i])){
+          const val = cols[i + offset];
+          if(val && isNaN(parseFloat(val.replace(/,/g,"")))) {
+            offset++; // 이 위치부터 1칸씩 밀림
+            break;
+          }
+        }
+      }
+    } else if(cols.length === headers.length) {
+      // 컬럼 수는 같지만 숫자 헤더에 텍스트가 들어온 경우 감지
+      for(let i=0;i<headers.length;i++){
+        if(NUMERIC_HEADERS.has(headers[i])){
+          const val = cols[i];
+          if(val && isNaN(parseFloat(val.replace(/,/g,"")))) {
+            // 다음 값이 숫자면 extra 컬럼이 있는 것
+            const nextVal = cols[i+1];
+            if(nextVal && !isNaN(parseFloat(nextVal.replace(/,/g,"")))) {
+              offset = 1;
+              // headers에 phantom 컬럼 삽입해서 i 위치부터 1칸 밀기
+              break;
+            }
+          }
+        }
+      }
+    }
+
+    if(offset > 0) {
+      // 오프셋이 감지된 경우: 첫 번째 숫자 헤더 위치부터 cols를 1칸 뒤에서 읽음
+      let shifted = false;
+      headers.forEach((h,i)=>{
+        if(!h) return;
+        if(!shifted && NUMERIC_HEADERS.has(h)) shifted = true;
+        obj[h] = shifted ? (cols[i+offset]||"") : (cols[i]||"");
+      });
+    } else {
+      headers.forEach((h,i)=>{ if(h) obj[h]=cols[i]||""; });
+    }
     return obj;
   });
 }
@@ -325,6 +372,13 @@ function mapMetaRow(row){
     for(const k of keys){
       if(row[k]!==undefined&&row[k]!==null&&row[k]!=="") return row[k];
     }
+    // 대소문자/공백 무시 fallback
+    const rowKeys=Object.keys(row);
+    for(const k of keys){
+      const norm=k.replace(/\s/g,"").toLowerCase();
+      const found=rowKeys.find(rk=>rk.replace(/\s/g,"").toLowerCase()===norm);
+      if(found&&row[found]!==undefined&&row[found]!==null&&row[found]!=="") return row[found];
+    }
     return "";
   };
   const num=v=>{
@@ -333,32 +387,54 @@ function mapMetaRow(row){
     return isNaN(n)?0:n;
   };
 
-  return {
-    date:       g("일","날짜","보고 시작","date"),
+  // 날짜 정규화 → YYYY-MM-DD
+  const normalizeDate = v => {
+    if(!v) return "";
+    const s = String(v).trim();
+    // 이미 YYYY-MM-DD
+    if(/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+    // YYYY. M. D. / YYYY. MM. DD. (한국 구글시트)
+    const ko = s.match(/^(\d{4})[.\s]+(\d{1,2})[.\s]+(\d{1,2})/);
+    if(ko) return `${ko[1]}-${ko[2].padStart(2,"0")}-${ko[3].padStart(2,"0")}`;
+    // M/D/YYYY 또는 MM/DD/YYYY
+    const us = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+    if(us) return `${us[3]}-${us[1].padStart(2,"0")}-${us[2].padStart(2,"0")}`;
+    // YYYY/MM/DD
+    const ymd = s.match(/^(\d{4})\/(\d{1,2})\/(\d{1,2})/);
+    if(ymd) return `${ymd[1]}-${ymd[2].padStart(2,"0")}-${ymd[3].padStart(2,"0")}`;
+    return s;
+  };
+
+  const out = {
+    date: normalizeDate(g("일","날짜","보고 시작","date")),
     campaign:   g("캠페인 이름","campaign_name","campaign"),
     adset:      g("광고 세트 이름","adset_name"),
     adName:     g("광고 이름","ad_name"),
     // 목표: OUTCOME_SALES / LINK_CLICKS 등 — 전환/트래픽 분류 핵심
-    objective:  g("목표","목적","objective"),
+    objective:  g("목표","목적","캠페인 목표","목표 유형","광고 목표","objective"),
     resultType: g("결과 유형","result_type"),
-    spend:      num(g("지출 금액 (KRW)","지출 금액","amount_spent","spend")),
-    impressions:num(g("노출","impressions")),
-    clicks:     num(g("링크 클릭","link_clicks")),
-    clicksAll:  num(g("클릭(전체)","clicks")),
-    lpv:        num(g("랜딩 페이지 조회","landing_page_views")),
-    purchases:  num(g("공유 항목이 포함된 구매","결과","purchases","result")),
-    cart:       num(g("공유 항목이 포함된 장바구니에 담기","add_to_cart")),
-    convValue:  num(g("공유 항목의 구매 전환값","공유 항목의 웹사이트 구매 전환값","conversion_value")),
-    cpc:        num(g("CPC(링크 클릭당 비용)","cpc")),
-    cpcAll:     num(g("CPC(전체)")),
-    ctr:        num(g("CTR(전체)","ctr")),
-    cpa:        num(g("결과당 비용","cost_per_result","cpa")),
-    cpm:        num(g("CPM(1,000회 노출당 비용)","cpm")),
+    spend:      num(g("지출 금액 (KRW)","지출 금액 (KRW)","지출 금액","금액","amount_spent","spend")),
+    impressions:num(g("노출","노출 수","impressions")),
+    clicks:     num(g("링크 클릭 수","링크 클릭","link_clicks","inline_link_clicks")),
+    clicksAll:  num(g("클릭(전체)","클릭 (전체)","클릭수","clicks")),
+    lpv:        num(g("랜딩 페이지 조회","랜딩 페이지 조회 수","landing_page_views")),
+    purchases:  num(g("공유 항목이 포함된 구매","웹사이트 구매","구매 완료","구매","결과","purchases","result","website_purchase","omni_purchase")),
+    cart:       num(g("공유 항목이 포함된 장바구니에 담기","장바구니에 담기","add_to_cart")),
+    convValue:  num(g("공유 항목의 구매 전환값","공유 항목의 웹사이트 구매 전환값","웹사이트 구매 전환값","구매 전환값","전환값","conversion_value","website_purchase_value")),
+    cpc:        num(g("CPC(링크 클릭당 비용)","CPC (링크 클릭당 비용)","링크 클릭당 비용","cpc","cost_per_link_click")),
+    cpcAll:     num(g("CPC(전체)","CPC (전체)")),
+    ctr:        num(g("CTR(전체)","CTR (전체)","CTR(링크 클릭률)","CTR (링크 클릭률)","ctr")),
+    cpa:        num(g("결과당 비용","결과 당 비용","cost_per_result","cpa")),
+    cpm:        num(g("CPM(1,000회 노출당 비용)","CPM (1,000회 노출당 비용)","CPM","cpm")),
     campaignBudget:     num(g("캠페인 예산","campaign_budget")),
     campaignBudgetType: g("캠페인 예산 유형","campaign_budget_type"),
     adsetBudget:        num(g("광고 세트 예산","adset_budget")),
     adsetBudgetType:    g("광고 세트 예산 유형","adset_budget_type"),
   };
+  // CPC fallback: 컬럼에 없으면 spend/clicks로 계산
+  const _clicks = out.clicks || out.clicksAll || 0;
+  if(!out.cpc && out.spend > 0 && _clicks > 0) out.cpc = Math.round(out.spend / _clicks);
+  return out;
 }
 
 // 전환/트래픽 분류 — 목표 컬럼 우선, 그 다음 캠페인명
@@ -847,6 +923,10 @@ export default function OaDashboard(){
   const [imgUploading, setImgUploading] = useState(false);
   const [imgError, setImgError]       = useState("");
   const [hoverImg, setHoverImg]       = useState(null);
+  const [dailyOpenDate, setDailyOpenDate] = useState(null);
+  const [weekOpenKey, setWeekOpenKey] = useState(null);
+  const [monthOpenKey, setMonthOpenKey] = useState(null);
+  const [productOpenKey, setProductOpenKey] = useState(null);
   const fileInputRef                  = useRef(null);
   const [isDragging, setIsDragging]   = useState(false);
 
@@ -854,7 +934,10 @@ export default function OaDashboard(){
   // 소재 라이브러리 & 재제작 요청
   const [creativeLib, setCreativeLib] = useSyncState("oa_creative_lib_v8", []);
   const [recreateReqs, setRecreateReqs] = useSyncState("oa_recreate_req_v8", []);
-  const [kwData, setKwData] = useSyncState("oa_kw_v1", { keywords: [], logs: [] });
+  const [kwData, setKwData] = useSyncState("oa_kw_v1", {
+    keywords: [{id:"oa-fixed",name:"OA",competitor:"",color:"#2563EB",type:"my",addedAt:"",fixed:true}],
+    logs: []
+  });
 
   const [allAdRaw, setAllAdRaw]       = useSyncState("oa_all_ad_raw_v7", []);
   const [allAdStatus, setAllAdStatus] = useState(()=>allAdRaw?.length>0?"ok":"idle");
@@ -1067,6 +1150,55 @@ export default function OaDashboard(){
       }
     }
 
+    // 어제 광고비
+    const yDate = new Date(); yDate.setDate(yDate.getDate()-1);
+    const yStr2 = `${yDate.getFullYear()}-${String(yDate.getMonth()+1).padStart(2,'0')}-${String(yDate.getDate()).padStart(2,'0')}`;
+    const yRows2 = metaFiltered.filter(r=>r.date===yStr2);
+    if(yRows2.length>0){
+      const ySpend2 = yRows2.reduce((s,r)=>s+(r.spend||0),0);
+      const yConv2  = yRows2.filter(r=>isConversionCampaign(r.objective,r.campaign)).reduce((s,r)=>s+(r.spend||0),0);
+      const yTraff2 = yRows2.filter(r=>!isConversionCampaign(r.objective,r.campaign)).reduce((s,r)=>s+(r.spend||0),0);
+      lines.push("");
+      lines.push(`## 어제 광고비 (${yStr2})`);
+      lines.push(`- 총: ${fmtW(ySpend2)}`);
+      lines.push(`- 전환: ${fmtW(yConv2)} / 트래픽: ${fmtW(yTraff2)}`);
+    }
+
+    // 캠페인별 집계 (전환/트래픽 분리)
+    const campMap = {};
+    metaFiltered.forEach(r=>{
+      const k = r.campaign||"기타";
+      if(!campMap[k]) campMap[k]={campaign:k,objective:r.objective||"",spend:0,purch:0,convV:0,clicks:0,lpv:0,isConv:isConversionCampaign(r.objective,r.campaign)};
+      campMap[k].spend+=r.spend||0; campMap[k].purch+=r.purchases||0;
+      campMap[k].convV+=r.convValue||0; campMap[k].clicks+=r.clicks||0; campMap[k].lpv+=r.lpv||0;
+    });
+    const camps = Object.values(campMap).sort((a,b)=>b.spend-a.spend);
+    const convCamps  = camps.filter(c=>c.isConv);
+    const traffCamps = camps.filter(c=>!c.isConv);
+    lines.push("");
+    lines.push("## 전환 캠페인 성과");
+    lines.push("캠페인 | 광고비 | 구매 | 전환값 | ROAS | CPA");
+    convCamps.forEach(c=>{
+      const roas=c.spend>0?Math.round(c.convV/c.spend*100)+"%":"—";
+      const cpa=c.purch>0?fmtW(c.spend/c.purch):"—";
+      lines.push(`${c.campaign} | ${fmtW(c.spend)} | ${c.purch}건 | ${fmtW(c.convV)} | ${roas} | ${cpa}`);
+    });
+    lines.push("");
+    lines.push("## 트래픽 캠페인 성과");
+    lines.push("캠페인 | 광고비 | 클릭 | CPC | LPV율");
+    traffCamps.forEach(c=>{
+      const cpc=c.clicks>0?`₩${Math.round(c.spend/c.clicks)}`:"—";
+      const lpvR=c.clicks>0?Math.round(c.lpv/c.clicks*100)+"%":"—";
+      lines.push(`${c.campaign} | ${fmtW(c.spend)} | ${c.clicks.toLocaleString()} | ${cpc} | ${lpvR}`);
+    });
+
+    // 데이터 출처 표시
+    lines.push("");
+    lines.push(`## 데이터 출처`);
+    lines.push(`- Meta API: ${metaApiStatus==="ok"?"연결됨":"미연결"}`);
+    lines.push(`- 구글 시트 (전환): ${sheetConvRaw.length>0?`연결됨 (${sheetConvRaw.length}건)`:"미연결"}`);
+    lines.push(`- 기간: ${{yesterday:"어제",last_7d:"최근 7일",last_14d:"최근 14일",last_30d:"최근 30일",last_90d:"최근 90일"}[metaDatePreset]||metaDatePreset}`);
+
     return lines.join("\n");
   }
 
@@ -1218,24 +1350,14 @@ export default function OaDashboard(){
     }
   }
 
-  // 마운트 시 Meta API 자동 로드
-  useEffect(() => { fetchMetaAds(); }, []); // eslint-disable-line
-
   // 시트 URL 로드 시 자동 fetch
   useEffect(() => { if(sheetUrl) fetchSheet(sheetUrl); }, [sheetUrl]); // eslint-disable-line
 
-  // 하이브리드 병합: 시트 전환 + API 트래픽
+  // 시트 전용
   useEffect(() => {
-    if(sheetConvRaw.length > 0) {
-      // 시트에 있는 캠페인은 시트 우선, 나머지는 API
-      const sheetCamps = new Set(sheetConvRaw.map(r=>r.campaign).filter(Boolean));
-      const apiOnly = metaApiRaw.filter(r => !sheetCamps.has(r.campaign));
-      setMetaRaw([...sheetConvRaw, ...apiOnly]);
-      setMetaStatus("ok");
-    } else {
-      setMetaRaw(metaApiRaw);
-    }
-  }, [metaApiRaw, sheetConvRaw]); // eslint-disable-line
+    setMetaRaw(sheetConvRaw.length > 0 ? sheetConvRaw : []);
+    if(sheetConvRaw.length > 0) setMetaStatus("ok");
+  }, [sheetConvRaw]); // eslint-disable-line
 
   // 시트 fetch
   async function fetchSheet(url) {
@@ -1524,11 +1646,16 @@ export default function OaDashboard(){
   },[infUrl, infUrlLoaded]);
 
   // ── 메타 데이터 집계 ─────────────────────────────
-  const hasSheet = metaApiStatus==="ok" && metaRaw.length>0;
+  const hasData = sheetConvRaw.length > 0 && metaRaw.length > 0;
+  const hasSheet = hasData; // 하위호환 — 모든 카드/차트에서 동일 기준 사용
   // 인스타그램 게시물 광고 = 캠페인명에 "Instagram 게시물" 포함
   const isInstaPost = r => (r.campaign||r.adName||"").includes("Instagram 게시물");
-  const metaFiltered = metaRaw.filter(r => !deletedAds.includes(r.adName||r.campaign||"") && !isInstaPost(r));
-  const instaRaw     = metaRaw.filter(r => isInstaPost(r)); // 인스타 게시물 따로
+  // deletedAds Set — O(1) 조회
+  const deletedAdsSet = new Set(deletedAds);
+  const metaFiltered = metaRaw.filter(r => !deletedAdsSet.has(r.adName||r.campaign||"") && !isInstaPost(r));
+  const instaRaw     = metaRaw.filter(r => isInstaPost(r));
+  // 최신 날짜 — 여러 곳에서 반복 계산되던 것 한 번만
+  const sheetMaxDate = metaRaw.map(r=>r.date).filter(Boolean).sort().pop()||"";
 
   const metaAgg = hasSheet ? (() => {
     const totalSpend    = metaFiltered.reduce((s,r)=>s+r.spend,0);
@@ -1540,22 +1667,27 @@ export default function OaDashboard(){
     const avgCpa        = totalPurchases ? totalSpend/totalPurchases : 0;
     const lpvRate       = totalClicks ? (totalLpv/totalClicks)*100 : 0;
 
-    // 날짜별 집계
+    // 날짜별 집계 (전환/트래픽 분리 포함)
     const byDate = {};
     metaFiltered.forEach(r=>{
       if(!r.date) return;
       if(!byDate[r.date]) byDate[r.date]={
         day:r.date.slice(5).replace("-","/"),
         spend:0, clicks:0, lpv:0, purchases:0,
-        impressions:0, convValue:0, n:0
+        impressions:0, convValue:0, n:0,
+        convSpend:0, traffSpend:0,
+        convClicks:0, traffClicks:0,
       };
+      const isConv = isConversionCampaign(r.objective, r.campaign);
       byDate[r.date].spend      += r.spend||0;
-      byDate[r.date].clicks     += r.clicks||0;        // 링크 클릭만 사용 (일관성)
+      byDate[r.date].clicks     += r.clicks||0;
       byDate[r.date].lpv        += r.lpv||0;
       byDate[r.date].purchases  += r.purchases||0;
       byDate[r.date].impressions+= r.impressions||0;
       byDate[r.date].convValue  += r.convValue||0;
       byDate[r.date].n++;
+      if(isConv){ byDate[r.date].convSpend  += r.spend||0; byDate[r.date].convClicks  += r.clicks||0; }
+      else      { byDate[r.date].traffSpend += r.spend||0; byDate[r.date].traffClicks += r.clicks||0; }
     });
     const daily = Object.values(byDate)
       .sort((a,b)=>a.day.localeCompare(b.day))
@@ -1564,6 +1696,8 @@ export default function OaDashboard(){
         // CTR = 클릭/노출 × 100 (직접 계산, 더 정확)
         ctr: d.impressions>0 ? +((d.clicks/d.impressions)*100).toFixed(2) : 0,
         cpc: d.clicks>0 ? +(d.spend/d.clicks).toFixed(0) : 0,
+        convCpc:  d.convClicks>0  ? +(d.convSpend/d.convClicks).toFixed(0)   : null,
+        traffCpc: d.traffClicks>0 ? +(d.traffSpend/d.traffClicks).toFixed(0) : null,
         lpvRate: d.clicks>0 ? +((d.lpv/d.clicks)*100).toFixed(1) : 0,
       }));
 
@@ -1701,6 +1835,7 @@ export default function OaDashboard(){
     {id:"creative",  icon:"palette",label:"소재"},
     {id:"keyword",   icon:"search",label:"키워드"},
     {id:"review",    icon:"check_circle",label:"콘텐츠리뷰"},
+    {id:"coupang",   icon:"shopping_cart",label:"쿠팡"},
   ];
 
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -1750,10 +1885,11 @@ export default function OaDashboard(){
 
     const activeGroups = alertGroups.filter(g=>g.count>0);
 
-    // 전날 광고비 계산
+    // 전날 광고비 계산 (로컬 타임존 기준 — toISOString은 UTC라 한국 시간과 다를 수 있음)
     const yesterday = new Date(); yesterday.setDate(yesterday.getDate()-1);
-    const yStr = yesterday.toISOString().slice(0,10);
-    const yRows = metaRaw.filter(r=>r.date===yStr);
+    const yStr = `${yesterday.getFullYear()}-${String(yesterday.getMonth()+1).padStart(2,'0')}-${String(yesterday.getDate()).padStart(2,'0')}`;
+    // metaFiltered 기준 — 차트와 동일 소스 (삭제광고·인스타게시물 제외)
+    const yRows = metaFiltered.filter(r=>r.date===yStr);
     const ySpend = yRows.reduce((s,r)=>s+(r.spend||0),0);
     const yConv  = yRows.filter(r=>isConversionCampaign(r.objective,r.campaign)).reduce((s,r)=>s+(r.spend||0),0);
     const yTraff = yRows.filter(r=>!isConversionCampaign(r.objective,r.campaign)).reduce((s,r)=>s+(r.spend||0),0);
@@ -2002,48 +2138,32 @@ export default function OaDashboard(){
             </div>
           </div>
         </div>
-        {/* Meta API 상태 배너 */}
+        {/* 데이터 상태 배너 */}
         <div style={{
-          background: metaApiStatus==="ok" ? "#EDF7F1" : metaApiStatus==="error" ? "#FEF0F0" : C.goldLt,
-          border:`1px solid ${metaApiStatus==="ok"?C.good+"55":metaApiStatus==="error"?C.bad+"55":C.gold+"66"}`,
+          background: metaApiStatus==="ok" ? "#EDF7F1" : sheetConvRaw.length>0 ? "#EDF7F1" : C.goldLt,
+          border:`1px solid ${(metaApiStatus==="ok"||sheetConvRaw.length>0)?C.good+"55":C.gold+"66"}`,
           borderRadius:12,padding:"12px 16px",
           display:"flex",alignItems:"center",justifyContent:"space-between",gap:10,flexWrap:"wrap",
         }}>
           <div style={{display:"flex",alignItems:"center",gap:10}}>
             <MI n="bar_chart" size={20}/>
             <div>
-              {metaApiStatus==="ok" ? (
+              {(metaApiStatus==="ok"||sheetConvRaw.length>0) ? (
                 <>
-                  <div style={{fontSize:12,fontWeight:800,color:C.good}}>Meta API 연결됨 · {metaRaw.length}건{deletedAds.length>0&&<span style={{color:C.inkLt,fontWeight:600}}> ({deletedAds.length}개 숨김)</span>}</div>
-                  <div style={{fontSize:10,color:C.inkMid,marginTop:1}}>
-                    기간: {{yesterday:"어제",last_7d:"최근 7일",last_14d:"최근 14일",last_30d:"최근 30일",last_90d:"최근 90일"}[metaDatePreset]||metaDatePreset}
-                  </div>
+                  <div style={{fontSize:12,fontWeight:800,color:C.good}}>데이터 연결됨 · {metaRaw.length}건{deletedAds.length>0&&<span style={{color:C.inkLt,fontWeight:600}}> ({deletedAds.length}개 숨김)</span>}</div>
+                  <div style={{fontSize:10,color:C.inkMid,marginTop:1}}>기간: {metaRaw.map(r=>r.date).filter(Boolean).sort()[0]||"—"} ~ {sheetMaxDate||"—"}</div>
                 </>
               ) : metaApiStatus==="loading" ? (
-                <div style={{fontSize:12,fontWeight:700,color:C.gold}}><MI n="hourglass_empty" size={13}/> Meta API 불러오는 중...</div>
-              ) : metaApiStatus==="error" ? (
-                <div>
-                  <div style={{fontSize:12,fontWeight:800,color:C.bad}}>Meta API 오류 — {metaApiError}</div>
-                  <div style={{fontSize:10,color:C.inkMid,marginTop:1}}>토큰 또는 계정 ID를 확인하세요</div>
-                </div>
-              ) : (
                 <div style={{fontSize:12,fontWeight:700,color:C.gold}}><MI n="hourglass_empty" size={13}/> 불러오는 중...</div>
+              ) : (
+                <div style={{fontSize:12,fontWeight:700,color:C.gold}}>전환 시트를 연결해주세요</div>
               )}
             </div>
           </div>
           <div style={{display:"flex",gap:6,flexWrap:"wrap",alignItems:"center"}}>
-            {/* 기간 선택 */}
-            {["yesterday","last_7d","last_14d","last_30d","last_90d"].map(p=>(
-              <button key={p} onClick={()=>{setMetaDatePreset(p);fetchMetaAds(p);}}
-                style={{fontSize:10,padding:"3px 9px",borderRadius:20,border:`1px solid ${metaDatePreset===p?C.rose:C.border}`,
-                  background:metaDatePreset===p?C.rose:"#fff",color:metaDatePreset===p?"#fff":C.inkMid,
-                  cursor:"pointer",fontFamily:"inherit",fontWeight:700}}>
-                {{"yesterday":"어제","last_7d":"7일","last_14d":"14일","last_30d":"30일","last_90d":"90일"}[p]}
-              </button>
-            ))}
-            <Btn variant="sage" small onClick={()=>fetchMetaAds()}><MI n="refresh" size={13}/> 새로고침</Btn>
+            {sheetUrl && <Btn variant="sage" small onClick={()=>fetchSheet(sheetUrl)}><MI n="refresh" size={13}/> 새로고침</Btn>}
             <Btn variant={sheetConvRaw.length>0?"neutral":"gold"} small onClick={()=>{setSheetInput(sheetUrl);setSheetModal(true);}}>
-              <MI n="table_chart" size={13}/> {sheetConvRaw.length>0?`전환 시트 (${sheetConvRaw.length}건)`:"전환 시트 연결"}
+              <MI n="table_chart" size={13}/> {sheetConvRaw.length>0?`시트 (${sheetConvRaw.length}건)`:"시트 연결"}
             </Btn>
             {deletedAds.length>0&&(
               <div style={{position:"relative"}}>
@@ -2092,7 +2212,6 @@ export default function OaDashboard(){
         {/* ── 카드1: 집행중 광고 성과 (시트 기준) ── */}
         {hasSheet&&(()=>{
           const fmtW = n=>n>=10000?`₩${Math.round(n/10000).toLocaleString()}만`:`₩${Math.round(n).toLocaleString()}`;
-          const sheetMaxDate = metaRaw.map(r=>r.date).filter(Boolean).sort().pop()||"";
 
           // 집행중 광고만 필터 (최신 날짜 기준 spend>0)
           const adLastSpend={};
@@ -2186,8 +2305,8 @@ export default function OaDashboard(){
           );
         })()}
 
-        {/* ── 카드2: 전체 광고비 (Meta API) ── */}
-        {(metaApiStatus==="ok"||metaApiStatus==="loading")&&(()=>{
+        {/* ── 카드2: 전체 광고비 (시트+API 합산) ── */}
+        {hasData&&(()=>{
           const fmtW = n=>n>=10000?`₩${Math.round(n/10000).toLocaleString()}만`:`₩${Math.round(n).toLocaleString()}`;
           const allRows = metaRaw.filter(r=>!isInstaPost(r));
           const allConv    = allRows.filter(r=>isConversionCampaign(r.objective,r.campaign));
@@ -2203,7 +2322,7 @@ export default function OaDashboard(){
               <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12,gap:8,flexWrap:"wrap"}}>
                 <div>
                   <div style={{fontSize:12,fontWeight:800,letterSpacing:"0.05em"}}><MI n="payments" size={14}/> 전체 광고비</div>
-                  <div style={{fontSize:10,opacity:0.4,marginTop:2}}>Meta API · {{"last_7d":"최근 7일","last_14d":"최근 14일","last_30d":"최근 30일","last_90d":"최근 90일"}[metaDatePreset]||metaDatePreset}</div>
+                  <div style={{fontSize:10,opacity:0.4,marginTop:2}}>{sheetConvRaw.length>0?"시트+API":"Meta API"} · {{"yesterday":"어제","last_7d":"최근 7일","last_14d":"최근 14일","last_30d":"최근 30일","last_90d":"최근 90일"}[metaDatePreset]||metaDatePreset}</div>
                 </div>
                 <div style={{textAlign:"right"}}>
                   <div style={{fontSize:9,opacity:0.5}}>총 광고비</div>
@@ -2312,7 +2431,7 @@ export default function OaDashboard(){
 
         {/* 탭 */}
         <div style={{display:"flex",gap:6,overflowX:"auto",paddingBottom:2}}>
-          {[{id:"overview",label:<><MI n="trending_up" size={12}/> 추이</>},{id:"campaign",label:<><MI n="campaign" size={12}/> 캠페인</>},{id:"weekly",label:<><MI n="calendar_month" size={12}/> 주별</>},{id:"monthly",label:<><MI n="date_range" size={12}/> 월별</>},{id:"product",label:<><MI n="inventory_2" size={12}/> 제품별</>}].map(t=>(
+          {[{id:"overview",label:<><MI n="trending_up" size={12}/> 추이</>},{id:"campaign",label:<><MI n="campaign" size={12}/> 캠페인</>},{id:"weekly",label:<><MI n="calendar_month" size={12}/> 주별</>},{id:"monthly",label:<><MI n="date_range" size={12}/> 월별</>},{id:"daily",label:<><MI n="calendar_today" size={12}/> 일별</>},{id:"product",label:<><MI n="inventory_2" size={12}/> 제품별</>}].map(t=>(
             <button key={t.id} onClick={()=>setMetaTab(t.id)} style={{
               padding:"6px 16px",borderRadius:8,cursor:"pointer",border:`1px solid ${metaTab===t.id?C.rose:C.border}`,
               background:metaTab===t.id?C.blush:C.white,color:metaTab===t.id?C.rose:C.inkMid,
@@ -2332,17 +2451,25 @@ export default function OaDashboard(){
             )}
             {hasSheet&&d&&(<>
               <Card>
-                <CardTitle title="일별 광고비" sub="소진 패턴"/>
-                <ResponsiveContainer width="100%" height={160}>
-                  <BarChart data={d.daily}>
+                <CardTitle title="일별 광고비" sub="전환(분홍) + 트래픽(파랑) 누적"/>
+                <ResponsiveContainer width="100%" height={180}>
+                  <BarChart data={d.daily} stackOffset="none">
                     <CartesianGrid strokeDasharray="3 3" stroke={C.border}/>
                     <XAxis dataKey="day" tick={{fontSize:8,fill:C.inkLt}} axisLine={false} tickLine={false} interval={Math.floor(d.daily.length/6)}/>
                     <YAxis tick={{fontSize:8,fill:C.inkLt}} axisLine={false} tickLine={false}
                       tickFormatter={v=>v>=10000?`${Math.round(v/10000)}만`:v}/>
-                    <Tooltip content={<BeautyTooltip fmt={v=>`₩${Math.round(v/10000).toLocaleString()}만`}/>}/>
-                    <Bar dataKey="spend" fill={C.roseLt} radius={[3,3,0,0]} name="광고비"/>
+                    <Tooltip formatter={(v,n)=>[`₩${Math.round(v/10000).toLocaleString()}만`,n]} labelStyle={{fontWeight:700,fontSize:11}}/>
+                    <Bar dataKey="convSpend"  stackId="a" fill="#f9a8d4" name="전환"/>
+                    <Bar dataKey="traffSpend" stackId="a" fill={C.roseLt} radius={[3,3,0,0]} name="트래픽"/>
                   </BarChart>
                 </ResponsiveContainer>
+                <div style={{display:"flex",gap:16,justifyContent:"flex-end",marginTop:4}}>
+                  {[{c:"#f9a8d4",l:"전환"},{c:C.roseLt,l:"트래픽"}].map(({c,l})=>(
+                    <div key={l} style={{display:"flex",alignItems:"center",gap:5,fontSize:10,color:C.inkMid}}>
+                      <div style={{width:12,height:12,background:c,borderRadius:3}}/>{l}
+                    </div>
+                  ))}
+                </div>
               </Card>
               <Card>
                 <CardTitle title="클릭수 vs LPV 일별 추이" sub="클릭 대비 랜딩 도달 흐름"/>
@@ -2408,6 +2535,26 @@ export default function OaDashboard(){
                   </ResponsiveContainer>
                 </Card>
               </div>
+              <Card>
+                <CardTitle title="일별 CPC" sub="전환(분홍) vs 트래픽(파랑)"/>
+                <ResponsiveContainer width="100%" height={160}>
+                  <LineChart data={d.daily}>
+                    <CartesianGrid strokeDasharray="3 3" stroke={C.border}/>
+                    <XAxis dataKey="day" tick={{fontSize:8,fill:C.inkLt}} axisLine={false} tickLine={false} interval={Math.floor(d.daily.length/6)}/>
+                    <YAxis tick={{fontSize:8,fill:C.inkLt}} axisLine={false} tickLine={false} tickFormatter={v=>v>=1000?`${Math.round(v/1000)}k`:v}/>
+                    <Tooltip formatter={(v,n)=>[v!=null?`₩${Math.round(v).toLocaleString()}`:"—",n]} labelStyle={{fontWeight:700,fontSize:11}}/>
+                    <Line type="monotone" dataKey="convCpc"  stroke="#f9a8d4" strokeWidth={2} dot={false} name="전환 CPC" connectNulls={false}/>
+                    <Line type="monotone" dataKey="traffCpc" stroke={C.roseLt} strokeWidth={2} dot={false} name="트래픽 CPC" connectNulls={false}/>
+                  </LineChart>
+                </ResponsiveContainer>
+                <div style={{display:"flex",gap:16,justifyContent:"flex-end",marginTop:4}}>
+                  {[{c:"#f9a8d4",l:"전환 CPC"},{c:C.roseLt,l:"트래픽 CPC"}].map(({c,l})=>(
+                    <div key={l} style={{display:"flex",alignItems:"center",gap:5,fontSize:10,color:C.inkMid}}>
+                      <div style={{width:14,height:3,background:c,borderRadius:2}}/>{l}
+                    </div>
+                  ))}
+                </div>
+              </Card>
               <div style={{background:`linear-gradient(135deg,${C.blush},${C.white})`,
                 border:`1px solid ${C.rose}33`,borderRadius:14,padding:"16px",
                 display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:12}}>
@@ -2417,7 +2564,7 @@ export default function OaDashboard(){
                   <div style={{fontSize:10,color:C.inkMid}}>{d.totalClicks.toLocaleString()} 클릭 → {d.totalLpv.toLocaleString()} 랜딩 도달</div>
                 </div>
                 <div style={{textAlign:"right"}}>
-                  <div style={{fontSize:10,color:C.inkLt}}>평균 CPC</div>
+                  <div style={{fontSize:10,color:C.inkLt}}>기간 평균 CPC</div>
                   <div style={{fontSize:22,fontWeight:900,color:C.gold}}>₩{Math.round(d.avgCpc).toLocaleString()}</div>
                   <div style={{fontSize:10,color:C.inkLt}}>총 {d.campaigns.length}개 캠페인</div>
                 </div>
@@ -2450,7 +2597,6 @@ export default function OaDashboard(){
               {(()=>{
                 const camps = campTab==="conversion" ? d.convCamps : d.trafficCamps;
                 const fmtW = n=>n>=10000?`₩${Math.round(n/10000).toLocaleString()}만`:`₩${Math.round(n).toLocaleString()}`;
-                const sheetMaxDate = metaRaw.map(r=>r.date).filter(Boolean).sort().pop()||"";
 
                 // 집행중 + 판정 좋은 광고만
                 const topAds = camps.filter(c=>{
@@ -2857,7 +3003,6 @@ export default function OaDashboard(){
                             const today = new Date(); today.setHours(0,0,0,0);
                             const parseD = s=>{ if(!s)return null; const d=new Date(s); return isNaN(d)?null:d; };
                             // 시트 전체 최신 날짜 (기준점)
-                            const sheetMaxDate = metaRaw.map(r=>r.date).filter(Boolean).sort().pop();
                             const sheetMax = parseD(sheetMaxDate);
                             const fd  = parseD(c.firstDate);
                             const lad = parseD(c.lastActiveDate); // 지출 있는 마지막 날
@@ -2983,178 +3128,330 @@ export default function OaDashboard(){
         )}
 
         {/* 주별 탭 */}
-        {metaTab==="weekly"&&(
-          <div style={{display:"flex",flexDirection:"column",gap:14}}>
-            {!hasSheet?(
-              <div style={{textAlign:"center",padding:"40px 0",color:C.inkLt}}>
-                <div style={{fontSize:36,marginBottom:10}}><MI n="calendar_month" size={36}/></div>
-                <div style={{fontSize:13,fontWeight:700,color:C.inkMid}}>시트 연결 후 주별 데이터가 표시됩니다</div>
-              </div>
-            ):(()=>{
-              // 주차별 집계
-              const weekMap = {};
-              metaRaw.forEach(r=>{
-                if(!r.date) return;
-                const d = new Date(r.date);
-                const day = d.getDay();
-                const monday = new Date(d); monday.setDate(d.getDate()-(day===0?6:day-1));
-                const wk = monday.toISOString().slice(0,10);
-                if(!weekMap[wk]) weekMap[wk]={week:wk,spend:0,clicks:0,lpv:0,purchases:0,convValue:0};
-                weekMap[wk].spend+=(r.spend||0);
-                weekMap[wk].clicks+=(r.clicks||0);
-                weekMap[wk].lpv+=(r.lpv||0);
-                weekMap[wk].purchases+=(r.purchases||0);
-                weekMap[wk].convValue+=(r.convValue||0);
-              });
-              const weeks = Object.values(weekMap).sort((a,b)=>a.week.localeCompare(b.week));
-              return(
-                <Card>
-                  <CardTitle title={<><MI n="calendar_month" size={14}/> 주별 성과</>} sub="주차별 광고비·구매·ROAS"/>
-                  <div style={{overflowX:"auto"}}>
-                    <table style={{width:"100%",borderCollapse:"collapse",fontSize:11}}>
-                      <thead><tr style={{borderBottom:`2px solid ${C.border}`}}>
-                        {["주차","광고비","클릭","LPV","구매","ROAS"].map((h,i)=>(
-                          <th key={i} style={{padding:"8px",textAlign:i===0?"left":"right",color:C.inkLt,fontWeight:700,fontSize:9}}>{h}</th>
-                        ))}
-                      </tr></thead>
-                      <tbody>{weeks.map((w,i)=>{
-                        const roas=w.spend>0?(w.convValue/w.spend).toFixed(2):0;
-                        return(<tr key={i} style={{borderBottom:`1px solid ${C.border}`}}
-                          onMouseEnter={e=>e.currentTarget.style.background=C.cream}
-                          onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
-                          <td style={{padding:"10px 8px",fontWeight:700,color:C.ink}}>{w.week}</td>
-                          <td style={{padding:"10px 8px",textAlign:"right",color:C.rose,fontWeight:700}}>₩{Math.round(w.spend/1000).toLocaleString()}K</td>
-                          <td style={{padding:"10px 8px",textAlign:"right",color:C.inkMid}}>{w.clicks.toLocaleString()}</td>
-                          <td style={{padding:"10px 8px",textAlign:"right",color:C.sage}}>{w.lpv.toLocaleString()}</td>
-                          <td style={{padding:"10px 8px",textAlign:"right",color:C.good,fontWeight:700}}>{w.purchases}</td>
-                          <td style={{padding:"10px 8px",textAlign:"right"}}>
-                            <span style={{fontWeight:800,fontSize:11,color:roas>=3?C.good:C.warn,background:roas>=3?"#EDF7F1":"#FFF8EC",padding:"2px 7px",borderRadius:20}}>{roas}x</span>
-                          </td>
-                        </tr>);
-                      })}</tbody>
-                    </table>
+        {metaTab==="weekly"&&(()=>{
+          if(!hasSheet) return(
+            <div style={{textAlign:"center",padding:"40px 0",color:C.inkLt}}>
+              <MI n="calendar_month" size={36}/><div style={{fontSize:13,fontWeight:700,color:C.inkMid,marginTop:10}}>데이터 없음</div>
+            </div>
+          );
+          const fmtW=n=>n>=10000?`₩${Math.round(n/10000).toLocaleString()}만`:`₩${Math.round(n).toLocaleString()}`;
+          const weekMap={};
+          metaFiltered.forEach(r=>{
+            if(!r.date||!r.campaign) return;
+            const dd=new Date(r.date); const day=dd.getDay();
+            const mon=new Date(dd); mon.setDate(dd.getDate()-(day===0?6:day-1));
+            const wk=`${mon.getFullYear()}-${String(mon.getMonth()+1).padStart(2,"0")}-${String(mon.getDate()).padStart(2,"0")}`;
+            if(!weekMap[wk]) weekMap[wk]={week:wk,spend:0,purchases:0,convValue:0,camps:{}};
+            weekMap[wk].spend+=(r.spend||0);
+            weekMap[wk].purchases+=(r.purchases||0);
+            weekMap[wk].convValue+=(r.convValue||0);
+            if(!weekMap[wk].camps[r.campaign]) weekMap[wk].camps[r.campaign]={spend:0,purchases:0,convValue:0,clicks:0,objective:r.objective||""};
+            weekMap[wk].camps[r.campaign].spend+=(r.spend||0);
+            weekMap[wk].camps[r.campaign].purchases+=(r.purchases||0);
+            weekMap[wk].camps[r.campaign].convValue+=(r.convValue||0);
+            weekMap[wk].camps[r.campaign].clicks+=(r.clicks||0);
+          });
+          const weeks=Object.values(weekMap).sort((a,b)=>b.week.localeCompare(a.week));
+          return(
+            <div style={{display:"flex",flexDirection:"column",gap:8}}>
+              {weeks.map((w,i)=>{
+                const isOpen=weekOpenKey===w.week;
+                const roas=w.spend>0?Math.round((w.convValue/w.spend)*100):0;
+                const campList=Object.entries(w.camps).filter(([,v])=>v.spend>0).sort((a,b)=>b[1].spend-a[1].spend);
+                const endDate=new Date(w.week); endDate.setDate(endDate.getDate()+6);
+                const endStr=`${String(endDate.getMonth()+1).padStart(2,"0")}/${String(endDate.getDate()).padStart(2,"0")}`;
+                const startStr=w.week.slice(5).replace("-","/");
+                return(
+                  <div key={w.week} style={{borderRadius:12,border:`1px solid ${i===0?C.rose+"66":C.border}`,overflow:"hidden",background:C.white}}>
+                    <div onClick={()=>setWeekOpenKey(isOpen?null:w.week)}
+                      style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"12px 16px",cursor:"pointer",
+                        background:i===0?"linear-gradient(135deg,#EFF6FF,#fff)":"transparent"}}>
+                      <div style={{display:"flex",alignItems:"center",gap:10}}>
+                        <div style={{fontSize:14,fontWeight:800,color:i===0?C.rose:C.ink}}>
+                          {startStr} ~ {endStr}
+                          {i===0&&<span style={{fontSize:10,marginLeft:6,color:C.rose,fontWeight:700,background:C.blush,padding:"2px 6px",borderRadius:4}}>최신</span>}
+                        </div>
+                        <div style={{fontSize:10,color:C.inkLt,display:"flex",gap:8}}>
+                          {w.purchases>0&&<span style={{color:C.sage,fontWeight:700}}>{w.purchases}건</span>}
+                          {roas>0&&<span>ROAS {roas}%</span>}
+                        </div>
+                      </div>
+                      <div style={{display:"flex",alignItems:"center",gap:10}}>
+                        <div style={{fontSize:15,fontWeight:900,color:C.ink}}>{fmtW(w.spend)}</div>
+                        <MI n={isOpen?"expand_less":"expand_more"} size={18} style={{color:C.inkLt}}/>
+                      </div>
+                    </div>
+                    {isOpen&&(
+                      <div style={{borderTop:`1px solid ${C.border}`,padding:"8px 12px",display:"flex",flexDirection:"column",gap:4}}>
+                        {campList.map(([camp,v])=>{
+                          const isConv=isConversionCampaign(v.objective,camp);
+                          const cr=v.convValue>0&&v.spend>0?Math.round((v.convValue/v.spend)*100):null;
+                          return(
+                            <div key={camp} style={{display:"flex",alignItems:"center",justifyContent:"space-between",
+                              padding:"8px 10px",borderRadius:8,background:isConv?"#fff5f7":C.cream}}>
+                              <div style={{flex:1,minWidth:0}}>
+                                <div style={{fontSize:11,fontWeight:700,color:isConv?C.rose:C.inkMid,
+                                  overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{camp}</div>
+                                <div style={{fontSize:10,color:C.inkLt,display:"flex",gap:8,marginTop:2}}>
+                                  {v.purchases>0&&<span style={{color:C.sage,fontWeight:700}}>{v.purchases}건</span>}
+                                  {cr&&<span>ROAS {cr}%</span>}
+                                  {v.clicks>0&&<span>{v.clicks.toLocaleString()} 클릭</span>}
+                                </div>
+                              </div>
+                              <div style={{fontSize:14,fontWeight:800,color:C.ink,marginLeft:12}}>{fmtW(v.spend)}</div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
                   </div>
-                </Card>
-              );
-            })()}
-          </div>
-        )}
+                );
+              })}
+            </div>
+          );
+        })()}
 
         {/* 월별 탭 */}
-        {metaTab==="monthly"&&(
-          <div style={{display:"flex",flexDirection:"column",gap:14}}>
-            {!hasSheet?(
-              <div style={{textAlign:"center",padding:"40px 0",color:C.inkLt}}>
-                <div style={{fontSize:36,marginBottom:10}}><MI n="date_range" size={36}/></div>
-                <div style={{fontSize:13,fontWeight:700,color:C.inkMid}}>시트 연결 후 월별 데이터가 표시됩니다</div>
-              </div>
-            ):(()=>{
-              const monthMap = {};
-              metaRaw.forEach(r=>{
-                if(!r.date) return;
-                const m = r.date.slice(0,7);
-                if(!monthMap[m]) monthMap[m]={month:m,spend:0,clicks:0,lpv:0,purchases:0,convValue:0};
-                monthMap[m].spend+=(r.spend||0);
-                monthMap[m].clicks+=(r.clicks||0);
-                monthMap[m].lpv+=(r.lpv||0);
-                monthMap[m].purchases+=(r.purchases||0);
-                monthMap[m].convValue+=(r.convValue||0);
-              });
-              const months = Object.values(monthMap).sort((a,b)=>a.month.localeCompare(b.month));
-              return(
-                <Card>
-                  <CardTitle title={<><MI n="date_range" size={14}/> 월별 성과</>} sub="월별 광고비·구매·ROAS"/>
-                  <div style={{overflowX:"auto"}}>
-                    <table style={{width:"100%",borderCollapse:"collapse",fontSize:11}}>
-                      <thead><tr style={{borderBottom:`2px solid ${C.border}`}}>
-                        {["월","광고비","클릭","LPV","구매","전환값","ROAS"].map((h,i)=>(
-                          <th key={i} style={{padding:"8px",textAlign:i===0?"left":"right",color:C.inkLt,fontWeight:700,fontSize:9}}>{h}</th>
-                        ))}
-                      </tr></thead>
-                      <tbody>{months.map((m,i)=>{
-                        const roas=m.spend>0?(m.convValue/m.spend).toFixed(2):0;
-                        return(<tr key={i} style={{borderBottom:`1px solid ${C.border}`}}
-                          onMouseEnter={e=>e.currentTarget.style.background=C.cream}
-                          onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
-                          <td style={{padding:"10px 8px",fontWeight:800,color:C.ink,fontSize:13}}>{m.month}</td>
-                          <td style={{padding:"10px 8px",textAlign:"right",color:C.rose,fontWeight:700}}>₩{Math.round(m.spend/1000).toLocaleString()}K</td>
-                          <td style={{padding:"10px 8px",textAlign:"right",color:C.inkMid}}>{m.clicks.toLocaleString()}</td>
-                          <td style={{padding:"10px 8px",textAlign:"right",color:C.sage}}>{m.lpv.toLocaleString()}</td>
-                          <td style={{padding:"10px 8px",textAlign:"right",color:C.good,fontWeight:700}}>{m.purchases}</td>
-                          <td style={{padding:"10px 8px",textAlign:"right",color:C.purple}}>₩{Math.round(m.convValue/1000).toLocaleString()}K</td>
-                          <td style={{padding:"10px 8px",textAlign:"right"}}>
-                            <span style={{fontWeight:800,fontSize:11,color:roas>=3?C.good:C.warn,background:roas>=3?"#EDF7F1":"#FFF8EC",padding:"2px 7px",borderRadius:20}}>{roas}x</span>
-                          </td>
-                        </tr>);
-                      })}</tbody>
-                    </table>
+        {metaTab==="monthly"&&(()=>{
+          if(!hasSheet) return(
+            <div style={{textAlign:"center",padding:"40px 0",color:C.inkLt}}>
+              <MI n="date_range" size={36}/><div style={{fontSize:13,fontWeight:700,color:C.inkMid,marginTop:10}}>데이터 없음</div>
+            </div>
+          );
+          const fmtW=n=>n>=10000?`₩${Math.round(n/10000).toLocaleString()}만`:`₩${Math.round(n).toLocaleString()}`;
+          const monthMap={};
+          metaFiltered.forEach(r=>{
+            if(!r.date||!r.campaign) return;
+            const m=r.date.slice(0,7);
+            if(!monthMap[m]) monthMap[m]={month:m,spend:0,purchases:0,convValue:0,camps:{}};
+            monthMap[m].spend+=(r.spend||0);
+            monthMap[m].purchases+=(r.purchases||0);
+            monthMap[m].convValue+=(r.convValue||0);
+            if(!monthMap[m].camps[r.campaign]) monthMap[m].camps[r.campaign]={spend:0,purchases:0,convValue:0,clicks:0,objective:r.objective||""};
+            monthMap[m].camps[r.campaign].spend+=(r.spend||0);
+            monthMap[m].camps[r.campaign].purchases+=(r.purchases||0);
+            monthMap[m].camps[r.campaign].convValue+=(r.convValue||0);
+            monthMap[m].camps[r.campaign].clicks+=(r.clicks||0);
+          });
+          const months=Object.values(monthMap).sort((a,b)=>b.month.localeCompare(a.month));
+          return(
+            <div style={{display:"flex",flexDirection:"column",gap:8}}>
+              {months.map((m,i)=>{
+                const isOpen=monthOpenKey===m.month;
+                const roas=m.spend>0?Math.round((m.convValue/m.spend)*100):0;
+                const campList=Object.entries(m.camps).filter(([,v])=>v.spend>0).sort((a,b)=>b[1].spend-a[1].spend);
+                const [yr,mo]=m.month.split("-");
+                return(
+                  <div key={m.month} style={{borderRadius:12,border:`1px solid ${i===0?C.rose+"66":C.border}`,overflow:"hidden",background:C.white}}>
+                    <div onClick={()=>setMonthOpenKey(isOpen?null:m.month)}
+                      style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"12px 16px",cursor:"pointer",
+                        background:i===0?"linear-gradient(135deg,#EFF6FF,#fff)":"transparent"}}>
+                      <div style={{display:"flex",alignItems:"center",gap:10}}>
+                        <div style={{fontSize:14,fontWeight:800,color:i===0?C.rose:C.ink}}>
+                          {yr}년 {mo}월
+                          {i===0&&<span style={{fontSize:10,marginLeft:6,color:C.rose,fontWeight:700,background:C.blush,padding:"2px 6px",borderRadius:4}}>최신</span>}
+                        </div>
+                        <div style={{fontSize:10,color:C.inkLt,display:"flex",gap:8}}>
+                          {m.purchases>0&&<span style={{color:C.sage,fontWeight:700}}>{m.purchases}건</span>}
+                          {roas>0&&<span>ROAS {roas}%</span>}
+                        </div>
+                      </div>
+                      <div style={{display:"flex",alignItems:"center",gap:10}}>
+                        <div style={{fontSize:15,fontWeight:900,color:C.ink}}>{fmtW(m.spend)}</div>
+                        <MI n={isOpen?"expand_less":"expand_more"} size={18} style={{color:C.inkLt}}/>
+                      </div>
+                    </div>
+                    {isOpen&&(
+                      <div style={{borderTop:`1px solid ${C.border}`,padding:"8px 12px",display:"flex",flexDirection:"column",gap:4}}>
+                        {campList.map(([camp,v])=>{
+                          const isConv=isConversionCampaign(v.objective,camp);
+                          const cr=v.convValue>0&&v.spend>0?Math.round((v.convValue/v.spend)*100):null;
+                          return(
+                            <div key={camp} style={{display:"flex",alignItems:"center",justifyContent:"space-between",
+                              padding:"8px 10px",borderRadius:8,background:isConv?"#fff5f7":C.cream}}>
+                              <div style={{flex:1,minWidth:0}}>
+                                <div style={{fontSize:11,fontWeight:700,color:isConv?C.rose:C.inkMid,
+                                  overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{camp}</div>
+                                <div style={{fontSize:10,color:C.inkLt,display:"flex",gap:8,marginTop:2}}>
+                                  {v.purchases>0&&<span style={{color:C.sage,fontWeight:700}}>{v.purchases}건</span>}
+                                  {cr&&<span>ROAS {cr}%</span>}
+                                  {v.clicks>0&&<span>{v.clicks.toLocaleString()} 클릭</span>}
+                                </div>
+                              </div>
+                              <div style={{fontSize:14,fontWeight:800,color:C.ink,marginLeft:12}}>{fmtW(v.spend)}</div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
                   </div>
-                </Card>
-              );
-            })()}
-          </div>
-        )}
+                );
+              })}
+            </div>
+          );
+        })()}
+
+        {/* 일별 탭 — 날짜 카드 클릭 → 캠페인 펼치기 */}
+        {metaTab==="daily"&&(()=>{
+          if(!hasSheet||!d) return(
+            <div style={{textAlign:"center",padding:"40px 0",color:C.inkLt}}>
+              <MI n="calendar_today" size={36}/><div style={{fontSize:13,fontWeight:700,color:C.inkMid,marginTop:10}}>데이터 없음</div>
+            </div>
+          );
+          const fmtW = n=>n>=10000?`₩${Math.round(n/10000).toLocaleString()}만`:`₩${Math.round(n).toLocaleString()}`;
+          const byDateCamp = {};
+          metaFiltered.forEach(r=>{
+            if(!r.date||!r.campaign) return;
+            if(!byDateCamp[r.date]) byDateCamp[r.date]={};
+            if(!byDateCamp[r.date][r.campaign]) byDateCamp[r.date][r.campaign]={spend:0,purchases:0,convValue:0,clicks:0,objective:r.objective||""};
+            byDateCamp[r.date][r.campaign].spend     += r.spend||0;
+            byDateCamp[r.date][r.campaign].purchases += r.purchases||0;
+            byDateCamp[r.date][r.campaign].convValue += r.convValue||0;
+            byDateCamp[r.date][r.campaign].clicks    += r.clicks||0;
+          });
+          const dates = Object.keys(byDateCamp).sort().reverse();
+          return(
+            <div style={{display:"flex",flexDirection:"column",gap:8}}>
+              {dates.map((date,i)=>{
+                const camps = byDateCamp[date];
+                const total = Object.values(camps).reduce((s,v)=>s+(v.spend||0),0);
+                const isLatest = i===0;
+                const isOpen = dailyOpenDate===date;
+                const campList = Object.entries(camps).filter(([,v])=>v.spend>0).sort((a,b)=>b[1].spend-a[1].spend);
+                const convTotal = campList.filter(([c,v])=>isConversionCampaign(v.objective,c)).reduce((s,[,v])=>s+v.spend,0);
+                const traffTotal = campList.filter(([c,v])=>!isConversionCampaign(v.objective,c)).reduce((s,[,v])=>s+v.spend,0);
+                return(
+                  <div key={date} style={{borderRadius:12,border:`1px solid ${isLatest?C.rose+"66":C.border}`,overflow:"hidden",background:C.white}}>
+                    {/* 날짜 헤더 — 클릭으로 펼치기 */}
+                    <div onClick={()=>setDailyOpenDate(isOpen?null:date)}
+                      style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"12px 16px",cursor:"pointer",
+                        background:isLatest?"linear-gradient(135deg,#EFF6FF,#fff)":"transparent"}}>
+                      <div style={{display:"flex",alignItems:"center",gap:10}}>
+                        <div style={{fontSize:14,fontWeight:800,color:isLatest?C.rose:C.ink}}>
+                          {date.slice(5).replace("-","/")}
+                          {isLatest&&<span style={{fontSize:10,marginLeft:6,color:C.rose,fontWeight:700,background:C.blush,padding:"2px 6px",borderRadius:4}}>최신</span>}
+                        </div>
+                        <div style={{fontSize:10,color:C.inkLt,display:"flex",gap:8}}>
+                          {convTotal>0&&<span style={{color:"#f9a8d4",fontWeight:700}}>전환 {fmtW(convTotal)}</span>}
+                          {traffTotal>0&&<span style={{color:C.roseLt,fontWeight:700}}>트래픽 {fmtW(traffTotal)}</span>}
+                        </div>
+                      </div>
+                      <div style={{display:"flex",alignItems:"center",gap:10}}>
+                        <div style={{fontSize:15,fontWeight:900,color:C.ink}}>{fmtW(total)}</div>
+                        <MI n={isOpen?"expand_less":"expand_more"} size={18} style={{color:C.inkLt}}/>
+                      </div>
+                    </div>
+                    {/* 캠페인 목록 — 펼쳐진 상태 */}
+                    {isOpen&&(
+                      <div style={{borderTop:`1px solid ${C.border}`,padding:"8px 12px",display:"flex",flexDirection:"column",gap:4}}>
+                        {campList.map(([camp,v])=>{
+                          const isConv = isConversionCampaign(v.objective,camp);
+                          const roas = v.convValue>0&&v.spend>0 ? Math.round((v.convValue/v.spend)*100) : null;
+                          return(
+                            <div key={camp} style={{display:"flex",alignItems:"center",justifyContent:"space-between",
+                              padding:"8px 10px",borderRadius:8,background:isConv?"#fff5f7":C.cream}}>
+                              <div style={{flex:1,minWidth:0}}>
+                                <div style={{fontSize:11,fontWeight:700,color:isConv?C.rose:C.inkMid,
+                                  overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{camp}</div>
+                                <div style={{fontSize:10,color:C.inkLt,display:"flex",gap:8,marginTop:2}}>
+                                  {v.purchases>0&&<span style={{color:C.sage,fontWeight:700}}>{v.purchases}건</span>}
+                                  {roas&&<span>ROAS {roas}%</span>}
+                                  {v.clicks>0&&<span>{v.clicks.toLocaleString()} 클릭</span>}
+                                </div>
+                              </div>
+                              <div style={{fontSize:14,fontWeight:800,color:C.ink,marginLeft:12}}>{fmtW(v.spend)}</div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          );
+        })()}
 
         {/* 제품별 탭 */}
-        {metaTab==="product"&&(
-          <div style={{display:"flex",flexDirection:"column",gap:14}}>
-            {!hasSheet?(
-              <div style={{textAlign:"center",padding:"40px 0",color:C.inkLt}}>
-                <div style={{fontSize:36,marginBottom:10}}><MI n="inventory_2" size={36}/></div>
-                <div style={{fontSize:13,fontWeight:700,color:C.inkMid}}>시트 연결 후 제품별 데이터가 표시됩니다</div>
-              </div>
-            ):(()=>{
-              // margins 키워드로 제품 분류
-              const productMap = {};
-              const PRODUCTS = margins.length>0 ? margins.map(m=>m.keyword) : ["프리온","소닉플로우","에어리소닉"];
-              metaRaw.forEach(r=>{
-                const name = (r.adName||r.campaign||"").toLowerCase();
-                let matched = "기타";
-                PRODUCTS.forEach(p=>{ if(name.includes(p.toLowerCase())) matched=p; });
-                if(!productMap[matched]) productMap[matched]={product:matched,spend:0,clicks:0,lpv:0,purchases:0,convValue:0,count:0};
-                productMap[matched].spend+=(r.spend||0);
-                productMap[matched].clicks+=(r.clicks||0);
-                productMap[matched].lpv+=(r.lpv||0);
-                productMap[matched].purchases+=(r.purchases||0);
-                productMap[matched].convValue+=(r.convValue||0);
-                productMap[matched].count++;
-              });
-              const products = Object.values(productMap).sort((a,b)=>b.spend-a.spend);
-              return(
-                <Card>
-                  <CardTitle title={<><MI n="inventory_2" size={14}/> 제품별 성과</>} sub="광고명 키워드 기준 자동 분류"/>
-                  <div style={{overflowX:"auto"}}>
-                    <table style={{width:"100%",borderCollapse:"collapse",fontSize:11}}>
-                      <thead><tr style={{borderBottom:`2px solid ${C.border}`}}>
-                        {["제품","광고수","광고비","구매","CPA","ROAS"].map((h,i)=>(
-                          <th key={i} style={{padding:"8px",textAlign:i===0?"left":"right",color:C.inkLt,fontWeight:700,fontSize:9}}>{h}</th>
-                        ))}
-                      </tr></thead>
-                      <tbody>{products.map((p,i)=>{
-                        const cpa=p.purchases>0?Math.round(p.spend/p.purchases):0;
-                        const roas=p.spend>0?(p.convValue/p.spend).toFixed(2):0;
-                        return(<tr key={i} style={{borderBottom:`1px solid ${C.border}`}}
-                          onMouseEnter={e=>e.currentTarget.style.background=C.cream}
-                          onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
-                          <td style={{padding:"10px 8px",fontWeight:800,color:C.ink}}>{p.product}</td>
-                          <td style={{padding:"10px 8px",textAlign:"right",color:C.inkMid}}>{p.count}</td>
-                          <td style={{padding:"10px 8px",textAlign:"right",color:C.rose,fontWeight:700}}>₩{Math.round(p.spend/1000).toLocaleString()}K</td>
-                          <td style={{padding:"10px 8px",textAlign:"right",color:C.good,fontWeight:700}}>{p.purchases}</td>
-                          <td style={{padding:"10px 8px",textAlign:"right"}}>
-                            {cpa>0?<span style={{fontWeight:800,fontSize:11,color:cpa<=16000?C.good:C.bad,background:cpa<=16000?"#EDF7F1":"#FEF0F0",padding:"2px 7px",borderRadius:20}}>₩{cpa.toLocaleString()}</span>:<span style={{color:C.inkLt}}>—</span>}
-                          </td>
-                          <td style={{padding:"10px 8px",textAlign:"right"}}>
-                            <span style={{fontWeight:800,fontSize:11,color:roas>=3?C.good:C.warn,background:roas>=3?"#EDF7F1":"#FFF8EC",padding:"2px 7px",borderRadius:20}}>{roas}x</span>
-                          </td>
-                        </tr>);
-                      })}</tbody>
-                    </table>
+        {metaTab==="product"&&(()=>{
+          if(!hasSheet) return(
+            <div style={{textAlign:"center",padding:"40px 0",color:C.inkLt}}>
+              <MI n="inventory_2" size={36}/><div style={{fontSize:13,fontWeight:700,color:C.inkMid,marginTop:10}}>데이터 없음</div>
+            </div>
+          );
+          const fmtW=n=>n>=10000?`₩${Math.round(n/10000).toLocaleString()}만`:`₩${Math.round(n).toLocaleString()}`;
+          const PRODUCTS=margins.length>0?margins.map(m=>m.keyword):["프리온","소닉플로우","에어리소닉"];
+          const productMap={};
+          metaFiltered.forEach(r=>{
+            const name=(r.adName||r.campaign||"").toLowerCase();
+            let matched="기타";
+            PRODUCTS.forEach(p=>{if(name.includes(p.toLowerCase())) matched=p;});
+            if(!productMap[matched]) productMap[matched]={product:matched,spend:0,purchases:0,convValue:0,camps:{}};
+            productMap[matched].spend+=(r.spend||0);
+            productMap[matched].purchases+=(r.purchases||0);
+            productMap[matched].convValue+=(r.convValue||0);
+            const ck=r.campaign||"(기타)";
+            if(!productMap[matched].camps[ck]) productMap[matched].camps[ck]={spend:0,purchases:0,convValue:0,clicks:0,objective:r.objective||""};
+            productMap[matched].camps[ck].spend+=(r.spend||0);
+            productMap[matched].camps[ck].purchases+=(r.purchases||0);
+            productMap[matched].camps[ck].convValue+=(r.convValue||0);
+            productMap[matched].camps[ck].clicks+=(r.clicks||0);
+          });
+          const products=Object.values(productMap).sort((a,b)=>b.spend-a.spend);
+          return(
+            <div style={{display:"flex",flexDirection:"column",gap:8}}>
+              {products.map((p,i)=>{
+                const isOpen=productOpenKey===p.product;
+                const roas=p.spend>0?Math.round((p.convValue/p.spend)*100):0;
+                const cpa=p.purchases>0?Math.round(p.spend/p.purchases):0;
+                const campList=Object.entries(p.camps).filter(([,v])=>v.spend>0).sort((a,b)=>b[1].spend-a[1].spend);
+                return(
+                  <div key={p.product} style={{borderRadius:12,border:`1px solid ${i===0?C.rose+"66":C.border}`,overflow:"hidden",background:C.white}}>
+                    <div onClick={()=>setProductOpenKey(isOpen?null:p.product)}
+                      style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"12px 16px",cursor:"pointer",
+                        background:i===0?"linear-gradient(135deg,#EFF6FF,#fff)":"transparent"}}>
+                      <div style={{display:"flex",alignItems:"center",gap:10}}>
+                        <div style={{fontSize:14,fontWeight:800,color:C.ink}}>{p.product}</div>
+                        <div style={{fontSize:10,color:C.inkLt,display:"flex",gap:8}}>
+                          {p.purchases>0&&<span style={{color:C.sage,fontWeight:700}}>{p.purchases}건</span>}
+                          {roas>0&&<span>ROAS {roas}%</span>}
+                          {cpa>0&&<span style={{color:cpa<=16000?C.good:C.bad}}>CPA {fmtW(cpa)}</span>}
+                        </div>
+                      </div>
+                      <div style={{display:"flex",alignItems:"center",gap:10}}>
+                        <div style={{fontSize:15,fontWeight:900,color:C.ink}}>{fmtW(p.spend)}</div>
+                        <MI n={isOpen?"expand_less":"expand_more"} size={18} style={{color:C.inkLt}}/>
+                      </div>
+                    </div>
+                    {isOpen&&(
+                      <div style={{borderTop:`1px solid ${C.border}`,padding:"8px 12px",display:"flex",flexDirection:"column",gap:4}}>
+                        {campList.map(([camp,v])=>{
+                          const isConv=isConversionCampaign(v.objective,camp);
+                          const cr=v.convValue>0&&v.spend>0?Math.round((v.convValue/v.spend)*100):null;
+                          return(
+                            <div key={camp} style={{display:"flex",alignItems:"center",justifyContent:"space-between",
+                              padding:"8px 10px",borderRadius:8,background:isConv?"#fff5f7":C.cream}}>
+                              <div style={{flex:1,minWidth:0}}>
+                                <div style={{fontSize:11,fontWeight:700,color:isConv?C.rose:C.inkMid,
+                                  overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{camp}</div>
+                                <div style={{fontSize:10,color:C.inkLt,display:"flex",gap:8,marginTop:2}}>
+                                  {v.purchases>0&&<span style={{color:C.sage,fontWeight:700}}>{v.purchases}건</span>}
+                                  {cr&&<span>ROAS {cr}%</span>}
+                                  {v.clicks>0&&<span>{v.clicks.toLocaleString()} 클릭</span>}
+                                </div>
+                              </div>
+                              <div style={{fontSize:14,fontWeight:800,color:C.ink,marginLeft:12}}>{fmtW(v.spend)}</div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
                   </div>
-                </Card>
-              );
-            })()}
-          </div>
-        )}
+                );
+              })}
+            </div>
+          );
+        })()}
 
         {/* ── 전환 시트 연결 모달 ── */}
         {sheetModal&&(
@@ -4761,6 +5058,171 @@ export default function OaDashboard(){
   })();
 
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  // 🛒 쿠팡
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  const CoupangSection = (() => {
+    const [loading, setLoading] = useState(false);
+    const [products, setProducts] = useState([]);
+    const [error, setError]       = useState(null);
+    const [savedIds, setSavedIds] = useSupabaseState("cp_product_ids_v1", []);
+    const fileRef = useRef(null);
+
+    async function fetchProducts() {
+      if (!savedIds.length) return;
+      setLoading(true); setError(null);
+      try {
+        const results = await Promise.all(savedIds.map(async ({ id, label }) => {
+          const res  = await fetch(`/api/coupang?type=product&id=${id}`);
+          const data = await res.json();
+          if (data.error) return { id, label, error: data.error };
+          return { id, label, ...data.product };
+        }));
+        setProducts(results);
+      } catch(e) { setError(e.message); }
+      setLoading(false);
+    }
+
+    async function fetchOrders() {
+      setLoading(true); setError(null);
+      try {
+        const res  = await fetch(`/api/coupang?type=orders`);
+        const data = await res.json();
+        if (data.error) { setError(data.error); setLoading(false); return; }
+        setOrders(data.list || []);
+      } catch(e) { setError(e.message); }
+      setLoading(false);
+    }
+
+    function handleFileUpload(e) {
+      const file = e.target.files?.[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = ev => {
+        const text = ev.target.result;
+        const lines = text.split(/\r?\n/).filter(l => l.trim());
+        const parsed = [];
+        for (const line of lines) {
+          const cols = line.split(/[,\t]/);
+          const id = cols[0]?.trim().replace(/^["']|["']$/g, "");
+          const label = cols[1]?.trim().replace(/^["']|["']$/g, "") || id;
+          if (id && /^\d+$/.test(id)) parsed.push({ id, label });
+        }
+        if (parsed.length) {
+          setSavedIds(parsed);
+          alert(`${parsed.length}개 상품 ID 불러왔어요`);
+        } else {
+          alert("상품 ID를 찾지 못했어요. 첫 번째 열에 숫자 ID가 있어야 해요.");
+        }
+        e.target.value = "";
+      };
+      reader.readAsText(file);
+    }
+
+    return (
+      <div style={{display:"flex",flexDirection:"column",gap:16}}>
+        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:8}}>
+          <div>
+            <div style={{fontSize:20,fontWeight:900,color:C.ink}}>쿠팡 가격 모니터링</div>
+            <div style={{fontSize:12,color:C.inkMid,marginTop:2}}>오아스토어 기준 · 할인전가 vs 현재판매가 비교</div>
+          </div>
+          <Btn small onClick={fetchProducts} disabled={loading||!savedIds.length}>
+            <MI n="sync" size={13}/> {loading?"조회 중...":"가격 조회"}
+          </Btn>
+        </div>
+
+        {error&&(
+          <Card>
+            <div style={{color:C.bad,fontSize:13,fontWeight:700}}>{error}</div>
+          </Card>
+        )}
+
+        <div style={{display:"flex",flexDirection:"column",gap:12}}>
+            {/* 상품 파일 관리 */}
+            <Card>
+              <CardTitle title="모니터링 상품 목록" sub="CSV 파일 업로드 · Supabase 공유 저장"/>
+              <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:12,flexWrap:"wrap"}}>
+                <input ref={fileRef} type="file" accept=".csv,.txt" onChange={handleFileUpload} style={{display:"none"}}/>
+                <Btn small onClick={()=>fileRef.current?.click()}>
+                  <MI n="upload_file" size={13}/> CSV 업로드
+                </Btn>
+                <span style={{fontSize:11,color:C.inkLt}}>첫 번째 열: 등록상품ID / 두 번째 열: 상품명(선택)</span>
+                {savedIds.length>0&&(
+                  <button onClick={()=>{if(confirm("목록을 초기화할까요?"))setSavedIds([]);}}
+                    style={{marginLeft:"auto",background:"none",border:"none",cursor:"pointer",color:C.inkLt,fontSize:12}}>
+                    초기화
+                  </button>
+                )}
+              </div>
+              {savedIds.length===0 ? (
+                <div style={{fontSize:12,color:C.inkLt,padding:"12px 0"}}>
+                  CSV 파일을 업로드하면 팀 전체에 공유됩니다
+                </div>
+              ) : (
+                <div style={{fontSize:12,color:C.inkMid}}>
+                  {savedIds.length}개 상품 등록됨 · {savedIds.slice(0,5).map(s=>s.label).join(", ")}{savedIds.length>5?` 외 ${savedIds.length-5}개`:""}
+                </div>
+              )}
+            </Card>
+
+            {/* 가격 비교 테이블 */}
+            {products.length>0&&(
+              <Card>
+                <CardTitle title="가격 현황" sub="할인율기준가(originalPrice) vs 판매가(salePrice)"/>
+                <div style={{overflowX:"auto"}}>
+                  <table style={{width:"100%",borderCollapse:"collapse",fontSize:12}}>
+                    <thead>
+                      <tr style={{background:C.cream}}>
+                        {["상품명","옵션","할인전가(기준가)","현재판매가","차이","재고","상태"].map(h=>(
+                          <th key={h} style={{padding:"7px 10px",textAlign:"left",fontWeight:700,color:C.inkMid,
+                            borderBottom:`1px solid ${C.border}`,whiteSpace:"nowrap"}}>{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {products.flatMap((p,pi) => {
+                        if(p.error) return [(
+                          <tr key={pi} style={{borderBottom:`1px solid ${C.border}`}}>
+                            <td colSpan={7} style={{padding:"7px 10px",color:C.bad,fontSize:11}}>{p.label} — {p.error}</td>
+                          </tr>
+                        )];
+                        return (p.items||[]).map((item,ii)=>{
+                          const sale = item.salePrice || 0;
+                          const orig = item.originalPrice || 0;
+                          const diff = orig && sale ? sale - orig : null;
+                          const pct  = orig && sale ? Math.round((1 - sale/orig)*100) : null;
+                          const diffColor = diff===null?C.inkLt:diff<0?C.bad:diff===0?C.inkMid:C.good;
+                          return (
+                            <tr key={`${pi}-${ii}`} style={{borderBottom:`1px solid ${C.border}`}}>
+                              <td style={{padding:"7px 10px",fontWeight:700,color:C.ink,maxWidth:160,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.name}</td>
+                              <td style={{padding:"7px 10px",color:C.inkMid,maxWidth:120,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{item.itemName||"—"}</td>
+                              <td style={{padding:"7px 10px",color:C.inkMid}}>{orig?orig.toLocaleString()+"원":"—"}</td>
+                              <td style={{padding:"7px 10px",fontWeight:800,color:C.ink}}>{sale?sale.toLocaleString()+"원":"—"}</td>
+                              <td style={{padding:"7px 10px",fontWeight:700,color:diffColor}}>
+                                {diff!==null?(diff===0?"동일":(diff>0?"+":"")+diff.toLocaleString()+"원"+(pct?` (${pct}%↓)`:"")):"—"}
+                              </td>
+                              <td style={{padding:"7px 10px",color:item.stockQuantity===0?C.bad:C.inkMid,fontWeight:item.stockQuantity===0?800:400}}>
+                                {item.stockQuantity??"—"}
+                              </td>
+                              <td style={{padding:"7px 10px"}}>
+                                <span style={{fontSize:11,fontWeight:700,
+                                  color:p.status==="APPROVED"||p.status==="판매중"?C.good:C.warn,
+                                  background:p.status==="APPROVED"||p.status==="판매중"?"#F0FDF4":"#FFF7ED",
+                                  padding:"2px 8px",borderRadius:10}}>{p.status||"—"}</span>
+                              </td>
+                            </tr>
+                          );
+                        });
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </Card>
+            )}
+        </div>
+      </div>
+    );
+  })();
+
   // ✅ 콘텐츠 리뷰
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   const ReviewSection=(()=>{
@@ -5003,6 +5465,118 @@ export default function OaDashboard(){
     const [logVol, setLogVol] = useState("");
     const [logNote, setLogNote] = useState("");
     const [logDate, setLogDate] = useState(new Date().toISOString().slice(0,10));
+    const [naverLoading, setNaverLoading] = useState(false);
+    const [naverResult, setNaverResult] = useState({}); // {keyword: {pcMonthly, mobileMonthly}}
+    const [rankLoading, setRankLoading] = useState(false);
+    const [autoRank, setAutoRank] = useState({}); // {keyword: {rank, matchedProduct, topItems}}
+    const [rankModal, setRankModal] = useState(null); // keyword name
+    const [searchInput, setSearchInput] = useState("");
+    const [searchLoading, setSearchLoading] = useState(false);
+    const [searchResults, setSearchResults] = useState(null); // null | []
+    const [mainTab, setMainTab] = useState("track"); // track | explore
+
+    // OA 고정 키워드 보장
+    const OA_FIXED = {id:"oa-fixed",name:"OA",competitor:"",color:"#2563EB",type:"my",addedAt:"",fixed:true};
+    useEffect(()=>{
+      if(!(kwData?.keywords||[]).some(k=>k.id==="oa-fixed")){
+        setKwData({...kwData, keywords:[OA_FIXED,...(kwData?.keywords||[])]});
+      }
+    // eslint-disable-next-line
+    },[]);
+
+    async function searchKeywords(overrideQuery) {
+      const q = (overrideQuery || searchInput).trim();
+      if(!q) return;
+      setSearchLoading(true);
+      setSearchResults(null);
+      try {
+        const res = await fetch(`/api/naver-keywords?keywords=${encodeURIComponent(q)}`);
+        const data = await res.json();
+        if(data.error) { alert("네이버 API: "+data.error); return; }
+        setSearchResults(data.keywords || []);
+      } catch(e) { alert("오류: "+e.message); }
+      setSearchLoading(false);
+    }
+
+    async function fetchAutoRank() {
+      if(!keywords.length) return;
+      setRankLoading(true);
+      try {
+        const map = {};
+        const naverVolMap = {};
+        const today = new Date().toISOString().slice(0,10);
+        const newLogs = [];
+        await Promise.all(keywords.map(async kw => {
+          const brand = kw.competitor || "오아";
+          // 순위: 키워드만으로 검색, 결과에서 브랜드 위치 찾기
+          const rankRes  = await fetch(`/api/naver-rank?query=${encodeURIComponent(kw.name)}&brand=${encodeURIComponent(brand)}`);
+          const rankData = await rankRes.json();
+
+          map[kw.name] = { rank: rankData.rank, matchedProduct: rankData.matchedProduct, matchedMall: rankData.matchedMall, total: rankData.total, topItems: rankData.topItems||[], brand };
+
+          // 검색량: 브랜드+키워드로 조회
+          let volume = 0;
+          try {
+            const volQuery = brand + kw.name;
+            const volRes = await fetch(`/api/naver-keywords?keywords=${encodeURIComponent(volQuery)}`);
+            const volData = await volRes.json();
+            if(!volData.error && volData.keywords?.length) {
+              const norm = s => (s||"").toLowerCase().replace(/\s/g,"");
+              const exact = volData.keywords.find(k=>norm(k.keyword)===norm(volQuery));
+              const result = exact || volData.keywords[0];
+              if(result) {
+                volume = (result.pcMonthly||0) + (result.mobileMonthly||0);
+                naverVolMap[kw.name] = result;
+              }
+            }
+          } catch(_) {}
+
+          // 순위 기록 자동 저장 (순위 또는 검색량이 있을 때)
+          if(rankData.rank || volume > 0) {
+            newLogs.push({ keywordId: kw.id, date: today, rank: rankData.rank||null, volume, brand });
+          }
+        }));
+        setAutoRank(map);
+        if(Object.keys(naverVolMap).length>0) setNaverResult(prev=>({...prev,...naverVolMap}));
+        if(newLogs.length>0) {
+          // 오늘 자동기록이 이미 있으면 업데이트, 없으면 새로 추가
+          const existingLogs = kwData?.logs||[];
+          const updatedLogs = existingLogs.map(l => {
+            const match = newLogs.find(nl=>nl.keywordId===l.keywordId && nl.date===today && l.auto);
+            if(match) return { ...l, rank: match.rank??l.rank, volume: match.volume||l.volume };
+            return l;
+          });
+          const addedIds = new Set(existingLogs.filter(l=>l.date===today&&l.auto).map(l=>l.keywordId));
+          const toAdd = newLogs.filter(nl=>!addedIds.has(nl.keywordId)).map(nl=>({
+            id: Date.now()+"-"+nl.keywordId, ...nl, note: "자동조회", auto: true,
+          }));
+          setKwData({ ...kwData, logs: [...updatedLogs, ...toAdd] });
+        }
+      } catch(e) { alert("순위 조회 오류: "+e.message); }
+      setRankLoading(false);
+    }
+
+    async function fetchNaverVolume() {
+      if(!keywords.length) return;
+      setNaverLoading(true);
+      try {
+        const map = {};
+        await Promise.all(keywords.map(async kw => {
+          // 검색량: 브랜드명+키워드로 검색
+          const brand2 = kw.competitor || "오아";
+          const volQuery = brand2+kw.name;
+          const res  = await fetch(`/api/naver-keywords?keywords=${encodeURIComponent(volQuery)}`);
+          const data = await res.json();
+          if(data.error) return;
+          const norm = s => (s||"").toLowerCase().replace(/\s/g,"");
+          const exact = (data.keywords||[]).find(k=>norm(k.keyword)===norm(volQuery));
+          const result = exact || data.keywords?.[0];
+          if(result) map[kw.name] = result;
+        }));
+        setNaverResult(map);
+      } catch(e) { alert("오류: "+e.message); }
+      setNaverLoading(false);
+    }
 
     const COLORS = ["#2563EB","#16A34A","#EA580C","#8B5CF6","#EC4899","#0891B2","#D97706","#DC2626"];
 
@@ -5078,20 +5652,122 @@ export default function OaDashboard(){
         {/* 헤더 */}
         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:8}}>
           <div>
-            <div style={{fontSize:20,fontWeight:900,color:C.ink}}>경쟁사 키워드 트래킹</div>
-            <div style={{fontSize:12,color:C.inkMid,marginTop:2}}>키워드 순위 변화를 직접 기록하고 추이를 확인해요</div>
+            <div style={{fontSize:20,fontWeight:900,color:C.ink}}>키워드 관리</div>
+            <div style={{fontSize:12,color:C.inkMid,marginTop:2}}>네이버 검색광고 API 연동 · 검색량 조회 및 순위 트래킹</div>
           </div>
-          <div style={{display:"flex",gap:8}}>
-            <Btn variant="sage" small onClick={()=>{setLogKwId(keywords[0]?.id||null);setLogModal(true);}}>
-              <MI n="edit_note" size={13}/> 순위 기록
-            </Btn>
-            <Btn small onClick={()=>setAddKwModal(true)}>
-              <MI n="add" size={13}/> 키워드 추가
-            </Btn>
-          </div>
+          {mainTab==="track"&&(
+            <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+              <Btn variant="neutral" small onClick={fetchAutoRank} disabled={rankLoading||keywords.length===0}>
+                <MI n="military_tech" size={13}/> {rankLoading?"조회 중...":"순위 조회"}
+              </Btn>
+              <Btn variant="sage" small onClick={()=>{setLogKwId(keywords[0]?.id||null);setLogModal(true);}}>
+                <MI n="edit_note" size={13}/> 순위 기록
+              </Btn>
+              <Btn small onClick={()=>setAddKwModal(true)}>
+                <MI n="add" size={13}/> 키워드 추가
+              </Btn>
+            </div>
+          )}
         </div>
 
-        {/* 탭 */}
+        {/* 메인 탭 */}
+        <div style={{display:"flex",gap:4,background:C.cream,borderRadius:12,padding:4,width:"fit-content"}}>
+          {[{id:"track",label:"순위 트래킹"},{id:"explore",label:"키워드 탐색"}].map(t=>(
+            <button key={t.id} onClick={()=>setMainTab(t.id)} style={{
+              fontSize:12,fontWeight:700,padding:"6px 18px",borderRadius:8,border:"none",cursor:"pointer",
+              background:mainTab===t.id?C.rose:"transparent",
+              color:mainTab===t.id?"#fff":C.inkMid,fontFamily:"inherit",
+            }}>{t.label}</button>
+          ))}
+        </div>
+
+        {/* 키워드 탐색 탭 */}
+        {mainTab==="explore"&&(
+          <div style={{display:"flex",flexDirection:"column",gap:12}}>
+            <Card>
+              <CardTitle title="키워드 탐색" sub="키워드 입력 → 연관 키워드 + 월간 검색량 + 경쟁도 조회"/>
+              <div style={{display:"flex",gap:8,marginBottom:16}}>
+                <input
+                  value={searchInput}
+                  onChange={e=>setSearchInput(e.target.value)}
+                  onKeyDown={e=>e.key==="Enter"&&searchKeywords()}
+                  placeholder="예: 헤어드라이기, 소닉플로우"
+                  style={{flex:1,padding:"9px 14px",borderRadius:10,border:`1px solid ${C.border}`,
+                    fontSize:13,fontFamily:"inherit",color:C.ink,outline:"none"}}
+                />
+                <Btn onClick={searchKeywords} disabled={searchLoading||!searchInput.trim()}>
+                  <MI n="search" size={13}/> {searchLoading?"조회 중...":"검색"}
+                </Btn>
+              </div>
+              {searchResults===null&&!searchLoading&&(
+                <div style={{textAlign:"center",padding:"24px 0",color:C.inkLt,fontSize:13}}>
+                  키워드를 입력하고 검색하면 연관 키워드와 검색량을 볼 수 있어요
+                </div>
+              )}
+              {searchLoading&&(
+                <div style={{textAlign:"center",padding:"24px 0",color:C.inkMid,fontSize:13}}>조회 중...</div>
+              )}
+              {searchResults!==null&&!searchLoading&&(
+                searchResults.length===0 ? (
+                  <div style={{textAlign:"center",padding:"20px 0",color:C.inkLt,fontSize:13}}>결과가 없어요</div>
+                ) : (
+                  <div style={{overflowX:"auto"}}>
+                    <table style={{width:"100%",borderCollapse:"collapse",fontSize:12}}>
+                      <thead>
+                        <tr style={{background:C.cream}}>
+                          {["키워드","PC 월검색","모바일 월검색","합계","경쟁도","추가"].map(h=>(
+                            <th key={h} style={{padding:"7px 10px",textAlign:"left",fontWeight:700,color:C.inkMid,
+                              borderBottom:`1px solid ${C.border}`,whiteSpace:"nowrap"}}>{h}</th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {searchResults.sort((a,b)=>(b.pcMonthly+b.mobileMonthly)-(a.pcMonthly+a.mobileMonthly)).map((k,i)=>{
+                          const total = (k.pcMonthly||0)+(k.mobileMonthly||0);
+                          const compColor = k.competition==="HIGH"?C.bad:k.competition==="MID"?C.warn:C.good;
+                          const compLabel = k.competition==="HIGH"?"높음":k.competition==="MID"?"중간":"낮음";
+                          const alreadyTracked = keywords.some(kw=>kw.name===k.keyword);
+                          return (
+                            <tr key={i} style={{borderBottom:`1px solid ${C.border}`}}>
+                              <td style={{padding:"7px 10px",fontWeight:700,color:C.ink}}>{k.keyword}</td>
+                              <td style={{padding:"7px 10px",color:C.inkMid}}>{(k.pcMonthly||0).toLocaleString()}</td>
+                              <td style={{padding:"7px 10px",color:C.inkMid}}>{(k.mobileMonthly||0).toLocaleString()}</td>
+                              <td style={{padding:"7px 10px",fontWeight:800,color:C.ink}}>{total.toLocaleString()}</td>
+                              <td style={{padding:"7px 10px"}}>
+                                <span style={{fontSize:11,fontWeight:700,color:compColor,background:compColor+"18",
+                                  padding:"2px 8px",borderRadius:20}}>{compLabel}</span>
+                              </td>
+                              <td style={{padding:"7px 10px"}}>
+                                {alreadyTracked ? (
+                                  <span style={{fontSize:11,color:C.inkLt}}>트래킹 중</span>
+                                ) : (
+                                  <button onClick={()=>{
+                                    const newKw={id:Date.now()+"",name:k.keyword,competitor:"",
+                                      color:["#2563EB","#16A34A","#EA580C","#8B5CF6","#EC4899"][keywords.length%5],
+                                      type:"my",addedAt:new Date().toISOString().slice(0,10)};
+                                    setKwData({...kwData,keywords:[...keywords,newKw]});
+                                  }} style={{fontSize:11,fontWeight:700,padding:"3px 10px",borderRadius:8,
+                                    border:`1px solid ${C.rose}`,color:C.rose,background:"#fff",cursor:"pointer",fontFamily:"inherit"}}>
+                                    + 트래킹
+                                  </button>
+                                )}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                    <div style={{marginTop:8,fontSize:11,color:C.inkLt}}>총 {searchResults.length}개 연관 키워드 · 네이버 검색광고 API 기준</div>
+                  </div>
+                )
+              )}
+            </Card>
+          </div>
+        )}
+
+        {mainTab==="track"&&(<>
+
+        {/* 서브 탭 */}
         <div style={{display:"flex",gap:4,background:C.cream,borderRadius:12,padding:4,width:"fit-content"}}>
           {[{id:"all",label:"전체"},
             {id:"my",label:"우리 브랜드"},
@@ -5133,8 +5809,8 @@ export default function OaDashboard(){
                         <div style={{width:10,height:10,borderRadius:"50%",background:kw.color,flexShrink:0}}/>
                         <div style={{fontSize:13,fontWeight:800,color:C.ink,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",maxWidth:110}}>{kw.name}</div>
                       </div>
-                      <button onClick={e=>{e.stopPropagation();deleteKeyword(kw.id);}}
-                        style={{background:"none",border:"none",cursor:"pointer",color:C.inkLt,padding:2,fontSize:12}}>✕</button>
+                      {!kw.fixed&&<button onClick={e=>{e.stopPropagation();deleteKeyword(kw.id);}}
+                        style={{background:"none",border:"none",cursor:"pointer",color:C.inkLt,padding:2,fontSize:12}}>✕</button>}
                     </div>
                     {kw.competitor&&<div style={{fontSize:10,color:C.inkLt,marginBottom:6}}>{kw.competitor}</div>}
                     <div style={{display:"flex",alignItems:"flex-end",gap:8}}>
@@ -5144,6 +5820,28 @@ export default function OaDashboard(){
                       {ch&&<div style={{fontSize:11,fontWeight:800,color:ch.color,marginBottom:2}}>{ch.text}</div>}
                     </div>
                     {kw.latest&&<div style={{fontSize:10,color:C.inkLt,marginTop:4}}>{kw.latest.date} 기준</div>}
+                    <div style={{display:"flex",gap:4,marginTop:6}}>
+                      {autoRank[kw.name]?.topItems?.length>0&&(
+                        <button onClick={e=>{e.stopPropagation();setRankModal(kw.name);}}
+                          style={{flex:1,padding:"5px 0",borderRadius:8,
+                            border:`1px solid ${C.border}`,background:"#fff",color:C.inkMid,
+                            fontSize:10,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
+                          <MI n="military_tech" size={11}/> 순위 보기
+                        </button>
+                      )}
+                      <button onClick={e=>{
+                        e.stopPropagation();
+                        const brand = kw.competitor||"오아";
+                        const q = brand+kw.name;
+                        setSearchInput(q);
+                        setMainTab("explore");
+                        searchKeywords(q);
+                      }} style={{flex:1,padding:"5px 0",borderRadius:8,
+                        border:`1px solid ${C.border}`,background:"#fff",color:C.inkMid,
+                        fontSize:10,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
+                        <MI n="bar_chart" size={11}/> 검색량 보기
+                      </button>
+                    </div>
                     <button onClick={e=>{e.stopPropagation();setLogKwId(kw.id);setLogModal(true);}}
                       style={{marginTop:8,width:"100%",padding:"5px 0",borderRadius:8,border:`1px solid ${C.border}`,
                         background:C.cream,color:C.inkMid,fontSize:10,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
@@ -5182,7 +5880,7 @@ export default function OaDashboard(){
                   <table style={{width:"100%",borderCollapse:"collapse",fontSize:12}}>
                     <thead>
                       <tr style={{background:C.cream}}>
-                        {["날짜","키워드","순위","검색량","메모"].map(h=>(
+                        {["날짜","키워드","브랜드","순위","검색량","메모",""].map(h=>(
                           <th key={h} style={{padding:"6px 10px",textAlign:"left",fontWeight:700,color:C.inkMid,
                             borderBottom:`1px solid ${C.border}`,whiteSpace:"nowrap"}}>{h}</th>
                         ))}
@@ -5201,9 +5899,20 @@ export default function OaDashboard(){
                                 {kw?.competitor&&<span style={{fontSize:10,color:C.inkLt}}>({kw.competitor})</span>}
                               </span>
                             </td>
+                            <td style={{padding:"7px 10px"}}>
+                              <span style={{fontSize:11,fontWeight:700,color:C.rose,background:"#EFF6FF",padding:"2px 8px",borderRadius:10}}>
+                                {log.brand||"OA"}
+                              </span>
+                            </td>
                             <td style={{padding:"7px 10px",fontWeight:800,color:C.ink}}>{log.rank}위</td>
                             <td style={{padding:"7px 10px",color:C.inkMid}}>{log.volume?log.volume.toLocaleString():"—"}</td>
-                            <td style={{padding:"7px 10px",color:C.inkMid,maxWidth:160,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{log.note||"—"}</td>
+                            <td style={{padding:"7px 10px",color:C.inkMid,maxWidth:160,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
+                              {log.auto ? <span style={{fontSize:10,color:C.rose,fontWeight:700,background:"#EFF6FF",padding:"1px 6px",borderRadius:10}}>자동</span> : log.note||"—"}
+                            </td>
+                            <td style={{padding:"4px 6px"}}>
+                              <button onClick={()=>setKwData({...kwData,logs:logs.filter(l=>l.id!==log.id)})}
+                                style={{background:"none",border:"none",cursor:"pointer",color:C.inkLt,fontSize:13,padding:2}}>✕</button>
+                            </td>
                           </tr>
                         );
                       })}
@@ -5214,6 +5923,45 @@ export default function OaDashboard(){
             )}
           </>
         )}
+        </>)}
+
+        {/* 경쟁사 순위 모달 */}
+        {rankModal&&autoRank[rankModal]&&(
+          <Modal title={<><MI n="military_tech"/> "{rankModal}" 네이버쇼핑 순위</>} onClose={()=>setRankModal(null)}>
+            <div style={{overflowY:"auto",maxHeight:460}}>
+              {autoRank[rankModal].topItems.map(item=>(
+                <div key={item.rank} style={{
+                  display:"flex",alignItems:"center",gap:10,
+                  padding:"9px 12px",borderRadius:10,marginBottom:4,
+                  background:item.isTarget?"#EFF6FF":"#fff",
+                  border:`1px solid ${item.isTarget?C.rose:C.border}`,
+                }}>
+                  <div style={{fontSize:16,fontWeight:900,color:item.isTarget?C.rose:item.rank<=3?"#F59E0B":C.inkMid,
+                    minWidth:36,textAlign:"center"}}>
+                    {item.rank}위
+                  </div>
+                  <div style={{flex:1,minWidth:0}}>
+                    <div style={{display:"flex",alignItems:"center",gap:5}}>
+                      {item.isTarget&&<span style={{fontSize:10,fontWeight:800,color:"#fff",background:C.rose,
+                        padding:"1px 6px",borderRadius:10}}>{autoRank[rankModal].brand||"OA"}</span>}
+                      <span style={{fontSize:12,fontWeight:800,color:item.isTarget?C.rose:C.ink}}>
+                        {item.brand||item.mallName||"—"}
+                      </span>
+                    </div>
+                    <div style={{fontSize:11,color:C.inkMid,marginTop:1,overflow:"hidden",
+                      textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{item.title}</div>
+                  </div>
+                  {item.lprice&&(
+                    <div style={{fontSize:12,fontWeight:800,color:C.ink,whiteSpace:"nowrap",textAlign:"right"}}>
+                      {item.lprice.toLocaleString()}원
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+            <div style={{marginTop:8,fontSize:11,color:C.inkLt}}>네이버쇼핑 관련도순 기준 · 상위 30개</div>
+          </Modal>
+        )}
 
         {/* 키워드 추가 모달 */}
         {addKwModal&&(
@@ -5221,8 +5969,8 @@ export default function OaDashboard(){
             <FR label="키워드 *">
               <Inp value={kwInput} onChange={setKwInput} placeholder="예: 전동칫솔, 음파칫솔" autoFocus/>
             </FR>
-            <FR label="경쟁사 이름 (선택)">
-              <Inp value={compInput} onChange={setCompInput} placeholder="비워두면 '우리 브랜드' 키워드로 분류"/>
+            <FR label="브랜드명 (비우면 오아 기준)">
+              <Inp value={compInput} onChange={setCompInput} placeholder="예: 유닉스, 다이슨 (비우면 오아)"/>
             </FR>
             <Btn onClick={addKeyword} disabled={!kwInput.trim()} style={{width:"100%",marginTop:4}}>
               <MI n="add" size={13}/> 추가하기
@@ -5430,6 +6178,7 @@ export default function OaDashboard(){
           {sec==="creative"    && CreativeSection}
           {sec==="keyword"     && KeywordSection}
           {sec==="review"      && ReviewSection}
+          {sec==="coupang"     && CoupangSection}
         </main>
       </div>
 
