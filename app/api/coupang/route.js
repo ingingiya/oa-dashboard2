@@ -74,18 +74,26 @@ export async function GET(request) {
     if (type === "debug") {
       const id = searchParams.get("id") || "TEST_ID";
       const path  = `/v2/providers/seller_api/apis/api/v1/marketplace/seller-products/${id}`;
-      const query = `vendorId=${vendorId}`;
+
+      // 테스트1: vendorId 포함
+      const q1 = `vendorId=${vendorId}`;
+      const r1 = await callCoupang("GET", path, q1);
+
+      // 테스트2: vendorId 없이
+      const r2 = await callCoupang("GET", path, "");
+
       const datetime = new Date().toISOString().replace(/[-:T]/g,"").slice(2,12);
-      const message  = datetime + "GET" + path + "?" + query;
-      const headers  = makeAuth("GET", path, query);
+      const headers  = makeAuth("GET", path, q1);
       return Response.json({
-        message,
+        message: datetime + "GET" + path + "?" + q1,
         authorization: headers.Authorization,
         vendorIdLen: vendorId.length,
         accessKeyLen: accessKey.length,
         secretKeyLen: secretKey.length,
         secretKeyFirstChar: secretKey[0],
         secretKeyLastChar:  secretKey[secretKey.length-1],
+        test_withVendorId:   { status: r1.status, ok: r1.ok, data: r1.data },
+        test_withoutVendorId: { status: r2.status, ok: r2.ok, data: r2.data },
       });
     }
 
