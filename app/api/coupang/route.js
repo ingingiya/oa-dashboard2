@@ -22,7 +22,7 @@ function makeAuth(method, path, query = "") {
   const accessKey = (process.env.COUPANG_ACCESS_KEY || "").trim();
   const secretKey = (process.env.COUPANG_SECRET_KEY || "").trim();
   const iso = new Date().toISOString();
-  const datetime = iso.slice(2,8) + "T" + iso.slice(11,19) + "Z"; // yyMMddTHHmmssZ
+  const datetime = iso.slice(2,4)+iso.slice(5,7)+iso.slice(8,10)+"T"+iso.slice(11,13)+iso.slice(14,16)+iso.slice(17,19)+"Z"; // yyMMddTHHmmssZ
 
   const message   = datetime + method + path + (query ? "?" + query : "");
   const signature = crypto.createHmac("sha256", secretKey).update(message).digest("hex");
