@@ -114,6 +114,24 @@ export async function GET(request) {
         test_withVendorId:    { status: r1.status, ok: r1.ok, data: r1.data },
         test_withoutVendorId: { status: r2.status, ok: r2.ok, data: r2.data },
         test_https: await httpsGet(`https://api-gateway.coupang.com${path}?${q1}`, makeAuth("GET", path, q1)),
+        test_hex_decoded: await (async () => {
+          try {
+            const hexKey = Buffer.from(secretKey, 'hex');
+            const msg = datetime + "GET" + path + "?" + q1;
+            const sig = crypto.createHmac("sha256", hexKey).update(msg).digest("hex");
+            const auth = `CEA algorithm=HmacSHA256, access-key=${accessKey}, signed-date=${datetime}, signature=${sig}`;
+            return await httpsGet(`https://api-gateway.coupang.com${path}?${q1}`, { Authorization: auth });
+          } catch(e) { return { error: e.message }; }
+        })(),
+        test_base64_decoded: await (async () => {
+          try {
+            const b64Key = Buffer.from(secretKey, 'base64');
+            const msg = datetime + "GET" + path + "?" + q1;
+            const sig = crypto.createHmac("sha256", b64Key).update(msg).digest("hex");
+            const auth = `CEA algorithm=HmacSHA256, access-key=${accessKey}, signed-date=${datetime}, signature=${sig}`;
+            return await httpsGet(`https://api-gateway.coupang.com${path}?${q1}`, { Authorization: auth });
+          } catch(e) { return { error: e.message }; }
+        })(),
         test_kst: await (async () => {
           // KST = UTC+9
           const kstDate = new Date(Date.now() + 9*60*60*1000);
