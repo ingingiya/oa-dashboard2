@@ -1,5 +1,22 @@
 export const dynamic = 'force-dynamic';
 import crypto from 'crypto';
+import https from 'https';
+
+function httpsGet(url, headers) {
+  return new Promise((resolve) => {
+    const u = new URL(url);
+    const req = https.request({ hostname: u.hostname, path: u.pathname + u.search, method: 'GET', headers }, res => {
+      let body = '';
+      res.on('data', d => body += d);
+      res.on('end', () => {
+        let data; try { data = JSON.parse(body); } catch { data = { raw: body }; }
+        resolve({ ok: res.statusCode < 300, status: res.statusCode, data });
+      });
+    });
+    req.on('error', e => resolve({ ok: false, status: 0, data: { error: e.message } }));
+    req.end();
+  });
+}
 
 function makeAuth(method, path, query = "") {
   const accessKey = (process.env.COUPANG_ACCESS_KEY || "").trim();
@@ -96,6 +113,7 @@ export async function GET(request) {
         accessKeyHasQuotes: accessKey.startsWith('"') || accessKey.startsWith("'"),
         test_withVendorId:    { status: r1.status, ok: r1.ok, data: r1.data },
         test_withoutVendorId: { status: r2.status, ok: r2.ok, data: r2.data },
+        test_https: await httpsGet(`https://api-gateway.coupang.com${path}?${q1}`, makeAuth("GET", path, q1)),
         test_kst: await (async () => {
           // KST = UTC+9
           const kstDate = new Date(Date.now() + 9*60*60*1000);
