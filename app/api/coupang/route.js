@@ -90,8 +90,10 @@ export async function GET(request) {
         vendorIdLen: vendorId.length,
         accessKeyLen: accessKey.length,
         secretKeyLen: secretKey.length,
-        secretKeyFirstChar: secretKey[0],
-        secretKeyLastChar:  secretKey[secretKey.length-1],
+        secretKeyHasQuotes: secretKey.startsWith('"') || secretKey.startsWith("'"),
+        secretKeyHasNewline: secretKey.includes('\n') || secretKey.includes('\r'),
+        secretKeyHasSpace: secretKey.includes(' '),
+        accessKeyHasQuotes: accessKey.startsWith('"') || accessKey.startsWith("'"),
         test_withVendorId:   { status: r1.status, ok: r1.ok, data: r1.data },
         test_withoutVendorId: { status: r2.status, ok: r2.ok, data: r2.data },
       });
