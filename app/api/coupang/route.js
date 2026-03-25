@@ -94,8 +94,21 @@ export async function GET(request) {
         secretKeyHasNewline: secretKey.includes('\n') || secretKey.includes('\r'),
         secretKeyHasSpace: secretKey.includes(' '),
         accessKeyHasQuotes: accessKey.startsWith('"') || accessKey.startsWith("'"),
-        test_withVendorId:   { status: r1.status, ok: r1.ok, data: r1.data },
+        test_withVendorId:    { status: r1.status, ok: r1.ok, data: r1.data },
         test_withoutVendorId: { status: r2.status, ok: r2.ok, data: r2.data },
+        test_kst: await (async () => {
+          // KST = UTC+9
+          const kstDate = new Date(Date.now() + 9*60*60*1000);
+          const kstDatetime = kstDate.toISOString().replace(/[-:T]/g,"").slice(2,12);
+          const kstMsg = kstDatetime + "GET" + path + "?" + q1;
+          const kstSig = crypto.createHmac("sha256", secretKey).update(kstMsg).digest("hex");
+          const kstAuth = `CEA algorithm=HmacSHA256, access-key=${accessKey}, signed-date=${kstDatetime}, signature=${kstSig}`;
+          const url = `https://api-gateway.coupang.com${path}?${q1}`;
+          const res = await fetch(url, { headers: { Authorization: kstAuth } });
+          const text = await res.text();
+          let data; try { data = JSON.parse(text); } catch { data = { raw: text }; }
+          return { status: res.status, ok: res.ok, data, kstDatetime };
+        })(),
       });
     }
 
