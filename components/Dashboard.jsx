@@ -7455,17 +7455,22 @@ export default function OaDashboard(){
         )}
 
         {mainTab==="musinsa"&&(()=>{
-          // 가격 데이터 로드
+          const SURL = process.env.NEXT_PUBLIC_SUPABASE_URL;
+          const SKEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+          const sHeaders = {apikey:SKEY, Authorization:`Bearer ${SKEY}`};
+          // 가격 데이터 로드 (브라우저에서 직접 Supabase 호출)
           if(musinsaTab==="prices" && !musinsaItems && !musinsaLoading) {
             setMusinsaLoading(true);
-            fetch("/api/musinsa").then(r=>r.json()).then(d=>{
-              setMusinsaItems(d.items||[]);
-              setMusinsaLoading(false);
-            }).catch(()=>setMusinsaLoading(false));
+            fetch(`${SURL}/rest/v1/musinsa_prices?select=*&order=brand.asc,name.asc`, {headers:sHeaders})
+              .then(r=>r.json()).then(d=>{
+                setMusinsaItems(Array.isArray(d)?d:[]);
+                setMusinsaLoading(false);
+              }).catch(()=>setMusinsaLoading(false));
           }
           // 링크 목록 로드
           if(musinsaTab==="links" && !musinsaLinks) {
-            fetch("/api/musinsa/links").then(r=>r.json()).then(d=>setMusinsaLinks(Array.isArray(d)?d:[]));
+            fetch(`${SURL}/rest/v1/musinsa_links?select=*&order=id.asc`, {headers:sHeaders})
+              .then(r=>r.json()).then(d=>setMusinsaLinks(Array.isArray(d)?d:[]));
           }
           const byBrand = {};
           (musinsaItems||[]).forEach(item=>{
