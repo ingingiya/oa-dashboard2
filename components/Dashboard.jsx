@@ -7328,85 +7328,90 @@ export default function OaDashboard(){
                         </div>
                       </div>
                       {items.length>0&&(
-                        <div style={{overflowX:"auto",marginBottom:8}}>
+                        <div style={{overflowX:"auto",marginBottom:10}}>
                           <table style={{width:"100%",borderCollapse:"collapse",fontSize:11}}>
-                            <thead><tr style={{borderBottom:`1px solid ${C.border}`}}>
-                              {["채널","제품명","정상가","판매가","프로모션","메모",""].map(h=>(
-                                <th key={h} style={{padding:"4px 6px",textAlign:"left",fontWeight:700,color:C.inkMid,whiteSpace:"nowrap"}}>{h}</th>
-                              ))}
-                            </tr></thead>
+                            <thead>
+                              <tr style={{background:C.cream}}>
+                                {["채널","제품명","정가","할인가","차이","행사/프로모션","메모","조회일",""].map(h=>(
+                                  <th key={h} style={{padding:"6px 8px",textAlign:"left",fontWeight:700,color:C.inkMid,borderBottom:`1px solid ${C.border}`,whiteSpace:"nowrap"}}>{h}</th>
+                                ))}
+                              </tr>
+                            </thead>
                             <tbody>
                               {items.map(item=>{
                                 const diff = (prod.ourPrice && item.salePrice) ? prod.ourPrice - item.salePrice : null;
                                 const fetching = mktFetching[item.id];
                                 return(
-                                  <tr key={item.id} style={{borderBottom:`1px solid ${C.cream}`,background:item.favorite?"#fffbeb":item.manual?"#fefce8":undefined}}>
-                                    <td style={{padding:"5px 6px",whiteSpace:"nowrap"}}>
-                                      <button onClick={()=>setMarketData((marketData||[]).map(p=>p.id!==prod.id?p:{...p,items:(p.items||[]).map(i=>i.id!==item.id?i:{...i,favorite:!i.favorite})}))}
-                                        style={{background:"none",border:"none",cursor:"pointer",padding:0,marginRight:4,fontSize:13,lineHeight:1}}>
-                                        {item.favorite?"⭐":"☆"}
-                                      </button>
-                                      {item.channel}
+                                  <tr key={item.id} style={{borderBottom:`1px solid ${C.border}`,background:item.favorite?"#fffbeb":item.manual?"#fefce8":undefined}}>
+                                    <td style={{padding:"7px 8px",whiteSpace:"nowrap"}}>
+                                      <span style={{fontSize:10,fontWeight:700,padding:"2px 7px",borderRadius:6,background:C.cream,color:C.inkMid}}>{item.channel}</span>
                                     </td>
-                                    <td style={{padding:"5px 6px",maxWidth:160}}>
-                                      {mktEditCell===`${item.id}-productName`?(
-                                        <input autoFocus defaultValue={item.productName||""} onBlur={e=>saveMktCell(prod.id,item.id,"productName",e.target.value)}
-                                          style={{width:"100%",border:`1px solid ${C.border}`,borderRadius:4,padding:"2px 4px",fontSize:11,fontFamily:"inherit"}}/>
-                                      ):(
-                                        <span onClick={()=>{setMktEditCell(`${item.id}-productName`);setMktEditValue(item.productName||"");}}
-                                          style={{cursor:"text",color:item.productName?C.ink:C.inkLt,fontSize:11}}>{item.productName||"클릭하여 입력"}</span>
-                                      )}
-                                      {item.image&&<img src={item.image} alt="" style={{width:24,height:24,objectFit:"cover",borderRadius:3,marginLeft:4,verticalAlign:"middle"}}/>}
+                                    <td style={{padding:"7px 8px",maxWidth:200}}>
+                                      <div style={{display:"flex",alignItems:"center",gap:6}}>
+                                        {item.image&&<img src={item.image} alt="" style={{width:32,height:32,objectFit:"cover",borderRadius:4,flexShrink:0,border:`1px solid ${C.border}`}}/>}
+                                        <div style={{flex:1,overflow:"hidden"}}>
+                                          <div style={{fontWeight:700,color:C.ink,fontSize:11,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{item.productName||"—"}</div>
+                                          {item.url&&(
+                                            <a href={item.url} target="_blank" rel="noreferrer"
+                                              style={{display:"inline-flex",alignItems:"center",gap:2,fontSize:9,color:"#2563eb",textDecoration:"none",marginTop:1}}>
+                                              <MI n="open_in_new" size={10}/>판매 페이지
+                                            </a>
+                                          )}
+                                        </div>
+                                      </div>
                                     </td>
-                                    <td style={{padding:"5px 6px",whiteSpace:"nowrap"}}>
-                                      {mktEditCell===`${item.id}-regularPrice`?(
-                                        <input autoFocus type="number" defaultValue={item.regularPrice||""} onBlur={e=>saveMktCell(prod.id,item.id,"regularPrice",parseInt(e.target.value)||null)}
-                                          style={{width:80,border:`1px solid ${C.border}`,borderRadius:4,padding:"2px 4px",fontSize:11,fontFamily:"inherit"}}/>
-                                      ):(
-                                        <span onClick={()=>{setMktEditCell(`${item.id}-regularPrice`);setMktEditValue(item.regularPrice||"");}}
-                                          style={{cursor:"text",color:item.regularPrice?C.ink:C.inkLt}}>{fmtP(item.regularPrice)||"—"}</span>
-                                      )}
+                                    <td style={{padding:"7px 8px",color:C.inkMid,whiteSpace:"nowrap"}}>{item.regularPrice?`₩${item.regularPrice.toLocaleString()}`:"—"}</td>
+                                    <td style={{padding:"7px 8px",whiteSpace:"nowrap"}}>
+                                      <div style={{fontWeight:800,color:C.ink}}>{item.salePrice?`₩${item.salePrice.toLocaleString()}`:"—"}</div>
+                                      {item.naverItems?.slice(0,2).map((ni,ni_i)=>(
+                                        <div key={ni_i} style={{fontSize:9,color:C.inkLt,marginTop:1,maxWidth:120,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
+                                          {ni.mallName} ₩{ni.lprice?.toLocaleString()}
+                                        </div>
+                                      ))}
                                     </td>
-                                    <td style={{padding:"5px 6px",whiteSpace:"nowrap"}}>
-                                      {mktEditCell===`${item.id}-salePrice`?(
-                                        <input autoFocus type="number" defaultValue={item.salePrice||""} onBlur={e=>saveMktCell(prod.id,item.id,"salePrice",parseInt(e.target.value)||null)}
-                                          style={{width:80,border:`1px solid ${C.border}`,borderRadius:4,padding:"2px 4px",fontSize:11,fontFamily:"inherit"}}/>
-                                      ):(
-                                        <span onClick={()=>{setMktEditCell(`${item.id}-salePrice`);setMktEditValue(item.salePrice||"");}}
-                                          style={{cursor:"text",color:item.salePrice?C.ink:C.inkLt}}>
-                                          {fmtP(item.salePrice)||"—"}
-                                          {diff!==null&&<span style={{marginLeft:4,fontSize:9,color:diff>0?C.good:"#dc2626",fontWeight:700}}>{diff>0?`↓${fmtP(diff)}`:`↑${fmtP(Math.abs(diff))}`}</span>}
+                                    <td style={{padding:"7px 8px",whiteSpace:"nowrap"}}>
+                                      {diff!==null&&(
+                                        <span style={{fontWeight:700,fontSize:10,color:diff>0?C.bad:C.good}}>
+                                          {diff>0?`+₩${Math.round(diff).toLocaleString()}`:`-₩${Math.round(-diff).toLocaleString()}`}
+                                          <span style={{fontWeight:400,color:C.inkLt,marginLeft:3}}>{diff>0?"우리 더 비쌈":"우리 더 저렴"}</span>
                                         </span>
                                       )}
                                     </td>
-                                    <td style={{padding:"5px 6px"}}>
-                                      {mktEditCell===`${item.id}-promotion`?(
-                                        <input autoFocus defaultValue={item.promotion||""} onBlur={e=>saveMktCell(prod.id,item.id,"promotion",e.target.value)}
-                                          style={{width:"100%",border:`1px solid ${C.border}`,borderRadius:4,padding:"2px 4px",fontSize:11,fontFamily:"inherit"}}/>
-                                      ):(
-                                        <span onClick={()=>{setMktEditCell(`${item.id}-promotion`);setMktEditValue(item.promotion||"");}}
-                                          style={{cursor:"text",color:item.promotion?C.ink:C.inkLt,fontSize:11}}>{item.promotion||"—"}</span>
-                                      )}
+                                    <td style={{padding:"4px 8px",maxWidth:160}} onClick={()=>{if(mktEditCell?.itemId!==item.id||mktEditCell?.field!=="promotion"){setMktEditCell({productId:prod.id,itemId:item.id,field:"promotion"});setMktEditValue(item.promotion||"");}}}>
+                                      {mktEditCell?.itemId===item.id&&mktEditCell?.field==="promotion"
+                                        ? <textarea autoFocus rows={2} value={mktEditValue} onChange={e=>setMktEditValue(e.target.value)}
+                                            onBlur={e=>saveMktCell(prod.id,item.id,"promotion",e.target.value)}
+                                            onKeyDown={e=>{if(e.key==="Escape")setMktEditCell(null);}}
+                                            style={{width:"100%",fontSize:10,border:`1px solid ${C.accent}`,borderRadius:4,padding:"3px 5px",resize:"vertical",minHeight:36,fontFamily:"inherit",outline:"none"}}/>
+                                        : <span style={{fontSize:10,color:item.promotion?C.warn:C.inkLt,cursor:"text",display:"block",minHeight:18,whiteSpace:"pre-wrap",wordBreak:"break-all"}} title={item.promotion||"클릭해서 입력"}>
+                                            {item.promotion||<span style={{color:C.inkLt,fontStyle:"italic"}}>—</span>}
+                                          </span>
+                                      }
                                     </td>
-                                    <td style={{padding:"5px 6px",maxWidth:120}}>
-                                      {mktEditCell===`${item.id}-note`?(
-                                        <textarea autoFocus defaultValue={item.note||""} onBlur={e=>saveMktCell(prod.id,item.id,"note",e.target.value)}
-                                          style={{width:"100%",border:`1px solid ${C.border}`,borderRadius:4,padding:"2px 4px",fontSize:11,fontFamily:"inherit",resize:"vertical",minHeight:40}}/>
-                                      ):(
-                                        <span onClick={()=>{setMktEditCell(`${item.id}-note`);setMktEditValue(item.note||"");}}
-                                          style={{cursor:"text",color:item.note?C.ink:C.inkLt,fontSize:11}}>{item.note||"—"}</span>
-                                      )}
+                                    <td style={{padding:"4px 8px",maxWidth:140}} onClick={()=>{if(mktEditCell?.itemId!==item.id||mktEditCell?.field!=="note"){setMktEditCell({productId:prod.id,itemId:item.id,field:"note"});setMktEditValue(item.note||"");}}}>
+                                      {mktEditCell?.itemId===item.id&&mktEditCell?.field==="note"
+                                        ? <textarea autoFocus rows={2} value={mktEditValue} onChange={e=>setMktEditValue(e.target.value)}
+                                            onBlur={e=>saveMktCell(prod.id,item.id,"note",e.target.value)}
+                                            onKeyDown={e=>{if(e.key==="Escape")setMktEditCell(null);}}
+                                            style={{width:"100%",fontSize:10,border:`1px solid ${C.accent}`,borderRadius:4,padding:"3px 5px",resize:"vertical",minHeight:36,fontFamily:"inherit",outline:"none"}}/>
+                                        : <span style={{fontSize:10,color:item.note?C.inkMid:C.inkLt,cursor:"text",display:"block",minHeight:18,whiteSpace:"pre-wrap",wordBreak:"break-all"}} title={item.note||"클릭해서 입력"}>
+                                            {item.note||<span style={{color:C.inkLt,fontStyle:"italic"}}>—</span>}
+                                          </span>
+                                      }
                                     </td>
-                                    <td style={{padding:"5px 6px",whiteSpace:"nowrap"}}>
-                                      <div style={{display:"flex",gap:3,alignItems:"center"}}>
+                                    <td style={{padding:"7px 8px",color:C.inkLt,fontSize:10,whiteSpace:"nowrap"}}>{item.lastChecked||"—"}</td>
+                                    <td style={{padding:"7px 8px",whiteSpace:"nowrap"}}>
+                                      <div style={{display:"flex",gap:4}}>
+                                        <button onClick={()=>setMarketData((marketData||[]).map(p=>p.id!==prod.id?p:{...p,items:p.items.map(i=>i.id!==item.id?i:{...i,favorite:!i.favorite})}))}
+                                          title="즐겨찾기"
+                                          style={{border:`1px solid ${item.favorite?"#f59e0b":C.border}`,borderRadius:6,width:24,height:24,cursor:"pointer",fontSize:11,display:"flex",alignItems:"center",justifyContent:"center",background:item.favorite?"#fef3c7":"transparent"}}>
+                                          <MI n="star" size={12} style={{color:item.favorite?"#f59e0b":C.inkLt}}/>
+                                        </button>
                                         <button onClick={()=>{setMktItemModal({productId:prod.id,itemId:item.id});setMktItemInput({channel:item.channel||"스마트스토어",productName:item.productName||"",url:item.url||"",image:item.image||"",regularPrice:item.regularPrice||"",salePrice:item.salePrice||"",promotion:item.promotion||"",note:item.note||""});setMktModalSearch("");setMktModalResults([]);}}
+                                          title="수정"
                                           style={{background:"none",border:`1px solid ${C.border}`,borderRadius:6,width:24,height:24,cursor:"pointer",fontSize:11,display:"flex",alignItems:"center",justifyContent:"center"}}>
                                           <MI n="edit" size={12} style={{color:C.inkMid}}/>
                                         </button>
-                                        {item.url&&<a href={item.url} target="_blank" rel="noreferrer"
-                                          style={{background:"none",border:`1px solid ${C.border}`,borderRadius:6,width:24,height:24,cursor:"pointer",fontSize:11,display:"flex",alignItems:"center",justifyContent:"center",textDecoration:"none",color:C.inkMid}}>
-                                          <MI n="open_in_new" size={12}/>
-                                        </a>}
                                         <button onClick={()=>fetchMarketPrice(prod.id,item.id)} disabled={fetching}
                                           title="네이버 쇼핑에서 가격 조회"
                                           style={{background:"none",border:`1px solid ${C.border}`,borderRadius:6,width:24,height:24,cursor:"pointer",fontSize:11,display:"flex",alignItems:"center",justifyContent:"center",opacity:fetching?0.5:1}}>
