@@ -7267,7 +7267,7 @@ export default function OaDashboard(){
                               <div style={{overflowX:"auto"}}>
                                 <table style={{width:"100%",borderCollapse:"collapse",fontSize:11}}>
                                   <thead><tr style={{borderBottom:`1px solid ${C.border}`}}>
-                                    {["이미지","상품명","판매가","정가","할인율","수집일","링크"].map(h=>(
+                                    {["이미지","상품명","판매가","정가","할인율","세일기간","수집일","링크"].map(h=>(
                                       <th key={h} style={{padding:"4px 8px",textAlign:"left",fontWeight:700,color:C.inkMid,whiteSpace:"nowrap"}}>{h}</th>
                                     ))}
                                   </tr></thead>
@@ -7281,6 +7281,7 @@ export default function OaDashboard(){
                                           <td style={{padding:"6px 8px",fontWeight:800,color:C.ink,whiteSpace:"nowrap"}}>{item.sale_price?`₩${item.sale_price.toLocaleString()}`:"—"}</td>
                                           <td style={{padding:"6px 8px",color:C.inkMid,whiteSpace:"nowrap",textDecoration:"line-through"}}>{item.original_price&&item.original_price!==item.sale_price?`₩${item.original_price.toLocaleString()}`:"—"}</td>
                                           <td style={{padding:"6px 8px",whiteSpace:"nowrap"}}>{disc>0&&<span style={{background:"#fee2e2",color:"#dc2626",fontWeight:700,padding:"2px 6px",borderRadius:4,fontSize:10}}>{disc}%</span>}</td>
+                                          <td style={{padding:"6px 8px",color:"#7c3aed",fontSize:10,whiteSpace:"nowrap",maxWidth:120,overflow:"hidden",textOverflow:"ellipsis"}}>{item.sale_period||"—"}</td>
                                           <td style={{padding:"6px 8px",color:C.inkLt,whiteSpace:"nowrap"}}>{item.collected_at?item.collected_at.slice(0,10):"—"}</td>
                                           <td style={{padding:"6px 8px"}}>{item.url&&<a href={item.url} target="_blank" rel="noreferrer" style={{fontSize:10,color:"#2563eb",textDecoration:"none",display:"flex",alignItems:"center",gap:2}}><MI n="open_in_new" size={10}/>보기</a>}</td>
                                         </tr>
