@@ -68,6 +68,8 @@ export async function GET(request) {
       brand: item.brand || item.maker || "",
       title: item.title?.replace(/<[^>]+>/g, "") || "",
       lprice: item.lprice ? parseInt(item.lprice) : null,
+      link: item.link || "",
+      image: item.image || "",
       isTarget: matchesBrand(item, brandKw),
     }));
 

@@ -28,7 +28,9 @@ export async function GET(request) {
   if (!token) return Response.json({ error: "NOTION_TOKEN 없음" }, { status: 500 });
   const { searchParams } = new URL(request.url);
   const showCompleted = searchParams.get("completed") === "true";
-  const month = searchParams.get("month"); // "YYYY-MM" 형식, 없으면 전체
+  const month = searchParams.get("month"); // "YYYY-MM" 형식
+  const from  = searchParams.get("from");  // "YYYY-MM-DD" 이후 전부
+  const to    = searchParams.get("to");    // "YYYY-MM-DD" 이전까지
   try {
     let allResults = [];
     let cursor = undefined;
@@ -43,7 +45,13 @@ export async function GET(request) {
       if (!showCompleted) {
         filters.push({ property: "상태", select: { does_not_equal: "완료" } });
       }
-      if (month) {
+      if (from) {
+        filters.push({ property: "날짜", date: { on_or_after: from } });
+      }
+      if (to) {
+        filters.push({ property: "날짜", date: { on_or_before: to } });
+      }
+      if (month && !from && !to) {
         const [y, m] = month.split("-").map(Number);
         const start = `${y}-${String(m).padStart(2,"0")}-01`;
         const lastD = new Date(y, m, 0).getDate();
