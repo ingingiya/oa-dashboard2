@@ -1,18 +1,20 @@
 export const dynamic = 'force-dynamic';
 export const maxDuration = 60;
 
+import Anthropic from '@anthropic-ai/sdk';
+
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const SUPABASE_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
 
-const LINKS = [
-  { pid: "5485556", url: "https://www.musinsa.com/products/5485556" },
-  { pid: "3774961", url: "https://www.musinsa.com/products/3774961" },
-  { pid: "4173791", url: "https://www.musinsa.com/products/4173791" },
-  { pid: "3702722", url: "https://www.musinsa.com/products/3702722" },
-  { pid: "5485742", url: "https://www.musinsa.com/products/5485742" },
-  { pid: "4270193", url: "https://www.musinsa.com/products/4270193" },
-  { pid: "3620953", url: "https://www.musinsa.com/products/3620953" },
-];
+const client = new Anthropic({ apiKey: ANTHROPIC_API_KEY });
+
+async function fetchLinks() {
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/musinsa_links?select=*&active=eq.true&order=id.asc`, {
+    headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` },
+  });
+  return res.ok ? res.json() : [];
+}
 
 async function fetchPrice(pid, url) {
   try {
@@ -32,13 +34,11 @@ async function fetchPrice(pid, url) {
         const d = JSON.parse(nextMatch[1]);
         const pp = d?.props?.pageProps || {};
         const product = pp.product || pp.goodsDetail || pp.item || {};
-        if (product) {
-          const name = product.goodsName || product.name || product.title || "";
-          const brand = (typeof product.brand === "object" ? product.brand?.name : product.brand) || product.brandName || "";
-          const salePrice = parseInt(product.price || product.salePrice || product.goodsPrice || 0);
-          const originalPrice = parseInt(product.originalPrice || product.consumerPrice || salePrice);
-          if (name && salePrice) return { name, brand, sale_price: salePrice, original_price: originalPrice };
-        }
+        const name = product.goodsName || product.name || product.title || "";
+        const brand = (typeof product.brand === "object" ? product.brand?.name : product.brand) || product.brandName || "";
+        const salePrice = parseInt(product.price || product.salePrice || product.goodsPrice || 0);
+        const originalPrice = parseInt(product.originalPrice || product.consumerPrice || salePrice);
+        if (name && salePrice) return { name, brand, sale_price: salePrice, original_price: originalPrice };
       } catch {}
     }
 
@@ -51,7 +51,7 @@ async function fetchPrice(pid, url) {
         if (ld["@type"] === "Product") {
           const offer = Array.isArray(ld.offers) ? ld.offers[0] : ld.offers || {};
           const salePrice = parseInt(parseFloat(offer.price || 0));
-          return {
+          if (salePrice) return {
             name: ld.name || "",
             brand: typeof ld.brand === "object" ? ld.brand?.name || "" : ld.brand || "",
             sale_price: salePrice,
@@ -59,6 +59,26 @@ async function fetchPrice(pid, url) {
           };
         }
       } catch {}
+    }
+
+    // 3) Claude로 HTML 분석
+    if (ANTHROPIC_API_KEY) {
+      const snippet = html.slice(0, 8000);
+      const msg = await client.messages.create({
+        model: "claude-haiku-4-5-20251001",
+        max_tokens: 200,
+        messages: [{
+          role: "user",
+          content: `이 무신사 상품 페이지 HTML에서 정보를 추출해줘.\n반드시 JSON만 응답:\n{"brand":"브랜드명","name":"상품명","sale_price":판매가숫자,"original_price":정가숫자}\n가격은 숫자만(쉼표/원 제외). 정가 없으면 sale_price와 동일.\n\nHTML:\n${snippet}`,
+        }],
+      });
+      const text = msg.content[0].text.trim();
+      const start = text.indexOf("{");
+      const end = text.lastIndexOf("}") + 1;
+      if (start >= 0 && end > start) {
+        const result = JSON.parse(text.slice(start, end));
+        if (result.sale_price) return result;
+      }
     }
 
     return null;
@@ -86,19 +106,22 @@ export async function POST() {
     return Response.json({ error: "Supabase 설정 없음" }, { status: 500 });
   }
 
+  const links = await fetchLinks();
+  if (!links.length) return Response.json({ error: "등록된 링크 없음" }, { status: 400 });
+
   const results = [];
   const errors = [];
 
-  for (const { pid, url } of LINKS) {
+  for (const { product_id: pid, url } of links) {
     const data = await fetchPrice(pid, url);
-    if (data && data.sale_price) {
+    if (data?.sale_price) {
       const row = {
         product_id: pid,
         url,
         name: data.name,
         brand: data.brand,
-        sale_price: data.sale_price,
-        original_price: data.original_price,
+        sale_price: parseInt(data.sale_price),
+        original_price: parseInt(data.original_price || data.sale_price),
         collected_at: new Date().toISOString(),
       };
       await saveToSupabase(row);
