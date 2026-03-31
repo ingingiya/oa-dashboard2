@@ -17,9 +17,10 @@ export async function GET() {
         },
       }
     );
-    if (!res.ok) return Response.json({ error: `Supabase ${res.status}` }, { status: res.status });
-    const data = await res.json();
-    return Response.json({ items: data });
+    const text = await res.text();
+    if (!res.ok) return Response.json({ error: `Supabase ${res.status}`, body: text }, { status: res.status });
+    const data = JSON.parse(text);
+    return Response.json({ items: data, count: data.length, ok: res.ok, status: res.status });
   } catch (e) {
     return Response.json({ error: e.message }, { status: 500 });
   }
