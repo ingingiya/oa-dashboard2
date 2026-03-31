@@ -6110,6 +6110,9 @@ export default function OaDashboard(){
     const [musinsaItems, setMusinsaItems] = useState(null);
     const [musinsaLoading, setMusinsaLoading] = useState(false);
     const [musinsaRunning, setMusinsaRunning] = useState(false);
+    const [musinsaLinks, setMusinsaLinks] = useState(null);
+    const [musinsaTab, setMusinsaTab] = useState("prices"); // prices | links
+    const [newLinkUrl, setNewLinkUrl] = useState("");
     const [marketData, setMarketData] = useSyncState("oa_market_research_v1", []);
     const [mktProductModal, setMktProductModal] = useState(false);
     const [mktBulkModal, setMktBulkModal] = useState(false);
@@ -7447,12 +7450,17 @@ export default function OaDashboard(){
         )}
 
         {mainTab==="musinsa"&&(()=>{
-          if(!musinsaItems && !musinsaLoading) {
+          // 가격 데이터 로드
+          if(musinsaTab==="prices" && !musinsaItems && !musinsaLoading) {
             setMusinsaLoading(true);
             fetch("/api/musinsa").then(r=>r.json()).then(d=>{
               setMusinsaItems(d.items||[]);
               setMusinsaLoading(false);
             }).catch(()=>setMusinsaLoading(false));
+          }
+          // 링크 목록 로드
+          if(musinsaTab==="links" && !musinsaLinks) {
+            fetch("/api/musinsa/links").then(r=>r.json()).then(d=>setMusinsaLinks(Array.isArray(d)?d:[]));
           }
           const byBrand = {};
           (musinsaItems||[]).forEach(item=>{
@@ -7462,90 +7470,126 @@ export default function OaDashboard(){
           });
           return(
             <div style={{display:"flex",flexDirection:"column",gap:12}}>
+              {/* 헤더 */}
               <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:8}}>
-                <div>
-                  <div style={{fontSize:13,fontWeight:800,color:C.ink}}>무신사 가격 현황</div>
-                  <div style={{fontSize:11,color:C.inkMid,marginTop:2}}>매주 월요일 자동 수집 · 수동 수집 가능</div>
+                <div style={{display:"flex",gap:4,background:C.cream,borderRadius:10,padding:3}}>
+                  {[{id:"prices",label:"가격 현황"},{id:"links",label:"링크 관리"}].map(t=>(
+                    <button key={t.id} onClick={()=>setMusinsaTab(t.id)} style={{fontSize:11,fontWeight:700,padding:"5px 14px",borderRadius:8,border:"none",cursor:"pointer",background:musinsaTab===t.id?"#fff":"transparent",color:musinsaTab===t.id?C.ink:C.inkMid,fontFamily:"inherit"}}>{t.label}</button>
+                  ))}
                 </div>
-                <div style={{display:"flex",gap:8}}>
-                  <button onClick={()=>{
-                    if(musinsaRunning) return;
-                    setMusinsaRunning(true);
-                    fetch("/api/musinsa/scrape",{method:"POST"}).then(r=>r.json()).then(d=>{
-                      if(d.ok){
-                        alert(`수집 완료! ${d.success}개 성공 / ${d.failed}개 실패`);
-                        setMusinsaItems(null); setMusinsaLoading(false);
-                      } else alert("오류: "+d.error);
-                      setMusinsaRunning(false);
-                    }).catch(e=>{alert("오류: "+e.message);setMusinsaRunning(false);});
-                  }}
-                  style={{display:"flex",alignItems:"center",gap:5,padding:"7px 14px",borderRadius:8,border:"none",background:musinsaRunning?"#e5e7eb":"#111",color:musinsaRunning?C.inkMid:"#fff",fontWeight:700,fontSize:11,cursor:musinsaRunning?"not-allowed":"pointer",fontFamily:"inherit"}}>
-                    <MI n="download" size={13}/>{musinsaRunning?"수집 중...":"지금 수집"}
-                  </button>
-                  <button onClick={()=>{setMusinsaItems(null);setMusinsaLoading(false);}}
-                    style={{display:"flex",alignItems:"center",gap:5,padding:"7px 14px",borderRadius:8,border:"none",background:"#f3f4f6",color:C.inkMid,fontWeight:700,fontSize:11,cursor:"pointer",fontFamily:"inherit"}}>
-                    <MI n="refresh" size={13}/>새로고침
-                  </button>
-                </div>
-              </div>
-              {musinsaLoading?(
-                <Card><div style={{textAlign:"center",padding:"32px 0",color:C.inkLt,fontSize:12}}>불러오는 중...</div></Card>
-              ):!musinsaItems||musinsaItems.length===0?(
-                <Card>
-                  <div style={{textAlign:"center",padding:"32px 0",color:C.inkLt}}>
-                    <div style={{fontSize:13,marginBottom:8}}>데이터 없음</div>
-                    <div style={{fontSize:11}}>scraper.py를 먼저 실행하면 여기에 표시됩니다</div>
-                    <div style={{fontSize:10,color:C.inkLt,marginTop:12,fontFamily:"monospace",background:C.cream,padding:"8px 12px",borderRadius:8,textAlign:"left",display:"inline-block"}}>
-                      export SUPABASE_URL="{process.env.NEXT_PUBLIC_SUPABASE_URL||"..."}"<br/>
-                      export SUPABASE_KEY="anon키"<br/>
-                      export ANTHROPIC_API_KEY="클로드키"<br/>
-                      python scraper.py
-                    </div>
+                {musinsaTab==="prices"&&(
+                  <div style={{display:"flex",gap:8}}>
+                    <button onClick={()=>{
+                      if(musinsaRunning) return;
+                      setMusinsaRunning(true);
+                      fetch("/api/musinsa/scrape",{method:"POST"}).then(r=>r.json()).then(d=>{
+                        if(d.ok){ alert(`수집 완료! ${d.success}개 성공 / ${d.failed}개 실패`); setMusinsaItems(null); setMusinsaLoading(false); }
+                        else alert("오류: "+d.error);
+                        setMusinsaRunning(false);
+                      }).catch(e=>{alert("오류: "+e.message);setMusinsaRunning(false);});
+                    }} style={{display:"flex",alignItems:"center",gap:5,padding:"7px 14px",borderRadius:8,border:"none",background:musinsaRunning?"#e5e7eb":"#111",color:musinsaRunning?C.inkMid:"#fff",fontWeight:700,fontSize:11,cursor:musinsaRunning?"not-allowed":"pointer",fontFamily:"inherit"}}>
+                      <MI n="download" size={13}/>{musinsaRunning?"수집 중...":"지금 수집"}
+                    </button>
+                    <button onClick={()=>{setMusinsaItems(null);setMusinsaLoading(false);}} style={{display:"flex",alignItems:"center",gap:5,padding:"7px 14px",borderRadius:8,border:"none",background:"#f3f4f6",color:C.inkMid,fontWeight:700,fontSize:11,cursor:"pointer",fontFamily:"inherit"}}>
+                      <MI n="refresh" size={13}/>새로고침
+                    </button>
                   </div>
-                </Card>
-              ):(
-                Object.entries(byBrand).map(([brand, items])=>(
-                  <Card key={brand}>
-                    <div style={{fontSize:13,fontWeight:900,color:C.ink,marginBottom:10}}>{brand} <span style={{fontSize:10,fontWeight:500,color:C.inkLt}}>({items.length}개)</span></div>
-                    <div style={{overflowX:"auto"}}>
-                      <table style={{width:"100%",borderCollapse:"collapse",fontSize:11}}>
-                        <thead><tr style={{borderBottom:`1px solid ${C.border}`}}>
-                          {["상품명","판매가","정가","할인율","수집일","링크"].map(h=>(
-                            <th key={h} style={{padding:"4px 8px",textAlign:"left",fontWeight:700,color:C.inkMid,whiteSpace:"nowrap"}}>{h}</th>
-                          ))}
-                        </tr></thead>
-                        <tbody>
-                          {items.map(item=>{
-                            const disc = item.original_price && item.sale_price && item.original_price > item.sale_price
-                              ? Math.round((1 - item.sale_price/item.original_price)*100) : 0;
-                            const date = item.collected_at ? item.collected_at.slice(0,10) : "—";
-                            return(
-                              <tr key={item.product_id} style={{borderBottom:`1px solid ${C.cream}`}}>
-                                <td style={{padding:"6px 8px",maxWidth:200,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{item.name}</td>
-                                <td style={{padding:"6px 8px",fontWeight:800,color:C.ink,whiteSpace:"nowrap"}}>
-                                  {item.sale_price ? `₩${item.sale_price.toLocaleString()}` : "—"}
-                                </td>
-                                <td style={{padding:"6px 8px",color:C.inkMid,whiteSpace:"nowrap",textDecoration:"line-through"}}>
-                                  {item.original_price && item.original_price!==item.sale_price ? `₩${item.original_price.toLocaleString()}` : "—"}
-                                </td>
-                                <td style={{padding:"6px 8px",whiteSpace:"nowrap"}}>
-                                  {disc>0&&<span style={{background:"#fee2e2",color:"#dc2626",fontWeight:700,padding:"2px 6px",borderRadius:4,fontSize:10}}>{disc}%</span>}
-                                </td>
-                                <td style={{padding:"6px 8px",color:C.inkLt,whiteSpace:"nowrap"}}>{date}</td>
-                                <td style={{padding:"6px 8px"}}>
-                                  {item.url&&<a href={item.url} target="_blank" rel="noreferrer"
-                                    style={{fontSize:10,color:"#2563eb",textDecoration:"none",display:"flex",alignItems:"center",gap:2}}>
-                                    <MI n="open_in_new" size={10}/>보기
-                                  </a>}
-                                </td>
-                              </tr>
-                            );
-                          })}
-                        </tbody>
-                      </table>
+                )}
+              </div>
+
+              {/* 가격 현황 탭 */}
+              {musinsaTab==="prices"&&(
+                musinsaLoading?(
+                  <Card><div style={{textAlign:"center",padding:"32px 0",color:C.inkLt,fontSize:12}}>불러오는 중...</div></Card>
+                ):!musinsaItems||musinsaItems.length===0?(
+                  <Card><div style={{textAlign:"center",padding:"32px 0",color:C.inkLt,fontSize:12}}>데이터 없음 — 지금 수집 버튼을 눌러주세요</div></Card>
+                ):(
+                  Object.entries(byBrand).map(([brand,items])=>(
+                    <Card key={brand}>
+                      <div style={{fontSize:13,fontWeight:900,color:C.ink,marginBottom:10}}>{brand} <span style={{fontSize:10,fontWeight:500,color:C.inkLt}}>({items.length}개)</span></div>
+                      <div style={{overflowX:"auto"}}>
+                        <table style={{width:"100%",borderCollapse:"collapse",fontSize:11}}>
+                          <thead><tr style={{borderBottom:`1px solid ${C.border}`}}>
+                            {["상품명","판매가","정가","할인율","수집일","링크"].map(h=>(
+                              <th key={h} style={{padding:"4px 8px",textAlign:"left",fontWeight:700,color:C.inkMid,whiteSpace:"nowrap"}}>{h}</th>
+                            ))}
+                          </tr></thead>
+                          <tbody>
+                            {items.map(item=>{
+                              const disc = item.original_price&&item.sale_price&&item.original_price>item.sale_price?Math.round((1-item.sale_price/item.original_price)*100):0;
+                              return(
+                                <tr key={item.product_id} style={{borderBottom:`1px solid ${C.cream}`}}>
+                                  <td style={{padding:"6px 8px",maxWidth:200,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{item.name}</td>
+                                  <td style={{padding:"6px 8px",fontWeight:800,color:C.ink,whiteSpace:"nowrap"}}>{item.sale_price?`₩${item.sale_price.toLocaleString()}`:"—"}</td>
+                                  <td style={{padding:"6px 8px",color:C.inkMid,whiteSpace:"nowrap",textDecoration:"line-through"}}>{item.original_price&&item.original_price!==item.sale_price?`₩${item.original_price.toLocaleString()}`:"—"}</td>
+                                  <td style={{padding:"6px 8px",whiteSpace:"nowrap"}}>{disc>0&&<span style={{background:"#fee2e2",color:"#dc2626",fontWeight:700,padding:"2px 6px",borderRadius:4,fontSize:10}}>{disc}%</span>}</td>
+                                  <td style={{padding:"6px 8px",color:C.inkLt,whiteSpace:"nowrap"}}>{item.collected_at?item.collected_at.slice(0,10):"—"}</td>
+                                  <td style={{padding:"6px 8px"}}>{item.url&&<a href={item.url} target="_blank" rel="noreferrer" style={{fontSize:10,color:"#2563eb",textDecoration:"none",display:"flex",alignItems:"center",gap:2}}><MI n="open_in_new" size={10}/>보기</a>}</td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                    </Card>
+                  ))
+                )
+              )}
+
+              {/* 링크 관리 탭 */}
+              {musinsaTab==="links"&&(
+                <div style={{display:"flex",flexDirection:"column",gap:10}}>
+                  {/* 추가 입력 */}
+                  <Card>
+                    <div style={{fontSize:12,fontWeight:700,color:C.ink,marginBottom:8}}>링크 추가</div>
+                    <div style={{display:"flex",gap:8,alignItems:"center"}}>
+                      <input value={newLinkUrl} onChange={e=>setNewLinkUrl(e.target.value)}
+                        placeholder="https://www.musinsa.com/products/1234567"
+                        style={{flex:1,fontSize:11,padding:"7px 10px",borderRadius:8,border:`1px solid ${C.border}`,outline:"none",fontFamily:"inherit"}}/>
+                      <button onClick={()=>{
+                        const url = newLinkUrl.trim();
+                        if(!url) return;
+                        const m = url.match(/products\/(\d+)/);
+                        const pid = m?m[1]:Date.now().toString();
+                        fetch("/api/musinsa/links",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({product_id:pid,url,active:true})})
+                          .then(()=>{setNewLinkUrl("");setMusinsaLinks(null);});
+                      }} style={{padding:"7px 16px",borderRadius:8,border:"none",background:"#111",color:"#fff",fontWeight:700,fontSize:11,cursor:"pointer",fontFamily:"inherit",whiteSpace:"nowrap"}}>
+                        <MI n="add" size={13}/>추가
+                      </button>
                     </div>
                   </Card>
-                ))
+                  {/* 링크 목록 */}
+                  <Card>
+                    <div style={{fontSize:12,fontWeight:700,color:C.ink,marginBottom:8}}>등록된 링크 <span style={{fontWeight:400,color:C.inkLt}}>({(musinsaLinks||[]).length}개)</span></div>
+                    {!musinsaLinks?(
+                      <div style={{color:C.inkLt,fontSize:11,textAlign:"center",padding:"16px 0"}}>불러오는 중...</div>
+                    ):(musinsaLinks||[]).length===0?(
+                      <div style={{color:C.inkLt,fontSize:11,textAlign:"center",padding:"16px 0"}}>등록된 링크 없음</div>
+                    ):(
+                      <div style={{display:"flex",flexDirection:"column",gap:6}}>
+                        {musinsaLinks.map(link=>(
+                          <div key={link.id} style={{display:"flex",alignItems:"center",gap:8,padding:"6px 0",borderBottom:`1px solid ${C.cream}`}}>
+                            <span style={{fontSize:10,color:C.inkLt,minWidth:60}}>#{link.product_id}</span>
+                            <a href={link.url} target="_blank" rel="noreferrer" style={{flex:1,fontSize:11,color:"#2563eb",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{link.url}</a>
+                            <button onClick={()=>{
+                              fetch("/api/musinsa/links",{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({id:link.id,active:!link.active})})
+                                .then(()=>setMusinsaLinks(null));
+                            }} style={{padding:"3px 8px",borderRadius:6,border:"none",background:link.active?"#dcfce7":"#f3f4f6",color:link.active?"#16a34a":C.inkMid,fontSize:10,fontWeight:700,cursor:"pointer",fontFamily:"inherit",whiteSpace:"nowrap"}}>
+                              {link.active?"활성":"비활성"}
+                            </button>
+                            <button onClick={()=>{
+                              if(!confirm("삭제할까요?")) return;
+                              fetch("/api/musinsa/links",{method:"DELETE",headers:{"Content-Type":"application/json"},body:JSON.stringify({id:link.id})})
+                                .then(()=>setMusinsaLinks(null));
+                            }} style={{padding:"3px 8px",borderRadius:6,border:"none",background:"#fee2e2",color:"#dc2626",fontSize:10,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
+                              삭제
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </Card>
+                </div>
               )}
             </div>
           );
