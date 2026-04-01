@@ -8069,15 +8069,15 @@ export default function OaDashboard(){
         /* 달력 모바일 */
         .cal-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
         .cal-grid-wrap { min-width: 560px; }
-        .cal-cell { min-height: 110px; }
+        .cal-cell { min-height: 150px; }
         @media (max-width: 768px) {
-          .cal-cell { min-height: 80px; padding: 4px 2px !important; }
-          .cal-item-text { font-size: 9px !important; }
+          .cal-cell { min-height: 110px; padding: 4px 2px !important; }
+          .cal-item-text { font-size: 10px !important; }
           .sch-banner { flex-wrap: wrap; gap: 6px !important; }
           .sch-banner-btns { flex-wrap: wrap; }
         }
         @media (max-width: 480px) {
-          .cal-cell { min-height: 64px; }
+          .cal-cell { min-height: 90px; }
         }
 
         /* 챗봇 FAB — 모바일에서 하단 nav 위로 */
