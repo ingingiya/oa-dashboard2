@@ -4467,26 +4467,27 @@ export default function OaDashboard(){
                       color:isToday?C.white:col===0?C.bad:col===6?"#3B82F6":C.ink,marginBottom:2,flexShrink:0}}>
                       {day}
                     </div>
-                    {items.slice(0,3).map((s,j)=>{
+                    {items.slice(0,8).map((s,j)=>{
                       const tc=schTypeColor(s.type);
                       const ac=s.assigneeColor||C.inkLt;
                       const isCont=s._spanPos==="mid"||s._spanPos==="end";
                       const isLast=!s._spanPos||s._spanPos==="end"||s._spanPos==="single";
                       const isFirst=!s._spanPos||s._spanPos==="start"||s._spanPos==="single";
                       const showTitle=isFirst||s._firstVisible||!!s._isChecklist;
+                      const isHaengsa=s.type==="행사";
                       return(
                         <div key={j}
                           draggable={!s._isChecklist&&isFirst}
                           onDragStart={e=>{e.stopPropagation();dragRef.current=s;}}
                           onClick={e=>{e.stopPropagation();setSchModalData({mode:"edit",initial:{...s,notionId:s.id,note:s.memo}});}}
-                          style={{fontSize:11,fontWeight:700,
-                            padding:"2px 5px",
+                          style={{fontSize:isHaengsa?9:11,fontWeight:isHaengsa?600:700,
+                            padding:isHaengsa?"1px 4px":"2px 5px",
                             borderRadius:isFirst&&isLast?3:isFirst?"3px 0 0 3px":isLast?"0 3px 3px 0":0,
                             background:`${tc}${isCont?"33":"18"}`,
                             color:showTitle?tc:`${tc}66`,
                             marginBottom:2,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",
                             cursor:isCont?"default":"grab",
-                            borderLeft:isFirst?`2px solid ${ac}`:s._firstVisible?`2px dashed ${ac}`:"none",
+                            borderLeft:isFirst?(isHaengsa?`1px solid ${ac}`:`2px solid ${ac}`):s._firstVisible?`2px dashed ${ac}`:"none",
                             marginLeft:isCont&&!s._firstVisible?"-4px":"0",
                             marginRight:!isLast?"-4px":"0",
                           }}>
@@ -4496,7 +4497,7 @@ export default function OaDashboard(){
                         </div>
                       );
                     })}
-                    {items.length>3&&<div style={{fontSize:10,color:C.inkLt,fontWeight:700}}>+{items.length-3}개 더</div>}
+                    {items.length>8&&<div style={{fontSize:10,color:C.inkLt,fontWeight:700}}>+{items.length-8}개 더</div>}
                   </div>
                 );
               })}
@@ -5891,10 +5892,11 @@ export default function OaDashboard(){
     const [cat, setCat] = useState("공통");
     const [filterCat, setFilterCat] = useState("전체");
     const [mtModal, setMtModal] = useState(false);
-    const [mtForm, setMtForm] = useState({title:"",date:new Date().toISOString().slice(0,10),attendees:[],content:"",actions:""});
+    const [mtForm, setMtForm] = useState({title:"",date:new Date().toISOString().slice(0,10),attendees:[],content:"",actions:"",htmlContent:"",summary:""});
     const [recording, setRecording] = useState(false);
     const [recSupported, setRecSupported] = useState(false);
     const recognitionRef = useRef(null);
+    const mtHtmlRef = useRef(null);
     const inputStyle={width:"100%",fontSize:12,padding:"8px 10px",borderRadius:8,border:`1px solid ${C.border}`,fontFamily:"inherit",outline:"none",boxSizing:"border-box"};
 
     // Web Speech API 지원 확인
@@ -5925,11 +5927,20 @@ export default function OaDashboard(){
       setRecording(false);
     }
 
+    function handleHtmlUpload(e) {
+      const file = e.target.files?.[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = ev => setMtForm(p => ({...p, htmlContent: ev.target.result, htmlFileName: file.name}));
+      reader.readAsText(file, "utf-8");
+      e.target.value = "";
+    }
+
     function saveMeeting(){
       if(!mtForm.title.trim()) return;
       setMeetingNotes(prev=>[{id:Date.now()+"", ...mtForm,
         createdAt:new Date().toISOString().slice(0,10)},...(prev||[])]);
-      setMtForm({title:"",date:new Date().toISOString().slice(0,10),attendees:[],content:"",actions:""});
+      setMtForm({title:"",date:new Date().toISOString().slice(0,10),attendees:[],content:"",actions:"",htmlContent:"",htmlFileName:"",summary:""});
       setMtModal(false); stopRecording();
     }
 
@@ -6014,7 +6025,7 @@ export default function OaDashboard(){
       {noteTab==="meeting"&&(
       <Card>
         <CardTitle title={<><MI n="mic" size={14}/> 미팅 노트</>} sub={`${(meetingNotes||[]).length}건`}
-          action={<Btn small onClick={()=>{setMtForm({title:"",date:new Date().toISOString().slice(0,10),attendees:[],content:"",actions:""});setMtModal(true);}}>+ 새 미팅</Btn>}/>
+          action={<Btn small onClick={()=>{setMtForm({title:"",date:new Date().toISOString().slice(0,10),attendees:[],content:"",actions:"",htmlContent:"",htmlFileName:"",summary:""});setMtModal(true);}}>+ 새 미팅</Btn>}/>
         {(meetingNotes||[]).length===0&&<div style={{textAlign:"center",color:C.inkLt,fontSize:12,padding:"24px 0"}}>미팅 노트를 추가해보세요</div>}
         <div style={{display:"flex",flexDirection:"column",gap:10}}>
           {(meetingNotes||[]).map(m=>(
@@ -6036,6 +6047,28 @@ export default function OaDashboard(){
                   <MI n="checklist" size={11}/> <strong>액션아이템:</strong> {m.actions}
                 </div>
               )}
+              {/* HTML 첨부 파일 표시 */}
+              {m.htmlContent&&(
+                <div style={{marginTop:10}}>
+                  <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:6}}>
+                    <span style={{fontSize:11,fontWeight:700,color:C.inkMid}}><MI n="attach_file" size={11}/> {m.htmlFileName||"첨부 파일"}</span>
+                    <button onClick={()=>{const blob=new Blob([m.htmlContent],{type:"text/html;charset=utf-8"});const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download=(m.htmlFileName||m.title||"미팅")+".html";document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(url);}}
+                      style={{fontSize:11,fontWeight:700,padding:"4px 10px",borderRadius:8,border:`1px solid ${C.border}`,
+                        background:C.cream,color:C.inkMid,cursor:"pointer",fontFamily:"inherit",display:"flex",alignItems:"center",gap:4}}>
+                      <MI n="download" size={12}/> 다운로드
+                    </button>
+                  </div>
+                  <iframe srcDoc={m.htmlContent} style={{width:"100%",height:420,border:`1px solid ${C.border}`,borderRadius:10,background:"#fff"}} sandbox="allow-scripts allow-same-origin" title="미팅자료"/>
+                </div>
+              )}
+              {/* 미팅 종료 후 정리내용 */}
+              <div style={{marginTop:10,borderTop:`1px solid ${C.border}`,paddingTop:10}}>
+                <div style={{fontSize:11,fontWeight:700,color:C.inkMid,marginBottom:4}}><MI n="summarize" size={12}/> 정리내용 (미팅 후)</div>
+                <textarea value={m.summary||""} onChange={e=>{const v=e.target.value;setMeetingNotes(prev=>(prev||[]).map(n=>n.id===m.id?{...n,summary:v}:n));}}
+                  placeholder="미팅 종료 후 결론, 다음 스텝, 주요 결정사항 등 정리"
+                  style={{width:"100%",fontSize:12,padding:"8px 10px",borderRadius:8,border:`1px solid ${C.border}`,
+                    fontFamily:"inherit",outline:"none",boxSizing:"border-box",resize:"vertical",minHeight:80,lineHeight:1.7,background:C.cream}}/>
+              </div>
             </div>
           ))}
         </div>
@@ -6098,6 +6131,20 @@ export default function OaDashboard(){
                 <textarea value={mtForm.actions} onChange={e=>setMtForm(p=>({...p,actions:e.target.value}))}
                   placeholder="ex. 소리 - 소재 3개 제작 / 영서 - 광고 세팅 확인"
                   style={{...inputStyle,resize:"vertical",minHeight:60,lineHeight:1.6}}/>
+              </div>
+              <div>
+                <div style={{fontSize:10,fontWeight:700,color:C.inkMid,marginBottom:4}}>HTML 자료 첨부</div>
+                <div style={{display:"flex",alignItems:"center",gap:8}}>
+                  <button onClick={()=>mtHtmlRef.current?.click()}
+                    style={{fontSize:11,fontWeight:700,padding:"6px 12px",borderRadius:8,border:`1px solid ${C.border}`,
+                      background:mtForm.htmlContent?C.sage+"22":C.cream,color:mtForm.htmlContent?C.sage:C.inkMid,
+                      cursor:"pointer",fontFamily:"inherit",display:"flex",alignItems:"center",gap:4}}>
+                    <MI n="attach_file" size={13}/>{mtForm.htmlContent?`✓ ${mtForm.htmlFileName||"파일 첨부됨"}`:"HTML 파일 업로드"}
+                  </button>
+                  {mtForm.htmlContent&&<button onClick={()=>setMtForm(p=>({...p,htmlContent:"",htmlFileName:""}))}
+                    style={{fontSize:10,color:C.inkLt,background:"none",border:"none",cursor:"pointer"}}>✕</button>}
+                  <input ref={mtHtmlRef} type="file" accept=".html,.htm" style={{display:"none"}} onChange={handleHtmlUpload}/>
+                </div>
               </div>
             </div>
             <div style={{display:"flex",gap:8,marginTop:16}}>
