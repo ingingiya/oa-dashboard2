@@ -4475,19 +4475,27 @@ export default function OaDashboard(){
                       const isFirst=!s._spanPos||s._spanPos==="start"||s._spanPos==="single";
                       const showTitle=isFirst||s._firstVisible||!!s._isChecklist;
                       const isHaengsa=s.type==="행사";
+                      if(isHaengsa) return(
+                        <div key={j} title={s.title}
+                          onClick={e=>{e.stopPropagation();setSchModalData({mode:"edit",initial:{...s,notionId:s.id,note:s.memo}});}}
+                          style={{height:4,borderRadius:isFirst&&isLast?2:isFirst?"2px 0 0 2px":isLast?"0 2px 2px 0":0,
+                            background:tc,opacity:0.75,marginBottom:2,cursor:"pointer",
+                            marginLeft:isCont&&!s._firstVisible?"-4px":"0",
+                            marginRight:!isLast?"-4px":"0"}}/>
+                      );
                       return(
                         <div key={j}
                           draggable={!s._isChecklist&&isFirst}
                           onDragStart={e=>{e.stopPropagation();dragRef.current=s;}}
                           onClick={e=>{e.stopPropagation();setSchModalData({mode:"edit",initial:{...s,notionId:s.id,note:s.memo}});}}
-                          style={{fontSize:isHaengsa?9:11,fontWeight:isHaengsa?600:700,
-                            padding:isHaengsa?"1px 4px":"2px 5px",
+                          style={{fontSize:11,fontWeight:700,
+                            padding:"2px 5px",
                             borderRadius:isFirst&&isLast?3:isFirst?"3px 0 0 3px":isLast?"0 3px 3px 0":0,
                             background:`${tc}${isCont?"33":"18"}`,
                             color:showTitle?tc:`${tc}66`,
                             marginBottom:2,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",
                             cursor:isCont?"default":"grab",
-                            borderLeft:isFirst?(isHaengsa?`1px solid ${ac}`:`2px solid ${ac}`):s._firstVisible?`2px dashed ${ac}`:"none",
+                            borderLeft:isFirst?`2px solid ${ac}`:s._firstVisible?`2px dashed ${ac}`:"none",
                             marginLeft:isCont&&!s._firstVisible?"-4px":"0",
                             marginRight:!isLast?"-4px":"0",
                           }}>
@@ -5938,8 +5946,14 @@ export default function OaDashboard(){
 
     function saveMeeting(){
       if(!mtForm.title.trim()) return;
-      setMeetingNotes(prev=>[{id:Date.now()+"", ...mtForm,
-        createdAt:new Date().toISOString().slice(0,10)},...(prev||[])]);
+      if(mtForm.id){
+        // 수정 모드 — 기존 항목 업데이트
+        setMeetingNotes(prev=>(prev||[]).map(n=>n.id===mtForm.id?{...n,...mtForm}:n));
+      } else {
+        // 신규 추가
+        setMeetingNotes(prev=>[{id:Date.now()+"", ...mtForm,
+          createdAt:new Date().toISOString().slice(0,10)},...(prev||[])]);
+      }
       setMtForm({title:"",date:new Date().toISOString().slice(0,10),attendees:[],content:"",actions:"",htmlContent:"",htmlFileName:"",summary:""});
       setMtModal(false); stopRecording();
     }
@@ -6038,8 +6052,12 @@ export default function OaDashboard(){
                     {m.attendees?.length>0&&<span style={{marginLeft:8}}><MI n="group" size={10}/> {m.attendees.join(", ")}</span>}
                   </div>
                 </div>
-                <button onClick={()=>setMeetingNotes(prev=>(prev||[]).filter(i=>i.id!==m.id))}
-                  style={{fontSize:11,color:C.inkLt,background:"none",border:"none",cursor:"pointer"}}>✕</button>
+                <div style={{display:"flex",gap:4}}>
+                  <button onClick={()=>{setMtForm({...m});setMtModal(true);}}
+                    style={{fontSize:11,color:C.inkMid,background:"none",border:"none",cursor:"pointer",padding:"2px 6px"}}><MI n="edit" size={13}/></button>
+                  <button onClick={()=>setMeetingNotes(prev=>(prev||[]).filter(i=>i.id!==m.id))}
+                    style={{fontSize:11,color:C.inkLt,background:"none",border:"none",cursor:"pointer"}}>✕</button>
+                </div>
               </div>
               {m.content&&<div style={{fontSize:12,color:C.ink,lineHeight:1.7,whiteSpace:"pre-wrap",marginBottom:8,padding:"8px 10px",background:C.cream,borderRadius:8}}>{m.content}</div>}
               {m.actions&&(
