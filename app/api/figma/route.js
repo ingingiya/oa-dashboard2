@@ -23,8 +23,8 @@ function collectFrames(node, depth = 0) {
     frames.push({ name: node.name, nodeId: node.id });
   }
 
-  // SECTION, FRAME, GROUP 안쪽도 탐색 (depth 5까지)
-  if (node.children && depth < 5 && traversableTypes.includes(node.type || "CANVAS")) {
+  // 모든 노드 안쪽 탐색 (depth 5까지)
+  if (node.children && depth < 5) {
     node.children.forEach(child => frames.push(...collectFrames(child, depth + 1)));
   }
 
