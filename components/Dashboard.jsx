@@ -250,8 +250,8 @@ function adScore(ad, margin, c={}){
   return {issues, lpvC, lpvR, cpa, ctr};
 }
 
-function schTypeColor(t){ return {소재제작:"#7c3aed",광고:C.gold,시딩:C.purple,이벤트:C.sage,공구:C.rose,촬영:"#0891b2",인스타:"#e1306c",트위터:"#1da1f2",반복:"#94a3b8"}[t]||C.inkMid; }
-function schTypeIcon(t){  return {소재제작:"brush",광고:"campaign",시딩:"auto_awesome",이벤트:"celebration",공구:"shopping_bag",촬영:"photo_camera",인스타:"photo_camera",트위터:"alternate_email",반복:"check_box"}[t]||"push_pin"; }
+function schTypeColor(t){ return {소재제작:"#7c3aed",광고:C.gold,시딩:C.purple,이벤트:C.sage,행사:"#f97316",공구:C.rose,촬영:"#0891b2",인스타:"#e1306c",트위터:"#1da1f2",반복:"#94a3b8"}[t]||C.inkMid; }
+function schTypeIcon(t){  return {소재제작:"brush",광고:"campaign",시딩:"auto_awesome",이벤트:"celebration",행사:"local_activity",공구:"shopping_bag",촬영:"photo_camera",인스타:"photo_camera",트위터:"alternate_email",반복:"check_box"}[t]||"push_pin"; }
 
 // useLocal은 useSupabaseState로 대체됨
 
@@ -685,14 +685,20 @@ function SchModalComp({mode, initial, onSave, onClose}){
   const set = (k,v) => setF(p=>({...p,[k]:v}));
   return(
     <Modal title={mode==="add"?"일정 추가":"일정 수정"} onClose={onClose}>
-      <FR label="유형"><Sel value={f.type} onChange={v=>set("type",v)} options={["소재제작","광고","시딩","이벤트","공구","촬영","인스타","트위터","기타"]}/></FR>
+      <FR label="유형"><Sel value={f.type} onChange={v=>set("type",v)} options={["소재제작","광고","시딩","이벤트","행사","공구","촬영","인스타","트위터","기타"]}/></FR>
       <FR label="제목 *"><Inp value={f.title} onChange={v=>set("title",v)} placeholder="세럼 30ml 공구 오픈"/></FR>
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:12}}>
         <FR label="시작일 *"><Inp type="date" value={f.date} onChange={v=>set("date",v)}/></FR>
         <FR label="종료일"><Inp type="date" value={f.endDate} onChange={v=>set("endDate",v)}/></FR>
       </div>
       <FR label="담당자"><Sel value={f.assignee||""} onChange={v=>set("assignee",v)} options={["","소리","영서","경은","지수"]}/></FR>
-      <FR label="메모"><Inp value={f.note||""} onChange={v=>set("note",v)} placeholder="한도 수량, 할인율 등"/></FR>
+      <FR label="메모">
+        <textarea value={f.note||""} onChange={e=>set("note",e.target.value)} placeholder="한도 수량, 할인율, 주의사항 등 자유롭게 입력"
+          style={{width:"100%",padding:"9px 12px",border:`1px solid ${C.border}`,borderRadius:9,
+            fontSize:12,color:C.ink,background:C.cream,outline:"none",fontFamily:"inherit",
+            resize:"vertical",minHeight:100,lineHeight:1.7,boxSizing:"border-box"}}
+          onFocus={e=>e.target.style.borderColor=C.rose} onBlur={e=>e.target.style.borderColor=C.border}/>
+      </FR>
       <FR label="상태"><Sel value={f.status} onChange={v=>set("status",v)} options={["예정","진행중","완료","보류"]}/></FR>
       <Btn onClick={()=>{if(!f.title||!f.date)return; onSave(f);}} style={{width:"100%",marginTop:8}}>💾 저장</Btn>
     </Modal>
@@ -4308,13 +4314,17 @@ export default function OaDashboard(){
       if (!s.date) return;
       const sd = new Date(s.date + "T00:00:00");
       const ed = s.endDate ? new Date(s.endDate + "T00:00:00") : new Date(sd);
+      let firstVisibleInMonth = true;
       for (let d = new Date(sd); d <= ed; d.setDate(d.getDate()+1)) {
         const key = toLocalKey(d);
         if (!itemsByDate[key]) itemsByDate[key] = [];
         const isStart = d.getTime()===sd.getTime();
         const isEnd = d.getTime()===ed.getTime();
         const spanPos = isStart&&isEnd?"single":isStart?"start":isEnd?"end":"mid";
-        itemsByDate[key].push({...s, _spanPos: spanPos});
+        const inThisMonth = d.getMonth()===calMonth.m && d.getFullYear()===calMonth.y;
+        const _firstVisible = inThisMonth && firstVisibleInMonth;
+        if (inThisMonth) firstVisibleInMonth = false;
+        itemsByDate[key].push({...s, _spanPos: spanPos, _firstVisible});
       }
     });
 
@@ -4463,6 +4473,7 @@ export default function OaDashboard(){
                       const isCont=s._spanPos==="mid"||s._spanPos==="end";
                       const isLast=s._spanPos==="end"||s._spanPos==="single";
                       const isFirst=s._spanPos==="start"||s._spanPos==="single";
+                      const showTitle=isFirst||s._firstVisible;
                       return(
                         <div key={j}
                           draggable={!s._isChecklist&&isFirst}
@@ -4472,14 +4483,16 @@ export default function OaDashboard(){
                             padding:"2px 5px",
                             borderRadius:isFirst&&isLast?3:isFirst?"3px 0 0 3px":isLast?"0 3px 3px 0":0,
                             background:`${tc}${isCont?"33":"18"}`,
-                            color:isCont?`${tc}99`:tc,
+                            color:showTitle?tc:`${tc}66`,
                             marginBottom:2,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",
                             cursor:isCont?"default":"grab",
-                            borderLeft:isFirst?`2px solid ${ac}`:"none",
-                            marginLeft:isCont?"-4px":"0",
+                            borderLeft:isFirst?`2px solid ${ac}`:s._firstVisible?`2px dashed ${ac}`:"none",
+                            marginLeft:isCont&&!s._firstVisible?"-4px":"0",
                             marginRight:!isLast?"-4px":"0",
                           }}>
-                          {isCont?"·":((s.assignee?`(${s.assignee.slice(0,1)}) `:"")+s.title.replace(/[(\[（][가-힣]{2,4}[)\]）]\s*/g,"").slice(0,12))}
+                          {showTitle
+                            ?(s.assignee?`(${s.assignee.slice(0,1)}) `:"")+s.title.replace(/[(\[（][가-힣]{2,4}[)\]）]\s*/g,"").slice(0,12)
+                            :"·"}
                         </div>
                       );
                     })}
