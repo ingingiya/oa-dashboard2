@@ -7126,16 +7126,23 @@ export default function OaDashboard(){
                         <Card><div style={{textAlign:"center",padding:"24px 0",color:C.inkLt,fontSize:12}}>우리브랜드 탭에 제품과 채널을 먼저 추가해주세요</div></Card>
                       ):(
                         <div style={{display:"flex",flexDirection:"column",gap:8}}>
+                          {ourProds.every(prod=>{
+                            const officialMin=parseInt(prod.ourPrice)||null;
+                            const getPrice=i=>parseInt(i.salePrice||i.naverPrice)||0;
+                            const cnt=officialMin?(prod.items||[]).filter(i=>{const p=getPrice(i);return p&&p<officialMin;}).length:0;
+                            return !officialMin||cnt===0;
+                          })&&<Card><div style={{textAlign:"center",padding:"24px 0",color:"#16a34a",fontSize:13,fontWeight:700}}>✓ 공식가 이탈 없음 — 모든 채널 정상</div></Card>}
                           {ourProds.map(prod=>{
                             const allItems = prod.items||[];
                             if(!allItems.length) return null;
                             const officialMin = parseInt(prod.ourPrice)||null;
                             const getPrice = i => parseInt(i.salePrice||i.naverPrice)||0;
-                            // 스마트스토어(오아 공식)는 최저가 계산 제외 — 기준가이므로
                             const isOurStore = i => (i.channel||i.mallName||"").includes("스마트스토어");
                             const marketPrices = allItems.filter(i=>!isOurStore(i)).map(getPrice).filter(Boolean);
                             const marketMin = marketPrices.length ? Math.min(...marketPrices) : null;
-                            const undercutCount = officialMin ? allItems.filter(i=>{ const p=getPrice(i); return p && p<officialMin; }).length : 0;
+                            const undercutItems = officialMin ? allItems.filter(i=>{ const p=getPrice(i); return p && p<officialMin; }) : [];
+                            const undercutCount = undercutItems.length;
+                            if(!officialMin || undercutCount===0) return null;
                             return(
                               <Card key={prod.id}>
                                 <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10,flexWrap:"wrap"}}>
