@@ -251,7 +251,7 @@ function adScore(ad, margin, c={}){
 }
 
 function schTypeColor(t){ return {소재제작:"#7c3aed",광고:C.gold,시딩:C.purple,이벤트:C.sage,행사:"#f97316",공구:C.rose,촬영:"#0891b2",인스타:"#e1306c",트위터:"#1da1f2",반복:"#94a3b8"}[t]||C.inkMid; }
-function schTypeIcon(t){  return {소재제작:"brush",광고:"campaign",시딩:"auto_awesome",이벤트:"celebration",행사:"local_activity",공구:"shopping_bag",촬영:"photo_camera",인스타:"photo_camera",트위터:"alternate_email",반복:"check_box"}[t]||"push_pin"; }
+function schTypeIcon(t){  return {소재제작:"brush",광고:"campaign",시딩:"auto_awesome",이벤트:"celebration",행사:"flag",공구:"shopping_bag",촬영:"photo_camera",인스타:"photo_camera",트위터:"alternate_email",반복:"check_box"}[t]||"push_pin"; }
 
 // useLocal은 useSupabaseState로 대체됨
 
@@ -4471,9 +4471,9 @@ export default function OaDashboard(){
                       const tc=schTypeColor(s.type);
                       const ac=s.assigneeColor||C.inkLt;
                       const isCont=s._spanPos==="mid"||s._spanPos==="end";
-                      const isLast=s._spanPos==="end"||s._spanPos==="single";
-                      const isFirst=s._spanPos==="start"||s._spanPos==="single";
-                      const showTitle=isFirst||s._firstVisible;
+                      const isLast=!s._spanPos||s._spanPos==="end"||s._spanPos==="single";
+                      const isFirst=!s._spanPos||s._spanPos==="start"||s._spanPos==="single";
+                      const showTitle=isFirst||s._firstVisible||!!s._isChecklist;
                       return(
                         <div key={j}
                           draggable={!s._isChecklist&&isFirst}
@@ -4546,8 +4546,8 @@ export default function OaDashboard(){
               return(
                 <div key={s.id} style={{borderRadius:10,border:`1px solid ${C.border}`,background:C.white,overflow:"hidden"}}>
                   <div style={{display:"flex",alignItems:"center",gap:10,padding:"10px 12px"}}>
-                    <span style={{fontSize:10,fontWeight:700,color:tc,background:`${tc}18`,padding:"2px 8px",borderRadius:20,whiteSpace:"nowrap",flexShrink:0}}>
-                      <MI n={schTypeIcon(s.type)} size={12}/> {s.type}
+                    <span style={{fontSize:9,fontWeight:700,color:tc,background:`${tc}18`,padding:"1px 6px",borderRadius:20,whiteSpace:"nowrap",flexShrink:0}}>
+                      <MI n={schTypeIcon(s.type)} size={10}/> {s.type}
                     </span>
                     <div style={{flex:1,minWidth:0}}>
                       <div style={{fontSize:12,fontWeight:800,color:C.ink,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{s.title}</div>
@@ -8081,15 +8081,15 @@ export default function OaDashboard(){
         /* 달력 모바일 */
         .cal-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
         .cal-grid-wrap { min-width: 560px; }
-        .cal-cell { min-height: 150px; }
+        .cal-cell { min-height: 200px; }
         @media (max-width: 768px) {
-          .cal-cell { min-height: 110px; padding: 4px 2px !important; }
+          .cal-cell { min-height: 160px; padding: 4px 2px !important; }
           .cal-item-text { font-size: 10px !important; }
           .sch-banner { flex-wrap: wrap; gap: 6px !important; }
           .sch-banner-btns { flex-wrap: wrap; }
         }
         @media (max-width: 480px) {
-          .cal-cell { min-height: 90px; }
+          .cal-cell { min-height: 130px; }
         }
 
         /* 챗봇 FAB — 모바일에서 하단 nav 위로 */
