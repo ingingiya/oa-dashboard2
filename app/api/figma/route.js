@@ -2,19 +2,32 @@ export const dynamic = 'force-dynamic';
 
 const FIGMA_API = "https://api.figma.com/v1";
 
-// 트리에서 모든 프레임/컴포넌트 수집
+// 제네릭 이름 판별 (Frame 1, Rectangle 3 등)
+function isGenericName(name) {
+  return /^(frame|rectangle|group|image|vector|section)\s*\d*$/i.test(name.trim());
+}
+
+// 트리에서 모든 프레임/컴포넌트/소재 수집
 function collectFrames(node, depth = 0) {
   const frames = [];
   if (!node) return frames;
+
+  const collectableTypes = ["FRAME", "COMPONENT", "COMPONENT_SET", "RECTANGLE", "GROUP"];
+  const traversableTypes = ["FRAME", "COMPONENT", "COMPONENT_SET", "GROUP", "SECTION", "CANVAS"];
+
   if (
-    (node.type === "FRAME" || node.type === "COMPONENT" || node.type === "COMPONENT_SET") &&
-    depth >= 2 // 페이지 바로 아래 프레임만 (depth 0=document, 1=page, 2=frame)
+    collectableTypes.includes(node.type) &&
+    depth >= 2 &&
+    !isGenericName(node.name)
   ) {
     frames.push({ name: node.name, nodeId: node.id });
   }
-  if (node.children && depth < 3) {
+
+  // SECTION, FRAME, GROUP 안쪽도 탐색 (depth 5까지)
+  if (node.children && depth < 5 && traversableTypes.includes(node.type || "CANVAS")) {
     node.children.forEach(child => frames.push(...collectFrames(child, depth + 1)));
   }
+
   return frames;
 }
 
@@ -28,7 +41,7 @@ export async function GET(request) {
 
   if (!fileKey) return Response.json({ error: "fileKey 필요" }, { status: 400 });
 
-  const res = await fetch(`${FIGMA_API}/files/${fileKey}?depth=3`, {
+  const res = await fetch(`${FIGMA_API}/files/${fileKey}?depth=5`, {
     headers: { "X-Figma-Token": token },
   });
   if (!res.ok) return Response.json({ error: `Figma 오류 ${res.status}` }, { status: res.status });
