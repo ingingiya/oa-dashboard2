@@ -2262,6 +2262,15 @@ export default function OaDashboard(){
     const fmt=n=>n>=10000?`₩${Math.round(n/10000).toLocaleString()}만`:`₩${Math.round(n).toLocaleString()}`;
     const [showDeletedPanel, setShowDeletedPanel] = useState(false);
 
+    // 월 선택기 — 집행중 광고성과 / 전체 광고비 카드용
+    const availableMonths = [...new Set(metaRaw.map(r=>r.date?.slice(0,7)).filter(Boolean))].sort();
+    const defaultMonth = availableMonths[availableMonths.length-1] || "";
+    const [selectedMonth, setSelectedMonth] = useState("");
+    const activeMonth = selectedMonth || defaultMonth;
+    // 선택한 달의 데이터만 필터
+    const monthFiltered = metaFiltered.filter(r=>r.date?.startsWith(activeMonth));
+    const monthRaw      = metaRaw.filter(r=>r.date?.startsWith(activeMonth));
+
 
     return(
       <div style={{display:"flex",flexDirection:"column",gap:14}}>
@@ -2367,23 +2376,48 @@ export default function OaDashboard(){
         </div>
 
 
+        {/* ── 월 선택기 (집행중/전체광고비 카드용) ── */}
+        {hasSheet&&availableMonths.length>1&&(
+          <div style={{display:"flex",gap:6,flexWrap:"wrap",alignItems:"center"}}>
+            <span style={{fontSize:11,color:C.inkLt,fontWeight:700,marginRight:2}}>월별 보기</span>
+            {availableMonths.map(m=>{
+              const [y,mo]=m.split("-");
+              const label=`${parseInt(mo)}월`;
+              const active=m===activeMonth;
+              return(
+                <button key={m} onClick={()=>setSelectedMonth(m===defaultMonth?"":m)}
+                  style={{padding:"4px 12px",borderRadius:20,border:`1.5px solid ${active?"#7c3aed":C.border}`,
+                    background:active?"#7c3aed":"transparent",color:active?"#fff":C.inkMid,
+                    fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
+                  {y}.{label}
+                </button>
+              );
+            })}
+          </div>
+        )}
+
         {/* ── 카드1: 집행중 광고 성과 (시트 기준) ── */}
         {hasSheet&&(()=>{
           const fmtW = n=>n>=10000?`₩${Math.round(n/10000).toLocaleString()}만`:`₩${Math.round(n).toLocaleString()}`;
 
-          // 집행중 광고만 필터 (최신 날짜 기준 spend>0)
-          const adLastSpend={};
-          metaFiltered.forEach(r=>{
-            const key=(r.adName||r.campaign||"")+"|||"+(r.adset||"");
-            if((r.spend||0)>0&&r.date&&(!adLastSpend[key]||r.date>adLastSpend[key])) adLastSpend[key]=r.date;
-          });
-          const activeKeys=new Set(Object.entries(adLastSpend)
-            .filter(([,d])=>sheetMaxDate&&Math.floor((new Date(sheetMaxDate)-new Date(d))/86400000)<=3)
-            .map(([k])=>k));
-          const activeRows = metaFiltered.filter(r=>{
-            const key=(r.adName||r.campaign||"")+"|||"+(r.adset||"");
-            return activeKeys.has(key);
-          });
+          // 최신 달이면 집행중(3일)만, 과거 달이면 해당 월 전체
+          const isLatestMonth = activeMonth === defaultMonth;
+          let activeRows;
+          let activeKeys;
+          if(isLatestMonth){
+            const adLastSpend={};
+            monthFiltered.forEach(r=>{
+              const key=(r.adName||r.campaign||"")+"|||"+(r.adset||"");
+              if((r.spend||0)>0&&r.date&&(!adLastSpend[key]||r.date>adLastSpend[key])) adLastSpend[key]=r.date;
+            });
+            activeKeys=new Set(Object.entries(adLastSpend)
+              .filter(([,d])=>sheetMaxDate&&Math.floor((new Date(sheetMaxDate)-new Date(d))/86400000)<=3)
+              .map(([k])=>k));
+            activeRows=monthFiltered.filter(r=>activeKeys.has((r.adName||r.campaign||"")+"|||"+(r.adset||"")));
+          } else {
+            activeRows = monthFiltered;
+            activeKeys = new Set(monthFiltered.map(r=>(r.adName||r.campaign||"")+"|||"+(r.adset||"")));
+          }
 
           const agg = rows=>({
             spend:  rows.reduce((s,r)=>s+(r.spend||0),0),
@@ -2398,8 +2432,8 @@ export default function OaDashboard(){
           const traffic = agg(activeRows.filter(r=>!isConversionCampaign(r.objective,r.campaign,r.resultType)));
           const total   = agg(activeRows);
 
-          const dates = metaRaw.map(r=>r.date).filter(Boolean).sort();
-          const period = dates.length?`${dates[0].slice(5).replace("-","/")} ~ ${dates[dates.length-1].slice(5).replace("-","/")}`:""
+          const dates = monthRaw.map(r=>r.date).filter(Boolean).sort();
+          const period = dates.length?`${dates[0].slice(5).replace("-","/")} ~ ${dates[dates.length-1].slice(5).replace("-","/")}`:activeMonth
 
           const Col=({label,icon,data,accent})=>{
             const cpa  = (s,p)=>p>0?fmtW(s/p):"—";
@@ -2438,8 +2472,8 @@ export default function OaDashboard(){
             <div style={{background:C.ink,borderRadius:14,padding:"16px 18px",color:C.white}}>
               <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12,gap:8,flexWrap:"wrap"}}>
                 <div>
-                  <div style={{fontSize:12,fontWeight:800,letterSpacing:"0.05em"}}><MI n="bar_chart" size={14}/> 집행중 광고 성과</div>
-                  <div style={{fontSize:10,opacity:0.5,marginTop:2}}>{period} · 집행중 {activeKeys.size}개</div>
+                  <div style={{fontSize:12,fontWeight:800,letterSpacing:"0.05em"}}><MI n="bar_chart" size={14}/> {isLatestMonth?"집행중 광고 성과":`${parseInt(activeMonth.slice(5))}월 광고 성과`}</div>
+                  <div style={{fontSize:10,opacity:0.5,marginTop:2}}>{period} · {isLatestMonth?`집행중 ${activeKeys.size}개`:`광고 ${activeKeys.size}개`}</div>
                 </div>
                 <div style={{display:"flex",gap:10,alignItems:"flex-end"}}>
                   {instaRaw.length>0&&(
@@ -2466,7 +2500,7 @@ export default function OaDashboard(){
         {/* ── 카드2: 전체 광고비 (시트+API 합산) ── */}
         {hasData&&(()=>{
           const fmtW = n=>n>=10000?`₩${Math.round(n/10000).toLocaleString()}만`:`₩${Math.round(n).toLocaleString()}`;
-          const allRows = metaRaw.filter(r=>!isInstaPost(r));
+          const allRows = monthRaw.filter(r=>!isInstaPost(r));
           const allConv    = allRows.filter(r=>isConversionCampaign(r.objective,r.campaign,r.resultType));
           const allTraffic = allRows.filter(r=>!isConversionCampaign(r.objective,r.campaign,r.resultType));
           const spend = arr=>arr.reduce((s,r)=>s+(r.spend||0),0);
@@ -2479,8 +2513,8 @@ export default function OaDashboard(){
               border:"1px solid rgba(255,255,255,0.08)"}}>
               <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12,gap:8,flexWrap:"wrap"}}>
                 <div>
-                  <div style={{fontSize:12,fontWeight:800,letterSpacing:"0.05em"}}><MI n="payments" size={14}/> 전체 광고비</div>
-                  <div style={{fontSize:10,opacity:0.4,marginTop:2}}>시트 기준</div>
+                  <div style={{fontSize:12,fontWeight:800,letterSpacing:"0.05em"}}><MI n="payments" size={14}/> {parseInt(activeMonth.slice(5))}월 전체 광고비</div>
+                  <div style={{fontSize:10,opacity:0.4,marginTop:2}}>시트 기준 합산</div>
                 </div>
                 <div style={{textAlign:"right"}}>
                   <div style={{fontSize:9,opacity:0.5}}>총 광고비</div>
