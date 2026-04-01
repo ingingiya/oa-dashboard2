@@ -4469,18 +4469,17 @@ export default function OaDashboard(){
                           onDragStart={e=>{e.stopPropagation();dragRef.current=s;}}
                           onClick={e=>{e.stopPropagation();setSchModalData({mode:"edit",initial:{...s,notionId:s.id,note:s.memo}});}}
                           style={{fontSize:11,fontWeight:700,
-                            padding:isCont?"2px 0":"2px 5px",
+                            padding:"2px 5px",
                             borderRadius:isFirst&&isLast?3:isFirst?"3px 0 0 3px":isLast?"0 3px 3px 0":0,
                             background:`${tc}${isCont?"33":"18"}`,
-                            color:isCont?"transparent":tc,
+                            color:isCont?`${tc}99`:tc,
                             marginBottom:2,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",
                             cursor:isCont?"default":"grab",
                             borderLeft:isFirst?`2px solid ${ac}`:"none",
                             marginLeft:isCont?"-4px":"0",
                             marginRight:!isLast?"-4px":"0",
                           }}>
-                          {!isCont&&(s.assignee?`(${s.assignee.slice(0,1)}) `:"")}
-                          {!isCont&&s.title.replace(/[(\[（][가-힣]{2,4}[)\]）]\s*/g,"").slice(0,12)}
+                          {isCont?"·":((s.assignee?`(${s.assignee.slice(0,1)}) `:"")+s.title.replace(/[(\[（][가-힣]{2,4}[)\]）]\s*/g,"").slice(0,12))}
                         </div>
                       );
                     })}
