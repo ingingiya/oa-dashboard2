@@ -4476,12 +4476,17 @@ export default function OaDashboard(){
                       const showTitle=isFirst||s._firstVisible||!!s._isChecklist;
                       const isHaengsa=s.type==="행사";
                       if(isHaengsa) return(
-                        <div key={j} title={s.title}
+                        <div key={j}
                           onClick={e=>{e.stopPropagation();setSchModalData({mode:"edit",initial:{...s,notionId:s.id,note:s.memo}});}}
-                          style={{height:4,borderRadius:isFirst&&isLast?2:isFirst?"2px 0 0 2px":isLast?"0 2px 2px 0":0,
-                            background:tc,opacity:0.75,marginBottom:2,cursor:"pointer",
+                          style={{fontSize:9,fontWeight:600,padding:"1px 4px",
+                            borderRadius:isFirst&&isLast?3:isFirst?"3px 0 0 3px":isLast?"0 3px 3px 0":0,
+                            background:`${tc}22`,color:showTitle?tc:`${tc}55`,
+                            marginBottom:2,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",
+                            cursor:"pointer",borderLeft:isFirst?`2px solid ${tc}`:s._firstVisible?`2px dashed ${tc}`:"none",
                             marginLeft:isCont&&!s._firstVisible?"-4px":"0",
-                            marginRight:!isLast?"-4px":"0"}}/>
+                            marginRight:!isLast?"-4px":"0"}}>
+                          {showTitle?s.title.replace(/[(\[（][가-힣]{2,4}[)\]）]\s*/g,"").slice(0,10):"·"}
+                        </div>
                       );
                       return(
                         <div key={j}
