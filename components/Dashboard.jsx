@@ -4311,7 +4311,10 @@ export default function OaDashboard(){
       for (let d = new Date(sd); d <= ed; d.setDate(d.getDate()+1)) {
         const key = toLocalKey(d);
         if (!itemsByDate[key]) itemsByDate[key] = [];
-        if (d.getTime()===sd.getTime()) itemsByDate[key].push(s); // 시작일에만 표시
+        const isStart = d.getTime()===sd.getTime();
+        const isEnd = d.getTime()===ed.getTime();
+        const spanPos = isStart&&isEnd?"single":isStart?"start":isEnd?"end":"mid";
+        itemsByDate[key].push({...s, _spanPos: spanPos});
       }
     });
 
@@ -4457,16 +4460,27 @@ export default function OaDashboard(){
                     {items.slice(0,3).map((s,j)=>{
                       const tc=schTypeColor(s.type);
                       const ac=s.assigneeColor||C.inkLt;
+                      const isCont=s._spanPos==="mid"||s._spanPos==="end";
+                      const isLast=s._spanPos==="end"||s._spanPos==="single";
+                      const isFirst=s._spanPos==="start"||s._spanPos==="single";
                       return(
-                        <div key={j} className="cal-item-text"
-                          draggable={!s._isChecklist}
+                        <div key={j}
+                          draggable={!s._isChecklist&&isFirst}
                           onDragStart={e=>{e.stopPropagation();dragRef.current=s;}}
                           onClick={e=>{e.stopPropagation();setSchModalData({mode:"edit",initial:{...s,notionId:s.id,note:s.memo}});}}
-                          style={{fontSize:11,fontWeight:700,padding:"2px 5px",borderRadius:3,
-                          background:`${tc}18`,color:tc,marginBottom:2,
-                          overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",
-                          cursor:"grab",borderLeft:`2px solid ${ac}`}}>
-                          {s.assignee?`(${s.assignee.slice(0,1)}) `:""}{s.title.replace(/[(\[（][가-힣]{2,4}[)\]）]\s*/g,"").slice(0,12)}
+                          style={{fontSize:11,fontWeight:700,
+                            padding:isCont?"2px 0":"2px 5px",
+                            borderRadius:isFirst&&isLast?3:isFirst?"3px 0 0 3px":isLast?"0 3px 3px 0":0,
+                            background:`${tc}${isCont?"33":"18"}`,
+                            color:isCont?"transparent":tc,
+                            marginBottom:2,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",
+                            cursor:isCont?"default":"grab",
+                            borderLeft:isFirst?`2px solid ${ac}`:"none",
+                            marginLeft:isCont?"-4px":"0",
+                            marginRight:!isLast?"-4px":"0",
+                          }}>
+                          {!isCont&&(s.assignee?`(${s.assignee.slice(0,1)}) `:"")}
+                          {!isCont&&s.title.replace(/[(\[（][가-힣]{2,4}[)\]）]\s*/g,"").slice(0,12)}
                         </div>
                       );
                     })}
