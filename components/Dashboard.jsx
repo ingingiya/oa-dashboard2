@@ -5020,7 +5020,9 @@ export default function OaDashboard(){
                   const quality = adQuality(ad);
                   const isConv = isConversionCampaign(ad.objective, ad.campaign);
                   const savedItem = (creativeLib||[]).find(i=>i.name===ad.adName);
-                  const figmaUrl = savedItem?.figmaUrl;
+                  const autoFm = !savedItem?.figmaUrl ? matchFigmaFrame(ad.adName) : null;
+                  const figmaUrl = savedItem?.figmaUrl || (autoFm ? figmaLink(autoFm.nodeId) : null);
+                  const figmaIsAuto = !savedItem?.figmaUrl && !!autoFm;
                   return(
                     <div key={ad.adName} style={{
                       borderRadius:10,overflow:"hidden",
@@ -5043,9 +5045,11 @@ export default function OaDashboard(){
                           </span>
                         </div>
                         {figmaUrl&&(
-                          <a href={figmaUrl} target="_blank" rel="noreferrer" title="Figma"
-                            style={{position:"absolute",bottom:5,right:5,display:"flex",alignItems:"center",padding:"2px 4px",borderRadius:5,background:"rgba(255,255,255,0.9)",border:"none",textDecoration:"none"}}>
+                          <a href={figmaUrl} target="_blank" rel="noreferrer"
+                            title={figmaIsAuto?`자동 매칭: ${autoFm.name}`:"Figma"}
+                            style={{position:"absolute",bottom:5,right:5,display:"flex",alignItems:"center",gap:2,padding:"2px 4px",borderRadius:5,background:"rgba(255,255,255,0.9)",border:"none",textDecoration:"none"}}>
                             <svg width="10" height="10" viewBox="0 0 38 57" fill="none"><path d="M10 28.5a9.5 9.5 0 0 1 9.5-9.5h9.5v19H19.5A9.5 9.5 0 0 1 10 28.5Z" fill="#1ABCFE"/><path d="M1 47.5A9.5 9.5 0 0 1 10.5 38H20v9.5a9.5 9.5 0 0 1-19 0Z" fill="#0ACF83"/><path d="M20 1v19h9.5a9.5 9.5 0 0 0 0-19H20Z" fill="#FF7262"/><path d="M1 9.5A9.5 9.5 0 0 0 10.5 19H20V1H10.5A9.5 9.5 0 0 0 1 9.5Z" fill="#F24E1E"/><path d="M1 28.5A9.5 9.5 0 0 0 10.5 38H20V19H10.5A9.5 9.5 0 0 0 1 28.5Z" fill="#A259FF"/></svg>
+                            {figmaIsAuto&&<span style={{fontSize:7,color:"#0d7fa8",fontWeight:700}}>자동</span>}
                           </a>
                         )}
                       </div>
