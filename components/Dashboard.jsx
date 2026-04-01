@@ -6144,6 +6144,7 @@ export default function OaDashboard(){
     const MKT_OLIVE_TAB = "🫒올리브영";
     const MKT_MUSINSA_TAB = "🛍무신사";
     const [mktPriceUpdating, setMktPriceUpdating] = useState(false);
+    const [mktLastUpdateAt, setMktLastUpdateAt] = useSyncState("oa_mkt_last_update_v1", null);
     const [mktPriceCatFilter, setMktPriceCatFilter] = useState("전체");
     const [mktOurBrandFilter, setMktOurBrandFilter] = useState("전체");
     const [mktAutoFetching, setMktAutoFetching] = useState({}); // {prodId: true}
@@ -6310,6 +6311,7 @@ export default function OaDashboard(){
         }));
       } catch(e){}
       setMktPriceUpdating(false);
+      setMktLastUpdateAt(new Date().toLocaleString("ko-KR",{month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit"}));
     }
 
     async function searchMktModal(q) {
@@ -7014,11 +7016,14 @@ export default function OaDashboard(){
                             </button>
                           ))}
                         </div>
-                        <button onClick={updateOurBrandPrices} disabled={mktPriceUpdating}
-                          style={{display:"flex",alignItems:"center",gap:5,padding:"7px 14px",borderRadius:8,border:"none",background:mktPriceUpdating?C.cream:"#7c3aed",color:mktPriceUpdating?C.inkMid:"#fff",fontWeight:700,fontSize:11,cursor:"pointer",fontFamily:"inherit",opacity:mktPriceUpdating?0.7:1}}>
-                          <MI n="sync" size={13}/>
-                          {mktPriceUpdating?"조회 중...":"전체 가격 업데이트"}
-                        </button>
+                        <div style={{display:"flex",alignItems:"center",gap:8}}>
+                          {mktLastUpdateAt&&<span style={{fontSize:10,color:C.inkLt}}>마지막 조회 {mktLastUpdateAt}</span>}
+                          <button onClick={updateOurBrandPrices} disabled={mktPriceUpdating}
+                            style={{display:"flex",alignItems:"center",gap:5,padding:"7px 14px",borderRadius:8,border:"none",background:mktPriceUpdating?C.cream:"#7c3aed",color:mktPriceUpdating?C.inkMid:"#fff",fontWeight:700,fontSize:11,cursor:"pointer",fontFamily:"inherit",opacity:mktPriceUpdating?0.7:1}}>
+                            <MI n="sync" size={13}/>
+                            {mktPriceUpdating?"조회 중...":"전체 가격 업데이트"}
+                          </button>
+                        </div>
                       </div>
                       {ourProds.length===0?(
                         <Card><div style={{textAlign:"center",padding:"24px 0",color:C.inkLt,fontSize:12}}>우리브랜드 탭에 제품과 채널을 먼저 추가해주세요</div></Card>
@@ -7027,11 +7032,12 @@ export default function OaDashboard(){
                           {ourProds.map(prod=>{
                             const allItems = prod.items||[];
                             if(!allItems.length) return null;
-                            // 우리 공식 판매가 = 제품에 직접 수기 입력한 ourPrice
                             const officialMin = parseInt(prod.ourPrice)||null;
                             const getPrice = i => parseInt(i.salePrice)||0;
-                            const allPrices = allItems.map(getPrice).filter(Boolean);
-                            const marketMin = allPrices.length ? Math.min(...allPrices) : null;
+                            // 스마트스토어(오아 공식)는 최저가 계산 제외 — 기준가이므로
+                            const isOurStore = i => (i.channel||i.mallName||"").includes("스마트스토어");
+                            const marketPrices = allItems.filter(i=>!isOurStore(i)).map(getPrice).filter(Boolean);
+                            const marketMin = marketPrices.length ? Math.min(...marketPrices) : null;
                             const undercutCount = officialMin ? allItems.filter(i=>{ const p=getPrice(i); return p && p<officialMin; }).length : 0;
                             return(
                               <Card key={prod.id}>
@@ -7048,24 +7054,29 @@ export default function OaDashboard(){
                                 <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
                                   {[...allItems].sort((a,b)=>(getPrice(a)||Infinity)-(getPrice(b)||Infinity)).map(item=>{
                                     const price = getPrice(item);
-                                    const isUndercut = officialMin && price && price < officialMin;
-                                    const isMarketMin = marketMin && price === marketMin;
+                                    const ourStore = isOurStore(item);
+                                    const isUndercut = !ourStore && officialMin && price && price < officialMin;
+                                    const isMarketMin = !ourStore && marketMin && price === marketMin;
                                     const diff = officialMin && price ? price - officialMin : null;
                                     return(
-                                      <div key={item.id} style={{display:"flex",alignItems:"center",gap:6,padding:"8px 10px",borderRadius:8,border:`1.5px solid ${isUndercut?"#fca5a5":isMarketMin&&!isUndercut?"#86efac":C.border}`,background:isUndercut?"#fff5f5":isMarketMin&&!isUndercut?"#f0fdf4":"transparent",minWidth:130}}>
+                                      <div key={item.id} style={{display:"flex",alignItems:"center",gap:6,padding:"8px 10px",borderRadius:8,border:`1.5px solid ${isUndercut?"#fca5a5":isMarketMin?"#86efac":ourStore?"#c4b5fd":C.border}`,background:isUndercut?"#fff5f5":isMarketMin?"#f0fdf4":ourStore?"#faf5ff":"transparent",minWidth:130}}>
                                         {item.image&&<img src={item.image} alt="" style={{width:28,height:28,objectFit:"cover",borderRadius:4,flexShrink:0}}/>}
                                         <div style={{flex:1,minWidth:0}}>
-                                          <div style={{fontSize:10,fontWeight:700,color:C.inkMid,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{item.channel||item.mallName}</div>
+                                          <div style={{display:"flex",alignItems:"center",gap:4}}>
+                                            <span style={{fontSize:10,fontWeight:700,color:C.inkMid,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{item.channel||item.mallName}</span>
+                                            {ourStore&&<span style={{fontSize:8,fontWeight:700,background:"#7c3aed",color:"#fff",padding:"1px 4px",borderRadius:3,flexShrink:0}}>기준</span>}
+                                          </div>
                                           {price?(
                                             <>
-                                              <div style={{fontSize:12,fontWeight:800,color:isUndercut?"#dc2626":isMarketMin?"#16a34a":C.ink}}>₩{price.toLocaleString()}</div>
-                                              {diff!==null&&diff!==0&&<div style={{fontSize:9,color:isUndercut?"#dc2626":C.inkMid,fontWeight:isUndercut?700:400}}>
+                                              <div style={{fontSize:12,fontWeight:800,color:isUndercut?"#dc2626":isMarketMin?"#16a34a":ourStore?"#7c3aed":C.ink}}>₩{price.toLocaleString()}</div>
+                                              {!ourStore&&diff!==null&&diff!==0&&<div style={{fontSize:9,color:isUndercut?"#dc2626":C.inkMid,fontWeight:isUndercut?700:400}}>
                                                 {diff<0?`-₩${Math.abs(diff).toLocaleString()} 이탈`:`+₩${diff.toLocaleString()}`}
                                               </div>}
                                             </>
                                           ):(
                                             <div style={{fontSize:11,color:C.inkLt}}>미입력</div>
                                           )}
+                                          {item.lastChecked&&<div style={{fontSize:8,color:C.inkLt,marginTop:2}}>{item.lastChecked} 조회</div>}
                                           {(item.naverLink||item.url)&&<a href={isUndercut?(item.naverLink||item.url):item.url} target="_blank" rel="noreferrer" style={{fontSize:9,color:"#2563eb",textDecoration:"none",display:"flex",alignItems:"center",gap:1}}><MI n="open_in_new" size={9}/>링크</a>}
                                         </div>
                                       </div>
