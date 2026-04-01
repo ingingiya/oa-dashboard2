@@ -6396,6 +6396,7 @@ export default function OaDashboard(){
             setMarketData(prev=>(prev||[]).map(p=>p.id!==prodId?p:{
               ...p, items:(p.items||[]).map(i=>i.id!==item.id?i:{
                 ...i,
+                salePrice: data.salePrice,
                 naverPrice: data.salePrice,
                 lastChecked: today,
                 checkedMallName: topItem?.mallName || null,
@@ -7129,7 +7130,7 @@ export default function OaDashboard(){
                             const allItems = prod.items||[];
                             if(!allItems.length) return null;
                             const officialMin = parseInt(prod.ourPrice)||null;
-                            const getPrice = i => parseInt(i.naverPrice||i.salePrice)||0;
+                            const getPrice = i => parseInt(i.salePrice||i.naverPrice)||0;
                             // 스마트스토어(오아 공식)는 최저가 계산 제외 — 기준가이므로
                             const isOurStore = i => (i.channel||i.mallName||"").includes("스마트스토어");
                             const marketPrices = allItems.filter(i=>!isOurStore(i)).map(getPrice).filter(Boolean);
