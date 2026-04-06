@@ -171,11 +171,13 @@ export async function POST(request) {
       });
 
       const sampleKeys = posts[0] ? Object.keys(posts[0]) : [];
+      // 실제로 어떤 ownerUsername 값이 오는지 확인
+      const allOwners = [...new Set(posts.map(p => getField(p, "ownerUsername","username")).filter(Boolean))];
 
       const byUser = {};
       for (const post of posts) {
         const uname = getField(post, "ownerUsername","username","owner.username","authorUsername");
-        if (!uname || uname === handle) continue;
+        if (!uname) continue; // 브랜드 계정 필터 제거 — 실제 값 확인용
         if (!byUser[uname]) {
           byUser[uname] = {
             username: uname,
@@ -207,7 +209,7 @@ export async function POST(request) {
 
       return new Response(JSON.stringify({
         influencers, mode, totalPosts: posts.length,
-        _debug: { sampleKeys, firstItem: posts[0], raw3: posts.slice(0,3) }
+        _debug: { sampleKeys, allOwners, firstItem: posts[0] }
       }), { status: 200, headers: { "Content-Type": "application/json" } });
     }
 
