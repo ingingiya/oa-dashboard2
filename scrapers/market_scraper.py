@@ -44,15 +44,31 @@ async def extract_musinsa(page, pid):
         if nd:
             d = json.loads(nd)
             pp = d.get("props", {}).get("pageProps", {})
+            # 실제 구조: pageProps.meta.data
+            meta = pp.get("meta", {}).get("data", {})
+            if meta:
+                name  = meta.get("goodsNm") or meta.get("goodsName") or ""
+                brand_info = meta.get("brandInfo", {})
+                brand = brand_info.get("brandName") or brand_info.get("name") or ""
+                gp    = meta.get("goodsPrice", {})
+                sale  = int(gp.get("salePrice") or gp.get("price") or 0)
+                orig  = int(gp.get("normalPrice") or gp.get("originalPrice") or sale)
+                imgs  = meta.get("thumbnailImageUrl") or meta.get("thumbnail") or ""
+                if not imgs:
+                    gl = meta.get("goodsImages") or meta.get("imageList") or []
+                    imgs = gl[0].get("imageUrl","") if gl else ""
+                if name and sale:
+                    return {"name": name, "brand": brand, "sale_price": sale, "original_price": orig, "image": imgs}
+            # fallback: 구버전 구조
             p = pp.get("product") or pp.get("goodsDetail") or pp.get("item") or {}
             if p:
                 brand = p.get("brandName") or (p.get("brand", {}).get("name", "") if isinstance(p.get("brand"), dict) else p.get("brand", ""))
-                sale = int(p.get("price") or p.get("salePrice") or p.get("goodsPrice") or 0)
-                orig = int(p.get("originalPrice") or p.get("consumerPrice") or sale)
-                img = p.get("thumbnailImageUrl") or p.get("thumbnail") or ((p.get("goodsImages") or [{}])[0].get("imageUrl", ""))
-                name = p.get("goodsName") or p.get("name") or ""
+                sale  = int(p.get("price") or p.get("salePrice") or p.get("goodsPrice") or 0)
+                orig  = int(p.get("originalPrice") or p.get("consumerPrice") or sale)
+                img   = p.get("thumbnailImageUrl") or p.get("thumbnail") or ""
+                name  = p.get("goodsName") or p.get("name") or ""
                 if name and sale:
-                    return {"name": name, "brand": brand, "sale_price": sale, "original_price": orig, "image": img or ""}
+                    return {"name": name, "brand": brand, "sale_price": sale, "original_price": orig, "image": img}
     except Exception as e:
         print(f"    ⚠️ 추출 실패: {e}")
     return {}
@@ -140,74 +156,30 @@ def _find_in_obj(obj, keys, depth=0):
 
 
 async def extract_zigzag(page, pid):
-    # 1) __NEXT_DATA__ 전체 재귀 탐색
     try:
         nd = await page.evaluate("() => JSON.stringify(window.__NEXT_DATA__)")
         if nd:
             d = json.loads(nd)
-            # dehydratedState queries 안에 product 데이터가 있는 경우
-            queries = _find_in_obj(d, ["queries"])
-            if isinstance(queries, list):
-                for q in queries:
-                    data = q.get("state", {}).get("data", {}) if isinstance(q, dict) else {}
-                    # 중첩 구조에서 product 찾기
-                    p = None
-                    for key in ["product", "item", "catalog", "catalogProduct", "goods"]:
-                        p = data.get(key) if isinstance(data, dict) else None
-                        if p: break
-                    if not p and isinstance(data, dict):
-                        # data 자체가 product인 경우
-                        if data.get("name") and (data.get("price") or data.get("salePrice")):
-                            p = data
-                    if p and isinstance(p, dict):
-                        name = p.get("name") or p.get("title") or ""
-                        brand = p.get("brand") or (p.get("store", {}).get("name", "") if isinstance(p.get("store"), dict) else "")
-                        sale = int(p.get("price") or p.get("salePrice") or p.get("discountedPrice") or 0)
-                        orig = int(p.get("originalPrice") or p.get("retailPrice") or sale)
-                        img = p.get("image") or p.get("thumbnail") or p.get("imageUrl") or ""
-                        if name and sale:
-                            return {"name": name, "brand": brand, "sale_price": sale, "original_price": orig, "image": img}
-            # 기존 방식
             pp = d.get("props", {}).get("pageProps", {})
-            p = pp.get("product") or pp.get("item") or pp.get("catalog") or {}
-            if p:
-                name = p.get("name") or p.get("title") or ""
-                brand = p.get("brand") or (p.get("store", {}).get("name", "") if isinstance(p.get("store"), dict) else "")
-                sale = int(p.get("price") or p.get("salePrice") or p.get("discountedPrice") or 0)
-                orig = int(p.get("originalPrice") or p.get("retailPrice") or sale)
-                img = p.get("image") or p.get("thumbnail") or p.get("imageUrl") or ""
+            # 실제 구조: pageProps.dehydratedState.queries[].state.data
+            queries = pp.get("dehydratedState", {}).get("queries", [])
+            for q in queries:
+                data = q.get("state", {}).get("data", {}) if isinstance(q, dict) else {}
+                if not isinstance(data, dict): continue
+                product = data.get("product", {})
+                shop    = data.get("shop", {})
+                if not product or not isinstance(product, dict): continue
+                name  = product.get("name") or product.get("title") or ""
+                brand = shop.get("name", "") if isinstance(shop, dict) else ""
+                pp2   = product.get("product_price", {})
+                sale  = int((pp2.get("final_discount_info") or {}).get("discount_price") or pp2.get("price") or 0)
+                orig  = int((pp2.get("max_price_info") or {}).get("price") or sale)
+                imgs  = product.get("product_image_list", [])
+                img   = imgs[0].get("url", "") if imgs else ""
                 if name and sale:
                     return {"name": name, "brand": brand, "sale_price": sale, "original_price": orig, "image": img}
     except Exception as e:
-        print(f"    ⚠️ 추출 실패(NEXT_DATA): {e}")
-    # 2) DOM 셀렉터
-    try:
-        result = await page.evaluate("""() => {
-            const p = el => { if (!el) return 0; const m = (el.innerText||'').replace(/[^0-9]/g,''); return m ? parseInt(m) : 0; };
-            const nameEl = document.querySelector('[class*="ProductName"], [class*="product-name"], h1');
-            const brandEl = document.querySelector('[class*="BrandName"], [class*="brand-name"], [class*="StoreName"]');
-            const priceEl = document.querySelector('[class*="SalePrice"], [class*="sale-price"], [class*="Price__sale"]');
-            const origEl  = document.querySelector('[class*="OriginalPrice"], [class*="original-price"]');
-            let sale = p(priceEl), orig = p(origEl);
-            if (!orig || orig < sale) orig = sale;
-            const imgEl = document.querySelector('img[src*="cf.shop-talk"], img[src*="zigzag"], [class*="ProductImage"] img');
-            return { name: nameEl?.innerText?.trim()||'', brand: brandEl?.innerText?.trim()||'', sale_price: sale, original_price: orig, image: imgEl?.src||'' };
-        }""")
-        if result and result.get("sale_price"):
-            return result
-    except Exception as e:
-        print(f"    ⚠️ 추출 실패(DOM): {e}")
-    # 3) JSON-LD fallback
-    try:
-        html = await page.content()
-        for ld_str in re.findall(r'<script[^>]*type=["\']application/ld\+json["\'][^>]*>(.*?)</script>', html, re.DOTALL):
-            ld = json.loads(ld_str.strip())
-            if isinstance(ld, list): ld = next((x for x in ld if x.get("@type") == "Product"), {})
-            if ld.get("@type") == "Product":
-                offer = ld.get("offers", {}); offer = offer[0] if isinstance(offer, list) else offer
-                price = int(float(offer.get("price", 0)))
-                if price: return {"name": ld.get("name",""), "brand": (ld.get("brand",{}).get("name","") if isinstance(ld.get("brand"),dict) else ""), "sale_price": price, "original_price": price, "image": ""}
-    except: pass
+        print(f"    ⚠️ 추출 실패: {e}")
     return {}
 
 
@@ -232,44 +204,63 @@ async def find_rank_zigzag(page, keyword, pid):
 
 # ── 에이블리 ─────────────────────────────────────────
 async def extract_ably(page, pid):
-    # 1) __NEXT_DATA__ 탐색
+    # 네트워크 인터셉트로 API 응답 가로채기
+    captured = {}
+
+    async def handle_response(response):
+        url = response.url
+        if (f"/goods/{pid}" in url or f"/products/{pid}" in url) and not captured.get("data"):
+            try:
+                ct = response.headers.get("content-type", "")
+                if "json" in ct:
+                    data = await response.json()
+                    if isinstance(data, dict):
+                        captured["data"] = data
+            except: pass
+
+    page.on("response", handle_response)
+    try:
+        await page.wait_for_load_state("networkidle", timeout=15000)
+    except: pass
+    page.remove_listener("response", handle_response)
+
+    if captured.get("data"):
+        d = captured["data"]
+        p = d.get("goods") or d.get("product") or d.get("item") or d.get("data") or {}
+        if not isinstance(p, dict): p = {}
+        if p:
+            name  = p.get("name") or p.get("goods_name") or ""
+            brand = (p.get("market", {}).get("name", "") if isinstance(p.get("market"), dict) else p.get("brand", ""))
+            sale  = int(p.get("price") or p.get("sale_price") or 0)
+            orig  = int(p.get("retail_price") or p.get("original_price") or sale)
+            img   = p.get("cover_image") or p.get("image") or ""
+            if name and sale:
+                print(f"    ✅ API 인터셉트 성공")
+                return {"name": name, "brand": brand, "sale_price": sale, "original_price": orig, "image": img}
+
+    # DOM fallback — __NEXT_DATA__ 포함
     try:
         nd = await page.evaluate("() => JSON.stringify(window.__NEXT_DATA__)")
         if nd:
             d = json.loads(nd)
             pp = d.get("props", {}).get("pageProps", {})
-            p = pp.get("goods") or pp.get("goodsDetail") or pp.get("product") or pp.get("item") or {}
+            p = pp.get("goods") or pp.get("goodsDetail") or pp.get("product") or {}
             if not p:
-                # dehydratedState 재귀 탐색
-                p = _find_in_obj(pp.get("dehydratedState", {}), ["goods", "goodsDetail", "product", "item"]) or {}
+                queries = pp.get("dehydratedState", {}).get("queries", [])
+                for q in queries:
+                    data = q.get("state", {}).get("data", {}) if isinstance(q, dict) else {}
+                    p = (data.get("goods") or data.get("product") or data.get("item")) if isinstance(data, dict) else None
+                    if p: break
             if p and isinstance(p, dict):
-                name = p.get("name") or p.get("goods_name") or ""
+                name  = p.get("name") or p.get("goods_name") or ""
                 brand = (p.get("market", {}).get("name", "") if isinstance(p.get("market"), dict) else p.get("brand", ""))
-                sale = int(p.get("price") or p.get("sale_price") or 0)
-                orig = int(p.get("retail_price") or p.get("original_price") or sale)
-                img = p.get("cover_image") or p.get("image") or ""
+                sale  = int(p.get("price") or p.get("sale_price") or 0)
+                orig  = int(p.get("retail_price") or p.get("original_price") or sale)
+                img   = p.get("cover_image") or p.get("image") or ""
                 if name and sale:
                     return {"name": name, "brand": brand, "sale_price": sale, "original_price": orig, "image": img}
     except Exception as e:
-        print(f"    ⚠️ 추출 실패(NEXT_DATA): {e}")
-    # 2) DOM 셀렉터 fallback
-    try:
-        await page.wait_for_timeout(2000)
-        result = await page.evaluate("""() => {
-            const p = el => { if (!el) return 0; const m = (el.innerText||'').replace(/[^0-9]/g,''); return m ? parseInt(m) : 0; };
-            const nameEl = document.querySelector('[class*="GoodsName"], [class*="goods-name"], [class*="ProductName"], h1');
-            const brandEl = document.querySelector('[class*="MarketName"], [class*="market-name"], [class*="BrandName"]');
-            const saleEl  = document.querySelector('[class*="SalePrice"], [class*="sale-price"], [class*="GoodsPrice"]');
-            const origEl  = document.querySelector('[class*="OriginPrice"], [class*="origin-price"], [class*="OriginalPrice"]');
-            let sale = p(saleEl), orig = p(origEl);
-            if (!orig || orig < sale) orig = sale;
-            const imgEl = document.querySelector('[class*="GoodsImage"] img, [class*="goods-image"] img, [class*="ProductImage"] img');
-            return { name: nameEl?.innerText?.trim()||'', brand: brandEl?.innerText?.trim()||'', sale_price: sale, original_price: orig, image: imgEl?.src||'' };
-        }""")
-        if result and result.get("sale_price"):
-            return result
-    except Exception as e:
-        print(f"    ⚠️ 추출 실패(DOM): {e}")
+        print(f"    ⚠️ 추출 실패: {e}")
     return {}
 
 
@@ -294,46 +285,60 @@ async def find_rank_ably(page, keyword, pid):
 
 # ── 카카오선물하기 ────────────────────────────────────
 async def extract_kakao_gift(page, pid):
-    # JS 로딩 대기 (카카오는 동적 렌더링)
+    # 네트워크 인터셉트로 API 응답 가로채기
+    captured = {}
+
+    async def handle_response(response):
+        url = response.url
+        if (f"/product/{pid}" in url or f"/products/{pid}" in url or f"productId={pid}" in url) and "json" in response.headers.get("content-type",""):
+            try:
+                data = await response.json()
+                if isinstance(data, dict) and not captured.get("data"):
+                    captured["data"] = data
+            except: pass
+
+    page.on("response", handle_response)
     try:
         await page.wait_for_load_state("networkidle", timeout=15000)
     except: pass
-    # 1) DOM 셀렉터 (카카오선물하기는 JS 렌더링 후 DOM에 데이터)
+    page.remove_listener("response", handle_response)
+
+    # API 응답에서 데이터 추출
+    if captured.get("data"):
+        d = captured["data"]
+        # 카카오 API 응답 구조 탐색
+        product = d.get("product") or d.get("item") or d.get("data") or d
+        if isinstance(product, dict):
+            name = product.get("name") or product.get("productName") or ""
+            brand_raw = product.get("brand") or product.get("brandName") or ""
+            brand = brand_raw.get("name", "") if isinstance(brand_raw, dict) else str(brand_raw)
+            sale = int(product.get("price") or product.get("salePrice") or product.get("discountedPrice") or 0)
+            orig = int(product.get("originalPrice") or product.get("listPrice") or product.get("normalPrice") or sale)
+            img = product.get("image") or product.get("thumbnailUrl") or product.get("imageUrl") or ""
+            if isinstance(img, dict): img = img.get("url") or img.get("src") or ""
+            if name and sale:
+                print(f"    ✅ API 인터셉트 성공")
+                return {"name": name, "brand": brand, "sale_price": sale, "original_price": orig, "image": img}
+
+    # DOM fallback
     try:
         result = await page.evaluate("""() => {
             const p = el => { if (!el) return 0; const m = (el.innerText||'').replace(/[^0-9]/g,''); return m ? parseInt(m) : 0; };
-            const nameEl = document.querySelector('[class*="tit_product"], [class*="ProductName"], [class*="product_name"], [class*="tit_item"], h1[class*="tit"]');
-            const brandEl = document.querySelector('[class*="txt_brand"], [class*="BrandName"], [class*="brand_name"]');
-            const saleEl  = document.querySelector('[class*="price_sale"], [class*="SalePrice"], [class*="txt_price"], em[class*="price"]');
-            const origEl  = document.querySelector('[class*="price_origin"], [class*="OriginalPrice"], [class*="price_before"] del');
+            // 카카오선물하기 클래스 패턴
+            const nameEl = document.querySelector('[class*="tit_product"],[class*="ProductName"],[class*="product_name"],[class*="tit_item"],h2,h1');
+            const brandEl = document.querySelector('[class*="txt_brand"],[class*="brand_name"],[class*="txt_seller"]');
+            const saleEl  = document.querySelector('[class*="price_sale"],[class*="num_price"],[class*="txt_price"] strong,[class*="sale_price"]');
+            const origEl  = document.querySelector('[class*="price_origin"] del,[class*="origin_price"],[class*="list_price"]');
             let sale = p(saleEl), orig = p(origEl);
             if (!orig || orig < sale) orig = sale;
-            const imgEl = document.querySelector('[class*="thumb_product"] img, [class*="ProductImage"] img, [class*="img_product"]');
-            return { name: nameEl?.innerText?.trim()||'', brand: brandEl?.innerText?.trim()||'', sale_price: sale, original_price: orig, image: imgEl?.src||'' };
+            const imgEl = document.querySelector('[class*="thumb_product"] img,[class*="product_img"] img,[class*="img_product"],main img');
+            return { name: nameEl?.innerText?.trim()||'', brand: brandEl?.innerText?.trim()||'', sale_price: sale, original_price: orig, image: imgEl?.src||imgEl?.dataset?.src||'' };
         }""")
         if result and result.get("sale_price"):
+            print(f"    ✅ DOM 추출 성공")
             return result
     except Exception as e:
-        print(f"    ⚠️ 추출 실패(DOM): {e}")
-    # 2) __NEXT_DATA__ 탐색
-    try:
-        nd = await page.evaluate("() => JSON.stringify(window.__NEXT_DATA__)")
-        if nd:
-            d = json.loads(nd)
-            pp = d.get("props", {}).get("pageProps", {})
-            p = pp.get("product") or pp.get("item") or {}
-            if not p:
-                p = _find_in_obj(pp, ["product", "item", "productDetail"]) or {}
-            if p and isinstance(p, dict):
-                name = p.get("name") or p.get("productName") or ""
-                brand = (p.get("brand", {}).get("name", "") if isinstance(p.get("brand"), dict) else p.get("brandName", ""))
-                sale = int(p.get("price") or p.get("salePrice") or 0)
-                orig = int(p.get("originalPrice") or sale)
-                img = p.get("image") or p.get("thumbnailUrl") or ""
-                if name and sale:
-                    return {"name": name, "brand": brand, "sale_price": sale, "original_price": orig, "image": img}
-    except Exception as e:
-        print(f"    ⚠️ 추출 실패(NEXT_DATA): {e}")
+        print(f"    ⚠️ DOM 추출 실패: {e}")
     return {}
 
 
