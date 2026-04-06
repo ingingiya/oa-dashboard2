@@ -4237,9 +4237,11 @@ export default function OaDashboard(){
           if(m2) return "팔로워: " + m2[1].trim();
           return note.replace(/^\[[^\]]+\]\s*/,"").split("·")[0].trim() || "직접 추가";
         };
+        // Apify로 수집된 것만 (note에 키워드:/팔로워:/태그: 포함)
+        const isCollected = f => /키워드:|팔로워:|태그:/.test(f.note||"") || /^\[/.test(f.note||"");
         // 카테고리별 그룹핑
         const groups = {};
-        infs.forEach(f => {
+        infs.filter(isCollected).forEach(f => {
           const cat = getCat(f);
           if(!groups[cat]) groups[cat] = [];
           groups[cat].push(f);
