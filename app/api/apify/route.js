@@ -49,21 +49,28 @@ export async function POST(request) {
 
       if (!Array.isArray(posts)) throw new Error("Apify 응답 형식 오류");
 
+      // 첫 번째 아이템의 키 목록을 디버그용으로 수집
+      const sampleKeys = posts[0] ? Object.keys(posts[0]) : [];
+      const sample = posts[0] || null;
+
       const byUser = {};
       for (const post of posts) {
-        const uname = post.ownerUsername || post.username;
+        const uname = post.ownerUsername || post.username || post.owner?.username
+          || post.authorUsername || post.author?.username;
         if (!uname) continue;
         if (!byUser[uname]) {
           byUser[uname] = {
             username: uname,
-            fullName: post.ownerFullName || post.fullName || "",
-            followers: post.ownerFollowersCount ?? post.followersCount ?? null,
+            fullName: post.ownerFullName || post.fullName || post.owner?.fullName
+              || post.authorFullName || "",
+            followers: post.ownerFollowersCount ?? post.followersCount
+              ?? post.owner?.followersCount ?? null,
             likes: [], comments: [],
             profileUrl: `https://www.instagram.com/${uname}/`,
           };
         }
-        byUser[uname].likes.push(post.likesCount || 0);
-        byUser[uname].comments.push(post.commentsCount || 0);
+        byUser[uname].likes.push(post.likesCount || post.likes || 0);
+        byUser[uname].comments.push(post.commentsCount || post.comments || 0);
       }
 
       const influencers = Object.values(byUser)
@@ -82,7 +89,10 @@ export async function POST(request) {
         .sort((a, b) => b.avgLikes - a.avgLikes)
         .slice(0, maxResults);
 
-      return new Response(JSON.stringify({ influencers, mode, totalPosts: posts.length }), {
+      return new Response(JSON.stringify({
+        influencers, mode, totalPosts: posts.length,
+        _debug: { sampleKeys, sample }
+      }), {
         status: 200, headers: { "Content-Type": "application/json" },
       });
     }
