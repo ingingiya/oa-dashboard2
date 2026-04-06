@@ -207,7 +207,7 @@ export async function POST(request) {
 
       return new Response(JSON.stringify({
         influencers, mode, totalPosts: posts.length,
-        _debug: { sampleKeys, firstItem: posts[0] }
+        _debug: { sampleKeys, firstItem: posts[0], raw3: posts.slice(0,3) }
       }), { status: 200, headers: { "Content-Type": "application/json" } });
     }
 
