@@ -6705,6 +6705,11 @@ export default function OaDashboard(){
     const [mktNewCategory, setMktNewCategory] = useState("");
     const [mktCompareData, setMktCompareData] = useState(null); // {prices:[], links:[]}
     const [mktCompareLoading, setMktCompareLoading] = useState(false);
+    const [mktCompLinkOpen, setMktCompLinkOpen] = useState(null); // prodId | null
+    const [mktCompLinkSearch, setMktCompLinkSearch] = useState("");
+    const [mktOurProds, setMktOurProds] = useState(null); // null=미로드
+    const [mktOurProdsLoading, setMktOurProdsLoading] = useState(false);
+    const [mktOurProdInput, setMktOurProdInput] = useState({name:"",category:"드라이기",ourPrice:""});
     const MKT_COMPARE_TAB = "📊시장비교";
     const [mktNewUrl, setMktNewUrl] = useState("");
     const [mktNewKeyword, setMktNewKeyword] = useState("");
@@ -7596,90 +7601,187 @@ export default function OaDashboard(){
 
                 {/* 시장비교 탭 */}
                 {mktCategoryTab===MKT_COMPARE_TAB&&(()=>{
-                  // 데이터 로드
-                  if(!mktCompareData && !mktCompareLoading) {
+                  // 데이터 로드 (market_prices + 우리제품 목록)
+                  if((!mktCompareData||mktOurProds===null) && !mktCompareLoading && !mktOurProdsLoading) {
                     setMktCompareLoading(true);
+                    setMktOurProdsLoading(true);
                     Promise.all([
                       fetch("/api/market/prices",{cache:"no-store"}).then(r=>r.json()).catch(()=>[]),
-                      fetch("/api/market/links",{cache:"no-store"}).then(r=>r.json()).catch(()=>[]),
-                    ]).then(([prices,links])=>{
-                      setMktCompareData({prices:Array.isArray(prices)?prices:[], links:Array.isArray(links)?links:[]});
+                      fetch("/api/market/compare-prods",{cache:"no-store"}).then(r=>r.json()).catch(()=>[]),
+                    ]).then(([prices,ourProds])=>{
+                      setMktCompareData({prices:Array.isArray(prices)?prices:[]});
+                      setMktOurProds(Array.isArray(ourProds)?ourProds:[]);
                       setMktCompareLoading(false);
+                      setMktOurProdsLoading(false);
                     });
                   }
-                  if(mktCompareLoading) return <Card><div style={{textAlign:"center",padding:"32px 0",color:C.inkLt,fontSize:12}}>불러오는 중...</div></Card>;
-                  if(!mktCompareData) return null;
-                  const {prices, links} = mktCompareData;
-                  // link에서 category 매핑: {platform+product_id → category}
-                  const catMap = {};
-                  links.forEach(l=>{ catMap[`${l.platform}__${l.product_id}`] = l.category; });
-                  const compareCats = MKT_CATEGORIES.filter(c=>c!=="우리브랜드");
+                  if(mktCompareLoading||mktOurProdsLoading) return <Card><div style={{textAlign:"center",padding:"32px 0",color:C.inkLt,fontSize:12}}>불러오는 중...</div></Card>;
+                  if(!mktCompareData||mktOurProds===null) return null;
+                  const {prices} = mktCompareData;
                   const PLATFORM_LABEL = {"musinsa":"무신사","oliveyoung":"올리브영","zigzag":"지그재그","ably":"에이블리","kakao_gift":"카카오선물하기"};
                   const PLATFORM_COLOR = {"musinsa":"#111","oliveyoung":"#16a34a","zigzag":"#7c3aed","ably":"#ec4899","kakao_gift":"#f59e0b"};
+                  const ourBrandProds = mktOurProds||[];
+                  // 경쟁사 연결 헬퍼 (Supabase 필드명: comp_links, our_price)
+                  function getCompLinks(prod) { return prod.comp_links||[]; }
+                  function hasLink(prod, key) { return getCompLinks(prod).includes(key); }
+                  async function toggleLink(prod, key) {
+                    const links = getCompLinks(prod);
+                    const next = links.includes(key) ? links.filter(k=>k!==key) : [...links,key];
+                    setMktOurProds(prev=>(prev||[]).map(p=>p.id===prod.id?{...p,comp_links:next}:p));
+                    await fetch("/api/market/compare-prods",{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({id:prod.id,comp_links:next})});
+                  }
                   return(
                     <div style={{display:"flex",flexDirection:"column",gap:16}}>
                       <div style={{display:"flex",justifyContent:"flex-end"}}>
-                        <button onClick={()=>setMktCompareData(null)} style={{display:"flex",alignItems:"center",gap:4,padding:"5px 12px",borderRadius:7,border:"none",background:"#f3f4f6",color:C.inkMid,fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
+                        <button onClick={()=>{setMktCompareData(null);setMktOurProds(null);setMktCompLinkOpen(null);}} style={{display:"flex",alignItems:"center",gap:4,padding:"5px 12px",borderRadius:7,border:"none",background:"#f3f4f6",color:C.inkMid,fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
                           <MI n="refresh" size={12}/>새로고침
                         </button>
                       </div>
-                      {compareCats.map(cat=>{
-                        // 우리 제품 (우리브랜드 카테고리에서 category 메모가 cat인 것, 또는 marketData category===cat)
-                        const ourProds = (marketData||[]).filter(p=>p.category===cat && p.ourPrice>0);
-                        // 경쟁사 제품
-                        const compProds = prices.filter(p=>catMap[`${p.platform}__${p.product_id}`]===cat);
-                        if(ourProds.length===0 && compProds.length===0) return null;
-                        const ourMin = ourProds.length ? Math.min(...ourProds.map(p=>p.ourPrice).filter(Boolean)) : null;
+                      {/* 우리 제품 추가 폼 */}
+                      <Card>
+                        <div style={{fontSize:12,fontWeight:800,color:C.ink,marginBottom:10}}>우리 브랜드 제품 추가</div>
+                        <div style={{display:"flex",gap:6,flexWrap:"wrap",alignItems:"center"}}>
+                          <input value={mktOurProdInput.name} onChange={e=>setMktOurProdInput(p=>({...p,name:e.target.value}))}
+                            placeholder="제품명 (예: 미니고데기)"
+                            style={{flex:2,minWidth:120,padding:"6px 10px",border:`1px solid ${C.border}`,borderRadius:6,fontSize:11,fontFamily:"inherit",outline:"none"}}/>
+                          <input value={mktOurProdInput.ourPrice} onChange={e=>setMktOurProdInput(p=>({...p,ourPrice:e.target.value}))}
+                            placeholder="판매가"
+                            style={{width:90,padding:"6px 10px",border:`1px solid ${C.border}`,borderRadius:6,fontSize:11,fontFamily:"inherit",outline:"none"}}/>
+                          <div style={{display:"flex",gap:4}}>
+                            {["드라이기","고데기","케어제품"].map(cat=>(
+                              <button key={cat} onClick={()=>setMktOurProdInput(p=>({...p,category:cat}))}
+                                style={{padding:"5px 10px",borderRadius:6,border:`1.5px solid ${mktOurProdInput.category===cat?"#7c3aed":C.border}`,background:mktOurProdInput.category===cat?"#7c3aed":"transparent",color:mktOurProdInput.category===cat?"#fff":C.inkMid,fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
+                                {cat}
+                              </button>
+                            ))}
+                          </div>
+                          <button onClick={async()=>{
+                            if(!mktOurProdInput.name.trim()) return;
+                            const newProd = {id:Date.now().toString(),name:mktOurProdInput.name.trim(),category:mktOurProdInput.category,our_price:parseInt(mktOurProdInput.ourPrice)||0,comp_links:[]};
+                            await fetch("/api/market/compare-prods",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(newProd)});
+                            setMktOurProds(prev=>[...(prev||[]),newProd]);
+                            setMktOurProdInput(p=>({...p,name:"",ourPrice:""}));
+                          }} style={{padding:"6px 14px",borderRadius:6,border:"none",background:"#7c3aed",color:"#fff",fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
+                            추가
+                          </button>
+                        </div>
+                      </Card>
+                      {ourBrandProds.map(prod=>{
+                        const linkedKeys = getCompLinks(prod);
+                        const linkedComps = prices.filter(p=>linkedKeys.includes(`${p.platform}__${p.product_id}`) && p.sale_price>0);
+                        const ourMin = prod.our_price||0;
+                        const isOpen = mktCompLinkOpen===prod.id;
+                        // 피커용 필터링
+                        const sq = mktCompLinkSearch.toLowerCase().trim();
+                        const pickerItems = prices.filter(p=>{
+                          if(!sq) return true;
+                          return (p.name||"").toLowerCase().includes(sq)||(p.brand||"").toLowerCase().includes(sq)||(PLATFORM_LABEL[p.platform]||"").includes(sq);
+                        }).slice(0,50);
                         return(
-                          <Card key={cat}>
-                            <div style={{fontSize:13,fontWeight:900,color:C.ink,marginBottom:12}}>{cat}</div>
-                            <div style={{overflowX:"auto"}}>
-                              <table style={{width:"100%",borderCollapse:"collapse",fontSize:11}}>
-                                <thead><tr style={{background:C.cream}}>
-                                  {["","구분","브랜드/상품명","플랫폼","판매가","정가","할인율","비교"].map(h=>(
-                                    <th key={h} style={{padding:"6px 8px",textAlign:"left",fontWeight:700,color:C.inkMid,borderBottom:`1px solid ${C.border}`,whiteSpace:"nowrap"}}>{h}</th>
-                                  ))}
-                                </tr></thead>
-                                <tbody>
-                                  {ourProds.map(p=>(
-                                    <tr key={`our-${p.id}`} style={{borderBottom:`1px solid ${C.cream}`,background:"#f0fdf4"}}>
-                                      <td style={{padding:"6px 8px"}}></td>
-                                      <td style={{padding:"6px 8px"}}><span style={{background:"#16a34a",color:"#fff",fontSize:9,fontWeight:700,padding:"2px 5px",borderRadius:4}}>우리</span></td>
-                                      <td style={{padding:"6px 8px",fontWeight:700,color:C.ink,maxWidth:200,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.name}</td>
-                                      <td style={{padding:"6px 8px",color:C.inkLt}}>—</td>
-                                      <td style={{padding:"6px 8px",fontWeight:800,color:"#16a34a"}}>{p.ourPrice?`₩${p.ourPrice.toLocaleString()}`:"—"}</td>
-                                      <td style={{padding:"6px 8px"}}>—</td>
-                                      <td style={{padding:"6px 8px"}}>—</td>
-                                      <td style={{padding:"6px 8px"}}>—</td>
-                                    </tr>
-                                  ))}
-                                  {compProds.sort((a,b)=>a.sale_price-b.sale_price).map(p=>{
-                                    const cheaper = ourMin && p.sale_price < ourMin;
-                                    const disc = p.original_price&&p.sale_price&&p.original_price>p.sale_price?Math.round((1-p.sale_price/p.original_price)*100):0;
-                                    const diff = ourMin ? p.sale_price - ourMin : null;
+                          <Card key={prod.id}>
+                            {/* 우리 제품 헤더 */}
+                            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12}}>
+                              <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
+                                <span style={{background:"#16a34a",color:"#fff",fontSize:9,fontWeight:700,padding:"3px 7px",borderRadius:4}}>우리</span>
+                                <span style={{background:"#7c3aed",color:"#fff",fontSize:9,fontWeight:700,padding:"3px 7px",borderRadius:4}}>{prod.category}</span>
+                                <span style={{fontWeight:900,fontSize:14,color:C.ink}}>{prod.name}</span>
+                                {prod.our_price>0&&<span style={{fontWeight:800,fontSize:13,color:"#16a34a"}}>₩{prod.our_price.toLocaleString()}</span>}
+                              </div>
+                              <div style={{display:"flex",gap:6}}>
+                                <button onClick={()=>{setMktCompLinkOpen(isOpen?null:prod.id);setMktCompLinkSearch("");}}
+                                  style={{display:"flex",alignItems:"center",gap:4,padding:"5px 10px",borderRadius:6,border:`1.5px solid ${isOpen?"#0891b2":C.border}`,background:isOpen?"#e0f2fe":"transparent",color:isOpen?"#0369a1":C.inkMid,fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
+                                  <MI n="add_link" size={13}/>{isOpen?"닫기":"경쟁사 연결"}
+                                </button>
+                                <button onClick={async()=>{
+                                  setMktOurProds(prev=>(prev||[]).filter(p=>p.id!==prod.id));
+                                  await fetch("/api/market/compare-prods",{method:"DELETE",headers:{"Content-Type":"application/json"},body:JSON.stringify({id:prod.id})});
+                                }} style={{padding:"5px 8px",borderRadius:6,border:`1px solid ${C.border}`,background:"none",color:"#dc2626",fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
+                                  삭제
+                                </button>
+                              </div>
+                            </div>
+
+                            {/* 연결된 경쟁사 테이블 */}
+                            {linkedComps.length>0&&(
+                              <div style={{overflowX:"auto",marginBottom:isOpen?12:0}}>
+                                <table style={{width:"100%",borderCollapse:"collapse",fontSize:11}}>
+                                  <thead><tr style={{background:C.cream}}>
+                                    {["","브랜드/상품명","플랫폼","판매가","정가","할인율","비교","링크",""].map(h=>(
+                                      <th key={h} style={{padding:"5px 8px",textAlign:"left",fontWeight:700,color:C.inkMid,borderBottom:`1px solid ${C.border}`,whiteSpace:"nowrap"}}>{h}</th>
+                                    ))}
+                                  </tr></thead>
+                                  <tbody>
+                                    {[...linkedComps].sort((a,b)=>a.sale_price-b.sale_price).map(p=>{
+                                      const cheaper = ourMin && p.sale_price<ourMin;
+                                      const disc = p.original_price&&p.original_price>p.sale_price?Math.round((1-p.sale_price/p.original_price)*100):0;
+                                      const diff = ourMin ? p.sale_price-ourMin : null;
+                                      const key = `${p.platform}__${p.product_id}`;
+                                      return(
+                                        <tr key={key} style={{borderBottom:`1px solid ${C.cream}`,background:cheaper?"#fff7ed":"transparent"}}>
+                                          <td style={{padding:"5px 8px"}}>{p.image&&<img src={p.image} alt="" style={{width:34,height:34,objectFit:"cover",borderRadius:4,border:`1px solid ${C.border}`}}/>}</td>
+                                          <td style={{padding:"5px 8px",maxWidth:200,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
+                                            <div style={{fontWeight:600}}>{p.brand}</div>
+                                            <div style={{color:C.inkMid,fontSize:10}}>{p.name}</div>
+                                          </td>
+                                          <td style={{padding:"5px 8px"}}>
+                                            <span style={{background:PLATFORM_COLOR[p.platform]||"#999",color:"#fff",fontSize:9,fontWeight:700,padding:"2px 5px",borderRadius:4,whiteSpace:"nowrap"}}>{PLATFORM_LABEL[p.platform]||p.platform}</span>
+                                          </td>
+                                          <td style={{padding:"5px 8px",fontWeight:800,color:cheaper?"#dc2626":C.ink}}>{`₩${p.sale_price.toLocaleString()}`}</td>
+                                          <td style={{padding:"5px 8px",color:C.inkMid,textDecoration:"line-through"}}>{p.original_price&&p.original_price!==p.sale_price?`₩${p.original_price.toLocaleString()}`:"—"}</td>
+                                          <td style={{padding:"5px 8px"}}>{disc>0&&<span style={{background:"#fee2e2",color:"#dc2626",fontWeight:700,padding:"2px 5px",borderRadius:4,fontSize:10}}>{disc}%</span>}</td>
+                                          <td style={{padding:"5px 8px",whiteSpace:"nowrap"}}>
+                                            {diff!==null&&<span style={{fontWeight:700,color:diff<0?"#dc2626":"#6b7280",fontSize:10}}>{diff<0?`▼₩${Math.abs(diff).toLocaleString()}`:`+₩${diff.toLocaleString()}`}</span>}
+                                          </td>
+                                          <td style={{padding:"5px 8px"}}>
+                                            {p.url&&<a href={p.url} target="_blank" rel="noopener noreferrer" style={{display:"inline-block",padding:"2px 8px",borderRadius:4,background:"#e0f2fe",color:"#0369a1",fontSize:10,fontWeight:700,textDecoration:"none",whiteSpace:"nowrap"}}>보기</a>}
+                                          </td>
+                                          <td style={{padding:"5px 8px"}}>
+                                            <button onClick={()=>toggleLink(prod,key)} style={{background:"none",border:"none",cursor:"pointer",color:"#dc2626",fontSize:14,lineHeight:1,padding:"0 2px"}} title="연결 해제">×</button>
+                                          </td>
+                                        </tr>
+                                      );
+                                    })}
+                                  </tbody>
+                                </table>
+                              </div>
+                            )}
+                            {linkedComps.length===0&&!isOpen&&(
+                              <div style={{color:C.inkLt,fontSize:11,padding:"8px 0"}}>연결된 경쟁사 없음 — 우측 "경쟁사 연결" 버튼으로 추가하세요</div>
+                            )}
+
+                            {/* 경쟁사 연결 피커 */}
+                            {isOpen&&(
+                              <div style={{marginTop:8,border:`1.5px solid #0891b2`,borderRadius:8,padding:10,background:"#f0f9ff"}}>
+                                <input
+                                  value={mktCompLinkSearch}
+                                  onChange={e=>setMktCompLinkSearch(e.target.value)}
+                                  placeholder="제품명, 브랜드, 플랫폼 검색..."
+                                  style={{width:"100%",padding:"6px 10px",border:`1px solid ${C.border}`,borderRadius:6,fontSize:11,fontFamily:"inherit",outline:"none",boxSizing:"border-box",marginBottom:8}}
+                                  autoFocus
+                                />
+                                {pickerItems.length===0&&<div style={{color:C.inkLt,fontSize:11,textAlign:"center",padding:"8px 0"}}>수집된 제품이 없습니다</div>}
+                                <div style={{maxHeight:260,overflowY:"auto",display:"flex",flexDirection:"column",gap:2}}>
+                                  {pickerItems.map(p=>{
+                                    const key=`${p.platform}__${p.product_id}`;
+                                    const linked=hasLink(prod,key);
                                     return(
-                                      <tr key={`${p.platform}-${p.product_id}`} style={{borderBottom:`1px solid ${C.cream}`,background:cheaper?"#fff7ed":"transparent"}}>
-                                        <td style={{padding:"6px 8px"}}>{p.image&&<img src={p.image} alt="" style={{width:36,height:36,objectFit:"cover",borderRadius:4,border:`1px solid ${C.border}`}}/>}</td>
-                                        <td style={{padding:"6px 8px"}}><span style={{background:"#fee2e2",color:"#dc2626",fontSize:9,fontWeight:700,padding:"2px 5px",borderRadius:4}}>경쟁</span></td>
-                                        <td style={{padding:"6px 8px",maxWidth:200,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
-                                          <div style={{fontWeight:600}}>{p.brand}</div>
-                                          <div style={{color:C.inkMid,fontSize:10}}>{p.name}</div>
-                                        </td>
-                                        <td style={{padding:"6px 8px"}}>
-                                          <span style={{background:PLATFORM_COLOR[p.platform]||"#999",color:"#fff",fontSize:9,fontWeight:700,padding:"2px 5px",borderRadius:4,whiteSpace:"nowrap"}}>{PLATFORM_LABEL[p.platform]||p.platform}</span>
-                                        </td>
-                                        <td style={{padding:"6px 8px",fontWeight:800,color:cheaper?"#dc2626":C.ink}}>{p.sale_price?`₩${p.sale_price.toLocaleString()}`:"—"}</td>
-                                        <td style={{padding:"6px 8px",color:C.inkMid,textDecoration:"line-through"}}>{p.original_price&&p.original_price!==p.sale_price?`₩${p.original_price.toLocaleString()}`:"—"}</td>
-                                        <td style={{padding:"6px 8px"}}>{disc>0&&<span style={{background:"#fee2e2",color:"#dc2626",fontWeight:700,padding:"2px 5px",borderRadius:4,fontSize:10}}>{disc}%</span>}</td>
-                                        <td style={{padding:"6px 8px",whiteSpace:"nowrap"}}>
-                                          {diff!==null&&<span style={{fontWeight:700,color:diff<0?"#dc2626":"#6b7280",fontSize:10}}>{diff<0?`▼₩${Math.abs(diff).toLocaleString()}`:`+₩${diff.toLocaleString()}`}</span>}
-                                        </td>
-                                      </tr>
+                                      <div key={key} onClick={()=>toggleLink(prod,key)}
+                                        style={{display:"flex",alignItems:"center",gap:8,padding:"5px 8px",borderRadius:6,cursor:"pointer",background:linked?"#dcfce7":"#fff",border:`1px solid ${linked?"#16a34a":C.border}`}}>
+                                        {p.image&&<img src={p.image} alt="" style={{width:30,height:30,objectFit:"cover",borderRadius:4,flexShrink:0}}/>}
+                                        <div style={{flex:1,minWidth:0}}>
+                                          <div style={{fontWeight:600,fontSize:11,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.brand} {p.name}</div>
+                                          <div style={{fontSize:10,color:C.inkMid}}>
+                                            <span style={{background:PLATFORM_COLOR[p.platform]||"#999",color:"#fff",fontSize:8,fontWeight:700,padding:"1px 4px",borderRadius:3,marginRight:4}}>{PLATFORM_LABEL[p.platform]||p.platform}</span>
+                                            {p.sale_price?`₩${p.sale_price.toLocaleString()}`:""}
+                                          </div>
+                                        </div>
+                                        <span style={{fontSize:16,color:linked?"#16a34a":"#9ca3af",flexShrink:0}}>{linked?"✓":"+"}</span>
+                                      </div>
                                     );
                                   })}
-                                </tbody>
-                              </table>
-                            </div>
+                                </div>
+                              </div>
+                            )}
                           </Card>
                         );
                       })}
