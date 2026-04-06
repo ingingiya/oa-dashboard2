@@ -381,11 +381,11 @@ async def extract_kakao_gift(page, pid, captured=None):
                 const m = (el.innerText||'').replace(/[^0-9]/g,'');
                 return m ? parseInt(m) : 0;
             };
-            const name  = document.querySelector('h4.tit_subject,[class*="tit_subject"]')?.innerText?.replace(/<!---->/g,'').trim() || '';
-            const brand = document.querySelector('[class*="link_brand"],[class*="txt_brand"],[class*="brand_name"]')?.innerText?.trim() || '';
-            const sale  = toInt(document.querySelector('.num_sale,[class*="num_sale"]'));
-            const orig  = toInt(document.querySelector('.num_origin,[class*="num_origin"]'));
-            const img   = document.querySelector('.thumb_prd .img_thumb,[class*="thumb_prd"] img,img[src*="kakaocdn"],img[src*="st.kakaocdn"]')?.src || '';
+            const name  = document.querySelector('h4.tit_subject')?.innerText?.replace(/<!---->/g,'').trim() || '';
+            const brand = document.querySelector('.link_brand,.txt_brand,.brand_name')?.innerText?.trim() || '';
+            const sale  = toInt(document.querySelector('.txt_total'));
+            const orig  = toInt(document.querySelector('del.legacy_price'));
+            const img   = document.querySelector('img.img_g')?.src || '';
             return { name, brand, sale_price: sale, original_price: orig > sale ? orig : sale, image: img };
         }""")
         if result and result.get("sale_price") and result.get("name"):
