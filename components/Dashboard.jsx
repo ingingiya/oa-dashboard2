@@ -6690,6 +6690,10 @@ export default function OaDashboard(){
     const [oliveyoungTab, setOliveyoungTab] = useState("prices");
     const [newOliveUrl, setNewOliveUrl] = useState("");
     const [newOliveKeyword, setNewOliveKeyword] = useState("");
+    const [editingLinkId, setEditingLinkId] = useState(null);
+    const [editingLinkKeyword, setEditingLinkKeyword] = useState("");
+    const [editingOliveId, setEditingOliveId] = useState(null);
+    const [editingOliveKeyword, setEditingOliveKeyword] = useState("");
     const [marketData, setMarketData] = useSyncState("oa_market_research_v1", []);
     const [mktProductModal, setMktProductModal] = useState(false);
     const [mktBulkModal, setMktBulkModal] = useState(false);
@@ -7780,7 +7784,22 @@ export default function OaDashboard(){
                                     <span style={{fontSize:10,color:C.inkLt,minWidth:80}}>#{link.product_id}</span>
                                     <div style={{flex:1,overflow:"hidden"}}>
                                       <a href={link.url} target="_blank" rel="noreferrer" style={{fontSize:11,color:"#2563eb",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",display:"block"}}>{link.url}</a>
-                                      {link.search_keyword&&<span style={{fontSize:10,color:"#7c3aed"}}>🔍 {link.search_keyword}</span>}
+                                      {editingOliveId===link.id?(
+                                        <div style={{display:"flex",gap:4,marginTop:3}}>
+                                          <input value={editingOliveKeyword} onChange={e=>setEditingOliveKeyword(e.target.value)}
+                                            placeholder="검색 키워드" autoFocus
+                                            style={{flex:1,fontSize:10,padding:"3px 6px",borderRadius:6,border:`1px solid ${C.border}`,outline:"none",fontFamily:"inherit"}}/>
+                                          <button onClick={()=>{
+                                            fetch(`${SURL}/rest/v1/oliveyoung_links?id=eq.${link.id}`,{method:"PATCH",headers:{...sH,"Content-Type":"application/json"},body:JSON.stringify({search_keyword:editingOliveKeyword.trim()||null})})
+                                              .then(()=>{setEditingOliveId(null);setOliveyoungLinks(null);});
+                                          }} style={{padding:"3px 8px",borderRadius:6,border:"none",background:"#111",color:"#fff",fontSize:10,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>저장</button>
+                                          <button onClick={()=>setEditingOliveId(null)} style={{padding:"3px 6px",borderRadius:6,border:"none",background:"#f3f4f6",color:C.inkMid,fontSize:10,cursor:"pointer",fontFamily:"inherit"}}>취소</button>
+                                        </div>
+                                      ):(
+                                        <span style={{fontSize:10,color:"#7c3aed",cursor:"pointer"}} onClick={()=>{setEditingOliveId(link.id);setEditingOliveKeyword(link.search_keyword||"");}}>
+                                          {link.search_keyword?`🔍 ${link.search_keyword}`:"+ 키워드 추가"}
+                                        </span>
+                                      )}
                                     </div>
                                     <button onClick={()=>{
                                       fetch(`${SURL}/rest/v1/oliveyoung_links?id=eq.${link.id}`,{method:"PATCH",headers:{...sH,"Content-Type":"application/json","Prefer":"return=representation"},body:JSON.stringify({active:!link.active})})
@@ -7933,7 +7952,22 @@ export default function OaDashboard(){
                                     <span style={{fontSize:10,color:C.inkLt,minWidth:60}}>#{link.product_id}</span>
                                     <div style={{flex:1,overflow:"hidden"}}>
                                       <a href={link.url} target="_blank" rel="noreferrer" style={{fontSize:11,color:"#2563eb",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",display:"block"}}>{link.url}</a>
-                                      {link.search_keyword&&<span style={{fontSize:10,color:"#7c3aed"}}>🔍 {link.search_keyword}</span>}
+                                      {editingLinkId===link.id?(
+                                        <div style={{display:"flex",gap:4,marginTop:3}}>
+                                          <input value={editingLinkKeyword} onChange={e=>setEditingLinkKeyword(e.target.value)}
+                                            placeholder="검색 키워드" autoFocus
+                                            style={{flex:1,fontSize:10,padding:"3px 6px",borderRadius:6,border:`1px solid ${C.border}`,outline:"none",fontFamily:"inherit"}}/>
+                                          <button onClick={()=>{
+                                            fetch("/api/musinsa/links",{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({id:link.id,search_keyword:editingLinkKeyword.trim()||null})})
+                                              .then(()=>{setEditingLinkId(null);setMusinsaLinks(null);});
+                                          }} style={{padding:"3px 8px",borderRadius:6,border:"none",background:"#111",color:"#fff",fontSize:10,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>저장</button>
+                                          <button onClick={()=>setEditingLinkId(null)} style={{padding:"3px 6px",borderRadius:6,border:"none",background:"#f3f4f6",color:C.inkMid,fontSize:10,cursor:"pointer",fontFamily:"inherit"}}>취소</button>
+                                        </div>
+                                      ):(
+                                        <span style={{fontSize:10,color:"#7c3aed",cursor:"pointer"}} onClick={()=>{setEditingLinkId(link.id);setEditingLinkKeyword(link.search_keyword||"");}}>
+                                          {link.search_keyword?`🔍 ${link.search_keyword}`:"+ 키워드 추가"}
+                                        </span>
+                                      )}
                                     </div>
                                     <button onClick={()=>{
                                       fetch("/api/musinsa/links",{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({id:link.id,active:!link.active})})
