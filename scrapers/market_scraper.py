@@ -373,40 +373,24 @@ async def extract_kakao_gift(page, pid, captured=None):
                 print(f"    ✅ API 인터셉트 성공")
                 return result
 
-    # DOM에서 직접 읽기 — 카카오선물하기 실제 구조 기반
+    # DOM 추출 — 카카오선물하기 실제 CSS 클래스 기반
     try:
         result = await page.evaluate("""() => {
             const toInt = el => {
                 if (!el) return 0;
-                const m = (el.innerText||el.textContent||'').replace(/[^0-9]/g,'');
+                const m = (el.innerText||'').replace(/[^0-9]/g,'');
                 return m ? parseInt(m) : 0;
             };
-            // 이름: 카카오선물하기 실제 클래스
-            const nameEl = document.querySelector('h4.tit_subject,[class*="tit_subject"],[class*="tit_product"],[class*="product_subject"]');
-            const name = nameEl?.innerText?.replace(/<!---->/g,'').trim() || '';
-            // 브랜드
-            const brandEl = document.querySelector('[class*="brand"],[class*="Brand"],[class*="seller"],[class*="shop_name"]');
-            const brand = brandEl?.innerText?.trim() || '';
-            // 가격: "원" 포함 텍스트 노드만 수집 (랜덤 숫자 배제)
-            const priceNums = [];
-            document.querySelectorAll('em,strong,span,b,p').forEach(el => {
-                const t = el.innerText || '';
-                if (/[\d,]+원/.test(t)) {
-                    const n = parseInt(t.replace(/[^0-9]/g,''));
-                    if (n >= 1000 && n < 10000000) priceNums.push(n);
-                }
-            });
-            const sorted = [...new Set(priceNums)].sort((a,b)=>a-b);
-            const sale = sorted[0] || 0;
-            const orig = sorted.length > 1 ? sorted[sorted.length-1] : sale;
-            // 이미지
-            const imgEl = document.querySelector('img[src*="kakaocdn"],img[src*="st.kakao"],figure img,[class*="thumb"] img,[class*="product"] img');
-            return { name, brand, sale_price: sale, original_price: orig >= sale ? orig : sale, image: imgEl?.src || '' };
+            const name  = document.querySelector('h4.tit_subject,[class*="tit_subject"]')?.innerText?.replace(/<!---->/g,'').trim() || '';
+            const brand = document.querySelector('[class*="link_brand"],[class*="txt_brand"],[class*="brand_name"]')?.innerText?.trim() || '';
+            const sale  = toInt(document.querySelector('.num_sale,[class*="num_sale"]'));
+            const orig  = toInt(document.querySelector('.num_origin,[class*="num_origin"]'));
+            const img   = document.querySelector('.thumb_prd .img_thumb,[class*="thumb_prd"] img,img[src*="kakaocdn"],img[src*="st.kakaocdn"]')?.src || '';
+            return { name, brand, sale_price: sale, original_price: orig > sale ? orig : sale, image: img };
         }""")
         if result and result.get("sale_price") and result.get("name"):
             print(f"    ✅ DOM 추출 성공: {result['name'][:20]}")
             return result
-        # 이름 없이라도 가격 있으면 저장 (이름은 URL에서 추출 불가)
         if result and result.get("sale_price"):
             print(f"    ⚠️ 가격만 추출 성공 (이름 없음)")
             return result
