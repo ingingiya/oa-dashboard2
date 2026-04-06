@@ -215,25 +215,37 @@ async def find_rank_zigzag(page, keyword, pid):
 
 
 # ── 에이블리 ─────────────────────────────────────────
-def _parse_ably_data(d):
-    candidates = []
-    for key in ["goods", "product", "item", "data", "goodsDetail"]:
-        v = d.get(key)
-        if isinstance(v, dict): candidates.append(v)
-    if not candidates: candidates = [d]
-    for p in candidates:
-        if not isinstance(p, dict): continue
-        name  = p.get("name") or p.get("goods_name") or p.get("goodsName") or ""
-        brand = ""
-        m = p.get("market") or p.get("brand") or {}
-        if isinstance(m, dict): brand = m.get("name", "")
-        elif isinstance(m, str): brand = m
-        sale  = int(p.get("price") or p.get("sale_price") or p.get("salePrice") or 0)
-        orig  = int(p.get("retail_price") or p.get("original_price") or p.get("retailPrice") or sale)
-        img   = p.get("cover_image") or p.get("image") or p.get("coverImage") or ""
-        if name and sale:
-            return {"name": name, "brand": brand, "sale_price": sale, "original_price": orig, "image": img}
+def _extract_ably_product(p):
+    """dict 하나에서 에이블리 상품 데이터 추출 시도"""
+    if not isinstance(p, dict): return None
+    name  = p.get("name") or p.get("goods_name") or p.get("goodsName") or ""
+    brand = ""
+    m = p.get("market") or p.get("brand") or p.get("seller") or {}
+    if isinstance(m, dict): brand = m.get("name", "") or m.get("brand_name", "")
+    elif isinstance(m, str): brand = m
+    sale  = int(p.get("price") or p.get("sale_price") or p.get("salePrice") or 0)
+    orig  = int(p.get("retail_price") or p.get("original_price") or p.get("retailPrice") or sale)
+    img   = p.get("cover_image") or p.get("image") or p.get("coverImage") or p.get("thumbnail") or ""
+    if name and sale:
+        return {"name": name, "brand": brand, "sale_price": sale, "original_price": orig, "image": img}
     return None
+
+
+def _parse_ably_data(d):
+    if not isinstance(d, dict): return None
+    # 직접 키 탐색
+    for key in ["goods", "product", "item", "data", "goodsDetail"]:
+        r = _extract_ably_product(d.get(key))
+        if r: return r
+    # pieces 리스트 (에이블리 상품 데이터가 리스트 안에 있는 경우)
+    for key in ["pieces", "items", "goods_list", "products"]:
+        lst = d.get(key)
+        if isinstance(lst, list):
+            for item in lst:
+                r = _extract_ably_product(item)
+                if r: return r
+    # root 자체
+    return _extract_ably_product(d)
 
 
 async def extract_ably(page, pid, captured=None):
@@ -325,32 +337,41 @@ async def extract_kakao_gift(page, pid, captured=None):
             print(f"    ✅ API 인터셉트 성공")
             return result
 
-    # DOM에서 직접 읽기
+    # DOM에서 직접 읽기 — 카카오선물하기 실제 구조 기반
     try:
         result = await page.evaluate("""() => {
-            const p = el => {
+            const toInt = el => {
                 if (!el) return 0;
-                const m = (el.innerText||'').replace(/[^0-9]/g,'');
+                const m = (el.innerText||el.textContent||'').replace(/[^0-9]/g,'');
                 return m ? parseInt(m) : 0;
             };
-            // 이름: h2/h3 중 가장 첫 번째 의미있는 것
-            let nameEl = null;
-            for (const el of document.querySelectorAll('h2,h3,[class*="tit_product"],[class*="tit_item"],[class*="product_name"]')) {
-                const t = el.innerText?.trim() || '';
-                if (t.length > 2 && !t.includes('선물하기') && !t.includes('카카오')) { nameEl = el; break; }
+            // 이름: 페이지 내 가장 긴 의미있는 텍스트 (네비/버튼 제외)
+            let name = '';
+            for (const el of document.querySelectorAll('h1,h2,h3,strong[class*="tit"],p[class*="tit"],[class*="product_name"],[class*="goods_name"],[class*="item_tit"]')) {
+                const t = (el.innerText||'').trim();
+                if (t.length > name.length && t.length > 3 && !/카카오|선물하기|홈|검색|뒤로|메뉴/.test(t)) name = t;
             }
-            const brandEl = document.querySelector('[class*="txt_brand"],[class*="brand_name"],[class*="info_brand"] span');
-            // 가격: 숫자가 있는 em, strong, span 중 가장 큰 것이 정가, 작은 것이 판매가
-            const priceEls = Array.from(document.querySelectorAll('em,strong,span,[class*="price"]'))
-                .map(el => { const n = parseInt((el.innerText||'').replace(/[^0-9]/g,'')); return n > 999 ? n : 0; })
-                .filter(Boolean).sort((a,b)=>a-b);
-            const sale = priceEls[0] || 0;
-            const orig = priceEls.length > 1 ? priceEls[priceEls.length-1] : sale;
-            const imgEl = document.querySelector('[class*="thumb"] img,[class*="product"] img,figure img,main img');
-            return { name: nameEl?.innerText?.trim()||'', brand: brandEl?.innerText?.trim()||'', sale_price: sale, original_price: orig >= sale ? orig : sale, image: imgEl?.src||'' };
+            // 브랜드
+            const brandEl = document.querySelector('[class*="brand"],[class*="Brand"],[class*="seller"],[class*="shop_name"]');
+            const brand = brandEl?.innerText?.trim() || '';
+            // 가격: sale_price = 가장 작은 5자리 이상 숫자, original = 가장 큰 숫자
+            const nums = Array.from(new Set(
+                Array.from(document.querySelectorAll('*'))
+                    .map(el => parseInt((el.childNodes[0]?.textContent||'').replace(/[^0-9]/g,'')))
+                    .filter(n => n >= 1000 && n <= 9999999)
+            )).sort((a,b)=>a-b);
+            const sale = nums[0] || 0;
+            const orig = nums.length > 1 ? nums[nums.length-1] : sale;
+            // 이미지
+            const imgEl = document.querySelector('img[src*="kakao"],img[src*="gift"],figure img,[class*="thumb"] img,[class*="product"] img');
+            return { name, brand, sale_price: sale, original_price: orig >= sale ? orig : sale, image: imgEl?.src || '' };
         }""")
+        if result and result.get("sale_price") and result.get("name"):
+            print(f"    ✅ DOM 추출 성공: {result['name'][:20]}")
+            return result
+        # 이름 없이라도 가격 있으면 저장 (이름은 URL에서 추출 불가)
         if result and result.get("sale_price"):
-            print(f"    ✅ DOM 추출 성공")
+            print(f"    ⚠️ 가격만 추출 성공 (이름 없음)")
             return result
     except Exception as e:
         print(f"    ⚠️ DOM 추출 실패: {e}")
