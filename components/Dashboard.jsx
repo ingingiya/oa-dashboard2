@@ -6701,6 +6701,7 @@ export default function OaDashboard(){
     const [mktPlatformLinks, setMktPlatformLinks] = useState({});
     const [mktPlatformLoading, setMktPlatformLoading] = useState({});
     const [mktPlatformRunning, setMktPlatformRunning] = useState({});
+    const [mktAllRunning, setMktAllRunning] = useState(false);
     const [mktNewUrl, setMktNewUrl] = useState("");
     const [mktNewKeyword, setMktNewKeyword] = useState("");
     const [mktEditId, setMktEditId] = useState(null);
@@ -7503,6 +7504,19 @@ export default function OaDashboard(){
                     </button>
                   ))}
                   <div style={{flex:1}}/>
+                  <button onClick={()=>{
+                    if(mktAllRunning) return;
+                    if(!confirm("전체 플랫폼 수집을 시작할까요? (5~15분 소요)")) return;
+                    setMktAllRunning(true);
+                    fetch("/api/github-scrape",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({platform:"all"})})
+                      .then(r=>r.json()).then(d=>{
+                        if(d.ok) alert("전체 수집 시작! GitHub Actions 실행 중.\n완료 후 각 탭에서 새로고침 버튼 누르세요.");
+                        else alert("오류: "+d.error);
+                        setMktAllRunning(false);
+                      }).catch(e=>{alert("오류: "+e.message);setMktAllRunning(false);});
+                  }} style={{display:"flex",alignItems:"center",gap:4,padding:"5px 12px",borderRadius:7,border:"none",background:mktAllRunning?"#e5e7eb":"#111",color:mktAllRunning?"#9ca3af":"#fff",fontWeight:700,fontSize:11,cursor:mktAllRunning?"not-allowed":"pointer",fontFamily:"inherit",whiteSpace:"nowrap"}}>
+                    <MI n="play_arrow" size={13}/>{mktAllRunning?"수집 중...":"전체 수집"}
+                  </button>
                   <Btn small onClick={()=>{setMktBulkModal(true);setMktBulkText("");}}>일괄 추가</Btn>
                   <Btn small onClick={()=>setMktProductModal(true)}>+ 제품 추가</Btn>
                 </div>

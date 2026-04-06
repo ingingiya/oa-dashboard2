@@ -1,7 +1,7 @@
 export const dynamic = 'force-dynamic';
 
 const REPO = "ingingiya/oa-dashboard2";
-const VALID_PLATFORMS = ["musinsa", "oliveyoung", "zigzag", "ably", "kakao_gift"];
+const VALID_PLATFORMS = ["all", "musinsa", "oliveyoung", "zigzag", "ably", "kakao_gift"];
 
 export async function POST(request) {
   const GITHUB_TOKEN = process.env.GITHUB_TOKEN;

@@ -9,6 +9,7 @@ on:
         default: 'musinsa'
         type: choice
         options:
+          - all
           - musinsa
           - oliveyoung
           - zigzag
