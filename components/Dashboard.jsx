@@ -1066,10 +1066,12 @@ export default function OaDashboard(){
   const [infUrlInput, setInfUrlInput]   = useState("");
   // 인플루언서 수집 (Apify)
   const [infTabMode, setInfTabMode]       = useState("관리"); // "관리" | "수집"
-  const [collectMode, setCollectMode]     = useState("keyword"); // "keyword" | "followers"
+  const [collectMode, setCollectMode]     = useState("keyword"); // "keyword" | "followers" | "tagged"
   const [collectKeyword, setCollectKeyword] = useState("");
   const [collectUsername, setCollectUsername] = useState("");
   const [collectCount, setCollectCount]   = useState(50);
+  const [collectMinFollowers, setCollectMinFollowers] = useState("");
+  const [collectMaxFollowers, setCollectMaxFollowers] = useState("");
   const [collectLoading, setCollectLoading] = useState(false);
   const [collectError, setCollectError]   = useState("");
   const [collectResults, setCollectResults] = useState([]);
@@ -1679,6 +1681,8 @@ export default function OaDashboard(){
           keyword: collectKeyword.trim(),
           username: collectUsername.trim().replace(/^@/, ""),
           maxResults: Number(collectCount) || 50,
+          minFollowers: collectMinFollowers ? Number(collectMinFollowers) : undefined,
+          maxFollowers: collectMaxFollowers ? Number(collectMaxFollowers) : undefined,
         }),
       });
       const data = await res.json();
@@ -4020,18 +4024,19 @@ export default function OaDashboard(){
     <div style={{display:"flex",flexDirection:"column",gap:14}}>
       <Card>
         {/* 수집 방법 선택 */}
-        <div style={{display:"flex",gap:8,marginBottom:16}}>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8,marginBottom:16}}>
           {[
-            {id:"keyword", icon:"search", label:"키워드 검색", desc:"'비건뷰티' 등 키워드로 관련 계정 검색"},
-            {id:"followers", icon:"group", label:"경쟁사 팔로워", desc:"특정 계정의 팔로워 목록 수집"},
+            {id:"keyword",   icon:"tag",    label:"키워드 (해시태그)", desc:"#비건뷰티 게시물 작성자 추출"},
+            {id:"followers", icon:"group",  label:"브랜드 팔로워",     desc:"특정 계정 팔로워 목록 수집"},
+            {id:"tagged",    icon:"sell",   label:"브랜드 태그한 계정",desc:"해당 계정을 태그한 게시물 작성자"},
           ].map(m=>(
             <div key={m.id} onClick={()=>{setCollectMode(m.id);setCollectResults([]);setCollectError("");}}
-              style={{flex:1,padding:"12px 14px",borderRadius:10,cursor:"pointer",
+              style={{padding:"12px 14px",borderRadius:10,cursor:"pointer",
                 border:`2px solid ${collectMode===m.id?C.rose:C.border}`,
                 background:collectMode===m.id?C.blush:C.white,transition:"all 0.15s"}}>
               <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:3}}>
-                <MI n={m.icon} size={14} style={{color:collectMode===m.id?C.rose:C.inkMid}}/>
-                <span style={{fontSize:12,fontWeight:800,color:collectMode===m.id?C.rose:C.ink}}>{m.label}</span>
+                <MI n={m.icon} size={13} style={{color:collectMode===m.id?C.rose:C.inkMid}}/>
+                <span style={{fontSize:11,fontWeight:800,color:collectMode===m.id?C.rose:C.ink}}>{m.label}</span>
               </div>
               <div style={{fontSize:10,color:C.inkMid}}>{m.desc}</div>
             </div>
@@ -4039,25 +4044,35 @@ export default function OaDashboard(){
         </div>
 
         {/* 입력 폼 */}
-        <div style={{display:"grid",gridTemplateColumns:"1fr auto auto",gap:8,alignItems:"flex-end",marginBottom:12}}>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 80px 80px 80px auto",gap:8,alignItems:"flex-end",marginBottom:12}}>
           {collectMode==="keyword"?(
-            <FR label="검색 키워드">
+            <FR label="해시태그 키워드 (띄어쓰기 없이)">
               <input value={collectKeyword} onChange={e=>setCollectKeyword(e.target.value)}
-                placeholder="예: 비건뷰티, 스킨케어인플루언서" onKeyDown={e=>{if(e.key==="Enter")handleCollect();}}
+                placeholder="예: 비건뷰티" onKeyDown={e=>{if(e.key==="Enter")handleCollect();}}
                 style={{width:"100%",boxSizing:"border-box",fontSize:12,padding:"7px 10px",borderRadius:8,
                   border:`1px solid ${C.border}`,fontFamily:"inherit",outline:"none"}}/>
             </FR>
           ):(
-            <FR label="경쟁사 계정 (@ 없이)">
+            <FR label={collectMode==="followers"?"브랜드/경쟁사 계정":"브랜드 계정 (태그 추출)"}>
               <input value={collectUsername} onChange={e=>setCollectUsername(e.target.value)}
-                placeholder="예: competitor_brand" onKeyDown={e=>{if(e.key==="Enter")handleCollect();}}
+                placeholder="예: oabrand_official" onKeyDown={e=>{if(e.key==="Enter")handleCollect();}}
                 style={{width:"100%",boxSizing:"border-box",fontSize:12,padding:"7px 10px",borderRadius:8,
                   border:`1px solid ${C.border}`,fontFamily:"inherit",outline:"none"}}/>
             </FR>
           )}
+          <FR label="최소 팔로워">
+            <input type="number" value={collectMinFollowers} onChange={e=>setCollectMinFollowers(e.target.value)}
+              placeholder="0" style={{width:"100%",boxSizing:"border-box",fontSize:12,padding:"7px 10px",borderRadius:8,
+                border:`1px solid ${C.border}`,fontFamily:"inherit",outline:"none"}}/>
+          </FR>
+          <FR label="최대 팔로워">
+            <input type="number" value={collectMaxFollowers} onChange={e=>setCollectMaxFollowers(e.target.value)}
+              placeholder="∞" style={{width:"100%",boxSizing:"border-box",fontSize:12,padding:"7px 10px",borderRadius:8,
+                border:`1px solid ${C.border}`,fontFamily:"inherit",outline:"none"}}/>
+          </FR>
           <FR label="수집 수">
             <input type="number" value={collectCount} onChange={e=>setCollectCount(e.target.value)}
-              style={{width:80,fontSize:12,padding:"7px 10px",borderRadius:8,
+              style={{width:"100%",boxSizing:"border-box",fontSize:12,padding:"7px 10px",borderRadius:8,
                 border:`1px solid ${C.border}`,fontFamily:"inherit",outline:"none"}}/>
           </FR>
           <Btn onClick={handleCollect}
