@@ -4113,16 +4113,21 @@ export default function OaDashboard(){
               <thead>
                 <tr style={{background:C.cream,borderBottom:`2px solid ${C.border}`}}>
                   <th style={{padding:"6px 10px",width:32}}/>
-                  {["계정","이름","팔로워","게시물","바이오",""].map(h=>(
-                    <th key={h} style={{padding:"6px 10px",textAlign:"left",fontSize:10,fontWeight:700,color:C.inkMid,whiteSpace:"nowrap"}}>{h}</th>
-                  ))}
+                  {collectMode==="keyword"
+                    ?["계정","이름","#포스트","평균좋아요","평균댓글",""].map(h=>(
+                        <th key={h} style={{padding:"6px 10px",textAlign:"left",fontSize:10,fontWeight:700,color:C.inkMid,whiteSpace:"nowrap"}}>{h}</th>
+                      ))
+                    :["계정","이름","팔로워","게시물","바이오",""].map(h=>(
+                        <th key={h} style={{padding:"6px 10px",textAlign:"left",fontSize:10,fontWeight:700,color:C.inkMid,whiteSpace:"nowrap"}}>{h}</th>
+                      ))
+                  }
                 </tr>
               </thead>
               <tbody>
                 {collectResults.map(r=>{
                   const isDup=infs.some(f=>(f.name||"").replace(/^@/,"")===r.username);
                   const checked=!!collectSelected[r.username];
-                  const followerStr=r.followers!=null?(r.followers>=1000000?(r.followers/1000000).toFixed(1)+"M":r.followers>=1000?(r.followers/1000).toFixed(0)+"K":String(r.followers)):"—";
+                  const fmtNum=n=>n==null?"—":n>=1000000?(n/1000000).toFixed(1)+"M":n>=1000?(n/1000).toFixed(0)+"K":String(n);
                   return(
                     <tr key={r.username} style={{borderBottom:`1px solid ${C.border}`,
                       background:isDup?"#FFFBEB":checked?"#EFF6FF":C.white,cursor:"pointer"}}
@@ -4140,9 +4145,19 @@ export default function OaDashboard(){
                         </div>
                       </td>
                       <td style={{padding:"8px 10px",fontSize:11,color:C.inkMid}}>{r.fullName||"—"}</td>
-                      <td style={{padding:"8px 10px",fontSize:12,fontWeight:700,color:C.ink}}>{followerStr}</td>
-                      <td style={{padding:"8px 10px",fontSize:11,color:C.inkMid}}>{r.posts??"-"}</td>
-                      <td style={{padding:"8px 10px",fontSize:10,color:C.inkMid,maxWidth:160,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{r.bio||"—"}</td>
+                      {collectMode==="keyword"?(
+                        <>
+                          <td style={{padding:"8px 10px",fontSize:12,fontWeight:700,color:C.ink,textAlign:"center"}}>{r.posts??"-"}</td>
+                          <td style={{padding:"8px 10px",fontSize:12,fontWeight:700,color:C.rose,textAlign:"center"}}>{r.avgLikes!=null?r.avgLikes.toLocaleString():"—"}</td>
+                          <td style={{padding:"8px 10px",fontSize:11,color:C.inkMid,textAlign:"center"}}>{r.avgComments!=null?r.avgComments.toLocaleString():"—"}</td>
+                        </>
+                      ):(
+                        <>
+                          <td style={{padding:"8px 10px",fontSize:12,fontWeight:700,color:C.ink}}>{fmtNum(r.followers)}</td>
+                          <td style={{padding:"8px 10px",fontSize:11,color:C.inkMid}}>{r.posts??"-"}</td>
+                          <td style={{padding:"8px 10px",fontSize:10,color:C.inkMid,maxWidth:140,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{r.bio||"—"}</td>
+                        </>
+                      )}
                       <td style={{padding:"8px 10px"}}>
                         <a href={r.profileUrl} target="_blank" rel="noreferrer" onClick={e=>e.stopPropagation()}
                           style={{fontSize:10,color:C.inkLt,textDecoration:"none"}}><MI n="open_in_new" size={12}/></a>
@@ -4173,7 +4188,11 @@ export default function OaDashboard(){
 
       {/* 서브탭 */}
       <div style={{display:"flex",gap:0,borderBottom:`2px solid ${C.border}`}}>
-        {[{id:"관리",icon:"table_rows"},{id:"수집",icon:"travel_explore"}].map(t=>(
+        {[
+          {id:"수집",icon:"travel_explore"},
+          {id:"저장",icon:"bookmark"},
+          {id:"진행상황",icon:"table_rows"},
+        ].map(t=>(
           <button key={t.id} onClick={()=>setInfTabMode(t.id)} style={{
             fontSize:12,fontWeight:700,padding:"8px 20px",
             border:"none",borderBottom:infTabMode===t.id?`2px solid ${C.rose}`:"2px solid transparent",
@@ -4188,8 +4207,95 @@ export default function OaDashboard(){
       {/* 수집 탭 */}
       {infTabMode==="수집"&&<>{CollectSection}</>}
 
-      {/* 관리 탭 */}
-      {infTabMode==="관리"&&<>
+      {/* 저장 탭 */}
+      {infTabMode==="저장"&&(()=>{
+        // note 필드에서 카테고리/키워드 파싱
+        const getCat = f => {
+          const m = (f.note||"").match(/^\[([^\]]+)\]/);
+          return m ? m[1] : "기타";
+        };
+        const getSrc = f => {
+          const note = (f.note||"");
+          const m = note.match(/키워드:\s*(.+?)(\s·|$)/);
+          if(m) return "키워드: " + m[1].trim();
+          const m2 = note.match(/팔로워:\s*(.+?)(\s·|$)/);
+          if(m2) return "팔로워: " + m2[1].trim();
+          return note.replace(/^\[[^\]]+\]\s*/,"").split("·")[0].trim() || "직접 추가";
+        };
+        // 카테고리별 그룹핑
+        const groups = {};
+        infs.forEach(f => {
+          const cat = getCat(f);
+          if(!groups[cat]) groups[cat] = [];
+          groups[cat].push(f);
+        });
+        const cats = Object.keys(groups).sort();
+        if(cats.length === 0) return(
+          <div style={{textAlign:"center",padding:"48px 0",color:C.inkLt,fontSize:12}}>
+            <MI n="bookmark" size={32} style={{color:C.border,display:"block",margin:"0 auto 8px"}}/>
+            저장된 인플루언서가 없어요<br/>
+            <span style={{fontSize:10}}>수집 탭에서 계정을 추가하면 여기에 모여요</span>
+          </div>
+        );
+        return(
+          <div style={{display:"flex",flexDirection:"column",gap:12}}>
+            {cats.map(cat=>(
+              <Card key={cat}>
+                <CardTitle
+                  title={<><MI n="label" size={13}/> {cat}</>}
+                  sub={`${groups[cat].length}명`}
+                />
+                <div style={{overflowX:"auto"}}>
+                  <table style={{width:"100%",borderCollapse:"collapse",minWidth:460}}>
+                    <thead>
+                      <tr style={{background:C.cream,borderBottom:`2px solid ${C.border}`}}>
+                        {["계정","이름","팔로워","수집 경로","상태",""].map(h=>(
+                          <th key={h} style={{padding:"6px 10px",textAlign:"left",fontSize:10,fontWeight:700,color:C.inkMid,whiteSpace:"nowrap"}}>{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {groups[cat].map(f=>{
+                        const handle=f.name.replace(/^@/,"");
+                        const url=`https://www.instagram.com/${handle}`;
+                        const posted = f.posted>0;
+                        return(
+                          <tr key={f.id} style={{borderBottom:`1px solid ${C.border}`}}>
+                            <td style={{padding:"8px 10px"}}>
+                              <a href={url} target="_blank" rel="noreferrer"
+                                style={{fontSize:12,fontWeight:800,color:C.rose,textDecoration:"none"}}>
+                                @{handle}
+                              </a>
+                            </td>
+                            <td style={{padding:"8px 10px",fontSize:11,color:C.inkMid}}>{f.displayName||"—"}</td>
+                            <td style={{padding:"8px 10px",fontSize:11,fontWeight:700,color:C.ink}}>{f.followers||"—"}</td>
+                            <td style={{padding:"8px 10px",fontSize:10,color:C.inkMid,maxWidth:140,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{getSrc(f)}</td>
+                            <td style={{padding:"8px 10px"}}>
+                              <span style={{fontSize:10,fontWeight:700,padding:"2px 8px",borderRadius:20,
+                                background:posted?C.sageLt:f.sent?C.blush:C.cream,
+                                color:posted?C.good:f.sent?C.rose:C.inkMid}}>
+                                {posted?"게시완료":f.sent?"발송완료":"미연락"}
+                              </span>
+                            </td>
+                            <td style={{padding:"8px 10px"}}>
+                              <Btn variant="neutral" small onClick={()=>setInfModalData({mode:"edit",initial:f})}>
+                                <MI n="edit" size={11}/>
+                              </Btn>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </Card>
+            ))}
+          </div>
+        );
+      })()}
+
+      {/* 진행상황 탭 */}
+      {infTabMode==="진행상황"&&<>
 
       {/* 구글 시트 연동 배너 */}
       <div style={{
