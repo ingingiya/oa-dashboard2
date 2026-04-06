@@ -101,24 +101,6 @@ async function saveToSupabase(row) {
   });
 }
 
-async function findMusinsaRank(keyword, productId) {
-  if (!keyword) return null;
-  try {
-    const res = await fetch(
-      `https://api.musinsa.com/api/search/goods?keyword=${encodeURIComponent(keyword)}&page=1&size=60&sortType=SCORE`,
-      { headers: { "User-Agent": "Mozilla/5.0", "Accept": "application/json", "Referer": "https://www.musinsa.com/" } }
-    );
-    if (!res.ok) return null;
-    const data = await res.json();
-    const items = data?.data?.list || data?.list || data?.goods || [];
-    const idx = items.findIndex(item => {
-      const id = String(item.goodsNo || item.id || item.productNo || "");
-      return id === String(productId);
-    });
-    return idx >= 0 ? idx + 1 : null;
-  } catch { return null; }
-}
-
 export async function POST() {
   if (!SUPABASE_URL || !SUPABASE_KEY) {
     return Response.json({ error: "Supabase 설정 없음" }, { status: 500 });
@@ -130,10 +112,9 @@ export async function POST() {
   const results = [];
   const errors = [];
 
-  for (const { product_id: pid, url, search_keyword } of links) {
+  for (const { product_id: pid, url } of links) {
     const data = await fetchPrice(pid, url);
     if (data?.sale_price) {
-      const rank = await findMusinsaRank(search_keyword, pid);
       const row = {
         product_id: pid,
         url,
@@ -141,7 +122,6 @@ export async function POST() {
         brand: data.brand,
         sale_price: parseInt(data.sale_price),
         original_price: parseInt(data.original_price || data.sale_price),
-        rank: rank ?? null,
         collected_at: new Date().toISOString(),
       };
       await saveToSupabase(row);
