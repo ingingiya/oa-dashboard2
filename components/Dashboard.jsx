@@ -7701,9 +7701,22 @@ export default function OaDashboard(){
                           ))}
                         </div>
                         {oliveyoungTab==="prices"&&(
-                          <button onClick={()=>{setOliveyoungItems(null);setOliveyoungLoading(false);}} style={{display:"flex",alignItems:"center",gap:5,padding:"7px 14px",borderRadius:8,border:"none",background:"#f3f4f6",color:C.inkMid,fontWeight:700,fontSize:11,cursor:"pointer",fontFamily:"inherit"}}>
-                            <MI n="refresh" size={13}/>새로고침
-                          </button>
+                          <div style={{display:"flex",gap:8}}>
+                            <button onClick={()=>{
+                              if(oliveyoungLoading) return;
+                              setOliveyoungLoading(true);
+                              fetch("/api/oliveyoung/scrape",{method:"POST"}).then(r=>r.json()).then(d=>{
+                                if(d.ok){ alert(`수집 완료! ${d.success}개 성공 / ${d.failed}개 실패`); setOliveyoungItems(null); setOliveyoungLoading(false); }
+                                else alert("오류: "+(d.error||"알 수 없음"));
+                                setOliveyoungLoading(false);
+                              }).catch(e=>{alert("오류: "+e.message);setOliveyoungLoading(false);});
+                            }} style={{display:"flex",alignItems:"center",gap:5,padding:"7px 14px",borderRadius:8,border:"none",background:oliveyoungLoading?"#e5e7eb":"#111",color:oliveyoungLoading?C.inkMid:"#fff",fontWeight:700,fontSize:11,cursor:oliveyoungLoading?"not-allowed":"pointer",fontFamily:"inherit"}}>
+                              <MI n="download" size={13}/>{oliveyoungLoading?"수집 중...":"지금 수집"}
+                            </button>
+                            <button onClick={()=>{setOliveyoungItems(null);setOliveyoungLoading(false);}} style={{display:"flex",alignItems:"center",gap:5,padding:"7px 14px",borderRadius:8,border:"none",background:"#f3f4f6",color:C.inkMid,fontWeight:700,fontSize:11,cursor:"pointer",fontFamily:"inherit"}}>
+                              <MI n="refresh" size={13}/>새로고침
+                            </button>
+                          </div>
                         )}
                       </div>
                       {oliveyoungTab==="prices"&&(
