@@ -158,63 +158,7 @@ export async function POST(request) {
       }), { status: 200, headers: { "Content-Type": "application/json" } });
     }
 
-    // ── 3. 브랜드 해시태그 검색 (계정명 → #계정명 해시태그 포스트 작성자) ──
-    if (mode === "tagged") {
-      if (!username) return new Response(JSON.stringify({ error: "username 필요" }), { status: 400 });
-      // 계정명을 해시태그로 변환 (공백·특수문자 제거)
-      const tag = username.replace(/^@/, "").replace(/[^a-zA-Z0-9가-힣]/g, "");
-
-      const posts = await runActorAndWait(APIFY_TOKEN, "apify~instagram-hashtag-scraper", {
-        hashtags: [tag],
-        resultsLimit: Math.min(maxResults * 5, 500),
-        addParentData: false,
-      });
-
-      if (!Array.isArray(posts) || posts.length === 0) {
-        return new Response(JSON.stringify({ influencers: [], mode, totalPosts: 0 }), {
-          status: 200, headers: { "Content-Type": "application/json" }
-        });
-      }
-
-      const byUser = {};
-      for (const post of posts) {
-        const uname = getField(post, "ownerUsername","username","owner.username");
-        if (!uname) continue;
-        if (!byUser[uname]) {
-          byUser[uname] = {
-            username: uname,
-            fullName: getField(post, "ownerFullName","fullName","owner.fullName") || "",
-            followers: getField(post, "ownerFollowersCount","followersCount","owner.followersCount"),
-            likes: [], comments: [],
-            profileUrl: `https://www.instagram.com/${uname}/`,
-          };
-        }
-        byUser[uname].likes.push(Number(getField(post, "likesCount","likes") || 0));
-        byUser[uname].comments.push(Number(getField(post, "commentsCount","comments") || 0));
-      }
-
-      const influencers = Object.values(byUser)
-        .map(u => ({
-          username: u.username,
-          fullName: u.fullName,
-          followers: u.followers ? Number(u.followers) : null,
-          posts: u.likes.length,
-          avgLikes: Math.round(u.likes.reduce((s,v)=>s+v,0)/Math.max(u.likes.length,1)),
-          avgComments: Math.round(u.comments.reduce((s,v)=>s+v,0)/Math.max(u.comments.length,1)),
-          bio: "",
-          profileUrl: u.profileUrl,
-          isVerified: false,
-        }))
-        .filter(u => passF(u.followers))
-        .sort((a,b) => b.avgLikes - a.avgLikes)
-        .slice(0, maxResults);
-
-      return new Response(JSON.stringify({ influencers, mode, totalPosts: posts.length }), {
-        status: 200, headers: { "Content-Type": "application/json" },
-      });
-    }
-
-    return new Response(JSON.stringify({ error: "mode는 keyword / followers / tagged 중 하나여야 해요" }), { status: 400 });
+    return new Response(JSON.stringify({ error: "mode는 keyword / followers 중 하나여야 해요" }), { status: 400 });
 
   } catch (e) {
     return new Response(JSON.stringify({ error: e.message }), { status: 500 });

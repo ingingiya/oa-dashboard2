@@ -4028,11 +4028,10 @@ export default function OaDashboard(){
     <div style={{display:"flex",flexDirection:"column",gap:14}}>
       <Card>
         {/* 수집 방법 선택 */}
-        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8,marginBottom:16}}>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:16}}>
           {[
             {id:"keyword",   icon:"tag",    label:"키워드 (해시태그)", desc:"#비건뷰티 게시물 작성자 추출"},
             {id:"followers", icon:"group",  label:"브랜드 팔로워",     desc:"특정 계정 팔로워 목록 수집"},
-            {id:"tagged",    icon:"sell",   label:"브랜드 해시태그",    desc:"#계정명 해시태그 게시물 작성자 추출"},
           ].map(m=>(
             <div key={m.id} onClick={()=>{setCollectMode(m.id);setCollectResults([]);setCollectError("");}}
               style={{padding:"12px 14px",borderRadius:10,cursor:"pointer",
