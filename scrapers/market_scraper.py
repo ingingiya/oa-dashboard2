@@ -53,10 +53,16 @@ async def extract_musinsa(page, pid):
                 gp    = meta.get("goodsPrice", {})
                 sale  = int(gp.get("salePrice") or gp.get("price") or 0)
                 orig  = int(gp.get("normalPrice") or gp.get("originalPrice") or sale)
-                imgs  = meta.get("thumbnailImageUrl") or meta.get("thumbnail") or ""
-                if not imgs:
-                    gl = meta.get("goodsImages") or meta.get("imageList") or []
-                    imgs = gl[0].get("imageUrl","") if gl else ""
+                raw_img = meta.get("thumbnailImageUrl") or meta.get("thumbnail") or ""
+                gl = meta.get("goodsImages") or meta.get("imageList") or []
+                if raw_img and raw_img.startswith("/"):
+                    imgs = f"https://image.msscdn.net/thumbnails{raw_img.replace('_500.', '_big.').replace('_125.', '_big.')}?w=1200"
+                elif raw_img:
+                    imgs = raw_img
+                elif gl:
+                    imgs = gl[0].get("imageUrl", "")
+                else:
+                    imgs = ""
                 if name and sale:
                     return {"name": name, "brand": brand, "sale_price": sale, "original_price": orig, "image": imgs}
             # fallback: 구버전 구조
