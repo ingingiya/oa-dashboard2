@@ -256,8 +256,9 @@ def _parse_ably_data(d):
 
 async def extract_ably(page, pid, captured=None):
     # 모든 캡처된 응답에서 상품 데이터 찾기
-    for resp_data in (captured or {}).get("all", []):
-        result = _parse_ably_data(resp_data)
+    for entry in (captured or {}).get("all", []):
+        data = entry.get("data", entry) if isinstance(entry, dict) and "data" in entry else entry
+        result = _parse_ably_data(data)
         if result:
             print(f"    ✅ API 인터셉트 성공")
             return result
@@ -354,12 +355,23 @@ def _parse_kakao_data(d):
 
 
 async def extract_kakao_gift(page, pid, captured=None):
-    # 모든 캡처된 응답에서 상품 데이터 찾기
-    for resp_data in (captured or {}).get("all", []):
-        result = _parse_kakao_data(resp_data)
-        if result:
-            print(f"    ✅ API 인터셉트 성공")
-            return result
+    all_resp = (captured or {}).get("all", [])
+    # 1순위: product 관련 API URL 응답
+    for entry in all_resp:
+        url, data = entry.get("url",""), entry.get("data",{})
+        if "product" in url and pid in url:
+            result = _parse_kakao_data(data)
+            if result:
+                print(f"    ✅ API 인터셉트 성공 ({url.split('?')[0].split('/')[-1]})")
+                return result
+    # 2순위: product URL 포함 (pid 없어도)
+    for entry in all_resp:
+        url, data = entry.get("url",""), entry.get("data",{})
+        if "product" in url:
+            result = _parse_kakao_data(data)
+            if result:
+                print(f"    ✅ API 인터셉트 성공")
+                return result
 
     # DOM에서 직접 읽기 — 카카오선물하기 실제 구조 기반
     try:
@@ -375,14 +387,18 @@ async def extract_kakao_gift(page, pid, captured=None):
             // 브랜드
             const brandEl = document.querySelector('[class*="brand"],[class*="Brand"],[class*="seller"],[class*="shop_name"]');
             const brand = brandEl?.innerText?.trim() || '';
-            // 가격: sale_price = 가장 작은 5자리 이상 숫자, original = 가장 큰 숫자
-            const nums = Array.from(new Set(
-                Array.from(document.querySelectorAll('*'))
-                    .map(el => parseInt((el.childNodes[0]?.textContent||'').replace(/[^0-9]/g,'')))
-                    .filter(n => n >= 1000 && n <= 9999999)
-            )).sort((a,b)=>a-b);
-            const sale = nums[0] || 0;
-            const orig = nums.length > 1 ? nums[nums.length-1] : sale;
+            // 가격: "원" 포함 텍스트 노드만 수집 (랜덤 숫자 배제)
+            const priceNums = [];
+            document.querySelectorAll('em,strong,span,b,p').forEach(el => {
+                const t = el.innerText || '';
+                if (/[\d,]+원/.test(t)) {
+                    const n = parseInt(t.replace(/[^0-9]/g,''));
+                    if (n >= 1000 && n < 10000000) priceNums.push(n);
+                }
+            });
+            const sorted = [...new Set(priceNums)].sort((a,b)=>a-b);
+            const sale = sorted[0] || 0;
+            const orig = sorted.length > 1 ? sorted[sorted.length-1] : sale;
             // 이미지
             const imgEl = document.querySelector('img[src*="kakaocdn"],img[src*="st.kakao"],figure img,[class*="thumb"] img,[class*="product"] img');
             return { name, brand, sale_price: sale, original_price: orig >= sale ? orig : sale, image: imgEl?.src || '' };
@@ -458,11 +474,11 @@ async def run_platform(platform, page):
                         if "json" not in ct: return
                         data = await response.json()
                         if not isinstance(data, dict): return
-                        # 카카오는 pid가 응답에 없을 수 있어 모든 JSON 수집
+                        # 카카오는 pid가 응답에 없을 수 있어 모든 JSON 수집 (URL 포함)
                         if _plat == "kakao_gift":
-                            _all.append(data)
+                            _all.append({"url": response.url, "data": data})
                         elif _pid in json.dumps(data):
-                            _all.append(data)
+                            _all.append({"url": response.url, "data": data})
                     except: pass
                 page.on("response", _on_response)
 
