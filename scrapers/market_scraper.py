@@ -311,21 +311,39 @@ def _to_int(v):
     return 0
 
 
-def _parse_kakao_data(d):
-    # 여러 depth 탐색
-    for key in ["product", "item", "data"]:
-        if isinstance(d.get(key), dict):
-            d = d[key]; break
+def _try_kakao_obj(d):
+    """dict 하나에서 카카오 상품 데이터 추출 시도"""
     if not isinstance(d, dict): return None
     name = d.get("name") or d.get("productName") or d.get("title") or ""
     brand_raw = d.get("brand") or d.get("brandName") or d.get("seller") or ""
-    brand = brand_raw.get("name", "") if isinstance(brand_raw, dict) else str(brand_raw)
+    brand = brand_raw.get("name", "") if isinstance(brand_raw, dict) else (str(brand_raw) if brand_raw else "")
     sale = _to_int(d.get("price") or d.get("salePrice") or d.get("discountedPrice") or 0)
     orig = _to_int(d.get("originalPrice") or d.get("listPrice") or d.get("normalPrice") or d.get("regularPrice") or sale)
     img = d.get("image") or d.get("thumbnailUrl") or d.get("imageUrl") or d.get("thumbnail") or ""
     if isinstance(img, dict): img = img.get("url") or img.get("src") or img.get("original") or ""
-    if name and sale:
+    if name and len(name) > 2 and sale:
         return {"name": name, "brand": brand, "sale_price": sale, "original_price": orig, "image": img}
+    return None
+
+
+def _parse_kakao_data(d):
+    if not isinstance(d, dict): return None
+    # 1depth 키 탐색
+    for key in ["product", "item", "data", "productDetail", "giftProduct"]:
+        r = _try_kakao_obj(d.get(key))
+        if r: return r
+    # root 자체
+    r = _try_kakao_obj(d)
+    if r: return r
+    # 2depth: 모든 dict 값 시도
+    for v in d.values():
+        if isinstance(v, dict):
+            r = _try_kakao_obj(v)
+            if r: return r
+        elif isinstance(v, list):
+            for item in v:
+                r = _try_kakao_obj(item)
+                if r: return r
     return None
 
 
@@ -431,12 +449,16 @@ async def run_platform(platform, page):
             # 카카오/에이블리: goto 전에 모든 JSON 응답 수집
             all_responses = []
             if platform in INTERCEPT_PLATFORMS:
-                async def _on_response(response, _pid=pid, _all=all_responses):
+                async def _on_response(response, _pid=pid, _all=all_responses, _plat=platform):
                     try:
                         ct = response.headers.get("content-type", "")
                         if "json" not in ct: return
                         data = await response.json()
-                        if isinstance(data, dict) and _pid in json.dumps(data):
+                        if not isinstance(data, dict): return
+                        # 카카오는 pid가 응답에 없을 수 있어 모든 JSON 수집
+                        if _plat == "kakao_gift":
+                            _all.append(data)
+                        elif _pid in json.dumps(data):
                             _all.append(data)
                     except: pass
                 page.on("response", _on_response)
