@@ -6702,6 +6702,10 @@ export default function OaDashboard(){
     const [mktPlatformLoading, setMktPlatformLoading] = useState({});
     const [mktPlatformRunning, setMktPlatformRunning] = useState({});
     const [mktAllRunning, setMktAllRunning] = useState(false);
+    const [mktNewCategory, setMktNewCategory] = useState("");
+    const [mktCompareData, setMktCompareData] = useState(null); // {prices:[], links:[]}
+    const [mktCompareLoading, setMktCompareLoading] = useState(false);
+    const MKT_COMPARE_TAB = "📊시장비교";
     const [mktNewUrl, setMktNewUrl] = useState("");
     const [mktNewKeyword, setMktNewKeyword] = useState("");
     const [mktEditId, setMktEditId] = useState(null);
@@ -7491,6 +7495,10 @@ export default function OaDashboard(){
                     style={{padding:"8px 14px",background:"none",border:"none",borderBottom:`2px solid ${mktCategoryTab===MKT_PRICE_TAB?"#7c3aed":"transparent"}`,color:mktCategoryTab===MKT_PRICE_TAB?"#7c3aed":C.inkMid,fontWeight:mktCategoryTab===MKT_PRICE_TAB?800:600,fontSize:12,cursor:"pointer",fontFamily:"inherit",marginBottom:-1}}>
                     🔍 최저가체크
                   </button>
+                  <button onClick={()=>setMktCategoryTab(MKT_COMPARE_TAB)}
+                    style={{padding:"8px 14px",background:"none",border:"none",borderBottom:`2px solid ${mktCategoryTab===MKT_COMPARE_TAB?"#0891b2":"transparent"}`,color:mktCategoryTab===MKT_COMPARE_TAB?"#0891b2":C.inkMid,fontWeight:mktCategoryTab===MKT_COMPARE_TAB?800:600,fontSize:12,cursor:"pointer",fontFamily:"inherit",marginBottom:-1}}>
+                    📊 시장비교
+                  </button>
                   {[
                     {id:"🫒올리브영",    key:"oliveyoung", color:"#16a34a"},
                     {id:"🛍무신사",      key:"musinsa",    color:"#111"},
@@ -7582,6 +7590,99 @@ export default function OaDashboard(){
                           })}
                         </div>
                       )}
+                    </div>
+                  );
+                })()}
+
+                {/* 시장비교 탭 */}
+                {mktCategoryTab===MKT_COMPARE_TAB&&(()=>{
+                  // 데이터 로드
+                  if(!mktCompareData && !mktCompareLoading) {
+                    setMktCompareLoading(true);
+                    Promise.all([
+                      fetch("/api/market/prices",{cache:"no-store"}).then(r=>r.json()).catch(()=>[]),
+                      fetch("/api/market/links",{cache:"no-store"}).then(r=>r.json()).catch(()=>[]),
+                    ]).then(([prices,links])=>{
+                      setMktCompareData({prices:Array.isArray(prices)?prices:[], links:Array.isArray(links)?links:[]});
+                      setMktCompareLoading(false);
+                    });
+                  }
+                  if(mktCompareLoading) return <Card><div style={{textAlign:"center",padding:"32px 0",color:C.inkLt,fontSize:12}}>불러오는 중...</div></Card>;
+                  if(!mktCompareData) return null;
+                  const {prices, links} = mktCompareData;
+                  // link에서 category 매핑: {platform+product_id → category}
+                  const catMap = {};
+                  links.forEach(l=>{ catMap[`${l.platform}__${l.product_id}`] = l.category; });
+                  const compareCats = MKT_CATEGORIES.filter(c=>c!=="우리브랜드");
+                  const PLATFORM_LABEL = {"musinsa":"무신사","oliveyoung":"올리브영","zigzag":"지그재그","ably":"에이블리","kakao_gift":"카카오선물하기"};
+                  const PLATFORM_COLOR = {"musinsa":"#111","oliveyoung":"#16a34a","zigzag":"#7c3aed","ably":"#ec4899","kakao_gift":"#f59e0b"};
+                  return(
+                    <div style={{display:"flex",flexDirection:"column",gap:16}}>
+                      <div style={{display:"flex",justifyContent:"flex-end"}}>
+                        <button onClick={()=>setMktCompareData(null)} style={{display:"flex",alignItems:"center",gap:4,padding:"5px 12px",borderRadius:7,border:"none",background:"#f3f4f6",color:C.inkMid,fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
+                          <MI n="refresh" size={12}/>새로고침
+                        </button>
+                      </div>
+                      {compareCats.map(cat=>{
+                        // 우리 제품 (우리브랜드 카테고리에서 category 메모가 cat인 것, 또는 marketData category===cat)
+                        const ourProds = (marketData||[]).filter(p=>p.category===cat && p.ourPrice>0);
+                        // 경쟁사 제품
+                        const compProds = prices.filter(p=>catMap[`${p.platform}__${p.product_id}`]===cat);
+                        if(ourProds.length===0 && compProds.length===0) return null;
+                        const ourMin = ourProds.length ? Math.min(...ourProds.map(p=>p.ourPrice).filter(Boolean)) : null;
+                        return(
+                          <Card key={cat}>
+                            <div style={{fontSize:13,fontWeight:900,color:C.ink,marginBottom:12}}>{cat}</div>
+                            <div style={{overflowX:"auto"}}>
+                              <table style={{width:"100%",borderCollapse:"collapse",fontSize:11}}>
+                                <thead><tr style={{background:C.cream}}>
+                                  {["","구분","브랜드/상품명","플랫폼","판매가","정가","할인율","비교"].map(h=>(
+                                    <th key={h} style={{padding:"6px 8px",textAlign:"left",fontWeight:700,color:C.inkMid,borderBottom:`1px solid ${C.border}`,whiteSpace:"nowrap"}}>{h}</th>
+                                  ))}
+                                </tr></thead>
+                                <tbody>
+                                  {ourProds.map(p=>(
+                                    <tr key={`our-${p.id}`} style={{borderBottom:`1px solid ${C.cream}`,background:"#f0fdf4"}}>
+                                      <td style={{padding:"6px 8px"}}></td>
+                                      <td style={{padding:"6px 8px"}}><span style={{background:"#16a34a",color:"#fff",fontSize:9,fontWeight:700,padding:"2px 5px",borderRadius:4}}>우리</span></td>
+                                      <td style={{padding:"6px 8px",fontWeight:700,color:C.ink,maxWidth:200,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.name}</td>
+                                      <td style={{padding:"6px 8px",color:C.inkLt}}>—</td>
+                                      <td style={{padding:"6px 8px",fontWeight:800,color:"#16a34a"}}>{p.ourPrice?`₩${p.ourPrice.toLocaleString()}`:"—"}</td>
+                                      <td style={{padding:"6px 8px"}}>—</td>
+                                      <td style={{padding:"6px 8px"}}>—</td>
+                                      <td style={{padding:"6px 8px"}}>—</td>
+                                    </tr>
+                                  ))}
+                                  {compProds.sort((a,b)=>a.sale_price-b.sale_price).map(p=>{
+                                    const cheaper = ourMin && p.sale_price < ourMin;
+                                    const disc = p.original_price&&p.sale_price&&p.original_price>p.sale_price?Math.round((1-p.sale_price/p.original_price)*100):0;
+                                    const diff = ourMin ? p.sale_price - ourMin : null;
+                                    return(
+                                      <tr key={`${p.platform}-${p.product_id}`} style={{borderBottom:`1px solid ${C.cream}`,background:cheaper?"#fff7ed":"transparent"}}>
+                                        <td style={{padding:"6px 8px"}}>{p.image&&<img src={p.image} alt="" style={{width:36,height:36,objectFit:"cover",borderRadius:4,border:`1px solid ${C.border}`}}/>}</td>
+                                        <td style={{padding:"6px 8px"}}><span style={{background:"#fee2e2",color:"#dc2626",fontSize:9,fontWeight:700,padding:"2px 5px",borderRadius:4}}>경쟁</span></td>
+                                        <td style={{padding:"6px 8px",maxWidth:200,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
+                                          <div style={{fontWeight:600}}>{p.brand}</div>
+                                          <div style={{color:C.inkMid,fontSize:10}}>{p.name}</div>
+                                        </td>
+                                        <td style={{padding:"6px 8px"}}>
+                                          <span style={{background:PLATFORM_COLOR[p.platform]||"#999",color:"#fff",fontSize:9,fontWeight:700,padding:"2px 5px",borderRadius:4,whiteSpace:"nowrap"}}>{PLATFORM_LABEL[p.platform]||p.platform}</span>
+                                        </td>
+                                        <td style={{padding:"6px 8px",fontWeight:800,color:cheaper?"#dc2626":C.ink}}>{p.sale_price?`₩${p.sale_price.toLocaleString()}`:"—"}</td>
+                                        <td style={{padding:"6px 8px",color:C.inkMid,textDecoration:"line-through"}}>{p.original_price&&p.original_price!==p.sale_price?`₩${p.original_price.toLocaleString()}`:"—"}</td>
+                                        <td style={{padding:"6px 8px"}}>{disc>0&&<span style={{background:"#fee2e2",color:"#dc2626",fontWeight:700,padding:"2px 5px",borderRadius:4,fontSize:10}}>{disc}%</span>}</td>
+                                        <td style={{padding:"6px 8px",whiteSpace:"nowrap"}}>
+                                          {diff!==null&&<span style={{fontWeight:700,color:diff<0?"#dc2626":"#6b7280",fontSize:10}}>{diff<0?`▼₩${Math.abs(diff).toLocaleString()}`:`+₩${diff.toLocaleString()}`}</span>}
+                                        </td>
+                                      </tr>
+                                    );
+                                  })}
+                                </tbody>
+                              </table>
+                            </div>
+                          </Card>
+                        );
+                      })}
                     </div>
                   );
                 })()}
@@ -7803,15 +7904,23 @@ export default function OaDashboard(){
                               <input value={mktNewUrl} onChange={e=>setMktNewUrl(e.target.value)}
                                 placeholder="상품 URL"
                                 style={{fontSize:11,padding:"7px 10px",borderRadius:8,border:`1px solid ${C.border}`,outline:"none",fontFamily:"inherit"}}/>
+                              <div style={{display:"flex",gap:6}}>
+                                {MKT_CATEGORIES.filter(c=>c!=="우리브랜드").map(cat=>(
+                                  <button key={cat} onClick={()=>setMktNewCategory(cat)}
+                                    style={{flex:1,padding:"5px 0",borderRadius:7,border:`1.5px solid ${mktNewCategory===cat?C.rose:C.border}`,background:mktNewCategory===cat?C.rose:"transparent",color:mktNewCategory===cat?"#fff":C.inkMid,fontSize:10,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
+                                    {cat}
+                                  </button>
+                                ))}
+                              </div>
                               <div style={{display:"flex",gap:8,alignItems:"center"}}>
                                 <input value={mktNewKeyword} onChange={e=>setMktNewKeyword(e.target.value)}
-                                  placeholder="검색 키워드 (순위 추적용)"
+                                  placeholder="검색 키워드 (순위 추적용, 선택)"
                                   style={{flex:1,fontSize:11,padding:"7px 10px",borderRadius:8,border:`1px solid ${C.border}`,outline:"none",fontFamily:"inherit"}}/>
                                 <button onClick={()=>{
                                   const url=mktNewUrl.trim(); if(!url) return;
                                   const pid=extractPid(url);
-                                  fetch("/api/market/links",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({platform,product_id:pid,url,active:true,search_keyword:mktNewKeyword.trim()||null})})
-                                    .then(()=>{setMktNewUrl("");setMktNewKeyword("");setMktPlatformLinks(p=>({...p,[platform]:null}));});
+                                  fetch("/api/market/links",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({platform,product_id:pid,url,active:true,search_keyword:mktNewKeyword.trim()||null,category:mktNewCategory||null})})
+                                    .then(()=>{setMktNewUrl("");setMktNewKeyword("");setMktNewCategory("");setMktPlatformLinks(p=>({...p,[platform]:null}));setMktCompareData(null);});
                                 }} style={{padding:"7px 16px",borderRadius:8,border:"none",background:"#111",color:"#fff",fontWeight:700,fontSize:11,cursor:"pointer",fontFamily:"inherit",whiteSpace:"nowrap"}}>
                                   <MI n="add" size={13}/>추가
                                 </button>
