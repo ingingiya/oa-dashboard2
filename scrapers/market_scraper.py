@@ -76,19 +76,23 @@ async def extract_musinsa(page, pid):
 
 async def find_rank_musinsa(page, keyword, pid):
     try:
-        await page.goto(f"https://www.musinsa.com/search/?q={quote(keyword)}&type=goods", wait_until="domcontentloaded", timeout=30000)
-        await page.wait_for_timeout(2000)
-        return await page.evaluate("""(pid) => {
-            const links = Array.from(document.querySelectorAll('a[href*="/products/"]'));
+        await page.goto(f"https://www.musinsa.com/search/goods?q={quote(keyword)}", wait_until="domcontentloaded", timeout=30000)
+        await page.wait_for_timeout(4000)
+        result = await page.evaluate("""(pid) => {
+            const selectors = ['a[href*="/products/"]', 'a[href*="/goods/"]'];
+            const links = selectors.flatMap(s => Array.from(document.querySelectorAll(s)));
             const seen = new Set(); let pos = 0;
             for (const a of links) {
-                const m = a.href.match(/\/products\/(\d+)/);
+                const m = a.href.match(/\/(?:products|goods)\/(\d+)/);
                 if (!m || seen.has(m[1])) continue;
                 seen.add(m[1]); pos++;
                 if (m[1] === pid) return pos;
             }
-            return null;
+            return { notFound: pos, sample: links.slice(0,3).map(a=>a.href) };
         }""", pid)
+        if isinstance(result, int): return result
+        print(f"    ⚠️ 무신사 순위 못찾음 (총{result.get('notFound')}개): {result.get('sample')}")
+        return None
     except Exception as e:
         print(f"    ⚠️ 순위 실패: {e}"); return None
 
@@ -120,18 +124,21 @@ async def extract_oliveyoung(page, pid):
 async def find_rank_oliveyoung(page, keyword, pid):
     try:
         await page.goto(f"https://www.oliveyoung.co.kr/store/search/getSearchMain.do?query={quote(keyword)}&rowsPerPage=48", wait_until="domcontentloaded", timeout=30000)
-        await page.wait_for_timeout(2000)
-        return await page.evaluate("""(pid) => {
+        await page.wait_for_timeout(3000)
+        result = await page.evaluate("""(pid) => {
             const links = Array.from(document.querySelectorAll('a[href*="goodsNo="]'));
             const seen = new Set(); let pos = 0;
             for (const a of links) {
                 const m = a.href.match(/goodsNo=([A-Z0-9]+)/i);
                 if (!m || seen.has(m[1])) continue;
                 seen.add(m[1]); pos++;
-                if (m[1] === pid) return pos;
+                if (m[1].toUpperCase() === pid.toUpperCase()) return pos;
             }
-            return null;
+            return { notFound: pos, sample: links.slice(0,3).map(a=>a.href) };
         }""", pid)
+        if isinstance(result, int): return result
+        print(f"    ⚠️ 올리브영 순위 못찾음 (총{result.get('notFound')}개): {result.get('sample')}")
+        return None
     except Exception as e:
         print(f"    ⚠️ 순위 실패: {e}"); return None
 
@@ -186,8 +193,8 @@ async def extract_zigzag(page, pid):
 async def find_rank_zigzag(page, keyword, pid):
     try:
         await page.goto(f"https://zigzag.kr/search?q={quote(keyword)}", wait_until="domcontentloaded", timeout=30000)
-        await page.wait_for_timeout(3000)
-        return await page.evaluate("""(pid) => {
+        await page.wait_for_timeout(4000)
+        result = await page.evaluate("""(pid) => {
             const links = Array.from(document.querySelectorAll('a[href*="/catalog/products/"]'));
             const seen = new Set(); let pos = 0;
             for (const a of links) {
@@ -196,8 +203,11 @@ async def find_rank_zigzag(page, keyword, pid):
                 seen.add(m[1]); pos++;
                 if (m[1] === pid) return pos;
             }
-            return null;
+            return { notFound: pos, sample: links.slice(0,3).map(a=>a.href) };
         }""", pid)
+        if isinstance(result, int): return result
+        print(f"    ⚠️ 지그재그 순위 못찾음 (총{result.get('notFound')}개): {result.get('sample')}")
+        return None
     except Exception as e:
         print(f"    ⚠️ 순위 실패: {e}"); return None
 
@@ -231,13 +241,18 @@ async def extract_ably(page, pid, captured=None):
         if result:
             print(f"    ✅ API 인터셉트 성공")
             return result
+        else:
+            print(f"    ⚠️ 인터셉트 데이터 파싱 실패: {list(captured['data'].keys())[:5]}")
+
+    print(f"    🔍 에이블리 인터셉트 결과: {'있음' if captured and captured.get('data') else '없음'}")
 
     # __NEXT_DATA__ fallback
     try:
         nd = await page.evaluate("() => JSON.stringify(window.__NEXT_DATA__)")
-        if nd:
+        if nd and nd != "null":
             d = json.loads(nd)
             pp = d.get("props", {}).get("pageProps", {})
+            print(f"    🔍 __NEXT_DATA__ pageProps keys: {list(pp.keys())[:8]}")
             queries = pp.get("dehydratedState", {}).get("queries", [])
             for q in queries:
                 data = q.get("state", {}).get("data", {}) if isinstance(q, dict) else {}
@@ -246,6 +261,8 @@ async def extract_ably(page, pid, captured=None):
                 if result: return result
             result = _parse_ably_data(pp)
             if result: return result
+        else:
+            print(f"    ⚠️ __NEXT_DATA__ 없음 — 페이지 URL: {page.url}")
     except Exception as e:
         print(f"    ⚠️ __NEXT_DATA__ 실패: {e}")
     return {}
@@ -271,16 +288,31 @@ async def find_rank_ably(page, keyword, pid):
 
 
 # ── 카카오선물하기 ────────────────────────────────────
+def _to_int(v):
+    """중첩 dict일 수 있는 price 값을 int로 변환"""
+    if isinstance(v, (int, float)): return int(v)
+    if isinstance(v, str): return int(v.replace(",", "")) if v.strip().replace(",","").isdigit() else 0
+    if isinstance(v, dict):
+        # price: {discountedPrice, salePrice, price, amount ...}
+        for k in ["discountedPrice", "salePrice", "price", "amount", "value"]:
+            r = _to_int(v.get(k, 0))
+            if r: return r
+    return 0
+
+
 def _parse_kakao_data(d):
-    product = d.get("product") or d.get("item") or d.get("data") or d
-    if not isinstance(product, dict): return None
-    name = product.get("name") or product.get("productName") or ""
-    brand_raw = product.get("brand") or product.get("brandName") or ""
+    # 여러 depth 탐색
+    for key in ["product", "item", "data"]:
+        if isinstance(d.get(key), dict):
+            d = d[key]; break
+    if not isinstance(d, dict): return None
+    name = d.get("name") or d.get("productName") or d.get("title") or ""
+    brand_raw = d.get("brand") or d.get("brandName") or d.get("seller") or ""
     brand = brand_raw.get("name", "") if isinstance(brand_raw, dict) else str(brand_raw)
-    sale = int(product.get("price") or product.get("salePrice") or product.get("discountedPrice") or 0)
-    orig = int(product.get("originalPrice") or product.get("listPrice") or product.get("normalPrice") or sale)
-    img = product.get("image") or product.get("thumbnailUrl") or product.get("imageUrl") or ""
-    if isinstance(img, dict): img = img.get("url") or img.get("src") or ""
+    sale = _to_int(d.get("price") or d.get("salePrice") or d.get("discountedPrice") or 0)
+    orig = _to_int(d.get("originalPrice") or d.get("listPrice") or d.get("normalPrice") or d.get("regularPrice") or sale)
+    img = d.get("image") or d.get("thumbnailUrl") or d.get("imageUrl") or d.get("thumbnail") or ""
+    if isinstance(img, dict): img = img.get("url") or img.get("src") or img.get("original") or ""
     if name and sale:
         return {"name": name, "brand": brand, "sale_price": sale, "original_price": orig, "image": img}
     return None
