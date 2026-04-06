@@ -7701,9 +7701,23 @@ export default function OaDashboard(){
                           ))}
                         </div>
                         {oliveyoungTab==="prices"&&(
-                          <button onClick={()=>{setOliveyoungItems(null);setOliveyoungLoading(false);}} style={{display:"flex",alignItems:"center",gap:5,padding:"7px 14px",borderRadius:8,border:"none",background:"#f3f4f6",color:C.inkMid,fontWeight:700,fontSize:11,cursor:"pointer",fontFamily:"inherit"}}>
-                            <MI n="refresh" size={13}/>새로고침
-                          </button>
+                          <div style={{display:"flex",gap:8}}>
+                            <button onClick={()=>{
+                              if(oliveyoungLoading) return;
+                              setOliveyoungLoading(true);
+                              fetch("/api/github-scrape",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({platform:"oliveyoung"})})
+                                .then(r=>r.json()).then(d=>{
+                                  if(d.ok) alert("수집 시작! GitHub Actions에서 실행 중. 2~3분 후 새로고침해줘.");
+                                  else alert("오류: "+d.error);
+                                  setOliveyoungLoading(false);
+                                }).catch(e=>{alert("오류: "+e.message);setOliveyoungLoading(false);});
+                            }} style={{display:"flex",alignItems:"center",gap:5,padding:"7px 14px",borderRadius:8,border:"none",background:oliveyoungLoading?"#e5e7eb":"#111",color:oliveyoungLoading?C.inkMid:"#fff",fontWeight:700,fontSize:11,cursor:oliveyoungLoading?"not-allowed":"pointer",fontFamily:"inherit"}}>
+                              <MI n="play_arrow" size={13}/>{oliveyoungLoading?"실행 중...":"수집 실행"}
+                            </button>
+                            <button onClick={()=>{setOliveyoungItems(null);setOliveyoungLoading(false);}} style={{display:"flex",alignItems:"center",gap:5,padding:"7px 14px",borderRadius:8,border:"none",background:"#f3f4f6",color:C.inkMid,fontWeight:700,fontSize:11,cursor:"pointer",fontFamily:"inherit"}}>
+                              <MI n="refresh" size={13}/>새로고침
+                            </button>
+                          </div>
                         )}
                       </div>
                       {oliveyoungTab==="prices"&&(
@@ -7860,13 +7874,14 @@ export default function OaDashboard(){
                             <button onClick={()=>{
                               if(musinsaRunning) return;
                               setMusinsaRunning(true);
-                              fetch("/api/musinsa/scrape",{method:"POST"}).then(r=>r.json()).then(d=>{
-                                if(d.ok){ alert(`수집 완료! ${d.success}개 성공 / ${d.failed}개 실패`); setMusinsaItems(null); setMusinsaLoading(false); }
-                                else alert("오류: "+d.error);
-                                setMusinsaRunning(false);
-                              }).catch(e=>{alert("오류: "+e.message);setMusinsaRunning(false);});
+                              fetch("/api/github-scrape",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({platform:"musinsa"})})
+                                .then(r=>r.json()).then(d=>{
+                                  if(d.ok) alert("수집 시작! GitHub Actions에서 실행 중. 2~3분 후 새로고침해줘.");
+                                  else alert("오류: "+d.error);
+                                  setMusinsaRunning(false);
+                                }).catch(e=>{alert("오류: "+e.message);setMusinsaRunning(false);});
                             }} style={{display:"flex",alignItems:"center",gap:5,padding:"7px 14px",borderRadius:8,border:"none",background:musinsaRunning?"#e5e7eb":"#111",color:musinsaRunning?C.inkMid:"#fff",fontWeight:700,fontSize:11,cursor:musinsaRunning?"not-allowed":"pointer",fontFamily:"inherit"}}>
-                              <MI n="download" size={13}/>{musinsaRunning?"수집 중...":"지금 수집"}
+                              <MI n="play_arrow" size={13}/>{musinsaRunning?"실행 중...":"수집 실행"}
                             </button>
                             <button onClick={()=>{setMusinsaItems(null);setMusinsaLoading(false);}} style={{display:"flex",alignItems:"center",gap:5,padding:"7px 14px",borderRadius:8,border:"none",background:"#f3f4f6",color:C.inkMid,fontWeight:700,fontSize:11,cursor:"pointer",fontFamily:"inherit"}}>
                               <MI n="refresh" size={13}/>새로고침
