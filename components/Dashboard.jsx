@@ -4264,7 +4264,7 @@ export default function OaDashboard(){
                   <table style={{width:"100%",borderCollapse:"collapse",minWidth:460}}>
                     <thead>
                       <tr style={{background:C.cream,borderBottom:`2px solid ${C.border}`}}>
-                        {["계정","이름","팔로워","수집 경로","상태",""].map(h=>(
+                        {["계정","이름","팔로워","수집 경로",""].map(h=>(
                           <th key={h} style={{padding:"6px 10px",textAlign:"left",fontSize:10,fontWeight:700,color:C.inkMid,whiteSpace:"nowrap"}}>{h}</th>
                         ))}
                       </tr>
@@ -4273,7 +4273,6 @@ export default function OaDashboard(){
                       {groups[cat].map(f=>{
                         const handle=f.name.replace(/^@/,"");
                         const url=`https://www.instagram.com/${handle}`;
-                        const posted = f.posted>0;
                         return(
                           <tr key={f.id} style={{borderBottom:`1px solid ${C.border}`}}>
                             <td style={{padding:"8px 10px"}}>
@@ -4284,14 +4283,7 @@ export default function OaDashboard(){
                             </td>
                             <td style={{padding:"8px 10px",fontSize:11,color:C.inkMid}}>{f.displayName||"—"}</td>
                             <td style={{padding:"8px 10px",fontSize:11,fontWeight:700,color:C.ink}}>{f.followers||"—"}</td>
-                            <td style={{padding:"8px 10px",fontSize:10,color:C.inkMid,maxWidth:140,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{getSrc(f)}</td>
-                            <td style={{padding:"8px 10px"}}>
-                              <span style={{fontSize:10,fontWeight:700,padding:"2px 8px",borderRadius:20,
-                                background:posted?C.sageLt:f.sent?C.blush:C.cream,
-                                color:posted?C.good:f.sent?C.rose:C.inkMid}}>
-                                {posted?"게시완료":f.sent?"발송완료":"미연락"}
-                              </span>
-                            </td>
+                            <td style={{padding:"8px 10px",fontSize:10,color:C.inkMid,maxWidth:160,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{getSrc(f)}</td>
                             <td style={{padding:"8px 10px"}}>
                               <Btn variant="neutral" small onClick={()=>setInfModalData({mode:"edit",initial:f})}>
                                 <MI n="edit" size={11}/>
