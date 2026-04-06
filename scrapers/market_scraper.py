@@ -363,12 +363,9 @@ async def extract_kakao_gift(page, pid, captured=None):
                 const m = (el.innerText||el.textContent||'').replace(/[^0-9]/g,'');
                 return m ? parseInt(m) : 0;
             };
-            // 이름: 페이지 내 가장 긴 의미있는 텍스트 (네비/버튼 제외)
-            let name = '';
-            for (const el of document.querySelectorAll('h1,h2,h3,strong[class*="tit"],p[class*="tit"],[class*="product_name"],[class*="goods_name"],[class*="item_tit"]')) {
-                const t = (el.innerText||'').trim();
-                if (t.length > name.length && t.length > 3 && !/카카오|선물하기|홈|검색|뒤로|메뉴/.test(t)) name = t;
-            }
+            // 이름: 카카오선물하기 실제 클래스
+            const nameEl = document.querySelector('h4.tit_subject,[class*="tit_subject"],[class*="tit_product"],[class*="product_subject"]');
+            const name = nameEl?.innerText?.replace(/<!---->/g,'').trim() || '';
             // 브랜드
             const brandEl = document.querySelector('[class*="brand"],[class*="Brand"],[class*="seller"],[class*="shop_name"]');
             const brand = brandEl?.innerText?.trim() || '';
