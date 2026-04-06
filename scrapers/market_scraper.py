@@ -203,15 +203,12 @@ async def find_rank_zigzag(page, keyword, pid):
 
 
 # ── 에이블리 ─────────────────────────────────────────
-def _parse_ably_data(d, pid):
-    """에이블리 API/NEXT_DATA 응답에서 상품 데이터 추출"""
+def _parse_ably_data(d):
     candidates = []
-    # 여러 키 후보 탐색
     for key in ["goods", "product", "item", "data", "goodsDetail"]:
         v = d.get(key)
         if isinstance(v, dict): candidates.append(v)
-    if not candidates:
-        candidates = [d]
+    if not candidates: candidates = [d]
     for p in candidates:
         if not isinstance(p, dict): continue
         name  = p.get("name") or p.get("goods_name") or p.get("goodsName") or ""
@@ -227,31 +224,10 @@ def _parse_ably_data(d, pid):
     return None
 
 
-async def extract_ably(page, pid):
-    # 모든 JSON 응답 인터셉트 (URL 패턴 제한 없이)
-    captured = {}
-
-    async def handle_response(response):
-        if captured.get("data"): return
-        try:
-            ct = response.headers.get("content-type", "")
-            if "json" not in ct: return
-            data = await response.json()
-            if not isinstance(data, dict): return
-            # 상품 ID가 응답 어딘가에 있으면 캡처
-            raw = json.dumps(data)
-            if pid in raw:
-                captured["data"] = data
-        except: pass
-
-    page.on("response", handle_response)
-    try:
-        await page.wait_for_load_state("networkidle", timeout=15000)
-    except: pass
-    page.remove_listener("response", handle_response)
-
-    if captured.get("data"):
-        result = _parse_ably_data(captured["data"], pid)
+async def extract_ably(page, pid, captured=None):
+    # run_platform에서 pre-captured된 데이터 우선 사용
+    if captured and captured.get("data"):
+        result = _parse_ably_data(captured["data"])
         if result:
             print(f"    ✅ API 인터셉트 성공")
             return result
@@ -262,15 +238,13 @@ async def extract_ably(page, pid):
         if nd:
             d = json.loads(nd)
             pp = d.get("props", {}).get("pageProps", {})
-            # dehydratedState queries 탐색
             queries = pp.get("dehydratedState", {}).get("queries", [])
             for q in queries:
                 data = q.get("state", {}).get("data", {}) if isinstance(q, dict) else {}
                 if not isinstance(data, dict): continue
-                result = _parse_ably_data(data, pid)
+                result = _parse_ably_data(data)
                 if result: return result
-            # pageProps 직접
-            result = _parse_ably_data(pp, pid)
+            result = _parse_ably_data(pp)
             if result: return result
     except Exception as e:
         print(f"    ⚠️ __NEXT_DATA__ 실패: {e}")
@@ -297,57 +271,48 @@ async def find_rank_ably(page, keyword, pid):
 
 
 # ── 카카오선물하기 ────────────────────────────────────
-async def extract_kakao_gift(page, pid):
-    # 네트워크 인터셉트로 API 응답 가로채기
-    captured = {}
+def _parse_kakao_data(d):
+    product = d.get("product") or d.get("item") or d.get("data") or d
+    if not isinstance(product, dict): return None
+    name = product.get("name") or product.get("productName") or ""
+    brand_raw = product.get("brand") or product.get("brandName") or ""
+    brand = brand_raw.get("name", "") if isinstance(brand_raw, dict) else str(brand_raw)
+    sale = int(product.get("price") or product.get("salePrice") or product.get("discountedPrice") or 0)
+    orig = int(product.get("originalPrice") or product.get("listPrice") or product.get("normalPrice") or sale)
+    img = product.get("image") or product.get("thumbnailUrl") or product.get("imageUrl") or ""
+    if isinstance(img, dict): img = img.get("url") or img.get("src") or ""
+    if name and sale:
+        return {"name": name, "brand": brand, "sale_price": sale, "original_price": orig, "image": img}
+    return None
 
-    async def handle_response(response):
-        url = response.url
-        if (f"/product/{pid}" in url or f"/products/{pid}" in url or f"productId={pid}" in url) and "json" in response.headers.get("content-type",""):
-            try:
-                data = await response.json()
-                if isinstance(data, dict) and not captured.get("data"):
-                    captured["data"] = data
-            except: pass
 
-    page.on("response", handle_response)
-    try:
-        await page.wait_for_load_state("networkidle", timeout=15000)
-    except: pass
-    page.remove_listener("response", handle_response)
+async def extract_kakao_gift(page, pid, captured=None):
+    # run_platform에서 pre-captured된 데이터 우선 사용
+    if captured and captured.get("data"):
+        result = _parse_kakao_data(captured["data"])
+        if result:
+            print(f"    ✅ API 인터셉트 성공")
+            return result
 
-    # API 응답에서 데이터 추출
-    if captured.get("data"):
-        d = captured["data"]
-        # 카카오 API 응답 구조 탐색
-        product = d.get("product") or d.get("item") or d.get("data") or d
-        if isinstance(product, dict):
-            name = product.get("name") or product.get("productName") or ""
-            brand_raw = product.get("brand") or product.get("brandName") or ""
-            brand = brand_raw.get("name", "") if isinstance(brand_raw, dict) else str(brand_raw)
-            sale = int(product.get("price") or product.get("salePrice") or product.get("discountedPrice") or 0)
-            orig = int(product.get("originalPrice") or product.get("listPrice") or product.get("normalPrice") or sale)
-            img = product.get("image") or product.get("thumbnailUrl") or product.get("imageUrl") or ""
-            if isinstance(img, dict): img = img.get("url") or img.get("src") or ""
-            if name and sale:
-                print(f"    ✅ API 인터셉트 성공")
-                return {"name": name, "brand": brand, "sale_price": sale, "original_price": orig, "image": img}
-
-    # DOM fallback
+    # DOM에서 직접 읽기 (페이지 완전 렌더링 후)
     try:
         result = await page.evaluate("""() => {
             const p = el => { if (!el) return 0; const m = (el.innerText||'').replace(/[^0-9]/g,''); return m ? parseInt(m) : 0; };
-            // 카카오선물하기 클래스 패턴
-            const nameEl = document.querySelector('[class*="tit_product"],[class*="ProductName"],[class*="product_name"],[class*="tit_item"],h2,h1');
-            const brandEl = document.querySelector('[class*="txt_brand"],[class*="brand_name"],[class*="txt_seller"]');
-            const saleEl  = document.querySelector('[class*="price_sale"],[class*="num_price"],[class*="txt_price"] strong,[class*="sale_price"]');
-            const origEl  = document.querySelector('[class*="price_origin"] del,[class*="origin_price"],[class*="list_price"]');
+            // 카카오선물하기 실제 클래스 탐색
+            const nameEl = document.querySelector('h2.tit_product,h2.tit_item,.tit_product,.product_name,[class*="tit_product"],[class*="ProductName"],h1,h2');
+            const brandEl = document.querySelector('.txt_brand,.brand_name,[class*="txt_brand"],[class*="brand_name"]');
+            const saleEl  = document.querySelector('.num_price,.sale_price,[class*="num_price"],[class*="sale_price"],[class*="price_sale"] strong,em.num_price');
+            const origEl  = document.querySelector('.origin_price del,.list_price del,[class*="origin_price"],[class*="list_price"],[class*="price_origin"]');
             let sale = p(saleEl), orig = p(origEl);
             if (!orig || orig < sale) orig = sale;
-            const imgEl = document.querySelector('[class*="thumb_product"] img,[class*="product_img"] img,[class*="img_product"],main img');
-            return { name: nameEl?.innerText?.trim()||'', brand: brandEl?.innerText?.trim()||'', sale_price: sale, original_price: orig, image: imgEl?.src||imgEl?.dataset?.src||'' };
+            const imgEl = document.querySelector('.thumb_product img,.product_thumb img,[class*="thumb_product"] img,[class*="product_img"] img,figure img');
+            return { name: nameEl?.innerText?.trim()||'', brand: brandEl?.innerText?.trim()||'', sale_price: sale, original_price: orig, image: imgEl?.src||'' };
         }""")
         if result and result.get("sale_price"):
+            # 이름이 없으면 페이지 title에서 추출
+            if not result.get("name"):
+                title = await page.title()
+                result["name"] = title.split("|")[0].strip() if "|" in title else title.strip()
             print(f"    ✅ DOM 추출 성공")
             return result
     except Exception as e:
@@ -375,8 +340,22 @@ async def find_rank_kakao_gift(page, keyword, pid):
 
 
 # ── 플랫폼 매핑 ──────────────────────────────────────
-EXTRACTORS  = {"musinsa": extract_musinsa, "oliveyoung": extract_oliveyoung, "zigzag": extract_zigzag, "ably": extract_ably, "kakao_gift": extract_kakao_gift}
+def _wrap(fn):
+    """captured 파라미터 없는 extractor를 통일 시그니처로 래핑"""
+    async def wrapper(page, pid, captured=None): return await fn(page, pid)
+    return wrapper
+
+EXTRACTORS = {
+    "musinsa":    _wrap(extract_musinsa),
+    "oliveyoung": _wrap(extract_oliveyoung),
+    "zigzag":     _wrap(extract_zigzag),
+    "ably":       extract_ably,
+    "kakao_gift": extract_kakao_gift,
+}
 RANK_FINDERS = {"musinsa": find_rank_musinsa, "oliveyoung": find_rank_oliveyoung, "zigzag": find_rank_zigzag, "ably": find_rank_ably, "kakao_gift": find_rank_kakao_gift}
+
+
+INTERCEPT_PLATFORMS = {"kakao_gift", "ably"}
 
 
 async def run_platform(platform, page):
@@ -391,9 +370,30 @@ async def run_platform(platform, page):
         pid, url, keyword = link["product_id"], link["url"], link.get("search_keyword") or ""
         print(f"[{i+1}/{len(links)}] {pid}")
         try:
+            # 카카오/에이블리는 goto 전에 리스너 등록
+            captured = {}
+            if platform in INTERCEPT_PLATFORMS:
+                async def _on_response(response, _pid=pid, _cap=captured):
+                    if _cap.get("data"): return
+                    try:
+                        ct = response.headers.get("content-type", "")
+                        if "json" not in ct: return
+                        data = await response.json()
+                        if isinstance(data, dict) and _pid in json.dumps(data):
+                            _cap["data"] = data
+                    except: pass
+                page.on("response", _on_response)
+
             await page.goto(url, wait_until="domcontentloaded", timeout=60000)
             await page.wait_for_timeout(3000)
-            price_data = await EXTRACTORS[platform](page, pid)
+
+            if platform in INTERCEPT_PLATFORMS:
+                try:
+                    await page.wait_for_load_state("networkidle", timeout=8000)
+                except: pass
+                page.remove_listener("response", _on_response)
+
+            price_data = await EXTRACTORS[platform](page, pid, captured)
             if price_data and price_data.get("sale_price"):
                 row = {"platform": platform, "product_id": pid, "url": url,
                        "name": price_data.get("name",""), "brand": price_data.get("brand",""),
