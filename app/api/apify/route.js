@@ -158,26 +158,28 @@ export async function POST(request) {
       }), { status: 200, headers: { "Content-Type": "application/json" } });
     }
 
-    // ── 3. 브랜드 태그한 게시물 작성자 ───────────────────
+    // ── 3. 브랜드 해시태그 검색 (계정명 → #계정명 해시태그 포스트 작성자) ──
     if (mode === "tagged") {
       if (!username) return new Response(JSON.stringify({ error: "username 필요" }), { status: 400 });
-      const handle = username.replace(/^@/, "");
+      // 계정명을 해시태그로 변환 (공백·특수문자 제거)
+      const tag = username.replace(/^@/, "").replace(/[^a-zA-Z0-9가-힣]/g, "");
 
-      const posts = await runActorAndWait(APIFY_TOKEN, "apify~instagram-scraper", {
-        directUrls: [`https://www.instagram.com/${handle}/tagged/`],
-        resultsType: "posts",
-        resultsLimit: Math.min(maxResults * 3, 300),
+      const posts = await runActorAndWait(APIFY_TOKEN, "apify~instagram-hashtag-scraper", {
+        hashtags: [tag],
+        resultsLimit: Math.min(maxResults * 5, 500),
         addParentData: false,
       });
 
-      const sampleKeys = posts[0] ? Object.keys(posts[0]) : [];
-      // 실제로 어떤 ownerUsername 값이 오는지 확인
-      const allOwners = [...new Set(posts.map(p => getField(p, "ownerUsername","username")).filter(Boolean))];
+      if (!Array.isArray(posts) || posts.length === 0) {
+        return new Response(JSON.stringify({ influencers: [], mode, totalPosts: 0 }), {
+          status: 200, headers: { "Content-Type": "application/json" }
+        });
+      }
 
       const byUser = {};
       for (const post of posts) {
-        const uname = getField(post, "ownerUsername","username","owner.username","authorUsername");
-        if (!uname) continue; // 브랜드 계정 필터 제거 — 실제 값 확인용
+        const uname = getField(post, "ownerUsername","username","owner.username");
+        if (!uname) continue;
         if (!byUser[uname]) {
           byUser[uname] = {
             username: uname,
@@ -207,10 +209,9 @@ export async function POST(request) {
         .sort((a,b) => b.avgLikes - a.avgLikes)
         .slice(0, maxResults);
 
-      return new Response(JSON.stringify({
-        influencers, mode, totalPosts: posts.length,
-        _debug: { sampleKeys, allOwners, firstItem: posts[0] }
-      }), { status: 200, headers: { "Content-Type": "application/json" } });
+      return new Response(JSON.stringify({ influencers, mode, totalPosts: posts.length }), {
+        status: 200, headers: { "Content-Type": "application/json" },
+      });
     }
 
     return new Response(JSON.stringify({ error: "mode는 keyword / followers / tagged 중 하나여야 해요" }), { status: 400 });
