@@ -6683,11 +6683,13 @@ export default function OaDashboard(){
     const [musinsaLinks, setMusinsaLinks] = useState(null);
     const [musinsaTab, setMusinsaTab] = useState("prices"); // prices | links
     const [newLinkUrl, setNewLinkUrl] = useState("");
+    const [newLinkKeyword, setNewLinkKeyword] = useState("");
     const [oliveyoungItems, setOliveyoungItems] = useState(null);
     const [oliveyoungLoading, setOliveyoungLoading] = useState(false);
     const [oliveyoungLinks, setOliveyoungLinks] = useState(null);
     const [oliveyoungTab, setOliveyoungTab] = useState("prices");
     const [newOliveUrl, setNewOliveUrl] = useState("");
+    const [newOliveKeyword, setNewOliveKeyword] = useState("");
     const [marketData, setMarketData] = useSyncState("oa_market_research_v1", []);
     const [mktProductModal, setMktProductModal] = useState(false);
     const [mktBulkModal, setMktBulkModal] = useState(false);
@@ -7712,7 +7714,7 @@ export default function OaDashboard(){
                               <div style={{overflowX:"auto"}}>
                                 <table style={{width:"100%",borderCollapse:"collapse",fontSize:11}}>
                                   <thead><tr style={{background:C.cream}}>
-                                    {["이미지","상품명","최적가","정가","할인율","세일기간","수집일","링크"].map(h=>(
+                                    {["이미지","상품명","순위","최적가","정가","할인율","세일기간","수집일","링크"].map(h=>(
                                       <th key={h} style={{padding:"6px 8px",textAlign:"left",fontWeight:700,color:C.inkMid,borderBottom:`1px solid ${C.border}`,whiteSpace:"nowrap"}}>{h}</th>
                                     ))}
                                   </tr></thead>
@@ -7723,6 +7725,7 @@ export default function OaDashboard(){
                                         <tr key={item.product_id} style={{borderBottom:`1px solid ${C.cream}`}}>
                                           <td style={{padding:"6px 8px"}}>{item.image&&<img src={item.image} alt="" style={{width:40,height:40,objectFit:"cover",borderRadius:4,border:`1px solid ${C.border}`}}/>}</td>
                                           <td style={{padding:"6px 8px",maxWidth:200,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{item.name}</td>
+                                          <td style={{padding:"6px 8px",whiteSpace:"nowrap"}}>{item.rank!=null?<span style={{fontWeight:800,color:item.rank<=3?"#dc2626":item.rank<=10?"#ea580c":"#111"}}>{item.rank}위</span>:"—"}</td>
                                           <td style={{padding:"6px 8px",fontWeight:800,color:"#16a34a",whiteSpace:"nowrap"}}>{item.sale_price?`₩${item.sale_price.toLocaleString()}`:"—"}</td>
                                           <td style={{padding:"6px 8px",color:C.inkMid,whiteSpace:"nowrap",textDecoration:"line-through"}}>{item.original_price&&item.original_price!==item.sale_price?`₩${item.original_price.toLocaleString()}`:"—"}</td>
                                           <td style={{padding:"6px 8px",whiteSpace:"nowrap"}}>{disc>0&&<span style={{background:"#fee2e2",color:"#dc2626",fontWeight:700,padding:"2px 6px",borderRadius:4,fontSize:10}}>{disc}%</span>}</td>
@@ -7743,20 +7746,25 @@ export default function OaDashboard(){
                         <div style={{display:"flex",flexDirection:"column",gap:10}}>
                           <Card>
                             <div style={{fontSize:12,fontWeight:700,color:C.ink,marginBottom:8}}>링크 추가</div>
-                            <div style={{display:"flex",gap:8,alignItems:"center"}}>
+                            <div style={{display:"flex",flexDirection:"column",gap:6}}>
                               <input value={newOliveUrl} onChange={e=>setNewOliveUrl(e.target.value)}
                                 placeholder="https://www.oliveyoung.co.kr/store/goods/getGoodsDetail.do?goodsNo=..."
-                                style={{flex:1,fontSize:11,padding:"7px 10px",borderRadius:8,border:`1px solid ${C.border}`,outline:"none",fontFamily:"inherit"}}/>
-                              <button onClick={()=>{
-                                const url = newOliveUrl.trim();
-                                if(!url) return;
-                                const m = url.match(/goodsNo=([A-Z0-9]+)/i);
-                                const pid = m?m[1]:Date.now().toString();
-                                fetch(`${SURL}/rest/v1/oliveyoung_links`,{method:"POST",headers:{...sH,"Content-Type":"application/json","Prefer":"return=representation"},body:JSON.stringify({product_id:pid,url,active:true})})
-                                  .then(()=>{setNewOliveUrl("");setOliveyoungLinks(null);});
-                              }} style={{padding:"7px 16px",borderRadius:8,border:"none",background:"#111",color:"#fff",fontWeight:700,fontSize:11,cursor:"pointer",fontFamily:"inherit",whiteSpace:"nowrap"}}>
-                                <MI n="add" size={13}/>추가
-                              </button>
+                                style={{fontSize:11,padding:"7px 10px",borderRadius:8,border:`1px solid ${C.border}`,outline:"none",fontFamily:"inherit"}}/>
+                              <div style={{display:"flex",gap:8,alignItems:"center"}}>
+                                <input value={newOliveKeyword} onChange={e=>setNewOliveKeyword(e.target.value)}
+                                  placeholder="검색 키워드 (순위 추적용, 예: 비타민C 세럼)"
+                                  style={{flex:1,fontSize:11,padding:"7px 10px",borderRadius:8,border:`1px solid ${C.border}`,outline:"none",fontFamily:"inherit"}}/>
+                                <button onClick={()=>{
+                                  const url = newOliveUrl.trim();
+                                  if(!url) return;
+                                  const m = url.match(/goodsNo=([A-Z0-9]+)/i);
+                                  const pid = m?m[1]:Date.now().toString();
+                                  fetch(`${SURL}/rest/v1/oliveyoung_links`,{method:"POST",headers:{...sH,"Content-Type":"application/json","Prefer":"return=representation"},body:JSON.stringify({product_id:pid,url,active:true,search_keyword:newOliveKeyword.trim()||null})})
+                                    .then(()=>{setNewOliveUrl("");setNewOliveKeyword("");setOliveyoungLinks(null);});
+                                }} style={{padding:"7px 16px",borderRadius:8,border:"none",background:"#111",color:"#fff",fontWeight:700,fontSize:11,cursor:"pointer",fontFamily:"inherit",whiteSpace:"nowrap"}}>
+                                  <MI n="add" size={13}/>추가
+                                </button>
+                              </div>
                             </div>
                           </Card>
                           <Card>
@@ -7770,7 +7778,10 @@ export default function OaDashboard(){
                                 {oliveyoungLinks.map(link=>(
                                   <div key={link.id} style={{display:"flex",alignItems:"center",gap:8,padding:"6px 0",borderBottom:`1px solid ${C.cream}`}}>
                                     <span style={{fontSize:10,color:C.inkLt,minWidth:80}}>#{link.product_id}</span>
-                                    <a href={link.url} target="_blank" rel="noreferrer" style={{flex:1,fontSize:11,color:"#2563eb",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{link.url}</a>
+                                    <div style={{flex:1,overflow:"hidden"}}>
+                                      <a href={link.url} target="_blank" rel="noreferrer" style={{fontSize:11,color:"#2563eb",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",display:"block"}}>{link.url}</a>
+                                      {link.search_keyword&&<span style={{fontSize:10,color:"#7c3aed"}}>🔍 {link.search_keyword}</span>}
+                                    </div>
                                     <button onClick={()=>{
                                       fetch(`${SURL}/rest/v1/oliveyoung_links?id=eq.${link.id}`,{method:"PATCH",headers:{...sH,"Content-Type":"application/json","Prefer":"return=representation"},body:JSON.stringify({active:!link.active})})
                                         .then(()=>setOliveyoungLinks(null));
@@ -7856,7 +7867,7 @@ export default function OaDashboard(){
                               <div style={{overflowX:"auto"}}>
                                 <table style={{width:"100%",borderCollapse:"collapse",fontSize:11}}>
                                   <thead><tr style={{borderBottom:`1px solid ${C.border}`}}>
-                                    {["이미지","상품명","판매가","정가","할인율","세일기간","수집일","링크"].map(h=>(
+                                    {["이미지","상품명","순위","판매가","정가","할인율","세일기간","수집일","링크"].map(h=>(
                                       <th key={h} style={{padding:"4px 8px",textAlign:"left",fontWeight:700,color:C.inkMid,whiteSpace:"nowrap"}}>{h}</th>
                                     ))}
                                   </tr></thead>
@@ -7867,6 +7878,7 @@ export default function OaDashboard(){
                                         <tr key={item.product_id} style={{borderBottom:`1px solid ${C.cream}`}}>
                                           <td style={{padding:"6px 8px"}}>{item.image&&<img src={item.image} alt="" style={{width:40,height:40,objectFit:"cover",borderRadius:4,border:`1px solid ${C.border}`}}/>}</td>
                                           <td style={{padding:"6px 8px",maxWidth:180,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{item.name}</td>
+                                          <td style={{padding:"6px 8px",whiteSpace:"nowrap"}}>{item.rank!=null?<span style={{fontWeight:800,color:item.rank<=3?"#dc2626":item.rank<=10?"#ea580c":"#111"}}>{item.rank}위</span>:"—"}</td>
                                           <td style={{padding:"6px 8px",fontWeight:800,color:C.ink,whiteSpace:"nowrap"}}>{item.sale_price?`₩${item.sale_price.toLocaleString()}`:"—"}</td>
                                           <td style={{padding:"6px 8px",color:C.inkMid,whiteSpace:"nowrap",textDecoration:"line-through"}}>{item.original_price&&item.original_price!==item.sale_price?`₩${item.original_price.toLocaleString()}`:"—"}</td>
                                           <td style={{padding:"6px 8px",whiteSpace:"nowrap"}}>{disc>0&&<span style={{background:"#fee2e2",color:"#dc2626",fontWeight:700,padding:"2px 6px",borderRadius:4,fontSize:10}}>{disc}%</span>}</td>
@@ -7887,20 +7899,25 @@ export default function OaDashboard(){
                         <div style={{display:"flex",flexDirection:"column",gap:10}}>
                           <Card>
                             <div style={{fontSize:12,fontWeight:700,color:C.ink,marginBottom:8}}>링크 추가</div>
-                            <div style={{display:"flex",gap:8,alignItems:"center"}}>
+                            <div style={{display:"flex",flexDirection:"column",gap:6}}>
                               <input value={newLinkUrl} onChange={e=>setNewLinkUrl(e.target.value)}
                                 placeholder="https://www.musinsa.com/products/1234567"
-                                style={{flex:1,fontSize:11,padding:"7px 10px",borderRadius:8,border:`1px solid ${C.border}`,outline:"none",fontFamily:"inherit"}}/>
-                              <button onClick={()=>{
-                                const url = newLinkUrl.trim();
-                                if(!url) return;
-                                const m = url.match(/products\/(\d+)/);
-                                const pid = m?m[1]:Date.now().toString();
-                                fetch("/api/musinsa/links",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({product_id:pid,url,active:true})})
-                                  .then(()=>{setNewLinkUrl("");setMusinsaLinks(null);});
-                              }} style={{padding:"7px 16px",borderRadius:8,border:"none",background:"#111",color:"#fff",fontWeight:700,fontSize:11,cursor:"pointer",fontFamily:"inherit",whiteSpace:"nowrap"}}>
-                                <MI n="add" size={13}/>추가
-                              </button>
+                                style={{fontSize:11,padding:"7px 10px",borderRadius:8,border:`1px solid ${C.border}`,outline:"none",fontFamily:"inherit"}}/>
+                              <div style={{display:"flex",gap:8,alignItems:"center"}}>
+                                <input value={newLinkKeyword} onChange={e=>setNewLinkKeyword(e.target.value)}
+                                  placeholder="검색 키워드 (순위 추적용, 예: 소닉 클렌저)"
+                                  style={{flex:1,fontSize:11,padding:"7px 10px",borderRadius:8,border:`1px solid ${C.border}`,outline:"none",fontFamily:"inherit"}}/>
+                                <button onClick={()=>{
+                                  const url = newLinkUrl.trim();
+                                  if(!url) return;
+                                  const m = url.match(/products\/(\d+)/);
+                                  const pid = m?m[1]:Date.now().toString();
+                                  fetch("/api/musinsa/links",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({product_id:pid,url,active:true,search_keyword:newLinkKeyword.trim()||null})})
+                                    .then(()=>{setNewLinkUrl("");setNewLinkKeyword("");setMusinsaLinks(null);});
+                                }} style={{padding:"7px 16px",borderRadius:8,border:"none",background:"#111",color:"#fff",fontWeight:700,fontSize:11,cursor:"pointer",fontFamily:"inherit",whiteSpace:"nowrap"}}>
+                                  <MI n="add" size={13}/>추가
+                                </button>
+                              </div>
                             </div>
                           </Card>
                           <Card>
@@ -7914,7 +7931,10 @@ export default function OaDashboard(){
                                 {musinsaLinks.map(link=>(
                                   <div key={link.id} style={{display:"flex",alignItems:"center",gap:8,padding:"6px 0",borderBottom:`1px solid ${C.cream}`}}>
                                     <span style={{fontSize:10,color:C.inkLt,minWidth:60}}>#{link.product_id}</span>
-                                    <a href={link.url} target="_blank" rel="noreferrer" style={{flex:1,fontSize:11,color:"#2563eb",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{link.url}</a>
+                                    <div style={{flex:1,overflow:"hidden"}}>
+                                      <a href={link.url} target="_blank" rel="noreferrer" style={{fontSize:11,color:"#2563eb",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",display:"block"}}>{link.url}</a>
+                                      {link.search_keyword&&<span style={{fontSize:10,color:"#7c3aed"}}>🔍 {link.search_keyword}</span>}
+                                    </div>
                                     <button onClick={()=>{
                                       fetch("/api/musinsa/links",{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({id:link.id,active:!link.active})})
                                         .then(()=>setMusinsaLinks(null));
