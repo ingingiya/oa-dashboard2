@@ -8,6 +8,6 @@ export async function GET(request) {
   const { searchParams } = new URL(request.url);
   const platform = searchParams.get("platform");
   const filter = platform ? `&platform=eq.${platform}` : "";
-  const res = await fetch(`${SUPABASE_URL}/rest/v1/market_prices?select=*${filter}&order=brand.asc,name.asc`, { headers: H });
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/market_prices?select=*${filter}&order=brand.asc,name.asc`, { headers: H, cache: "no-store" });
   return Response.json(await res.json(), { status: res.status });
 }
