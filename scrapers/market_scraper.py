@@ -203,20 +203,46 @@ async def find_rank_zigzag(page, keyword, pid):
 
 
 # ── 에이블리 ─────────────────────────────────────────
+def _parse_ably_data(d, pid):
+    """에이블리 API/NEXT_DATA 응답에서 상품 데이터 추출"""
+    candidates = []
+    # 여러 키 후보 탐색
+    for key in ["goods", "product", "item", "data", "goodsDetail"]:
+        v = d.get(key)
+        if isinstance(v, dict): candidates.append(v)
+    if not candidates:
+        candidates = [d]
+    for p in candidates:
+        if not isinstance(p, dict): continue
+        name  = p.get("name") or p.get("goods_name") or p.get("goodsName") or ""
+        brand = ""
+        m = p.get("market") or p.get("brand") or {}
+        if isinstance(m, dict): brand = m.get("name", "")
+        elif isinstance(m, str): brand = m
+        sale  = int(p.get("price") or p.get("sale_price") or p.get("salePrice") or 0)
+        orig  = int(p.get("retail_price") or p.get("original_price") or p.get("retailPrice") or sale)
+        img   = p.get("cover_image") or p.get("image") or p.get("coverImage") or ""
+        if name and sale:
+            return {"name": name, "brand": brand, "sale_price": sale, "original_price": orig, "image": img}
+    return None
+
+
 async def extract_ably(page, pid):
-    # 네트워크 인터셉트로 API 응답 가로채기
+    # 모든 JSON 응답 인터셉트 (URL 패턴 제한 없이)
     captured = {}
 
     async def handle_response(response):
-        url = response.url
-        if (f"/goods/{pid}" in url or f"/products/{pid}" in url) and not captured.get("data"):
-            try:
-                ct = response.headers.get("content-type", "")
-                if "json" in ct:
-                    data = await response.json()
-                    if isinstance(data, dict):
-                        captured["data"] = data
-            except: pass
+        if captured.get("data"): return
+        try:
+            ct = response.headers.get("content-type", "")
+            if "json" not in ct: return
+            data = await response.json()
+            if not isinstance(data, dict): return
+            # 상품 ID가 응답 어딘가에 있으면 캡처
+            raw = json.dumps(data)
+            if pid in raw:
+                captured["data"] = data
+        except: pass
 
     page.on("response", handle_response)
     try:
@@ -225,42 +251,29 @@ async def extract_ably(page, pid):
     page.remove_listener("response", handle_response)
 
     if captured.get("data"):
-        d = captured["data"]
-        p = d.get("goods") or d.get("product") or d.get("item") or d.get("data") or {}
-        if not isinstance(p, dict): p = {}
-        if p:
-            name  = p.get("name") or p.get("goods_name") or ""
-            brand = (p.get("market", {}).get("name", "") if isinstance(p.get("market"), dict) else p.get("brand", ""))
-            sale  = int(p.get("price") or p.get("sale_price") or 0)
-            orig  = int(p.get("retail_price") or p.get("original_price") or sale)
-            img   = p.get("cover_image") or p.get("image") or ""
-            if name and sale:
-                print(f"    ✅ API 인터셉트 성공")
-                return {"name": name, "brand": brand, "sale_price": sale, "original_price": orig, "image": img}
+        result = _parse_ably_data(captured["data"], pid)
+        if result:
+            print(f"    ✅ API 인터셉트 성공")
+            return result
 
-    # DOM fallback — __NEXT_DATA__ 포함
+    # __NEXT_DATA__ fallback
     try:
         nd = await page.evaluate("() => JSON.stringify(window.__NEXT_DATA__)")
         if nd:
             d = json.loads(nd)
             pp = d.get("props", {}).get("pageProps", {})
-            p = pp.get("goods") or pp.get("goodsDetail") or pp.get("product") or {}
-            if not p:
-                queries = pp.get("dehydratedState", {}).get("queries", [])
-                for q in queries:
-                    data = q.get("state", {}).get("data", {}) if isinstance(q, dict) else {}
-                    p = (data.get("goods") or data.get("product") or data.get("item")) if isinstance(data, dict) else None
-                    if p: break
-            if p and isinstance(p, dict):
-                name  = p.get("name") or p.get("goods_name") or ""
-                brand = (p.get("market", {}).get("name", "") if isinstance(p.get("market"), dict) else p.get("brand", ""))
-                sale  = int(p.get("price") or p.get("sale_price") or 0)
-                orig  = int(p.get("retail_price") or p.get("original_price") or sale)
-                img   = p.get("cover_image") or p.get("image") or ""
-                if name and sale:
-                    return {"name": name, "brand": brand, "sale_price": sale, "original_price": orig, "image": img}
+            # dehydratedState queries 탐색
+            queries = pp.get("dehydratedState", {}).get("queries", [])
+            for q in queries:
+                data = q.get("state", {}).get("data", {}) if isinstance(q, dict) else {}
+                if not isinstance(data, dict): continue
+                result = _parse_ably_data(data, pid)
+                if result: return result
+            # pageProps 직접
+            result = _parse_ably_data(pp, pid)
+            if result: return result
     except Exception as e:
-        print(f"    ⚠️ 추출 실패: {e}")
+        print(f"    ⚠️ __NEXT_DATA__ 실패: {e}")
     return {}
 
 
