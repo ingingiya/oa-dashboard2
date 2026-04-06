@@ -4009,6 +4009,124 @@ export default function OaDashboard(){
   const [schModalData, setSchModalData] = useState(null); // {mode, initial}
   // 모달은 return JSX 안에서 직접 렌더링
 
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  // 🔍 인플루언서 수집 (Apify) — InfluencerSection보다 먼저 정의
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  const CollectSection=(
+    <div style={{display:"flex",flexDirection:"column",gap:14}}>
+      <Card>
+        <CardTitle title={<><MI n="travel_explore" size={14}/> 인스타그램 해시태그 수집</>}
+          sub="Apify로 해시태그 게시물 분석 → 인플루언서 후보 추출"/>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr auto",gap:8,marginBottom:12,alignItems:"flex-end"}}>
+          <FR label="해시태그">
+            <div style={{display:"flex",alignItems:"center",gap:4}}>
+              <span style={{fontSize:13,color:C.inkMid}}>#</span>
+              <input value={collectHashtag} onChange={e=>setCollectHashtag(e.target.value)}
+                placeholder="비건뷰티" onKeyDown={e=>{if(e.key==="Enter")handleCollect();}}
+                style={{flex:1,fontSize:12,padding:"7px 10px",borderRadius:8,
+                  border:`1px solid ${C.border}`,fontFamily:"inherit",outline:"none"}}/>
+            </div>
+          </FR>
+          <FR label="최소 좋아요 수">
+            <input type="number" value={collectMinLikes} onChange={e=>setCollectMinLikes(e.target.value)}
+              style={{width:"100%",boxSizing:"border-box",fontSize:12,padding:"7px 10px",borderRadius:8,
+                border:`1px solid ${C.border}`,fontFamily:"inherit",outline:"none"}}/>
+          </FR>
+          <FR label="수집 게시물 수">
+            <input type="number" value={collectCount} onChange={e=>setCollectCount(e.target.value)}
+              style={{width:"100%",boxSizing:"border-box",fontSize:12,padding:"7px 10px",borderRadius:8,
+                border:`1px solid ${C.border}`,fontFamily:"inherit",outline:"none"}}/>
+          </FR>
+          <Btn onClick={handleCollect} disabled={collectLoading||!collectHashtag.trim()} style={{alignSelf:"flex-end",height:36}}>
+            {collectLoading?<><MI n="hourglass_empty" size={13}/> 수집중...</>:<><MI n="search" size={13}/> 수집 시작</>}
+          </Btn>
+        </div>
+        <FR label="카테고리 (추가 시 메모에 자동 태그)">
+          <input value={collectCategory} onChange={e=>setCollectCategory(e.target.value)}
+            placeholder="예: 비건뷰티, 스킨케어 ..." style={{width:"100%",boxSizing:"border-box",
+              fontSize:12,padding:"7px 10px",borderRadius:8,
+              border:`1px solid ${C.border}`,fontFamily:"inherit",outline:"none"}}/>
+        </FR>
+        {collectError&&(
+          <div style={{fontSize:11,fontWeight:700,padding:"8px 12px",borderRadius:8,marginTop:8,
+            background:collectError.startsWith("✅")?C.sageLt:"#FFF8F8",
+            color:collectError.startsWith("✅")?C.good:C.bad,
+            border:`1px solid ${collectError.startsWith("✅")?C.good+"44":C.bad+"44"}`}}>
+            {collectError}
+          </div>
+        )}
+        {!collectResults.length&&!collectLoading&&!collectError&&(
+          <div style={{textAlign:"center",padding:"40px 0",color:C.inkLt,fontSize:12}}>
+            <MI n="travel_explore" size={36} style={{color:C.border,display:"block",margin:"0 auto 10px"}}/>
+            해시태그를 입력하고 수집 시작을 눌러주세요<br/>
+            <span style={{fontSize:10}}>게시물에서 계정을 추출해 인플루언서 후보 목록을 만들어요</span>
+          </div>
+        )}
+      </Card>
+      {collectResults.length>0&&(
+        <Card>
+          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:10}}>
+            <div style={{fontSize:13,fontWeight:800,color:C.ink}}>
+              수집 결과 <span style={{color:C.rose}}>{collectResults.length}개</span> 계정
+              {Object.values(collectSelected).filter(Boolean).length>0&&(
+                <span style={{fontSize:10,color:C.inkMid,marginLeft:8}}>
+                  {Object.values(collectSelected).filter(Boolean).length}개 선택됨
+                </span>
+              )}
+            </div>
+            <div style={{display:"flex",gap:6}}>
+              <Btn variant="neutral" small onClick={()=>{const sel={};collectResults.forEach(r=>{sel[r.username]=true;});setCollectSelected(sel);}}>전체 선택</Btn>
+              <Btn variant="neutral" small onClick={()=>setCollectSelected({})}>해제</Btn>
+              <Btn variant="sage" small disabled={Object.values(collectSelected).filter(Boolean).length===0} onClick={handleAddCollected}>
+                <MI n="add" size={12}/> 인플루언서 목록에 추가
+              </Btn>
+            </div>
+          </div>
+          <div style={{overflowX:"auto"}}>
+            <table style={{width:"100%",borderCollapse:"collapse",minWidth:520}}>
+              <thead>
+                <tr style={{background:C.cream,borderBottom:`2px solid ${C.border}`}}>
+                  <th style={{padding:"6px 10px",width:32}}/>
+                  {["계정","이름","포스트 수","평균 좋아요","평균 댓글",""].map(h=>(
+                    <th key={h} style={{padding:"6px 10px",textAlign:"left",fontSize:10,fontWeight:700,color:C.inkMid,whiteSpace:"nowrap"}}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {collectResults.map(r=>{
+                  const isDup=infs.some(f=>(f.name||"").replace(/^@/,"")===r.username);
+                  const checked=!!collectSelected[r.username];
+                  return(
+                    <tr key={r.username} style={{borderBottom:`1px solid ${C.border}`,
+                      background:isDup?"#FFFBEB":checked?"#EFF6FF":C.white,cursor:"pointer"}}
+                      onClick={()=>!isDup&&setCollectSelected(p=>({...p,[r.username]:!p[r.username]}))}>
+                      <td style={{padding:"8px 10px"}}>
+                        {isDup
+                          ?<span style={{fontSize:9,color:C.warn,fontWeight:700,background:"#FFF8EC",padding:"2px 6px",borderRadius:10}}>이미 있음</span>
+                          :<input type="checkbox" checked={checked} readOnly style={{accentColor:C.rose}}/>}
+                      </td>
+                      <td style={{padding:"8px 10px"}}>
+                        <a href={r.profileUrl} target="_blank" rel="noreferrer" onClick={e=>e.stopPropagation()}
+                          style={{fontSize:12,fontWeight:800,color:C.rose,textDecoration:"none"}}>@{r.username}</a>
+                      </td>
+                      <td style={{padding:"8px 10px",fontSize:11,color:C.inkMid}}>{r.fullName||"—"}</td>
+                      <td style={{padding:"8px 10px",fontSize:12,fontWeight:700,color:C.ink,textAlign:"center"}}>{r.postCount}</td>
+                      <td style={{padding:"8px 10px",fontSize:12,fontWeight:700,color:C.rose,textAlign:"center"}}>{r.avgLikes.toLocaleString()}</td>
+                      <td style={{padding:"8px 10px",fontSize:11,color:C.inkMid,textAlign:"center"}}>{r.avgComments.toLocaleString()}</td>
+                      <td style={{padding:"8px 10px"}}>
+                        <a href={r.sampleUrl} target="_blank" rel="noreferrer" onClick={e=>e.stopPropagation()}
+                          style={{fontSize:10,color:C.inkLt,textDecoration:"none"}}><MI n="open_in_new" size={12}/></a>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </Card>
+      )}
+    </div>
+  );
 
   const InfluencerSection=(()=>{
     const [infSearch, setInfSearch] = useState("");
@@ -4331,141 +4449,6 @@ export default function OaDashboard(){
     </div>
     );
   })();
-
-  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  // 🔍 인플루언서 수집 (Apify)
-  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  const CollectSection=(
-    <div style={{display:"flex",flexDirection:"column",gap:14}}>
-      <Card>
-        <CardTitle title={<><MI n="travel_explore" size={14}/> 인스타그램 해시태그 수집</>}
-          sub="Apify로 해시태그 게시물 분석 → 인플루언서 후보 추출"/>
-
-        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr auto",gap:8,marginBottom:12,alignItems:"flex-end"}}>
-          <FR label="해시태그">
-            <div style={{display:"flex",alignItems:"center",gap:4}}>
-              <span style={{fontSize:13,color:C.inkMid}}>#</span>
-              <input value={collectHashtag} onChange={e=>setCollectHashtag(e.target.value)}
-                placeholder="비건뷰티" onKeyDown={e=>{if(e.key==="Enter")handleCollect();}}
-                style={{flex:1,fontSize:12,padding:"7px 10px",borderRadius:8,
-                  border:`1px solid ${C.border}`,fontFamily:"inherit",outline:"none"}}/>
-            </div>
-          </FR>
-          <FR label="최소 좋아요 수">
-            <input type="number" value={collectMinLikes} onChange={e=>setCollectMinLikes(e.target.value)}
-              style={{width:"100%",boxSizing:"border-box",fontSize:12,padding:"7px 10px",borderRadius:8,
-                border:`1px solid ${C.border}`,fontFamily:"inherit",outline:"none"}}/>
-          </FR>
-          <FR label="수집 게시물 수">
-            <input type="number" value={collectCount} onChange={e=>setCollectCount(e.target.value)}
-              style={{width:"100%",boxSizing:"border-box",fontSize:12,padding:"7px 10px",borderRadius:8,
-                border:`1px solid ${C.border}`,fontFamily:"inherit",outline:"none"}}/>
-          </FR>
-          <Btn onClick={handleCollect} disabled={collectLoading||!collectHashtag.trim()} style={{alignSelf:"flex-end",height:36}}>
-            {collectLoading?<><MI n="hourglass_empty" size={13}/> 수집중...</>:<><MI n="search" size={13}/> 수집 시작</>}
-          </Btn>
-        </div>
-
-        <FR label="카테고리 (추가 시 메모에 자동 태그)">
-          <input value={collectCategory} onChange={e=>setCollectCategory(e.target.value)}
-            placeholder="예: 비건뷰티, 스킨케어 ..." style={{width:"100%",boxSizing:"border-box",
-              fontSize:12,padding:"7px 10px",borderRadius:8,
-              border:`1px solid ${C.border}`,fontFamily:"inherit",outline:"none"}}/>
-        </FR>
-
-        {collectError&&(
-          <div style={{fontSize:11,fontWeight:700,padding:"8px 12px",borderRadius:8,marginTop:8,
-            background:collectError.startsWith("✅")?C.sageLt:"#FFF8F8",
-            color:collectError.startsWith("✅")?C.good:C.bad,
-            border:`1px solid ${collectError.startsWith("✅")?C.good+"44":C.bad+"44"}`}}>
-            {collectError}
-          </div>
-        )}
-
-        {!collectResults.length&&!collectLoading&&!collectError&&(
-          <div style={{textAlign:"center",padding:"40px 0",color:C.inkLt,fontSize:12}}>
-            <MI n="travel_explore" size={36} style={{color:C.border,display:"block",margin:"0 auto 10px"}}/>
-            해시태그를 입력하고 수집 시작을 눌러주세요<br/>
-            <span style={{fontSize:10}}>게시물에서 계정을 추출해 인플루언서 후보 목록을 만들어요</span>
-          </div>
-        )}
-      </Card>
-
-      {collectResults.length>0&&(
-        <Card>
-          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:10}}>
-            <div style={{fontSize:13,fontWeight:800,color:C.ink}}>
-              수집 결과 <span style={{color:C.rose}}>{collectResults.length}개</span> 계정
-              {Object.values(collectSelected).filter(Boolean).length>0&&(
-                <span style={{fontSize:10,color:C.inkMid,marginLeft:8}}>
-                  {Object.values(collectSelected).filter(Boolean).length}개 선택됨
-                </span>
-              )}
-            </div>
-            <div style={{display:"flex",gap:6}}>
-              <Btn variant="neutral" small onClick={()=>{
-                const sel={};collectResults.forEach(r=>{sel[r.username]=true;});setCollectSelected(sel);
-              }}>전체 선택</Btn>
-              <Btn variant="neutral" small onClick={()=>setCollectSelected({})}>해제</Btn>
-              <Btn variant="sage" small
-                disabled={Object.values(collectSelected).filter(Boolean).length===0}
-                onClick={handleAddCollected}>
-                <MI n="add" size={12}/> 인플루언서 목록에 추가
-              </Btn>
-            </div>
-          </div>
-          <div style={{overflowX:"auto"}}>
-            <table style={{width:"100%",borderCollapse:"collapse",minWidth:520}}>
-              <thead>
-                <tr style={{background:C.cream,borderBottom:`2px solid ${C.border}`}}>
-                  <th style={{padding:"6px 10px",width:32}}/>
-                  {["계정","이름","포스트 수","평균 좋아요","평균 댓글",""].map(h=>(
-                    <th key={h} style={{padding:"6px 10px",textAlign:"left",fontSize:10,fontWeight:700,color:C.inkMid,whiteSpace:"nowrap"}}>{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {collectResults.map(r=>{
-                  const isDup=infs.some(f=>(f.name||"").replace(/^@/,"")===r.username);
-                  const checked=!!collectSelected[r.username];
-                  return(
-                    <tr key={r.username} style={{borderBottom:`1px solid ${C.border}`,
-                      background:isDup?"#FFFBEB":checked?"#EFF6FF":C.white,cursor:"pointer"}}
-                      onClick={()=>!isDup&&setCollectSelected(p=>({...p,[r.username]:!p[r.username]}))}>
-                      <td style={{padding:"8px 10px"}}>
-                        {isDup
-                          ?<span style={{fontSize:9,color:C.warn,fontWeight:700,background:"#FFF8EC",padding:"2px 6px",borderRadius:10}}>이미 있음</span>
-                          :<input type="checkbox" checked={checked} readOnly style={{accentColor:C.rose}}/>
-                        }
-                      </td>
-                      <td style={{padding:"8px 10px"}}>
-                        <a href={r.profileUrl} target="_blank" rel="noreferrer"
-                          onClick={e=>e.stopPropagation()}
-                          style={{fontSize:12,fontWeight:800,color:C.rose,textDecoration:"none"}}>
-                          @{r.username}
-                        </a>
-                      </td>
-                      <td style={{padding:"8px 10px",fontSize:11,color:C.inkMid}}>{r.fullName||"—"}</td>
-                      <td style={{padding:"8px 10px",fontSize:12,fontWeight:700,color:C.ink,textAlign:"center"}}>{r.postCount}</td>
-                      <td style={{padding:"8px 10px",fontSize:12,fontWeight:700,color:C.rose,textAlign:"center"}}>{r.avgLikes.toLocaleString()}</td>
-                      <td style={{padding:"8px 10px",fontSize:11,color:C.inkMid,textAlign:"center"}}>{r.avgComments.toLocaleString()}</td>
-                      <td style={{padding:"8px 10px"}}>
-                        <a href={r.sampleUrl} target="_blank" rel="noreferrer"
-                          onClick={e=>e.stopPropagation()}
-                          style={{fontSize:10,color:C.inkLt,textDecoration:"none"}}>
-                          <MI n="open_in_new" size={12}/>
-                        </a>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        </Card>
-      )}
-    </div>
-  );
 
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   // 📦 재고 + 📅 스케줄 (이전 v5와 동일)
