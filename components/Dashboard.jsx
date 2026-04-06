@@ -1688,7 +1688,11 @@ export default function OaDashboard(){
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "수집 실패");
       setCollectResults(data.influencers || []);
-      if ((data.influencers||[]).length === 0) setCollectError("수집된 계정이 없어요. 검색어나 계정명을 확인해보세요.");
+      if ((data.influencers||[]).length === 0) {
+        const debugKeys = data._debug?.sampleKeys?.join(", ") || "없음";
+        const firstItem = data._debug?.firstItem ? JSON.stringify(data._debug.firstItem).slice(0,300) : "없음";
+        setCollectError(`수집된 계정 없음 (포스트 ${data.totalPosts||0}개)\n필드: ${debugKeys}\n샘플: ${firstItem}`);
+      }
     } catch (e) {
       setCollectError(e.message);
     } finally {
@@ -4091,6 +4095,7 @@ export default function OaDashboard(){
 
         {collectError&&(
           <div style={{fontSize:11,fontWeight:700,padding:"8px 12px",borderRadius:8,marginTop:8,
+            whiteSpace:"pre-wrap",wordBreak:"break-all",
             background:collectError.startsWith("✅")?C.sageLt:"#FFF8F8",
             color:collectError.startsWith("✅")?C.good:C.bad,
             border:`1px solid ${collectError.startsWith("✅")?C.good+"44":C.bad+"44"}`}}>
