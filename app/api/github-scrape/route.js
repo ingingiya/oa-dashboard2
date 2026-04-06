@@ -1,19 +1,16 @@
 export const dynamic = 'force-dynamic';
 
 const REPO = "ingingiya/oa-dashboard2";
-
-const WORKFLOWS = {
-  musinsa:    "scrape-musinsa.yml",
-  oliveyoung: "scrape-oliveyoung.yml",
-};
+const VALID_PLATFORMS = ["musinsa", "oliveyoung", "zigzag", "ably", "kakao_gift"];
 
 export async function POST(request) {
   const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
   if (!GITHUB_TOKEN) return Response.json({ error: "GITHUB_TOKEN 없음" }, { status: 500 });
 
   const { platform } = await request.json();
-  const workflow = WORKFLOWS[platform];
-  if (!workflow) return Response.json({ error: "platform은 musinsa / oliveyoung" }, { status: 400 });
+  if (!VALID_PLATFORMS.includes(platform)) return Response.json({ error: "지원하지 않는 플랫폼" }, { status: 400 });
+
+  const workflow = "scrape-market.yml";
 
   const res = await fetch(
     `https://api.github.com/repos/${REPO}/actions/workflows/${workflow}/dispatches`,
@@ -24,7 +21,7 @@ export async function POST(request) {
         Accept: "application/vnd.github+json",
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ ref: "main" }),
+      body: JSON.stringify({ ref: "main", inputs: { platform } }),
     }
   );
 

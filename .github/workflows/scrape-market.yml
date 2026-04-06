@@ -1,0 +1,39 @@
+name: 시장가 스크래퍼
+
+on:
+  workflow_dispatch:
+    inputs:
+      platform:
+        description: '플랫폼'
+        required: true
+        default: 'musinsa'
+        type: choice
+        options:
+          - musinsa
+          - oliveyoung
+          - zigzag
+          - ably
+          - kakao_gift
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Python 설정
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: 패키지 설치
+        run: |
+          pip install playwright httpx
+          playwright install chromium --with-deps
+
+      - name: 스크래퍼 실행
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+        run: python scrapers/market_scraper.py ${{ inputs.platform }}

@@ -6694,6 +6694,17 @@ export default function OaDashboard(){
     const [editingLinkKeyword, setEditingLinkKeyword] = useState("");
     const [editingOliveId, setEditingOliveId] = useState(null);
     const [editingOliveKeyword, setEditingOliveKeyword] = useState("");
+    // 통합 시장가 플랫폼 UI
+    const PLATFORM_TAB_MAP = {"🫒올리브영":"oliveyoung","🛍무신사":"musinsa","👗지그재그":"zigzag","🎀에이블리":"ably","🎁카카오선물하기":"kakao_gift"};
+    const [mktPlatformTab, setMktPlatformTab] = useState("prices"); // prices | links
+    const [mktPlatformPrices, setMktPlatformPrices] = useState({});
+    const [mktPlatformLinks, setMktPlatformLinks] = useState({});
+    const [mktPlatformLoading, setMktPlatformLoading] = useState({});
+    const [mktPlatformRunning, setMktPlatformRunning] = useState({});
+    const [mktNewUrl, setMktNewUrl] = useState("");
+    const [mktNewKeyword, setMktNewKeyword] = useState("");
+    const [mktEditId, setMktEditId] = useState(null);
+    const [mktEditKeyword, setMktEditKeyword] = useState("");
     const [marketData, setMarketData] = useSyncState("oa_market_research_v1", []);
     const [mktProductModal, setMktProductModal] = useState(false);
     const [mktBulkModal, setMktBulkModal] = useState(false);
@@ -7479,14 +7490,18 @@ export default function OaDashboard(){
                     style={{padding:"8px 14px",background:"none",border:"none",borderBottom:`2px solid ${mktCategoryTab===MKT_PRICE_TAB?"#7c3aed":"transparent"}`,color:mktCategoryTab===MKT_PRICE_TAB?"#7c3aed":C.inkMid,fontWeight:mktCategoryTab===MKT_PRICE_TAB?800:600,fontSize:12,cursor:"pointer",fontFamily:"inherit",marginBottom:-1}}>
                     🔍 최저가체크
                   </button>
-                  <button onClick={()=>setMktCategoryTab(MKT_OLIVE_TAB)}
-                    style={{padding:"8px 14px",background:"none",border:"none",borderBottom:`2px solid ${mktCategoryTab===MKT_OLIVE_TAB?"#16a34a":"transparent"}`,color:mktCategoryTab===MKT_OLIVE_TAB?"#16a34a":C.inkMid,fontWeight:mktCategoryTab===MKT_OLIVE_TAB?800:600,fontSize:12,cursor:"pointer",fontFamily:"inherit",marginBottom:-1}}>
-                    🫒 올리브영
-                  </button>
-                  <button onClick={()=>setMktCategoryTab(MKT_MUSINSA_TAB)}
-                    style={{padding:"8px 14px",background:"none",border:"none",borderBottom:`2px solid ${mktCategoryTab===MKT_MUSINSA_TAB?"#111":"transparent"}`,color:mktCategoryTab===MKT_MUSINSA_TAB?"#111":C.inkMid,fontWeight:mktCategoryTab===MKT_MUSINSA_TAB?800:600,fontSize:12,cursor:"pointer",fontFamily:"inherit",marginBottom:-1}}>
-                    🛍 무신사
-                  </button>
+                  {[
+                    {id:"🫒올리브영",    key:"oliveyoung", color:"#16a34a"},
+                    {id:"🛍무신사",      key:"musinsa",    color:"#111"},
+                    {id:"👗지그재그",    key:"zigzag",     color:"#7c3aed"},
+                    {id:"🎀에이블리",    key:"ably",       color:"#ec4899"},
+                    {id:"🎁카카오선물하기",key:"kakao_gift",color:"#f59e0b"},
+                  ].map(t=>(
+                    <button key={t.id} onClick={()=>setMktCategoryTab(t.id)}
+                      style={{padding:"8px 14px",background:"none",border:"none",borderBottom:`2px solid ${mktCategoryTab===t.id?t.color:"transparent"}`,color:mktCategoryTab===t.id?t.color:C.inkMid,fontWeight:mktCategoryTab===t.id?800:600,fontSize:12,cursor:"pointer",fontFamily:"inherit",marginBottom:-1,whiteSpace:"nowrap"}}>
+                      {t.id}
+                    </button>
+                  ))}
                   <div style={{flex:1}}/>
                   <Btn small onClick={()=>{setMktBulkModal(true);setMktBulkText("");}}>일괄 추가</Btn>
                   <Btn small onClick={()=>setMktProductModal(true)}>+ 제품 추가</Btn>
@@ -7672,59 +7687,66 @@ export default function OaDashboard(){
                   );
                 })()}
 
-                {mktCategoryTab===MKT_OLIVE_TAB&&(()=>{
-                  const SURL = process.env.NEXT_PUBLIC_SUPABASE_URL;
-                  const SKEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-                  const sH = {apikey:SKEY, Authorization:`Bearer ${SKEY}`};
-                  if(oliveyoungTab==="prices" && !oliveyoungItems && !oliveyoungLoading) {
-                    setOliveyoungLoading(true);
-                    fetch(`${SURL}/rest/v1/oliveyoung_prices?select=*&order=brand.asc,name.asc`, {headers:sH})
-                      .then(r=>r.json()).then(d=>{setOliveyoungItems(Array.isArray(d)?d:[]);setOliveyoungLoading(false);})
-                      .catch(()=>setOliveyoungLoading(false));
+                {PLATFORM_TAB_MAP[mktCategoryTab]&&(()=>{
+                  const platform = PLATFORM_TAB_MAP[mktCategoryTab];
+                  const prices = mktPlatformPrices[platform];
+                  const links = mktPlatformLinks[platform];
+                  const loading = mktPlatformLoading[platform];
+                  const running = mktPlatformRunning[platform];
+                  // 가격 로드
+                  if(mktPlatformTab==="prices" && !prices && !loading) {
+                    setMktPlatformLoading(p=>({...p,[platform]:true}));
+                    fetch(`/api/market/prices?platform=${platform}`)
+                      .then(r=>r.json()).then(d=>{
+                        setMktPlatformPrices(p=>({...p,[platform]:Array.isArray(d)?d:[]}));
+                        setMktPlatformLoading(p=>({...p,[platform]:false}));
+                      }).catch(()=>setMktPlatformLoading(p=>({...p,[platform]:false})));
                   }
-                  if(oliveyoungTab==="links" && !oliveyoungLinks) {
-                    fetch(`${SURL}/rest/v1/oliveyoung_links?select=*&order=id.asc`, {headers:sH})
-                      .then(r=>r.json()).then(d=>setOliveyoungLinks(Array.isArray(d)?d:[]));
+                  // 링크 로드
+                  if(mktPlatformTab==="links" && !links) {
+                    fetch(`/api/market/links?platform=${platform}`)
+                      .then(r=>r.json()).then(d=>setMktPlatformLinks(p=>({...p,[platform]:Array.isArray(d)?d:[]})));
                   }
                   const byBrand = {};
-                  (oliveyoungItems||[]).forEach(item=>{
-                    const b = item.brand||"기타";
-                    if(!byBrand[b]) byBrand[b]=[];
-                    byBrand[b].push(item);
-                  });
+                  (prices||[]).forEach(item=>{ const b=item.brand||"기타"; if(!byBrand[b])byBrand[b]=[]; byBrand[b].push(item); });
+                  const extractPid = (url) => {
+                    const patterns = [/\/products\/(\d+)/, /goodsNo=([A-Z0-9]+)/i, /\/catalog\/products\/(\d+)/, /\/goods\/(\d+)/, /\/product\/(\d+)/];
+                    for(const p of patterns){ const m=url.match(p); if(m) return m[1]; }
+                    return Date.now().toString();
+                  };
                   return(
                     <div style={{display:"flex",flexDirection:"column",gap:12}}>
                       <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:8}}>
                         <div style={{display:"flex",gap:4,background:C.cream,borderRadius:10,padding:3}}>
                           {[{id:"prices",label:"가격 현황"},{id:"links",label:"링크 관리"}].map(t=>(
-                            <button key={t.id} onClick={()=>setOliveyoungTab(t.id)} style={{fontSize:11,fontWeight:700,padding:"5px 14px",borderRadius:8,border:"none",cursor:"pointer",background:oliveyoungTab===t.id?"#fff":"transparent",color:oliveyoungTab===t.id?C.ink:C.inkMid,fontFamily:"inherit"}}>{t.label}</button>
+                            <button key={t.id} onClick={()=>setMktPlatformTab(t.id)} style={{fontSize:11,fontWeight:700,padding:"5px 14px",borderRadius:8,border:"none",cursor:"pointer",background:mktPlatformTab===t.id?"#fff":"transparent",color:mktPlatformTab===t.id?C.ink:C.inkMid,fontFamily:"inherit"}}>{t.label}</button>
                           ))}
                         </div>
-                        {oliveyoungTab==="prices"&&(
+                        {mktPlatformTab==="prices"&&(
                           <div style={{display:"flex",gap:8}}>
                             <button onClick={()=>{
-                              if(oliveyoungLoading) return;
-                              setOliveyoungLoading(true);
-                              fetch("/api/github-scrape",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({platform:"oliveyoung"})})
+                              if(running) return;
+                              setMktPlatformRunning(p=>({...p,[platform]:true}));
+                              fetch("/api/github-scrape",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({platform})})
                                 .then(r=>r.json()).then(d=>{
-                                  if(d.ok) alert("수집 시작! GitHub Actions에서 실행 중. 2~3분 후 새로고침해줘.");
+                                  if(d.ok) alert("수집 시작! GitHub Actions 실행 중. 2~3분 후 새로고침.");
                                   else alert("오류: "+d.error);
-                                  setOliveyoungLoading(false);
-                                }).catch(e=>{alert("오류: "+e.message);setOliveyoungLoading(false);});
-                            }} style={{display:"flex",alignItems:"center",gap:5,padding:"7px 14px",borderRadius:8,border:"none",background:oliveyoungLoading?"#e5e7eb":"#111",color:oliveyoungLoading?C.inkMid:"#fff",fontWeight:700,fontSize:11,cursor:oliveyoungLoading?"not-allowed":"pointer",fontFamily:"inherit"}}>
-                              <MI n="play_arrow" size={13}/>{oliveyoungLoading?"실행 중...":"수집 실행"}
+                                  setMktPlatformRunning(p=>({...p,[platform]:false}));
+                                }).catch(e=>{alert("오류: "+e.message);setMktPlatformRunning(p=>({...p,[platform]:false}));});
+                            }} style={{display:"flex",alignItems:"center",gap:5,padding:"7px 14px",borderRadius:8,border:"none",background:running?"#e5e7eb":"#111",color:running?C.inkMid:"#fff",fontWeight:700,fontSize:11,cursor:running?"not-allowed":"pointer",fontFamily:"inherit"}}>
+                              <MI n="play_arrow" size={13}/>{running?"실행 중...":"수집 실행"}
                             </button>
-                            <button onClick={()=>{setOliveyoungItems(null);setOliveyoungLoading(false);}} style={{display:"flex",alignItems:"center",gap:5,padding:"7px 14px",borderRadius:8,border:"none",background:"#f3f4f6",color:C.inkMid,fontWeight:700,fontSize:11,cursor:"pointer",fontFamily:"inherit"}}>
+                            <button onClick={()=>setMktPlatformPrices(p=>({...p,[platform]:null}))} style={{display:"flex",alignItems:"center",gap:5,padding:"7px 14px",borderRadius:8,border:"none",background:"#f3f4f6",color:C.inkMid,fontWeight:700,fontSize:11,cursor:"pointer",fontFamily:"inherit"}}>
                               <MI n="refresh" size={13}/>새로고침
                             </button>
                           </div>
                         )}
                       </div>
-                      {oliveyoungTab==="prices"&&(
-                        oliveyoungLoading?(
+                      {mktPlatformTab==="prices"&&(
+                        loading?(
                           <Card><div style={{textAlign:"center",padding:"32px 0",color:C.inkLt,fontSize:12}}>불러오는 중...</div></Card>
-                        ):!oliveyoungItems||oliveyoungItems.length===0?(
-                          <Card><div style={{textAlign:"center",padding:"32px 0",color:C.inkLt,fontSize:12}}>데이터 없음 — 스크레이퍼를 실행해주세요</div></Card>
+                        ):!prices||prices.length===0?(
+                          <Card><div style={{textAlign:"center",padding:"32px 0",color:C.inkLt,fontSize:12}}>데이터 없음 — 링크 추가 후 수집 실행</div></Card>
                         ):(
                           Object.entries(byBrand).map(([brand,items])=>(
                             <Card key={brand}>
@@ -7732,191 +7754,21 @@ export default function OaDashboard(){
                               <div style={{overflowX:"auto"}}>
                                 <table style={{width:"100%",borderCollapse:"collapse",fontSize:11}}>
                                   <thead><tr style={{background:C.cream}}>
-                                    {["이미지","상품명","순위","최적가","정가","할인율","세일기간","수집일","링크"].map(h=>(
+                                    {["이미지","상품명","순위","판매가","정가","할인율","수집일","링크"].map(h=>(
                                       <th key={h} style={{padding:"6px 8px",textAlign:"left",fontWeight:700,color:C.inkMid,borderBottom:`1px solid ${C.border}`,whiteSpace:"nowrap"}}>{h}</th>
                                     ))}
                                   </tr></thead>
                                   <tbody>
                                     {items.map(item=>{
-                                      const disc = item.original_price&&item.sale_price&&item.original_price>item.sale_price?Math.round((1-item.sale_price/item.original_price)*100):0;
+                                      const disc=item.original_price&&item.sale_price&&item.original_price>item.sale_price?Math.round((1-item.sale_price/item.original_price)*100):0;
                                       return(
                                         <tr key={item.product_id} style={{borderBottom:`1px solid ${C.cream}`}}>
                                           <td style={{padding:"6px 8px"}}>{item.image&&<img src={item.image} alt="" style={{width:40,height:40,objectFit:"cover",borderRadius:4,border:`1px solid ${C.border}`}}/>}</td>
                                           <td style={{padding:"6px 8px",maxWidth:200,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{item.name}</td>
                                           <td style={{padding:"6px 8px",whiteSpace:"nowrap"}}>{item.rank!=null?<span style={{fontWeight:800,color:item.rank<=3?"#dc2626":item.rank<=10?"#ea580c":"#111"}}>{item.rank}위</span>:"—"}</td>
-                                          <td style={{padding:"6px 8px",fontWeight:800,color:"#16a34a",whiteSpace:"nowrap"}}>{item.sale_price?`₩${item.sale_price.toLocaleString()}`:"—"}</td>
-                                          <td style={{padding:"6px 8px",color:C.inkMid,whiteSpace:"nowrap",textDecoration:"line-through"}}>{item.original_price&&item.original_price!==item.sale_price?`₩${item.original_price.toLocaleString()}`:"—"}</td>
-                                          <td style={{padding:"6px 8px",whiteSpace:"nowrap"}}>{disc>0&&<span style={{background:"#fee2e2",color:"#dc2626",fontWeight:700,padding:"2px 6px",borderRadius:4,fontSize:10}}>{disc}%</span>}</td>
-                                          <td style={{padding:"6px 8px",color:"#7c3aed",fontSize:10,whiteSpace:"nowrap",maxWidth:120,overflow:"hidden",textOverflow:"ellipsis"}}>{item.sale_period||"—"}</td>
-                                          <td style={{padding:"6px 8px",color:C.inkLt,whiteSpace:"nowrap"}}>{item.collected_at?item.collected_at.slice(0,10):"—"}</td>
-                                          <td style={{padding:"6px 8px"}}>{item.url&&<a href={item.url} target="_blank" rel="noreferrer" style={{fontSize:10,color:"#2563eb",textDecoration:"none",display:"flex",alignItems:"center",gap:2}}><MI n="open_in_new" size={10}/>보기</a>}</td>
-                                        </tr>
-                                      );
-                                    })}
-                                  </tbody>
-                                </table>
-                              </div>
-                            </Card>
-                          ))
-                        )
-                      )}
-                      {oliveyoungTab==="links"&&(
-                        <div style={{display:"flex",flexDirection:"column",gap:10}}>
-                          <Card>
-                            <div style={{fontSize:12,fontWeight:700,color:C.ink,marginBottom:8}}>링크 추가</div>
-                            <div style={{display:"flex",flexDirection:"column",gap:6}}>
-                              <input value={newOliveUrl} onChange={e=>setNewOliveUrl(e.target.value)}
-                                placeholder="https://www.oliveyoung.co.kr/store/goods/getGoodsDetail.do?goodsNo=..."
-                                style={{fontSize:11,padding:"7px 10px",borderRadius:8,border:`1px solid ${C.border}`,outline:"none",fontFamily:"inherit"}}/>
-                              <div style={{display:"flex",gap:8,alignItems:"center"}}>
-                                <input value={newOliveKeyword} onChange={e=>setNewOliveKeyword(e.target.value)}
-                                  placeholder="검색 키워드 (순위 추적용, 예: 비타민C 세럼)"
-                                  style={{flex:1,fontSize:11,padding:"7px 10px",borderRadius:8,border:`1px solid ${C.border}`,outline:"none",fontFamily:"inherit"}}/>
-                                <button onClick={()=>{
-                                  const url = newOliveUrl.trim();
-                                  if(!url) return;
-                                  const m = url.match(/goodsNo=([A-Z0-9]+)/i);
-                                  const pid = m?m[1]:Date.now().toString();
-                                  fetch(`${SURL}/rest/v1/oliveyoung_links`,{method:"POST",headers:{...sH,"Content-Type":"application/json","Prefer":"return=representation"},body:JSON.stringify({product_id:pid,url,active:true,search_keyword:newOliveKeyword.trim()||null})})
-                                    .then(()=>{setNewOliveUrl("");setNewOliveKeyword("");setOliveyoungLinks(null);});
-                                }} style={{padding:"7px 16px",borderRadius:8,border:"none",background:"#111",color:"#fff",fontWeight:700,fontSize:11,cursor:"pointer",fontFamily:"inherit",whiteSpace:"nowrap"}}>
-                                  <MI n="add" size={13}/>추가
-                                </button>
-                              </div>
-                            </div>
-                          </Card>
-                          <Card>
-                            <div style={{fontSize:12,fontWeight:700,color:C.ink,marginBottom:8}}>등록된 링크 <span style={{fontWeight:400,color:C.inkLt}}>({(oliveyoungLinks||[]).length}개)</span></div>
-                            {!oliveyoungLinks?(
-                              <div style={{color:C.inkLt,fontSize:11,textAlign:"center",padding:"16px 0"}}>불러오는 중...</div>
-                            ):(oliveyoungLinks||[]).length===0?(
-                              <div style={{color:C.inkLt,fontSize:11,textAlign:"center",padding:"16px 0"}}>등록된 링크 없음</div>
-                            ):(
-                              <div style={{display:"flex",flexDirection:"column",gap:6}}>
-                                {oliveyoungLinks.map(link=>(
-                                  <div key={link.id} style={{display:"flex",alignItems:"center",gap:8,padding:"6px 0",borderBottom:`1px solid ${C.cream}`}}>
-                                    <span style={{fontSize:10,color:C.inkLt,minWidth:80}}>#{link.product_id}</span>
-                                    <div style={{flex:1,overflow:"hidden"}}>
-                                      <a href={link.url} target="_blank" rel="noreferrer" style={{fontSize:11,color:"#2563eb",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",display:"block"}}>{link.url}</a>
-                                      {editingOliveId===link.id?(
-                                        <div style={{display:"flex",gap:4,marginTop:3}}>
-                                          <input value={editingOliveKeyword} onChange={e=>setEditingOliveKeyword(e.target.value)}
-                                            placeholder="검색 키워드" autoFocus
-                                            style={{flex:1,fontSize:10,padding:"3px 6px",borderRadius:6,border:`1px solid ${C.border}`,outline:"none",fontFamily:"inherit"}}/>
-                                          <button onClick={()=>{
-                                            fetch(`${SURL}/rest/v1/oliveyoung_links?id=eq.${link.id}`,{method:"PATCH",headers:{...sH,"Content-Type":"application/json"},body:JSON.stringify({search_keyword:editingOliveKeyword.trim()||null})})
-                                              .then(()=>{setEditingOliveId(null);setOliveyoungLinks(null);});
-                                          }} style={{padding:"3px 8px",borderRadius:6,border:"none",background:"#111",color:"#fff",fontSize:10,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>저장</button>
-                                          <button onClick={()=>setEditingOliveId(null)} style={{padding:"3px 6px",borderRadius:6,border:"none",background:"#f3f4f6",color:C.inkMid,fontSize:10,cursor:"pointer",fontFamily:"inherit"}}>취소</button>
-                                        </div>
-                                      ):(
-                                        <span style={{fontSize:10,color:"#7c3aed",cursor:"pointer"}} onClick={()=>{setEditingOliveId(link.id);setEditingOliveKeyword(link.search_keyword||"");}}>
-                                          {link.search_keyword?`🔍 ${link.search_keyword}`:"+ 키워드 추가"}
-                                        </span>
-                                      )}
-                                    </div>
-                                    <button onClick={()=>{
-                                      fetch(`${SURL}/rest/v1/oliveyoung_links?id=eq.${link.id}`,{method:"PATCH",headers:{...sH,"Content-Type":"application/json","Prefer":"return=representation"},body:JSON.stringify({active:!link.active})})
-                                        .then(()=>setOliveyoungLinks(null));
-                                    }} style={{padding:"3px 8px",borderRadius:6,border:"none",background:link.active?"#dcfce7":"#f3f4f6",color:link.active?"#16a34a":C.inkMid,fontSize:10,fontWeight:700,cursor:"pointer",fontFamily:"inherit",whiteSpace:"nowrap"}}>
-                                      {link.active?"활성":"비활성"}
-                                    </button>
-                                    <button onClick={()=>{
-                                      if(!confirm("삭제할까요?")) return;
-                                      fetch(`${SURL}/rest/v1/oliveyoung_links?id=eq.${link.id}`,{method:"DELETE",headers:sH})
-                                        .then(()=>setOliveyoungLinks(null));
-                                    }} style={{padding:"3px 8px",borderRadius:6,border:"none",background:"#fee2e2",color:"#dc2626",fontSize:10,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
-                                      삭제
-                                    </button>
-                                  </div>
-                                ))}
-                              </div>
-                            )}
-                          </Card>
-                        </div>
-                      )}
-                    </div>
-                  );
-                })()}
-
-                {mktCategoryTab===MKT_MUSINSA_TAB&&(()=>{
-                  const SURL = process.env.NEXT_PUBLIC_SUPABASE_URL;
-                  const SKEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-                  const sHeaders = {apikey:SKEY, Authorization:`Bearer ${SKEY}`};
-                  if(musinsaTab==="prices" && !musinsaItems && !musinsaLoading) {
-                    setMusinsaLoading(true);
-                    fetch(`${SURL}/rest/v1/musinsa_prices?select=*&order=brand.asc,name.asc`, {headers:sHeaders})
-                      .then(r=>r.json()).then(d=>{
-                        setMusinsaItems(Array.isArray(d)?d:[]);
-                        setMusinsaLoading(false);
-                      }).catch(()=>setMusinsaLoading(false));
-                  }
-                  if(musinsaTab==="links" && !musinsaLinks) {
-                    fetch(`${SURL}/rest/v1/musinsa_links?select=*&order=id.asc`, {headers:sHeaders})
-                      .then(r=>r.json()).then(d=>setMusinsaLinks(Array.isArray(d)?d:[]));
-                  }
-                  const byBrand = {};
-                  (musinsaItems||[]).forEach(item=>{
-                    const b = item.brand||"기타";
-                    if(!byBrand[b]) byBrand[b]=[];
-                    byBrand[b].push(item);
-                  });
-                  return(
-                    <div style={{display:"flex",flexDirection:"column",gap:12}}>
-                      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:8}}>
-                        <div style={{display:"flex",gap:4,background:C.cream,borderRadius:10,padding:3}}>
-                          {[{id:"prices",label:"가격 현황"},{id:"links",label:"링크 관리"}].map(t=>(
-                            <button key={t.id} onClick={()=>setMusinsaTab(t.id)} style={{fontSize:11,fontWeight:700,padding:"5px 14px",borderRadius:8,border:"none",cursor:"pointer",background:musinsaTab===t.id?"#fff":"transparent",color:musinsaTab===t.id?C.ink:C.inkMid,fontFamily:"inherit"}}>{t.label}</button>
-                          ))}
-                        </div>
-                        {musinsaTab==="prices"&&(
-                          <div style={{display:"flex",gap:8}}>
-                            <button onClick={()=>{
-                              if(musinsaRunning) return;
-                              setMusinsaRunning(true);
-                              fetch("/api/github-scrape",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({platform:"musinsa"})})
-                                .then(r=>r.json()).then(d=>{
-                                  if(d.ok) alert("수집 시작! GitHub Actions에서 실행 중. 2~3분 후 새로고침해줘.");
-                                  else alert("오류: "+d.error);
-                                  setMusinsaRunning(false);
-                                }).catch(e=>{alert("오류: "+e.message);setMusinsaRunning(false);});
-                            }} style={{display:"flex",alignItems:"center",gap:5,padding:"7px 14px",borderRadius:8,border:"none",background:musinsaRunning?"#e5e7eb":"#111",color:musinsaRunning?C.inkMid:"#fff",fontWeight:700,fontSize:11,cursor:musinsaRunning?"not-allowed":"pointer",fontFamily:"inherit"}}>
-                              <MI n="play_arrow" size={13}/>{musinsaRunning?"실행 중...":"수집 실행"}
-                            </button>
-                            <button onClick={()=>{setMusinsaItems(null);setMusinsaLoading(false);}} style={{display:"flex",alignItems:"center",gap:5,padding:"7px 14px",borderRadius:8,border:"none",background:"#f3f4f6",color:C.inkMid,fontWeight:700,fontSize:11,cursor:"pointer",fontFamily:"inherit"}}>
-                              <MI n="refresh" size={13}/>새로고침
-                            </button>
-                          </div>
-                        )}
-                      </div>
-                      {musinsaTab==="prices"&&(
-                        musinsaLoading?(
-                          <Card><div style={{textAlign:"center",padding:"32px 0",color:C.inkLt,fontSize:12}}>불러오는 중...</div></Card>
-                        ):!musinsaItems||musinsaItems.length===0?(
-                          <Card><div style={{textAlign:"center",padding:"32px 0",color:C.inkLt,fontSize:12}}>데이터 없음 — 링크 관리에서 링크 추가 후 실행.command를 실행해주세요</div></Card>
-                        ):(
-                          Object.entries(byBrand).map(([brand,items])=>(
-                            <Card key={brand}>
-                              <div style={{fontSize:13,fontWeight:900,color:C.ink,marginBottom:10}}>{brand} <span style={{fontSize:10,fontWeight:500,color:C.inkLt}}>({items.length}개)</span></div>
-                              <div style={{overflowX:"auto"}}>
-                                <table style={{width:"100%",borderCollapse:"collapse",fontSize:11}}>
-                                  <thead><tr style={{borderBottom:`1px solid ${C.border}`}}>
-                                    {["이미지","상품명","순위","판매가","정가","할인율","세일기간","수집일","링크"].map(h=>(
-                                      <th key={h} style={{padding:"4px 8px",textAlign:"left",fontWeight:700,color:C.inkMid,whiteSpace:"nowrap"}}>{h}</th>
-                                    ))}
-                                  </tr></thead>
-                                  <tbody>
-                                    {items.map(item=>{
-                                      const disc = item.original_price&&item.sale_price&&item.original_price>item.sale_price?Math.round((1-item.sale_price/item.original_price)*100):0;
-                                      return(
-                                        <tr key={item.product_id} style={{borderBottom:`1px solid ${C.cream}`}}>
-                                          <td style={{padding:"6px 8px"}}>{item.image&&<img src={item.image} alt="" style={{width:40,height:40,objectFit:"cover",borderRadius:4,border:`1px solid ${C.border}`}}/>}</td>
-                                          <td style={{padding:"6px 8px",maxWidth:180,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{item.name}</td>
-                                          <td style={{padding:"6px 8px",whiteSpace:"nowrap"}}>{item.rank!=null?<span style={{fontWeight:800,color:item.rank<=3?"#dc2626":item.rank<=10?"#ea580c":"#111"}}>{item.rank}위</span>:"—"}</td>
                                           <td style={{padding:"6px 8px",fontWeight:800,color:C.ink,whiteSpace:"nowrap"}}>{item.sale_price?`₩${item.sale_price.toLocaleString()}`:"—"}</td>
                                           <td style={{padding:"6px 8px",color:C.inkMid,whiteSpace:"nowrap",textDecoration:"line-through"}}>{item.original_price&&item.original_price!==item.sale_price?`₩${item.original_price.toLocaleString()}`:"—"}</td>
                                           <td style={{padding:"6px 8px",whiteSpace:"nowrap"}}>{disc>0&&<span style={{background:"#fee2e2",color:"#dc2626",fontWeight:700,padding:"2px 6px",borderRadius:4,fontSize:10}}>{disc}%</span>}</td>
-                                          <td style={{padding:"6px 8px",color:"#7c3aed",fontSize:10,whiteSpace:"nowrap",maxWidth:120,overflow:"hidden",textOverflow:"ellipsis"}}>{item.sale_period||"—"}</td>
                                           <td style={{padding:"6px 8px",color:C.inkLt,whiteSpace:"nowrap"}}>{item.collected_at?item.collected_at.slice(0,10):"—"}</td>
                                           <td style={{padding:"6px 8px"}}>{item.url&&<a href={item.url} target="_blank" rel="noreferrer" style={{fontSize:10,color:"#2563eb",textDecoration:"none",display:"flex",alignItems:"center",gap:2}}><MI n="open_in_new" size={10}/>보기</a>}</td>
                                         </tr>
@@ -7929,25 +7781,23 @@ export default function OaDashboard(){
                           ))
                         )
                       )}
-                      {musinsaTab==="links"&&(
+                      {mktPlatformTab==="links"&&(
                         <div style={{display:"flex",flexDirection:"column",gap:10}}>
                           <Card>
                             <div style={{fontSize:12,fontWeight:700,color:C.ink,marginBottom:8}}>링크 추가</div>
                             <div style={{display:"flex",flexDirection:"column",gap:6}}>
-                              <input value={newLinkUrl} onChange={e=>setNewLinkUrl(e.target.value)}
-                                placeholder="https://www.musinsa.com/products/1234567"
+                              <input value={mktNewUrl} onChange={e=>setMktNewUrl(e.target.value)}
+                                placeholder="상품 URL"
                                 style={{fontSize:11,padding:"7px 10px",borderRadius:8,border:`1px solid ${C.border}`,outline:"none",fontFamily:"inherit"}}/>
                               <div style={{display:"flex",gap:8,alignItems:"center"}}>
-                                <input value={newLinkKeyword} onChange={e=>setNewLinkKeyword(e.target.value)}
-                                  placeholder="검색 키워드 (순위 추적용, 예: 소닉 클렌저)"
+                                <input value={mktNewKeyword} onChange={e=>setMktNewKeyword(e.target.value)}
+                                  placeholder="검색 키워드 (순위 추적용)"
                                   style={{flex:1,fontSize:11,padding:"7px 10px",borderRadius:8,border:`1px solid ${C.border}`,outline:"none",fontFamily:"inherit"}}/>
                                 <button onClick={()=>{
-                                  const url = newLinkUrl.trim();
-                                  if(!url) return;
-                                  const m = url.match(/products\/(\d+)/);
-                                  const pid = m?m[1]:Date.now().toString();
-                                  fetch("/api/musinsa/links",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({product_id:pid,url,active:true,search_keyword:newLinkKeyword.trim()||null})})
-                                    .then(()=>{setNewLinkUrl("");setNewLinkKeyword("");setMusinsaLinks(null);});
+                                  const url=mktNewUrl.trim(); if(!url) return;
+                                  const pid=extractPid(url);
+                                  fetch("/api/market/links",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({platform,product_id:pid,url,active:true,search_keyword:mktNewKeyword.trim()||null})})
+                                    .then(()=>{setMktNewUrl("");setMktNewKeyword("");setMktPlatformLinks(p=>({...p,[platform]:null}));});
                                 }} style={{padding:"7px 16px",borderRadius:8,border:"none",background:"#111",color:"#fff",fontWeight:700,fontSize:11,cursor:"pointer",fontFamily:"inherit",whiteSpace:"nowrap"}}>
                                   <MI n="add" size={13}/>추가
                                 </button>
@@ -7955,45 +7805,45 @@ export default function OaDashboard(){
                             </div>
                           </Card>
                           <Card>
-                            <div style={{fontSize:12,fontWeight:700,color:C.ink,marginBottom:8}}>등록된 링크 <span style={{fontWeight:400,color:C.inkLt}}>({(musinsaLinks||[]).length}개)</span></div>
-                            {!musinsaLinks?(
+                            <div style={{fontSize:12,fontWeight:700,color:C.ink,marginBottom:8}}>등록된 링크 <span style={{fontWeight:400,color:C.inkLt}}>({(links||[]).length}개)</span></div>
+                            {!links?(
                               <div style={{color:C.inkLt,fontSize:11,textAlign:"center",padding:"16px 0"}}>불러오는 중...</div>
-                            ):(musinsaLinks||[]).length===0?(
+                            ):links.length===0?(
                               <div style={{color:C.inkLt,fontSize:11,textAlign:"center",padding:"16px 0"}}>등록된 링크 없음</div>
                             ):(
                               <div style={{display:"flex",flexDirection:"column",gap:6}}>
-                                {musinsaLinks.map(link=>(
+                                {links.map(link=>(
                                   <div key={link.id} style={{display:"flex",alignItems:"center",gap:8,padding:"6px 0",borderBottom:`1px solid ${C.cream}`}}>
                                     <span style={{fontSize:10,color:C.inkLt,minWidth:60}}>#{link.product_id}</span>
                                     <div style={{flex:1,overflow:"hidden"}}>
                                       <a href={link.url} target="_blank" rel="noreferrer" style={{fontSize:11,color:"#2563eb",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",display:"block"}}>{link.url}</a>
-                                      {editingLinkId===link.id?(
+                                      {mktEditId===link.id?(
                                         <div style={{display:"flex",gap:4,marginTop:3}}>
-                                          <input value={editingLinkKeyword} onChange={e=>setEditingLinkKeyword(e.target.value)}
+                                          <input value={mktEditKeyword} onChange={e=>setMktEditKeyword(e.target.value)}
                                             placeholder="검색 키워드" autoFocus
                                             style={{flex:1,fontSize:10,padding:"3px 6px",borderRadius:6,border:`1px solid ${C.border}`,outline:"none",fontFamily:"inherit"}}/>
                                           <button onClick={()=>{
-                                            fetch("/api/musinsa/links",{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({id:link.id,search_keyword:editingLinkKeyword.trim()||null})})
-                                              .then(()=>{setEditingLinkId(null);setMusinsaLinks(null);});
+                                            fetch("/api/market/links",{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({id:link.id,search_keyword:mktEditKeyword.trim()||null})})
+                                              .then(()=>{setMktEditId(null);setMktPlatformLinks(p=>({...p,[platform]:null}));});
                                           }} style={{padding:"3px 8px",borderRadius:6,border:"none",background:"#111",color:"#fff",fontSize:10,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>저장</button>
-                                          <button onClick={()=>setEditingLinkId(null)} style={{padding:"3px 6px",borderRadius:6,border:"none",background:"#f3f4f6",color:C.inkMid,fontSize:10,cursor:"pointer",fontFamily:"inherit"}}>취소</button>
+                                          <button onClick={()=>setMktEditId(null)} style={{padding:"3px 6px",borderRadius:6,border:"none",background:"#f3f4f6",color:C.inkMid,fontSize:10,cursor:"pointer",fontFamily:"inherit"}}>취소</button>
                                         </div>
                                       ):(
-                                        <span style={{fontSize:10,color:"#7c3aed",cursor:"pointer"}} onClick={()=>{setEditingLinkId(link.id);setEditingLinkKeyword(link.search_keyword||"");}}>
+                                        <span style={{fontSize:10,color:"#7c3aed",cursor:"pointer"}} onClick={()=>{setMktEditId(link.id);setMktEditKeyword(link.search_keyword||"");}}>
                                           {link.search_keyword?`🔍 ${link.search_keyword}`:"+ 키워드 추가"}
                                         </span>
                                       )}
                                     </div>
                                     <button onClick={()=>{
-                                      fetch("/api/musinsa/links",{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({id:link.id,active:!link.active})})
-                                        .then(()=>setMusinsaLinks(null));
+                                      fetch("/api/market/links",{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({id:link.id,active:!link.active})})
+                                        .then(()=>setMktPlatformLinks(p=>({...p,[platform]:null})));
                                     }} style={{padding:"3px 8px",borderRadius:6,border:"none",background:link.active?"#dcfce7":"#f3f4f6",color:link.active?"#16a34a":C.inkMid,fontSize:10,fontWeight:700,cursor:"pointer",fontFamily:"inherit",whiteSpace:"nowrap"}}>
                                       {link.active?"활성":"비활성"}
                                     </button>
                                     <button onClick={()=>{
                                       if(!confirm("삭제할까요?")) return;
-                                      fetch("/api/musinsa/links",{method:"DELETE",headers:{"Content-Type":"application/json"},body:JSON.stringify({id:link.id})})
-                                        .then(()=>setMusinsaLinks(null));
+                                      fetch("/api/market/links",{method:"DELETE",headers:{"Content-Type":"application/json"},body:JSON.stringify({id:link.id})})
+                                        .then(()=>setMktPlatformLinks(p=>({...p,[platform]:null})));
                                     }} style={{padding:"3px 8px",borderRadius:6,border:"none",background:"#fee2e2",color:"#dc2626",fontSize:10,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
                                       삭제
                                     </button>
