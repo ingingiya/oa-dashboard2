@@ -363,7 +363,7 @@ async def extract_kakao_gift(page, pid, captured=None):
             const sale = nums[0] || 0;
             const orig = nums.length > 1 ? nums[nums.length-1] : sale;
             // 이미지
-            const imgEl = document.querySelector('img[src*="kakao"],img[src*="gift"],figure img,[class*="thumb"] img,[class*="product"] img');
+            const imgEl = document.querySelector('img[src*="kakaocdn"],img[src*="st.kakao"],figure img,[class*="thumb"] img,[class*="product"] img');
             return { name, brand, sale_price: sale, original_price: orig >= sale ? orig : sale, image: imgEl?.src || '' };
         }""")
         if result and result.get("sale_price") and result.get("name"):
