@@ -2026,7 +2026,7 @@ export default function OaDashboard(){
     const adMargin = getAdMargin(ad.name, ad.campaign, margins, margin);
     const s=adScore(ad, adMargin, getConvCriteria(ad.name, ad.campaign, convCriteria)); return !cutAds.includes(ad)&&s.issues.some(i=>i.label==="보류"||i.label==="보통");
   });
-  const totalAlerts    = overdueIns.length+dangerInv.length+urgentScheds.length+cutAds.length+holdAds.length+orderRaw.length;
+  const totalAlerts    = urgentScheds.length+cutAds.length+holdAds.length+orderRaw.length;
 
   // ── CRUD 콜백 (모달 컴포넌트에서 onSave로 호출) ─────
   async function saveInf(item){
