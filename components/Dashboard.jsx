@@ -798,16 +798,21 @@ function NaverSection() {
   function parseCSV(text) {
     const lines = text.replace(/\r/g,"").split("\n").filter(l=>l.trim());
     if(lines.length < 3) return { rows:[], dateRange:"" };
-    // 1행 타이틀에서 날짜 범위 추출 (예: 2026.04.06~2026.04.12)
+    // 1행 타이틀에서 날짜 범위 추출
     const titleLine = lines[0].replace(/"/g,"");
-    const dateMatch = titleLine.match(/(\d{4}[.\-]\d{2}[.\-]\d{2})\s*~\s*(\d{4}[.\-]\d{2}[.\-]\d{2})/);
-    const dateRange = dateMatch ? `${dateMatch[1]} ~ ${dateMatch[2]}` : "";
+    const dateMatch = titleLine.match(/(\d{4}[./\-]\d{1,2}[./\-]\d{1,2})\s*~\s*(\d{4}[./\-]\d{1,2}[./\-]\d{1,2})/);
+    const dateRange = dateMatch ? `${dateMatch[1]} ~ ${dateMatch[2]}` : titleLine.trim().slice(0,40);
     const headers = lines[1].split(",").map(h=>h.replace(/^"|"$/g,"").trim());
+    const KEEP_COLS = ["캠페인","광고그룹","검색어","노출수","클릭수","총비용",
+      "총 전환수","총 전환매출액(원)","구매완료 전환수","구매완료 전환매출액(원)"];
     const rows = lines.slice(2).map(line=>{
       const vals = line.split(",").map(v=>v.replace(/^"|"$/g,"").trim());
       const o = {};
       headers.forEach((h,i)=>{ o[h] = vals[i]||""; });
-      return o;
+      // 필요한 컬럼만 추려서 저장 용량 최소화
+      const slim = {};
+      KEEP_COLS.forEach(k=>{ if(o[k]!==undefined) slim[k]=o[k]; });
+      return slim;
     }).filter(r=>r["캠페인"] && r["캠페인"].includes("이미용"));
     return { rows, dateRange };
   }
