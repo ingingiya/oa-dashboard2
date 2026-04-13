@@ -908,7 +908,7 @@ function NaverSection() {
   const roasColor = v => v>=500?C.good:v>=300?"#CA8A04":C.bad;
 
   if(loading) return <div style={{padding:40,textAlign:"center",color:C.inkLt,fontSize:13}}>불러오는 중...</div>;
-  if(loadErr) return <div style={{padding:20,background:"#FEF2F2",borderRadius:10,color:C.bad,fontSize:12}}>{loadErr}</div>;
+
 
   return (
     <div style={{display:"flex",flexDirection:"column",gap:14}}>
