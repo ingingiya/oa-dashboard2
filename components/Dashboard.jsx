@@ -790,8 +790,8 @@ function NaverSection() {
     if(lines.length < 3) return { rows:[], dateRange:"" };
     // 1행 타이틀에서 날짜 범위 추출
     const titleLine = lines[0].replace(/"/g,"");
-    const dateMatch = titleLine.match(/(\d{4}[./\-]\d{1,2}[./\-]\d{1,2})\s*~\s*(\d{4}[./\-]\d{1,2}[./\-]\d{1,2})/);
-    const dateRange = dateMatch ? `${dateMatch[1]} ~ ${dateMatch[2]}` : titleLine.trim().slice(0,40);
+    const dateMatch = titleLine.match(/(\d{4}[./\-]\d{1,2}[./\-]\d{1,2})\.?\s*~\s*(\d{4}[./\-]\d{1,2}[./\-]\d{1,2})\.?/);
+    const dateRange = dateMatch ? `${dateMatch[1]} ~ ${dateMatch[2]}` : "";
     const headers = lines[1].split(",").map(h=>h.replace(/^"|"$/g,"").trim());
     const KEEP_COLS = ["캠페인","광고그룹","검색어","노출수","클릭수","총비용",
       "총 전환수","총 전환매출액(원)","구매완료 전환수","구매완료 전환매출액(원)"];
