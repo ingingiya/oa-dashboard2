@@ -2017,10 +2017,12 @@ export default function OaDashboard(){
     return acc;
   }, {}) : {};
   const cutAds  = Object.values(adAlerts).filter(ad=>{
+    if(deletedAdsSet.has(ad.name)) return false;
     const adMargin = getAdMargin(ad.name, ad.campaign, margins, margin);
     const s=adScore(ad, adMargin, getConvCriteria(ad.name, ad.campaign, convCriteria)); return s.issues.some(i=>i.label==="컷"||i.label==="랜딩문제"||i.label==="소재문제");
   });
   const holdAds = Object.values(adAlerts).filter(ad=>{
+    if(deletedAdsSet.has(ad.name)) return false;
     const adMargin = getAdMargin(ad.name, ad.campaign, margins, margin);
     const s=adScore(ad, adMargin, getConvCriteria(ad.name, ad.campaign, convCriteria)); return !cutAds.includes(ad)&&s.issues.some(i=>i.label==="보류"||i.label==="보통");
   });
@@ -2069,17 +2071,17 @@ export default function OaDashboard(){
   async function deleteSch(id){ setSch(arr=>arr.filter(s=>s.id!==id)); }
 
   const NAVS=[
-    {id:"home",      icon:"🏠",label:"홈"},
-    {id:"meta",      icon:"📣",label:"메타광고"},
-    {id:"adspend",   icon:"💰",label:"총광고비"},
-    {id:"influencer",icon:"✨",label:"인플루언서"},
-    {id:"inventory", icon:"📦",label:"재고"},
-    {id:"schedule",  icon:"📅",label:"스케줄"},
-    {id:"erp",       icon:"🗄️", label:"ERP"},
-    {id:"creative",  icon:"🎨",label:"소재"},
-    {id:"keyword",   icon:"🔍",label:"키워드"},
-    {id:"review",    icon:"✅",label:"콘텐츠리뷰"},
-    {id:"insight",   icon:"📝",label:"팀 노트"},
+    {id:"home",      icon:"home",           label:"홈"},
+    {id:"meta",      icon:"campaign",       label:"메타광고"},
+    {id:"adspend",   icon:"payments",       label:"총광고비"},
+    {id:"influencer",icon:"auto_awesome",   label:"인플루언서"},
+    {id:"inventory", icon:"inventory_2",    label:"재고"},
+    {id:"schedule",  icon:"calendar_month", label:"스케줄"},
+    {id:"erp",       icon:"storage",        label:"ERP"},
+    {id:"creative",  icon:"palette",        label:"소재"},
+    {id:"keyword",   icon:"search",         label:"키워드"},
+    {id:"review",    icon:"check_circle",   label:"콘텐츠리뷰"},
+    {id:"insight",   icon:"edit_note",      label:"팀 노트"},
   ];
 
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
