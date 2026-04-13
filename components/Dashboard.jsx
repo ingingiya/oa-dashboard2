@@ -709,14 +709,17 @@ function SchModalComp({mode, initial, onSave, onClose}){
 // 네이버 광고 섹션
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 function NaverSection() {
-  const [rows, setRows]       = useState([]);
-  const [fileName, setFileName] = useState("");
+  const [rows, setRows]       = useState(()=>{ try{ return JSON.parse(localStorage.getItem("naver_rows")||"[]"); }catch{return [];} });
+  const [fileName, setFileName] = useState(()=>localStorage.getItem("naver_filename")||"");
   const [groupBy, setGroupBy] = useState("adgroup"); // campaign | adgroup | keyword
   const [sortCol, setSortCol] = useState("cost");
   const [sortAsc, setSortAsc] = useState(false);
   const [search, setSearch]   = useState("");
   const [minCost, setMinCost] = useState(0); // 최소 광고비 필터
   const [quickFilter, setQuickFilter] = useState("all"); // all | highcost | warn
+  // 수정 체크: { [label]: {label, cost, roas, memo, checkedAt} }
+  const [fixList, setFixList] = useState(()=>{ try{ return JSON.parse(localStorage.getItem("naver_fixlist")||"{}"); }catch{return {};} });
+  const [showFix, setShowFix] = useState(false);
 
   const fmtN = v => Number(v||0).toLocaleString();
   const fmtW = v => {
@@ -724,6 +727,26 @@ function NaverSection() {
     if(n>=10000) return `${Math.round(n/10000).toLocaleString()}만`;
     return `${Math.round(n).toLocaleString()}원`;
   };
+
+  function saveFixList(next) {
+    setFixList(next);
+    localStorage.setItem("naver_fixlist", JSON.stringify(next));
+  }
+
+  function toggleFix(r) {
+    const next = {...fixList};
+    if(next[r.label]) {
+      delete next[r.label];
+    } else {
+      next[r.label] = {label:r.label, cost:r.cost, roas:r.roas, checkedAt: new Date().toLocaleDateString("ko-KR"), memo:""};
+    }
+    saveFixList(next);
+  }
+
+  function updateMemo(label, memo) {
+    const next = {...fixList, [label]:{...fixList[label], memo}};
+    saveFixList(next);
+  }
 
   function parseCSV(text) {
     const lines = text.replace(/\r/g,"").split("\n").filter(l=>l.trim());
@@ -742,11 +765,13 @@ function NaverSection() {
     const file = e.target.files[0];
     if(!file) return;
     setFileName(file.name);
+    localStorage.setItem("naver_filename", file.name);
     const reader = new FileReader();
     reader.onload = ev => {
       const text = ev.target.result;
       const parsed = parseCSV(text);
       setRows(parsed);
+      localStorage.setItem("naver_rows", JSON.stringify(parsed));
     };
     reader.readAsText(file, "euc-kr");
   }
@@ -820,10 +845,11 @@ function NaverSection() {
     {key:"buyConv",    label:"구매전환",   align:"right", fmt:fmtN},
     {key:"buyRevenue", label:"구매매출",   align:"right", fmt:fmtW},
     {key:"roas",       label:"ROAS(구매)", align:"right", fmt:v=>`${fmtN(v)}%`},
+    {key:"_fix",       label:"수정",       align:"center", fmt:()=>null},
   ];
 
   function thClick(key) {
-    if(key==="label") return;
+    if(key==="label"||key==="_fix") return;
     if(sortCol===key) setSortAsc(p=>!p);
     else { setSortCol(key); setSortAsc(false); }
   }
@@ -839,12 +865,24 @@ function NaverSection() {
           <div style={{fontSize:16,fontWeight:900,color:C.ink}}>📊 네이버 광고 · <span style={{color:"#03C75A"}}>구매완료 ROAS</span></div>
           <div style={{fontSize:11,color:C.inkLt,marginTop:2}}>CSV 업로드 · 구매완료 전환매출 기준</div>
         </div>
-        <label style={{display:"flex",alignItems:"center",gap:8,padding:"7px 14px",borderRadius:8,
-          background:"#03C75A",color:"#fff",fontSize:11,fontWeight:800,cursor:"pointer"}}>
-          <span className="material-symbols-outlined" style={{fontSize:15}}>upload_file</span>
-          CSV 업로드
-          <input type="file" accept=".csv" onChange={onFile} style={{display:"none"}}/>
-        </label>
+        <div style={{display:"flex",gap:8,alignItems:"center"}}>
+          {Object.keys(fixList).length>0 && (
+            <button onClick={()=>setShowFix(p=>!p)} style={{
+              display:"flex",alignItems:"center",gap:5,padding:"7px 12px",borderRadius:8,
+              background:"#FEF3C7",border:`1.5px solid #F59E0B`,color:"#92400E",
+              fontSize:11,fontWeight:800,cursor:"pointer",
+            }}>
+              <span className="material-symbols-outlined" style={{fontSize:14}}>flag</span>
+              수정 {Object.keys(fixList).length}건
+            </button>
+          )}
+          <label style={{display:"flex",alignItems:"center",gap:8,padding:"7px 14px",borderRadius:8,
+            background:"#03C75A",color:"#fff",fontSize:11,fontWeight:800,cursor:"pointer"}}>
+            <span className="material-symbols-outlined" style={{fontSize:15}}>upload_file</span>
+            CSV 업로드
+            <input type="file" accept=".csv" onChange={onFile} style={{display:"none"}}/>
+          </label>
+        </div>
       </div>
 
       {fileName && (
@@ -937,20 +975,42 @@ function NaverSection() {
                   </tr>
                 </thead>
                 <tbody>
-                  {filtered.map((r,i)=>(
+                  {filtered.map((r,i)=>{
+                    const isFixed = !!fixList[r.label];
+                    const prev = fixList[r.label];
+                    const roasDiff = prev ? r.roas - prev.roas : null;
+                    return (
                     <tr key={i} style={{borderBottom:`1px solid ${C.border}22`,
-                      background:i%2===0?C.white:"#FAFAFA"}}>
-                      {COLS.map(c=>(
+                      background:isFixed?"#FFFBEB":i%2===0?C.white:"#FAFAFA"}}>
+                      {COLS.map(c=>{
+                        if(c.key==="_fix") return (
+                          <td key="_fix" style={{padding:"6px 10px",textAlign:"center"}}>
+                            <button onClick={()=>toggleFix(r)} title={isFixed?"체크 해제":"수정 필요 체크"} style={{
+                              padding:"3px 8px",borderRadius:6,fontSize:10,fontWeight:700,cursor:"pointer",
+                              border:`1.5px solid ${isFixed?"#F59E0B":C.border}`,
+                              background:isFixed?"#FEF3C7":C.white,
+                              color:isFixed?"#92400E":C.inkMid,
+                            }}>{isFixed?"✓수정중":"체크"}</button>
+                          </td>
+                        );
+                        return (
                         <td key={c.key} style={{padding:"9px 12px",textAlign:c.align,
                           fontWeight:c.key==="roas"||c.key==="label"?800:600,
                           color:c.key==="roas"?roasColor(r.roas):c.key==="buyRevenue"?C.rose:C.ink,
                           maxWidth:c.key==="label"?220:undefined,
                           overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
                           {c.fmt(r[c.key])}
+                          {c.key==="roas" && roasDiff!==null && (
+                            <span style={{fontSize:9,marginLeft:4,color:roasDiff>0?C.good:C.bad}}>
+                              {roasDiff>0?"+":""}{Math.round(roasDiff)}%p
+                            </span>
+                          )}
                         </td>
-                      ))}
+                        );
+                      })}
                     </tr>
-                  ))}
+                    );
+                  })}
                 </tbody>
                 <tfoot>
                   <tr style={{background:C.bg,borderTop:`2px solid ${C.border}`}}>
@@ -963,11 +1023,80 @@ function NaverSection() {
                     <td style={{padding:"9px 12px",textAlign:"right",fontWeight:700}}>{fmtN(total.buyConv)}</td>
                     <td style={{padding:"9px 12px",textAlign:"right",fontWeight:800,color:C.rose}}>{fmtW(total.buyRevenue)}</td>
                     <td style={{padding:"9px 12px",textAlign:"right",fontWeight:900,color:roasColor(totalRoas)}}>{fmtN(totalRoas)}%</td>
+                    <td/>
                   </tr>
                 </tfoot>
               </table>
             </div>
           </div>
+
+          {/* 수정 목록 패널 */}
+          {Object.keys(fixList).length>0 && (
+            <div style={{background:C.white,border:`1.5px solid #F59E0B`,borderRadius:12,overflow:"hidden"}}>
+              <button onClick={()=>setShowFix(p=>!p)} style={{
+                width:"100%",display:"flex",alignItems:"center",justifyContent:"space-between",
+                padding:"11px 16px",background:"#FFFBEB",border:"none",cursor:"pointer",
+              }}>
+                <div style={{fontWeight:800,fontSize:13,color:"#92400E"}}>
+                  ⚠️ 수정 체크 목록 — {Object.keys(fixList).length}건
+                </div>
+                <span className="material-symbols-outlined" style={{fontSize:18,color:"#92400E"}}>
+                  {showFix?"expand_less":"expand_more"}
+                </span>
+              </button>
+              {showFix && (
+                <div style={{padding:"12px 16px",display:"flex",flexDirection:"column",gap:10}}>
+                  {Object.values(fixList).map(f=>{
+                    const cur = aggregated.find(a=>a.label===f.label);
+                    const curRoas = cur?.roas ?? null;
+                    const roasDiff = curRoas!==null ? curRoas-f.roas : null;
+                    return (
+                      <div key={f.label} style={{
+                        background:"#FFFDF0",border:`1px solid ${C.border}`,borderRadius:8,padding:"10px 14px",
+                        display:"flex",flexDirection:"column",gap:6,
+                      }}>
+                        <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
+                          <div style={{fontWeight:800,fontSize:12,color:C.ink,flex:1,marginRight:8}}>{f.label}</div>
+                          <button onClick={()=>toggleFix({label:f.label})} style={{
+                            padding:"2px 8px",borderRadius:6,fontSize:10,border:`1px solid ${C.border}`,
+                            background:C.white,color:C.inkMid,cursor:"pointer",flexShrink:0,
+                          }}>해제</button>
+                        </div>
+                        <div style={{display:"flex",gap:16,fontSize:11,flexWrap:"wrap"}}>
+                          <div>
+                            <span style={{color:C.inkLt}}>체크 당시 ROAS </span>
+                            <span style={{fontWeight:700,color:roasColor(f.roas)}}>{f.roas}%</span>
+                          </div>
+                          {curRoas!==null && (
+                            <div>
+                              <span style={{color:C.inkLt}}>현재 ROAS </span>
+                              <span style={{fontWeight:700,color:roasColor(curRoas)}}>{curRoas}%</span>
+                              {roasDiff!==null && (
+                                <span style={{marginLeft:4,fontSize:10,fontWeight:700,color:roasDiff>0?C.good:C.bad}}>
+                                  ({roasDiff>0?"+":""}{Math.round(roasDiff)}%p)
+                                </span>
+                              )}
+                            </div>
+                          )}
+                          <div>
+                            <span style={{color:C.inkLt}}>체크일 </span>
+                            <span style={{fontWeight:600}}>{f.checkedAt}</span>
+                          </div>
+                        </div>
+                        <input
+                          value={f.memo||""}
+                          onChange={e=>updateMemo(f.label, e.target.value)}
+                          placeholder="메모 (수정 내용, 조치사항...)"
+                          style={{padding:"6px 10px",borderRadius:6,fontSize:11,border:`1px solid ${C.border}`,
+                            outline:"none",background:"#fff",width:"100%",boxSizing:"border-box"}}
+                        />
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
         </>
       )}
     </div>
