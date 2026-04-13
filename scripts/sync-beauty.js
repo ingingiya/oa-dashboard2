@@ -17,6 +17,7 @@ async function fetchBeautySales(pool) {
     SELECT
       제품명 as name,
       제품카테고리ID as cat_id,
+      거래처명 as channel,
       DATE(판매날짜) as date,
       SUM(판매수량) as qty,
       SUM(총매출액) as revenue,
@@ -24,7 +25,7 @@ async function fetchBeautySales(pool) {
     FROM v_daily_sales_detail
     WHERE 판매날짜 >= DATE_SUB(CURDATE(), INTERVAL ? DAY)
       AND 제품카테고리ID IN (${placeholders})
-    GROUP BY 제품명, 제품카테고리ID, DATE(판매날짜)
+    GROUP BY 제품명, 제품카테고리ID, 거래처명, DATE(판매날짜)
     ORDER BY date DESC
   `, [SYNC_DAYS, ...BEAUTY_IDS]);
   return rows;
@@ -37,6 +38,7 @@ async function upsertToSupabase(rows) {
     const batch = rows.slice(i, i + BATCH).map(r => ({
       name: r.name,
       cat_id: Number(r.cat_id),
+      channel: r.channel || '',
       date: r.date instanceof Date ? r.date.toISOString().split('T')[0] : String(r.date),
       qty: Number(r.qty) || 0,
       revenue: Number(r.revenue) || 0,

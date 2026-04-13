@@ -705,6 +705,426 @@ function SchModalComp({mode, initial, onSave, onClose}){
   );
 }
 
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// ERP 섹션 (이미용 판매 데이터)
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function ErpSection() {
+  const [erpTab,  setErpTab]  = useState("summary");
+  const [days,    setDays]    = useState(7);
+  const [catId,   setCatId]   = useState("");
+  const [rawData, setRawData] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error,   setError]   = useState(null);
+  const [channel, setChannelState] = useState("");
+  const [search,  setSearch]  = useState("");
+  const [monthlyGoal, setMonthlyGoalState] = useState(0);
+  const [goalEdit, setGoalEdit] = useState(false);
+  const [goalInput, setGoalInput] = useState("");
+
+  const BEAUTY_CATS = [
+    {id:"",   name:"전체 이미용"},
+    {id:"70", name:"헤어"},
+    {id:"71", name:"피부미용"},
+    {id:"72", name:"이미용잡화"},
+    {id:"73", name:"기타이미용"},
+  ];
+
+  const fmtW = v => {
+    const n = Number(v||0);
+    if(n>=100000000) return `${(n/100000000).toFixed(1)}억`;
+    if(n>=10000)     return `${Math.round(n/10000).toLocaleString()}만`;
+    return `₩${Math.round(n).toLocaleString()}`;
+  };
+
+  const setChannel = async (ch) => {
+    setChannelState(ch);
+    await setSetting("oa_erp_channel", ch).catch(()=>{});
+  };
+  const saveGoal = async (v) => {
+    const n = Number(String(v).replace(/[^0-9]/g,"")) || 0;
+    setMonthlyGoalState(n);
+    await setSetting("oa_erp_monthly_goal", n).catch(()=>{});
+    setGoalEdit(false);
+  };
+
+  useEffect(() => {
+    getSetting("oa_erp_channel").then(v => { if(v) setChannelState(v); }).catch(()=>{});
+    getSetting("oa_erp_monthly_goal").then(v => { if(v) setMonthlyGoalState(Number(v)||0); }).catch(()=>{});
+  }, []);
+
+  async function load(tab, d, cId) {
+    setLoading(true); setError(null);
+    try {
+      const SURL = process.env.NEXT_PUBLIC_SUPABASE_URL;
+      const SKEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+      // 비교를 위해 항상 60일치 로드 (이번달 계산도 포함)
+      const since = new Date(); since.setDate(since.getDate() - 60);
+      const sinceStr = since.toISOString().split('T')[0];
+      let url = `${SURL}/rest/v1/beauty_sales?select=name,cat_id,channel,date,qty,revenue,profit&date=gte.${sinceStr}&order=date.desc&limit=15000`;
+      if(cId) url += `&cat_id=eq.${cId}`;
+      const res = await fetch(url, { headers: { apikey: SKEY, Authorization: `Bearer ${SKEY}` } });
+      if(!res.ok) throw new Error(`Supabase 오류 ${res.status}`);
+      const raw = await res.json();
+      setRawData(raw || []);
+    } catch(e) { setError(e.message); setRawData(null); }
+    finally { setLoading(false); }
+  }
+
+  useEffect(() => { load(erpTab, days, catId); }, [catId]);
+
+  // 날짜 범위 계산
+  const today = new Date();
+  const toStr  = d => d.toISOString().split('T')[0];
+  const addDay = (d,n) => { const x=new Date(d); x.setDate(x.getDate()+n); return x; };
+  const curStart = toStr(addDay(today, -days + 1));   // 현재 기간 시작
+  const curEnd   = toStr(today);                       // 오늘
+  const prevStart= toStr(addDay(today, -days*2 + 1)); // 이전 기간 시작
+  const prevEnd  = toStr(addDay(today, -days));        // 이전 기간 끝
+
+  // 이번달 시작
+  const monthStart = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-01`;
+
+  // 채널 목록
+  const channels = rawData ? [...new Set(rawData.map(r=>r.channel).filter(Boolean))].sort() : [];
+
+  // 채널 + 검색 필터된 전체 데이터
+  const allFiltered = rawData ? rawData.filter(r =>
+    (!channel || r.channel === channel) &&
+    (!search  || r.name.toLowerCase().includes(search.toLowerCase()))
+  ) : null;
+
+  // 현재 기간 / 이전 기간 분리
+  const curData  = allFiltered ? allFiltered.filter(r => r.date >= curStart  && r.date <= curEnd)  : [];
+  const prevData = allFiltered ? allFiltered.filter(r => r.date >= prevStart && r.date <= prevEnd) : [];
+
+  // 이번달 전체 매출 (채널 무관, 카테고리 이미용 전체)
+  const monthRevenue = rawData ? rawData.filter(r=>r.date>=monthStart).reduce((s,r)=>s+Number(r.revenue),0) : 0;
+
+  // 상품별 요약 (현재 + 이전 비교)
+  const summaryData = erpTab==="summary" ? (() => {
+    const cur={}, prev={};
+    curData.forEach(r => {
+      if(!cur[r.name]) cur[r.name]={qty:0,revenue:0,profit:0};
+      cur[r.name].qty+=Number(r.qty); cur[r.name].revenue+=Number(r.revenue); cur[r.name].profit+=Number(r.profit);
+    });
+    prevData.forEach(r => {
+      if(!prev[r.name]) prev[r.name]={revenue:0};
+      prev[r.name].revenue+=Number(r.revenue);
+    });
+    return Object.entries(cur).map(([name,v])=>({
+      name, ...v,
+      prevRevenue: prev[name]?.revenue||0,
+      revChg: prev[name]?.revenue>0 ? Math.round((v.revenue-prev[name].revenue)/prev[name].revenue*100) : null,
+    })).sort((a,b)=>b.revenue-a.revenue);
+  })() : [];
+
+  // 급등/급락 (현재 vs 이전)
+  const trendData = erpTab==="trend" ? (() => {
+    const cur={}, prev={};
+    curData.forEach(r =>{ if(!cur[r.name]) cur[r.name]=0; cur[r.name]+=Number(r.qty); });
+    prevData.forEach(r=>{ if(!prev[r.name]) prev[r.name]=0; prev[r.name]+=Number(r.qty); });
+    const names = new Set([...Object.keys(cur),...Object.keys(prev)]);
+    return [...names].map(name=>({
+      name, this_p:cur[name]||0, last_p:prev[name]||0,
+      diff:(cur[name]||0)-(prev[name]||0),
+      pct: (prev[name]||0)>0 ? Math.round(((cur[name]||0)-(prev[name]||0))/(prev[name]||0)*100) : 999,
+    })).filter(r=>r.this_p>0||r.last_p>0).sort((a,b)=>(b.this_p-b.last_p)-(a.this_p-a.last_p));
+  })() : [];
+
+  const rising  = trendData.filter(r=>r.diff>0).slice(0,10);
+  const falling = trendData.filter(r=>r.diff<0).sort((a,b)=>a.diff-b.diff).slice(0,10);
+
+  const dailyAgg = erpTab==="daily" ? (() => {
+    const map = {};
+    curData.forEach(r=>{
+      if(!map[r.date]) map[r.date]={date:r.date, qty:0, revenue:0};
+      map[r.date].qty+=Number(r.qty); map[r.date].revenue+=Number(r.revenue);
+    });
+    return Object.values(map).sort((a,b)=>a.date.localeCompare(b.date));
+  })() : [];
+
+  const periodLabel = days===1 ? "어제 대비" : `전 ${days}일 대비`;
+
+  const TABS = [
+    {id:"summary", label:"📊 상품별"},
+    {id:"trend",   label:"📈 급등/급락"},
+    {id:"daily",   label:"📅 일별"},
+  ];
+
+  const selStyle = {padding:"5px 10px",borderRadius:8,fontSize:11,fontWeight:700,cursor:"pointer",
+    border:`1px solid ${C.border}`,background:C.white,color:C.ink,outline:"none"};
+
+  const goalPct = monthlyGoal>0 ? Math.min(Math.round(monthRevenue/monthlyGoal*100),100) : 0;
+  const goalRemain = monthlyGoal>0 ? Math.max(monthlyGoal-monthRevenue,0) : 0;
+
+  return (
+    <div style={{display:"flex",flexDirection:"column",gap:14}}>
+
+      {/* 월 매출 목표 배너 */}
+      <div style={{background:`linear-gradient(135deg,#1D4ED8,#2563EB)`,borderRadius:14,padding:"16px 20px",color:"#fff"}}>
+        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:8}}>
+          <div>
+            <div style={{fontSize:10,fontWeight:700,opacity:0.7,letterSpacing:"0.1em",marginBottom:4}}>
+              {today.getMonth()+1}월 이미용 매출 현황
+            </div>
+            <div style={{fontSize:22,fontWeight:900,lineHeight:1.1}}>
+              {monthRevenue>=100000000?`${(monthRevenue/100000000).toFixed(2)}억`:`${Math.round(monthRevenue/10000).toLocaleString()}만원`}
+            </div>
+            {monthlyGoal>0 && (
+              <div style={{fontSize:11,opacity:0.8,marginTop:4}}>
+                목표까지 {goalRemain>=100000000?`${(goalRemain/100000000).toFixed(2)}억`:`${Math.round(goalRemain/10000).toLocaleString()}만원`} 남음
+              </div>
+            )}
+          </div>
+          <div style={{textAlign:"right"}}>
+            {monthlyGoal>0 ? (
+              <div>
+                <div style={{fontSize:28,fontWeight:900}}>{goalPct}%</div>
+                <div style={{fontSize:10,opacity:0.7}}>목표 {Math.round(monthlyGoal/10000).toLocaleString()}만원</div>
+              </div>
+            ) : null}
+            {goalEdit ? (
+              <div style={{display:"flex",gap:6,alignItems:"center",marginTop:4}}>
+                <input autoFocus value={goalInput} onChange={e=>setGoalInput(e.target.value)}
+                  onKeyDown={e=>{if(e.key==="Enter") saveGoal(goalInput); if(e.key==="Escape") setGoalEdit(false);}}
+                  placeholder="목표 금액 (원)" style={{width:130,padding:"4px 8px",borderRadius:6,border:"none",
+                    fontSize:12,fontWeight:700,color:C.ink,outline:"none"}}/>
+                <button onClick={()=>saveGoal(goalInput)} style={{padding:"4px 10px",borderRadius:6,
+                  background:"rgba(255,255,255,0.3)",border:"none",color:"#fff",fontSize:11,fontWeight:700,cursor:"pointer"}}>저장</button>
+              </div>
+            ) : (
+              <button onClick={()=>{setGoalInput(String(monthlyGoal||"")); setGoalEdit(true);}}
+                style={{marginTop:6,padding:"4px 10px",borderRadius:6,background:"rgba(255,255,255,0.2)",
+                  border:"1px solid rgba(255,255,255,0.4)",color:"#fff",fontSize:10,fontWeight:700,cursor:"pointer"}}>
+                {monthlyGoal>0?"목표 수정":"목표 설정"}
+              </button>
+            )}
+          </div>
+        </div>
+        {monthlyGoal>0 && (
+          <div style={{marginTop:10,background:"rgba(255,255,255,0.2)",borderRadius:99,height:6}}>
+            <div style={{background:"#fff",borderRadius:99,height:"100%",width:`${goalPct}%`,transition:"width 0.5s"}}/>
+          </div>
+        )}
+      </div>
+
+      {/* 헤더 */}
+      <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",flexWrap:"wrap",gap:8}}>
+        <div>
+          <div style={{fontSize:16,fontWeight:900,color:C.ink}}>🗄️ ERP · <span style={{color:C.rose}}>이미용</span> 판매</div>
+          <div style={{fontSize:11,color:C.inkLt,marginTop:2}}>매일 오전 7시 자동 동기화 · {periodLabel}</div>
+        </div>
+        <div style={{display:"flex",gap:6,flexWrap:"wrap",alignItems:"center"}}>
+          {[1,7,14,30].map(d=>(
+            <button key={d} onClick={()=>setDays(d)} style={{
+              padding:"5px 12px",borderRadius:8,fontSize:11,fontWeight:700,cursor:"pointer",
+              border:`1px solid ${days===d?C.rose:C.border}`,
+              background:days===d?C.blush:C.white, color:days===d?C.rose:C.inkMid,
+            }}>{d===1?"오늘":d+"일"}</button>
+          ))}
+          <select value={catId} onChange={e=>setCatId(e.target.value)} style={selStyle}>
+            {BEAUTY_CATS.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}
+          </select>
+        </div>
+      </div>
+
+      {/* 채널 고정 + 검색 */}
+      <div style={{display:"flex",gap:8,flexWrap:"wrap",alignItems:"center"}}>
+        {/* 거래처 선택 (고정) */}
+        <div style={{display:"flex",alignItems:"center",gap:6}}>
+          <span style={{fontSize:11,color:C.inkMid,fontWeight:700,whiteSpace:"nowrap"}}>거래처</span>
+          <select value={channel} onChange={e=>setChannel(e.target.value)} style={{...selStyle,
+            minWidth:140, borderColor: channel ? C.rose : C.border,
+            color: channel ? C.rose : C.inkMid, fontWeight: channel ? 800 : 700,
+          }}>
+            <option value="">전체</option>
+            {channels.map(ch=><option key={ch} value={ch}>{ch}</option>)}
+          </select>
+          {channel && (
+            <button onClick={()=>setChannel("")} style={{fontSize:10,padding:"3px 8px",borderRadius:6,
+              border:`1px solid ${C.border}`,background:"none",cursor:"pointer",color:C.inkMid}}>
+              초기화
+            </button>
+          )}
+        </div>
+        {/* 제품명 검색 */}
+        <div style={{display:"flex",alignItems:"center",gap:6,flex:1,minWidth:160}}>
+          <span style={{fontSize:11,color:C.inkMid,fontWeight:700,whiteSpace:"nowrap"}}>검색</span>
+          <input value={search} onChange={e=>setSearch(e.target.value)}
+            placeholder="제품명 입력..." style={{
+              flex:1, padding:"5px 10px", borderRadius:8, fontSize:11, fontWeight:600,
+              border:`1px solid ${search?C.rose:C.border}`, outline:"none",
+              background:C.white, color:C.ink,
+            }}/>
+          {search && <button onClick={()=>setSearch("")} style={{fontSize:10,padding:"3px 8px",borderRadius:6,
+            border:`1px solid ${C.border}`,background:"none",cursor:"pointer",color:C.inkMid}}>✕</button>}
+        </div>
+      </div>
+
+      {/* 탭 */}
+      <div style={{display:"flex",gap:4}}>
+        {TABS.map(t=>(
+          <button key={t.id} onClick={()=>setErpTab(t.id)} style={{
+            padding:"6px 16px",borderRadius:8,fontSize:12,fontWeight:700,cursor:"pointer",
+            border:`1px solid ${erpTab===t.id?C.rose:C.border}`,
+            background:erpTab===t.id?C.blush:C.white,
+            color:erpTab===t.id?C.rose:C.inkMid,
+          }}>{t.label}</button>
+        ))}
+      </div>
+
+      {loading && <div style={{textAlign:"center",padding:"60px 0",color:C.inkLt,fontSize:13}}>⏳ 불러오는 중...</div>}
+      {error   && <div style={{textAlign:"center",padding:"40px 0",color:C.bad,fontSize:12,fontWeight:700}}>⚠️ {error}</div>}
+
+      {/* 상품별 요약 */}
+      {!loading && !error && erpTab==="summary" && (
+        <div style={{background:C.white,border:`1px solid ${C.border}`,borderRadius:12,overflow:"hidden"}}>
+          <div style={{padding:"12px 16px",borderBottom:`1px solid ${C.border}`,fontSize:12,fontWeight:800,color:C.ink}}>
+            상품별 판매 ({days===1?"오늘":days+"일"}) · {summaryData.length}개 제품
+          </div>
+          <div style={{overflowX:"auto"}}>
+            <table style={{width:"100%",borderCollapse:"collapse",fontSize:11,minWidth:540}}>
+              <thead>
+                <tr style={{background:C.bg}}>
+                  {["제품명","판매수량","총매출","이익","전기간 대비"].map(h=>(
+                    <th key={h} style={{padding:"8px 12px",textAlign:h==="제품명"?"left":"right",
+                      fontWeight:700,color:C.inkMid,borderBottom:`1px solid ${C.border}`,fontSize:10}}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {summaryData.map((r,i)=>(
+                  <tr key={i} style={{borderBottom:`1px solid ${C.border}33`,background:i%2===0?C.white:"#FAFAFA"}}>
+                    <td style={{padding:"9px 12px",fontWeight:700,color:C.ink,maxWidth:200,
+                      overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{r.name}</td>
+                    <td style={{padding:"9px 12px",textAlign:"right",fontWeight:700,color:C.inkMid}}>{Number(r.qty).toLocaleString()}</td>
+                    <td style={{padding:"9px 12px",textAlign:"right",fontWeight:700,color:C.rose}}>{fmtW(r.revenue)}</td>
+                    <td style={{padding:"9px 12px",textAlign:"right",fontWeight:700,
+                      color:Number(r.profit)>0?C.good:C.bad}}>{fmtW(r.profit)}</td>
+                    <td style={{padding:"9px 12px",textAlign:"right",fontWeight:800,
+                      color:r.revChg===null?C.inkLt:r.revChg>0?C.good:C.bad}}>
+                      {r.revChg===null?"NEW":r.revChg>0?`+${r.revChg}%`:`${r.revChg}%`}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* 급등/급락 */}
+      {!loading && !error && erpTab==="trend" && (
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14}}>
+          <div style={{background:C.white,border:`1px solid ${C.border}`,borderRadius:12,overflow:"hidden"}}>
+            <div style={{padding:"12px 16px",borderBottom:`1px solid ${C.border}`,display:"flex",alignItems:"center",gap:8}}>
+              <span style={{fontSize:14}}>🚀</span>
+              <span style={{fontSize:12,fontWeight:800,color:C.good}}>급등 Top 10</span>
+              <span style={{fontSize:10,color:C.inkLt}}>{periodLabel}</span>
+            </div>
+            {rising.length===0
+              ? <div style={{padding:"30px",textAlign:"center",color:C.inkLt,fontSize:12}}>데이터 없음</div>
+              : rising.map((r,i)=>(
+                <div key={i} style={{padding:"10px 14px",borderBottom:`1px solid ${C.border}22`,
+                  display:"flex",alignItems:"center",justifyContent:"space-between",gap:8}}>
+                  <div style={{flex:1,minWidth:0}}>
+                    <div style={{fontSize:11,fontWeight:700,color:C.ink,overflow:"hidden",
+                      textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{r.name}</div>
+                    <div style={{fontSize:10,color:C.inkLt}}>{r.last_p} → {r.this_p}개</div>
+                  </div>
+                  <div style={{textAlign:"right",flexShrink:0}}>
+                    <div style={{fontSize:13,fontWeight:900,color:C.good}}>+{r.pct===999?"NEW":r.pct+"%"}</div>
+                    <div style={{fontSize:10,color:C.good}}>+{r.diff}개</div>
+                  </div>
+                </div>
+              ))
+            }
+          </div>
+          <div style={{background:C.white,border:`1px solid ${C.border}`,borderRadius:12,overflow:"hidden"}}>
+            <div style={{padding:"12px 16px",borderBottom:`1px solid ${C.border}`,display:"flex",alignItems:"center",gap:8}}>
+              <span style={{fontSize:14}}>📉</span>
+              <span style={{fontSize:12,fontWeight:800,color:C.bad}}>급락 Top 10</span>
+              <span style={{fontSize:10,color:C.inkLt}}>{periodLabel}</span>
+            </div>
+            {falling.length===0
+              ? <div style={{padding:"30px",textAlign:"center",color:C.inkLt,fontSize:12}}>데이터 없음</div>
+              : falling.map((r,i)=>(
+                <div key={i} style={{padding:"10px 14px",borderBottom:`1px solid ${C.border}22`,
+                  display:"flex",alignItems:"center",justifyContent:"space-between",gap:8}}>
+                  <div style={{flex:1,minWidth:0}}>
+                    <div style={{fontSize:11,fontWeight:700,color:C.ink,overflow:"hidden",
+                      textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{r.name}</div>
+                    <div style={{fontSize:10,color:C.inkLt}}>{r.last_p} → {r.this_p}개</div>
+                  </div>
+                  <div style={{textAlign:"right",flexShrink:0}}>
+                    <div style={{fontSize:13,fontWeight:900,color:C.bad}}>{r.pct}%</div>
+                    <div style={{fontSize:10,color:C.bad}}>{r.diff}개</div>
+                  </div>
+                </div>
+              ))
+            }
+          </div>
+        </div>
+      )}
+
+      {/* 일별 차트 + 상세 */}
+      {!loading && !error && erpTab==="daily" && allFiltered && (
+        <div style={{display:"flex",flexDirection:"column",gap:14}}>
+          <div style={{background:C.white,border:`1px solid ${C.border}`,borderRadius:12,padding:16}}>
+            <div style={{fontSize:12,fontWeight:800,color:C.ink,marginBottom:12}}>일별 매출 추이</div>
+            <ResponsiveContainer width="100%" height={180}>
+              <AreaChart data={dailyAgg}>
+                <defs>
+                  <linearGradient id="gErp" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%"  stopColor={C.rose} stopOpacity={0.2}/>
+                    <stop offset="95%" stopColor={C.rose} stopOpacity={0}/>
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke={C.border}/>
+                <XAxis dataKey="date" tick={{fontSize:10,fill:C.inkLt}} tickLine={false}/>
+                <YAxis tick={{fontSize:10,fill:C.inkLt}} tickLine={false} axisLine={false} tickFormatter={v=>fmtW(v)}/>
+                <Tooltip formatter={v=>[fmtW(v),"매출"]}
+                  contentStyle={{background:C.white,border:`1px solid ${C.border}`,borderRadius:8,fontSize:11}}/>
+                <Area type="monotone" dataKey="revenue" stroke={C.rose} strokeWidth={2} fill="url(#gErp)" name="매출"/>
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+          <div style={{background:C.white,border:`1px solid ${C.border}`,borderRadius:12,overflow:"hidden"}}>
+            <div style={{padding:"12px 16px",borderBottom:`1px solid ${C.border}`,fontSize:12,fontWeight:800,color:C.ink}}>
+              일별 판매 상세 · {curData.length}건
+            </div>
+            <div style={{overflowX:"auto"}}>
+              <table style={{width:"100%",borderCollapse:"collapse",fontSize:11,minWidth:480}}>
+                <thead>
+                  <tr style={{background:C.bg}}>
+                    {["날짜","제품명","거래처","수량","매출"].map(h=>(
+                      <th key={h} style={{padding:"8px 12px",textAlign:["날짜","제품명","거래처"].includes(h)?"left":"right",
+                        fontWeight:700,color:C.inkMid,borderBottom:`1px solid ${C.border}`,fontSize:10}}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {curData.slice(0,200).map((r,i)=>(
+                    <tr key={i} style={{borderBottom:`1px solid ${C.border}22`,background:i%2===0?C.white:"#FAFAFA"}}>
+                      <td style={{padding:"8px 12px",color:C.inkMid,whiteSpace:"nowrap"}}>{r.date}</td>
+                      <td style={{padding:"8px 12px",fontWeight:600,color:C.ink,maxWidth:180,
+                        overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{r.name}</td>
+                      <td style={{padding:"8px 12px",color:C.inkMid,maxWidth:140,
+                        overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",fontSize:10}}>{r.channel}</td>
+                      <td style={{padding:"8px 12px",textAlign:"right",color:C.inkMid}}>{Number(r.qty).toLocaleString()}</td>
+                      <td style={{padding:"8px 12px",textAlign:"right",fontWeight:700,color:C.rose}}>{fmtW(r.revenue)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function OaDashboard(){
   // 날짜 문자열 — 클라이언트에서만 계산 (하이드레이션 불일치 방지)
   const dateStr = typeof window !== "undefined"
@@ -2072,11 +2492,10 @@ export default function OaDashboard(){
 
   const NAVS=[
     {id:"home",      icon:"home",           label:"홈"},
+    {id:"erp",       icon:"storage",        label:"ERP"},
     {id:"meta",      icon:"campaign",       label:"메타광고"},
     {id:"influencer",icon:"auto_awesome",   label:"인플루언서"},
-    {id:"inventory", icon:"inventory_2",    label:"재고"},
     {id:"schedule",  icon:"calendar_month", label:"스케줄"},
-    {id:"erp",       icon:"storage",        label:"ERP"},
     {id:"creative",  icon:"palette",        label:"소재"},
     {id:"keyword",   icon:"search",         label:"키워드"},
     {id:"review",    icon:"check_circle",   label:"콘텐츠리뷰"},
@@ -5853,312 +6272,6 @@ export default function OaDashboard(){
       </div>
     );
   })();
-
-  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  // ERP 섹션 (이미용 판매 데이터)
-  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  function ErpSection() {
-    const [erpTab, setErpTab]       = useState("summary");   // summary | trend | daily
-    const [days,   setDays]         = useState(7);
-    const [catId,  setCatId]        = useState("");           // "" = 전체 이미용
-    const [data,   setData]         = useState(null);
-    const [loading,setLoading]      = useState(false);
-    const [error,  setError]        = useState(null);
-
-    const BEAUTY_CATS = [
-      {id:"",   name:"전체 이미용"},
-      {id:"70",  name:"헤어"},
-      {id:"71",  name:"피부미용"},
-      {id:"72",  name:"이미용잡화"},
-      {id:"73",  name:"기타이미용"},
-    ];
-
-    const fmtW = v => {
-      const n = Number(v||0);
-      if(n>=100000000) return `${(n/100000000).toFixed(1)}억`;
-      if(n>=10000)     return `${Math.round(n/10000).toLocaleString()}만`;
-      return `₩${Math.round(n).toLocaleString()}`;
-    };
-
-    async function load(tab, d, cId) {
-      setLoading(true); setError(null);
-      try {
-        const SUPA_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
-        const SUPA_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-        const since = new Date(); since.setDate(since.getDate() - d);
-        const sinceStr = since.toISOString().split('T')[0];
-
-        // 날짜 범위 내 raw 데이터 전체 조회 (카테고리 필터 포함)
-        let url = `${SUPA_URL}/rest/v1/beauty_sales?select=name,cat_id,date,qty,revenue,profit&date=gte.${sinceStr}&order=date.desc&limit=5000`;
-        if(cId) url += `&cat_id=eq.${cId}`;
-
-        const res = await fetch(url, {
-          headers: { apikey: SUPA_KEY, Authorization: `Bearer ${SUPA_KEY}` }
-        });
-        if(!res.ok) throw new Error(`Supabase 오류 ${res.status}`);
-        const raw = await res.json();
-        if(!raw.length) { setData([]); setLoading(false); return; }
-
-        if(tab === "summary") {
-          // 상품별 합산
-          const map = {};
-          raw.forEach(r => {
-            if(!map[r.name]) map[r.name] = {name:r.name, qty:0, revenue:0, profit:0};
-            map[r.name].qty     += Number(r.qty);
-            map[r.name].revenue += Number(r.revenue);
-            map[r.name].profit  += Number(r.profit);
-          });
-          setData(Object.values(map).sort((a,b)=>b.revenue-a.revenue).slice(0,50));
-
-        } else if(tab === "trend") {
-          // 이번주 vs 지난주
-          const now = new Date();
-          const w0 = new Date(now); w0.setDate(now.getDate()-7);
-          const w1 = new Date(now); w1.setDate(now.getDate()-14);
-          const w0s = w0.toISOString().split('T')[0];
-          const w1s = w1.toISOString().split('T')[0];
-          const map = {};
-          raw.forEach(r => {
-            if(!map[r.name]) map[r.name] = {name:r.name, this_week:0, last_week:0, this_revenue:0, last_revenue:0};
-            if(r.date >= w0s) { map[r.name].this_week += Number(r.qty); map[r.name].this_revenue += Number(r.revenue); }
-            else if(r.date >= w1s) { map[r.name].last_week += Number(r.qty); map[r.name].last_revenue += Number(r.revenue); }
-          });
-          setData(Object.values(map).filter(r=>r.this_week>0||r.last_week>0).sort((a,b)=>(b.this_week-b.last_week)-(a.this_week-a.last_week)));
-
-        } else {
-          // 일별 (raw 그대로 — 날짜+상품별)
-          setData(raw);
-        }
-      } catch(e) { setError(e.message); setData(null); }
-      finally { setLoading(false); }
-    }
-
-    useEffect(() => { load(erpTab, days, catId); }, [erpTab, days, catId]);
-
-    function changeTab(t) { setErpTab(t); }
-
-    const TABS = [
-      {id:"summary", label:"📊 상품별"},
-      {id:"trend",   label:"📈 급등/급락"},
-      {id:"daily",   label:"📅 일별"},
-    ];
-
-    // trend 데이터 가공
-    const trendRows = erpTab==="trend" && data ? data.map(r=>({
-      ...r,
-      this_week: Number(r.this_week),
-      last_week: Number(r.last_week),
-      this_revenue: Number(r.this_revenue),
-      diff: Number(r.this_week) - Number(r.last_week),
-      pct: r.last_week>0 ? Math.round((Number(r.this_week)-Number(r.last_week))/Number(r.last_week)*100) : 999,
-    })) : [];
-    const rising  = trendRows.filter(r=>r.diff>0).slice(0,10);
-    const falling = trendRows.filter(r=>r.diff<0).sort((a,b)=>a.diff-b.diff).slice(0,10);
-
-    // daily: 날짜별 합산 + 상품별 피벗
-    const dailyAgg = erpTab==="daily" && data ? (() => {
-      const byDate = {};
-      data.forEach(r=>{
-        if(!byDate[r.date]) byDate[r.date]={date:r.date, qty:0, revenue:0};
-        byDate[r.date].qty     += Number(r.qty);
-        byDate[r.date].revenue += Number(r.revenue);
-      });
-      return Object.values(byDate).sort((a,b)=>a.date.localeCompare(b.date));
-    })() : [];
-
-    return (
-      <div style={{display:"flex",flexDirection:"column",gap:14}}>
-        {/* 헤더 */}
-        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:8}}>
-          <div>
-            <div style={{fontSize:16,fontWeight:900,color:C.ink}}>🗄️ ERP · <span style={{color:C.rose}}>이미용</span> 판매</div>
-            <div style={{fontSize:11,color:C.inkLt,marginTop:2}}>매일 오전 7시 자동 동기화 · Supabase</div>
-          </div>
-          <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
-            {/* 기간 선택 */}
-            {[7,14,30].map(d=>(
-              <button key={d} onClick={()=>setDays(d)} style={{
-                padding:"5px 12px",borderRadius:8,fontSize:11,fontWeight:700,cursor:"pointer",
-                border:`1px solid ${days===d?C.rose:C.border}`,
-                background:days===d?C.blush:C.white, color:days===d?C.rose:C.inkMid,
-              }}>{d}일</button>
-            ))}
-            {/* 카테고리 필터 */}
-            <select value={catId} onChange={e=>setCatId(e.target.value)} style={{
-              padding:"5px 10px",borderRadius:8,fontSize:11,fontWeight:700,cursor:"pointer",
-              border:`1px solid ${C.border}`,background:C.white,color:C.ink,outline:"none",
-            }}>
-              {BEAUTY_CATS.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}
-            </select>
-          </div>
-        </div>
-
-        {/* 탭 */}
-        <div style={{display:"flex",gap:4}}>
-          {TABS.map(t=>(
-            <button key={t.id} onClick={()=>changeTab(t.id)} style={{
-              padding:"6px 16px",borderRadius:8,fontSize:12,fontWeight:700,cursor:"pointer",
-              border:`1px solid ${erpTab===t.id?C.rose:C.border}`,
-              background:erpTab===t.id?C.blush:C.white,
-              color:erpTab===t.id?C.rose:C.inkMid,
-            }}>{t.label}</button>
-          ))}
-        </div>
-
-        {loading && <div style={{textAlign:"center",padding:"60px 0",color:C.inkLt,fontSize:13}}>⏳ 불러오는 중...</div>}
-        {error   && <div style={{textAlign:"center",padding:"40px 0",color:C.bad,fontSize:12,fontWeight:700}}>⚠️ {error}</div>}
-
-        {/* 상품별 요약 */}
-        {!loading && !error && erpTab==="summary" && data && (
-          <div style={{background:C.white,border:`1px solid ${C.border}`,borderRadius:12,overflow:"hidden"}}>
-            <div style={{padding:"12px 16px",borderBottom:`1px solid ${C.border}`,fontSize:12,fontWeight:800,color:C.ink}}>
-              상품별 판매 ({days}일) · {data.length}개 제품
-            </div>
-            <div style={{overflowX:"auto"}}>
-              <table style={{width:"100%",borderCollapse:"collapse",fontSize:11,minWidth:480}}>
-                <thead>
-                  <tr style={{background:C.bg}}>
-                    {["제품명","판매수량","총매출","이익"].map(h=>(
-                      <th key={h} style={{padding:"8px 12px",textAlign:h==="제품명"?"left":"right",
-                        fontWeight:700,color:C.inkMid,borderBottom:`1px solid ${C.border}`,fontSize:10}}>{h}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {data.map((r,i)=>(
-                    <tr key={i} style={{borderBottom:`1px solid ${C.border}33`,
-                      background:i%2===0?C.white:"#FAFAFA"}}>
-                      <td style={{padding:"9px 12px",fontWeight:700,color:C.ink,maxWidth:220,
-                        overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{r.name}</td>
-                      <td style={{padding:"9px 12px",textAlign:"right",fontWeight:700,color:C.inkMid}}>{Number(r.qty).toLocaleString()}</td>
-                      <td style={{padding:"9px 12px",textAlign:"right",fontWeight:700,color:C.rose}}>{fmtW(r.revenue)}</td>
-                      <td style={{padding:"9px 12px",textAlign:"right",fontWeight:700,
-                        color:Number(r.profit)>0?C.good:C.bad}}>{fmtW(r.profit)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
-
-        {/* 급등/급락 */}
-        {!loading && !error && erpTab==="trend" && (
-          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14}}>
-            {/* 급등 */}
-            <div style={{background:C.white,border:`1px solid ${C.border}`,borderRadius:12,overflow:"hidden"}}>
-              <div style={{padding:"12px 16px",borderBottom:`1px solid ${C.border}`,
-                display:"flex",alignItems:"center",gap:8}}>
-                <span style={{fontSize:14}}>🚀</span>
-                <span style={{fontSize:12,fontWeight:800,color:C.good}}>급등 Top 10</span>
-                <span style={{fontSize:10,color:C.inkLt}}>전주 대비</span>
-              </div>
-              {rising.length===0
-                ? <div style={{padding:"30px",textAlign:"center",color:C.inkLt,fontSize:12}}>데이터 없음</div>
-                : rising.map((r,i)=>(
-                  <div key={i} style={{padding:"10px 14px",borderBottom:`1px solid ${C.border}22`,
-                    display:"flex",alignItems:"center",justifyContent:"space-between",gap:8}}>
-                    <div style={{flex:1,minWidth:0}}>
-                      <div style={{fontSize:11,fontWeight:700,color:C.ink,overflow:"hidden",
-                        textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{r.name}</div>
-                      <div style={{fontSize:10,color:C.inkLt}}>{r.last_week} → {r.this_week}개</div>
-                    </div>
-                    <div style={{textAlign:"right",flexShrink:0}}>
-                      <div style={{fontSize:13,fontWeight:900,color:C.good}}>+{r.pct===999?"NEW":r.pct+"%"}</div>
-                      <div style={{fontSize:10,color:C.good}}>+{r.diff}개</div>
-                    </div>
-                  </div>
-                ))
-              }
-            </div>
-            {/* 급락 */}
-            <div style={{background:C.white,border:`1px solid ${C.border}`,borderRadius:12,overflow:"hidden"}}>
-              <div style={{padding:"12px 16px",borderBottom:`1px solid ${C.border}`,
-                display:"flex",alignItems:"center",gap:8}}>
-                <span style={{fontSize:14}}>📉</span>
-                <span style={{fontSize:12,fontWeight:800,color:C.bad}}>급락 Top 10</span>
-                <span style={{fontSize:10,color:C.inkLt}}>전주 대비</span>
-              </div>
-              {falling.length===0
-                ? <div style={{padding:"30px",textAlign:"center",color:C.inkLt,fontSize:12}}>데이터 없음</div>
-                : falling.map((r,i)=>(
-                  <div key={i} style={{padding:"10px 14px",borderBottom:`1px solid ${C.border}22`,
-                    display:"flex",alignItems:"center",justifyContent:"space-between",gap:8}}>
-                    <div style={{flex:1,minWidth:0}}>
-                      <div style={{fontSize:11,fontWeight:700,color:C.ink,overflow:"hidden",
-                        textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{r.name}</div>
-                      <div style={{fontSize:10,color:C.inkLt}}>{r.last_week} → {r.this_week}개</div>
-                    </div>
-                    <div style={{textAlign:"right",flexShrink:0}}>
-                      <div style={{fontSize:13,fontWeight:900,color:C.bad}}>{r.pct}%</div>
-                      <div style={{fontSize:10,color:C.bad}}>{r.diff}개</div>
-                    </div>
-                  </div>
-                ))
-              }
-            </div>
-          </div>
-        )}
-
-        {/* 일별 차트 + 상세 */}
-        {!loading && !error && erpTab==="daily" && data && (
-          <div style={{display:"flex",flexDirection:"column",gap:14}}>
-            {/* 일별 매출 차트 */}
-            <div style={{background:C.white,border:`1px solid ${C.border}`,borderRadius:12,padding:16}}>
-              <div style={{fontSize:12,fontWeight:800,color:C.ink,marginBottom:12}}>일별 매출 추이</div>
-              <ResponsiveContainer width="100%" height={180}>
-                <AreaChart data={dailyAgg}>
-                  <defs>
-                    <linearGradient id="gErp" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%"  stopColor={C.rose} stopOpacity={0.2}/>
-                      <stop offset="95%" stopColor={C.rose} stopOpacity={0}/>
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke={C.border}/>
-                  <XAxis dataKey="date" tick={{fontSize:10,fill:C.inkLt}} tickLine={false}/>
-                  <YAxis tick={{fontSize:10,fill:C.inkLt}} tickLine={false} axisLine={false}
-                    tickFormatter={v=>fmtW(v)}/>
-                  <Tooltip formatter={v=>[fmtW(v),"매출"]}
-                    contentStyle={{background:C.white,border:`1px solid ${C.border}`,borderRadius:8,fontSize:11}}/>
-                  <Area type="monotone" dataKey="revenue" stroke={C.rose} strokeWidth={2}
-                    fill="url(#gErp)" name="매출"/>
-                </AreaChart>
-              </ResponsiveContainer>
-            </div>
-            {/* 일별 상세 테이블 */}
-            <div style={{background:C.white,border:`1px solid ${C.border}`,borderRadius:12,overflow:"hidden"}}>
-              <div style={{padding:"12px 16px",borderBottom:`1px solid ${C.border}`,fontSize:12,fontWeight:800,color:C.ink}}>
-                일별 판매 상세
-              </div>
-              <div style={{overflowX:"auto"}}>
-                <table style={{width:"100%",borderCollapse:"collapse",fontSize:11,minWidth:440}}>
-                  <thead>
-                    <tr style={{background:C.bg}}>
-                      {["날짜","제품명","수량","매출"].map(h=>(
-                        <th key={h} style={{padding:"8px 12px",textAlign:h==="날짜"||h==="제품명"?"left":"right",
-                          fontWeight:700,color:C.inkMid,borderBottom:`1px solid ${C.border}`,fontSize:10}}>{h}</th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {data.slice(0,100).map((r,i)=>(
-                      <tr key={i} style={{borderBottom:`1px solid ${C.border}22`,background:i%2===0?C.white:"#FAFAFA"}}>
-                        <td style={{padding:"8px 12px",color:C.inkMid,whiteSpace:"nowrap"}}>{r.date}</td>
-                        <td style={{padding:"8px 12px",fontWeight:600,color:C.ink,maxWidth:200,
-                          overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{r.name}</td>
-                        <td style={{padding:"8px 12px",textAlign:"right",color:C.inkMid}}>{Number(r.qty).toLocaleString()}</td>
-                        <td style={{padding:"8px 12px",textAlign:"right",fontWeight:700,color:C.rose}}>{fmtW(r.revenue)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
-    );
-  }
 
   const ReviewSection=(()=>{
     const MEMBERS=["소리","영서","경은","지수"];
