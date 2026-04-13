@@ -715,8 +715,10 @@ function ErpSection() {
   const [rawData, setRawData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error,   setError]   = useState(null);
-  const [channel, setChannelState] = useState("");
+  const [selChannels, setSelChannelsRaw] = useState([]); // 선택된 거래처 목록
   const [search,  setSearch]  = useState("");
+  const [chanSearch, setChanSearch] = useState("");
+  const [chanOpen, setChanOpen] = useState(false);
   const [monthlyGoal, setMonthlyGoalState] = useState(0);
   const [goalEdit, setGoalEdit] = useState(false);
   const [goalInput, setGoalInput] = useState("");
@@ -736,9 +738,16 @@ function ErpSection() {
     return `₩${Math.round(n).toLocaleString()}`;
   };
 
-  const setChannel = async (ch) => {
-    setChannelState(ch);
-    await setSetting("oa_erp_channel", ch).catch(()=>{});
+  const addChannel = async (ch) => {
+    if(!ch || selChannels.includes(ch)) return;
+    const next = [...selChannels, ch];
+    setSelChannelsRaw(next);
+    await setSetting("oa_erp_channels", next).catch(()=>{});
+  };
+  const removeChannel = async (ch) => {
+    const next = selChannels.filter(c=>c!==ch);
+    setSelChannelsRaw(next);
+    await setSetting("oa_erp_channels", next).catch(()=>{});
   };
   const saveGoal = async (v) => {
     const n = Number(String(v).replace(/[^0-9]/g,"")) || 0;
@@ -748,7 +757,7 @@ function ErpSection() {
   };
 
   useEffect(() => {
-    getSetting("oa_erp_channel").then(v => { if(v) setChannelState(v); }).catch(()=>{});
+    getSetting("oa_erp_channels").then(v => { if(Array.isArray(v)) setSelChannelsRaw(v); }).catch(()=>{});
     getSetting("oa_erp_monthly_goal").then(v => { if(v) setMonthlyGoalState(Number(v)||0); }).catch(()=>{});
   }, []);
 
@@ -792,13 +801,14 @@ function ErpSection() {
   // 이번달 시작
   const monthStart = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-01`;
 
-  // 채널 목록
+  // 채널 목록 (선택 안 된 것만 드롭다운에 표시)
   const channels = rawData ? [...new Set(rawData.map(r=>r.channel).filter(Boolean))].sort() : [];
+  const availChannels = channels.filter(c=>!selChannels.includes(c));
 
   // 채널 + 검색 필터된 전체 데이터
   const allFiltered = rawData ? rawData.filter(r =>
-    (!channel || r.channel === channel) &&
-    (!search  || r.name.toLowerCase().includes(search.toLowerCase()))
+    (selChannels.length===0 || selChannels.includes(r.channel)) &&
+    (!search || r.name.toLowerCase().includes(search.toLowerCase()))
   ) : null;
 
   // 현재 기간 / 이전 기간 분리
@@ -938,23 +948,52 @@ function ErpSection() {
 
       {/* 채널 고정 + 검색 */}
       <div style={{display:"flex",gap:8,flexWrap:"wrap",alignItems:"center"}}>
-        {/* 거래처 선택 (고정) */}
+        {/* 거래처 다중 선택 (검색 가능) */}
         <div style={{display:"flex",alignItems:"center",gap:6,flexWrap:"wrap"}}>
           <span style={{fontSize:11,color:C.inkMid,fontWeight:700,whiteSpace:"nowrap"}}>거래처</span>
-          {channel ? (
-            <div style={{display:"flex",alignItems:"center",gap:4,background:C.blush,
+          {selChannels.map(ch=>(
+            <div key={ch} style={{display:"flex",alignItems:"center",gap:4,background:C.blush,
               border:`1px solid ${C.rose}`,borderRadius:20,padding:"3px 10px 3px 12px"}}>
-              <span style={{fontSize:11,fontWeight:800,color:C.rose}}>{channel}</span>
-              <button onClick={()=>setChannel("")} style={{background:"none",border:"none",
+              <span style={{fontSize:11,fontWeight:800,color:C.rose}}>{ch}</span>
+              <button onClick={()=>removeChannel(ch)} style={{background:"none",border:"none",
                 cursor:"pointer",color:C.rose,fontSize:13,lineHeight:1,padding:"0 0 0 4px",fontWeight:900}}>×</button>
             </div>
-          ) : (
-            <select value="" onChange={e=>{ if(e.target.value) setChannel(e.target.value); }}
-              style={{...selStyle, minWidth:140}}>
-              <option value="">전체 거래처 선택...</option>
-              {channels.map(ch=><option key={ch} value={ch}>{ch}</option>)}
-            </select>
-          )}
+          ))}
+          {/* 검색 가능한 거래처 추가 */}
+          <div style={{position:"relative"}}>
+            <input
+              value={chanSearch}
+              onChange={e=>{setChanSearch(e.target.value); setChanOpen(true);}}
+              onFocus={()=>setChanOpen(true)}
+              onBlur={()=>setTimeout(()=>setChanOpen(false),150)}
+              placeholder={selChannels.length>0?"+ 거래처 추가":"거래처 검색..."}
+              style={{padding:"5px 10px",borderRadius:8,fontSize:11,fontWeight:600,
+                border:`1px solid ${C.border}`,outline:"none",background:C.white,
+                color:C.ink,width:150}}
+            />
+            {chanOpen && (
+              <div style={{position:"absolute",top:"calc(100% + 4px)",left:0,zIndex:200,
+                background:C.white,border:`1px solid ${C.border}`,borderRadius:8,
+                boxShadow:"0 4px 16px rgba(0,0,0,0.10)",maxHeight:200,overflowY:"auto",minWidth:220}}>
+                {availChannels
+                  .filter(c=>!chanSearch||c.toLowerCase().includes(chanSearch.toLowerCase()))
+                  .slice(0,30)
+                  .map(ch=>(
+                    <div key={ch} onMouseDown={()=>{addChannel(ch); setChanSearch(""); setChanOpen(false);}}
+                      style={{padding:"7px 12px",fontSize:11,cursor:"pointer",color:C.ink,
+                        borderBottom:`1px solid ${C.border}22`}}
+                      onMouseEnter={e=>e.currentTarget.style.background=C.blush}
+                      onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
+                      {ch}
+                    </div>
+                  ))
+                }
+                {availChannels.filter(c=>!chanSearch||c.toLowerCase().includes(chanSearch.toLowerCase())).length===0 && (
+                  <div style={{padding:"12px",fontSize:11,color:C.inkLt,textAlign:"center"}}>검색 결과 없음</div>
+                )}
+              </div>
+            )}
+          </div>
         </div>
         {/* 제품명 검색 */}
         <div style={{display:"flex",alignItems:"center",gap:6,flex:1,minWidth:160}}>
