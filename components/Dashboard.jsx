@@ -1271,6 +1271,9 @@ function ErpSection() {
   // 이번달 전체 매출 (채널 무관, 카테고리 이미용 전체)
   const monthRevenue = rawData ? rawData.filter(r=>r.date>=monthStart).reduce((s,r)=>s+Number(r.revenue),0) : 0;
 
+  const ERP_BLACKLIST = ["오아블링","삼대오백부속품","오아부속품","오아뷰티플러스","오아뷰티","LED"];
+  const isBlacklisted = name => ERP_BLACKLIST.some(kw => name.includes(kw));
+
   // 상품별 요약 (현재 + 이전 비교)
   const summaryData = erpTab==="summary" ? (() => {
     const cur={}, prev={};
@@ -1282,11 +1285,13 @@ function ErpSection() {
       if(!prev[r.name]) prev[r.name]={revenue:0};
       prev[r.name].revenue+=Number(r.revenue);
     });
-    return Object.entries(cur).map(([name,v])=>({
-      name, ...v,
-      prevRevenue: prev[name]?.revenue||0,
-      revChg: prev[name]?.revenue>0 ? Math.round((v.revenue-prev[name].revenue)/prev[name].revenue*100) : null,
-    })).sort((a,b)=>b.revenue-a.revenue);
+    return Object.entries(cur)
+      .filter(([name])=>!isBlacklisted(name))
+      .map(([name,v])=>({
+        name, ...v,
+        prevRevenue: prev[name]?.revenue||0,
+        revChg: prev[name]?.revenue>0 ? Math.round((v.revenue-prev[name].revenue)/prev[name].revenue*100) : null,
+      })).sort((a,b)=>b.revenue-a.revenue);
   })() : [];
 
   // 급등/급락 (현재 vs 이전)
@@ -1295,7 +1300,7 @@ function ErpSection() {
     curData.forEach(r =>{ if(!cur[r.name]) cur[r.name]=0; cur[r.name]+=Number(r.qty); });
     prevData.forEach(r=>{ if(!prev[r.name]) prev[r.name]=0; prev[r.name]+=Number(r.qty); });
     const names = new Set([...Object.keys(cur),...Object.keys(prev)]);
-    return [...names].map(name=>({
+    return [...names].filter(n=>!isBlacklisted(n)).map(name=>({
       name, this_p:cur[name]||0, last_p:prev[name]||0,
       diff:(cur[name]||0)-(prev[name]||0),
       pct: (prev[name]||0)>0 ? Math.round(((cur[name]||0)-(prev[name]||0))/(prev[name]||0)*100) : 999,
@@ -1487,7 +1492,7 @@ function ErpSection() {
             <table style={{width:"100%",borderCollapse:"collapse",fontSize:11,minWidth:540}}>
               <thead>
                 <tr style={{background:C.bg}}>
-                  {["제품명","판매수량","총매출","이익","전기간 대비"].map(h=>(
+                  {["제품명","판매수량","총매출","이익","전기간 매출","전기간 대비"].map(h=>(
                     <th key={h} style={{padding:"8px 12px",textAlign:h==="제품명"?"left":"right",
                       fontWeight:700,color:C.inkMid,borderBottom:`1px solid ${C.border}`,fontSize:10}}>{h}</th>
                   ))}
@@ -1502,6 +1507,9 @@ function ErpSection() {
                     <td style={{padding:"9px 12px",textAlign:"right",fontWeight:700,color:C.rose}}>{fmtW(r.revenue)}</td>
                     <td style={{padding:"9px 12px",textAlign:"right",fontWeight:700,
                       color:Number(r.profit)>0?C.good:C.bad}}>{fmtW(r.profit)}</td>
+                    <td style={{padding:"9px 12px",textAlign:"right",color:C.inkMid}}>
+                      {r.prevRevenue>0 ? fmtW(r.prevRevenue) : <span style={{color:C.inkLt}}>-</span>}
+                    </td>
                     <td style={{padding:"9px 12px",textAlign:"right",fontWeight:800,
                       color:r.revChg===null?C.inkLt:r.revChg>0?C.good:C.bad}}>
                       {r.revChg===null?"NEW":r.revChg>0?`+${r.revChg}%`:`${r.revChg}%`}

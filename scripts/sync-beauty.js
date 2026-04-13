@@ -8,7 +8,7 @@ const mysql = require('mysql2/promise');
 const SUPA_URL = 'https://lugqeflqusqsyotdiaxg.supabase.co';
 const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx1Z3FlZmxxdXNxc3lvdGRpYXhnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMxOTkzMzksImV4cCI6MjA4ODc3NTMzOX0.ls7CN3iISLM_JcGEaVRV_JDSvm4BFqYMU6m4iBGiRA0';
 
-const BEAUTY_IDS = [44,70,71,72,73,74,75,76,77,78,80,82,200,201,202,203,204,205,206,207,208,209];
+const BEAUTY_IDS = [44,70,71,72,73,74,75,76,77,78,80,82,200,201,202,203,204,205,206,207,208,209,315];
 const SYNC_DAYS = 400; // 전년도 비교를 위해 13개월치
 
 async function fetchBeautySales(pool) {
