@@ -2073,7 +2073,6 @@ export default function OaDashboard(){
   const NAVS=[
     {id:"home",      icon:"home",           label:"홈"},
     {id:"meta",      icon:"campaign",       label:"메타광고"},
-    {id:"adspend",   icon:"payments",       label:"총광고비"},
     {id:"influencer",icon:"auto_awesome",   label:"인플루언서"},
     {id:"inventory", icon:"inventory_2",    label:"재고"},
     {id:"schedule",  icon:"calendar_month", label:"스케줄"},
