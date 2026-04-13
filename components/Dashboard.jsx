@@ -706,6 +706,246 @@ function SchModalComp({mode, initial, onSave, onClose}){
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 네이버 광고 섹션
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function NaverSection() {
+  const [rows, setRows]       = useState([]);
+  const [fileName, setFileName] = useState("");
+  const [groupBy, setGroupBy] = useState("adgroup"); // campaign | adgroup | keyword
+  const [sortCol, setSortCol] = useState("cost");
+  const [sortAsc, setSortAsc] = useState(false);
+  const [search, setSearch]   = useState("");
+  const [minCost, setMinCost] = useState(0); // 최소 광고비 필터
+
+  const fmtN = v => Number(v||0).toLocaleString();
+  const fmtW = v => {
+    const n = Number(v||0);
+    if(n>=10000) return `${Math.round(n/10000).toLocaleString()}만`;
+    return `${Math.round(n).toLocaleString()}원`;
+  };
+
+  function parseCSV(text) {
+    const lines = text.replace(/\r/g,"").split("\n").filter(l=>l.trim());
+    // 1행=타이틀, 2행=헤더, 3행~=데이터
+    if(lines.length < 3) return [];
+    const headers = lines[1].split(",").map(h=>h.replace(/^"|"$/g,"").trim());
+    return lines.slice(2).map(line=>{
+      const vals = line.split(",").map(v=>v.replace(/^"|"$/g,"").trim());
+      const o = {};
+      headers.forEach((h,i)=>{ o[h] = vals[i]||""; });
+      return o;
+    }).filter(r=>r["캠페인"]);
+  }
+
+  function onFile(e) {
+    const file = e.target.files[0];
+    if(!file) return;
+    setFileName(file.name);
+    const reader = new FileReader();
+    reader.onload = ev => {
+      const text = ev.target.result;
+      const parsed = parseCSV(text);
+      setRows(parsed);
+    };
+    reader.readAsText(file, "euc-kr");
+  }
+
+  // 그룹 키
+  const groupKey = r => groupBy==="campaign" ? r["캠페인"] : groupBy==="adgroup" ? r["광고그룹"] : r["검색어"];
+
+  // 집계
+  const aggregated = (() => {
+    const map = {};
+    rows.forEach(r => {
+      const key = groupKey(r);
+      if(!key) return;
+      if(!map[key]) map[key] = {
+        label: key,
+        campaign: r["캠페인"],
+        adgroup: r["광고그룹"],
+        imp:0, click:0, cost:0,
+        totalConv:0, totalRevenue:0,
+        buyConv:0, buyRevenue:0,
+      };
+      map[key].imp          += Number(r["노출수"])||0;
+      map[key].click        += Number(r["클릭수"])||0;
+      map[key].cost         += Number(r["총비용"])||0;
+      map[key].totalConv    += Number(r["총 전환수"])||0;
+      map[key].totalRevenue += Number(r["총 전환매출액(원)"])||0;
+      map[key].buyConv      += Number(r["구매완료 전환수"])||0;
+      map[key].buyRevenue   += Number(r["구매완료 전환매출액(원)"])||0;
+    });
+    return Object.values(map).map(r=>({
+      ...r,
+      ctr:    r.click>0 ? (r.click/r.imp*100).toFixed(2) : "0",
+      cpc:    r.click>0 ? Math.round(r.cost/r.click) : 0,
+      roas:   r.cost>0  ? Math.round(r.buyRevenue/r.cost*100) : 0,  // 구매완료 기준
+      roasTotal: r.cost>0 ? Math.round(r.totalRevenue/r.cost*100) : 0, // 참고용
+    }));
+  })();
+
+  // 필터 + 정렬
+  const filtered = aggregated
+    .filter(r => r.cost >= minCost)
+    .filter(r => !search || r.label.toLowerCase().includes(search.toLowerCase()))
+    .sort((a,b)=> sortAsc ? a[sortCol]-b[sortCol] : b[sortCol]-a[sortCol]);
+
+  // 합계
+  const total = filtered.reduce((s,r)=>({
+    imp:s.imp+r.imp, click:s.click+r.click, cost:s.cost+r.cost,
+    buyConv:s.buyConv+r.buyConv, buyRevenue:s.buyRevenue+r.buyRevenue,
+  }),{imp:0,click:0,cost:0,buyConv:0,buyRevenue:0});
+  const totalRoas = total.cost>0 ? Math.round(total.buyRevenue/total.cost*100) : 0;
+
+  const COLS = [
+    {key:"label",      label:groupBy==="campaign"?"캠페인":groupBy==="adgroup"?"광고그룹":"검색어", align:"left", fmt:v=>v},
+    {key:"imp",        label:"노출",       align:"right", fmt:fmtN},
+    {key:"click",      label:"클릭",       align:"right", fmt:fmtN},
+    {key:"ctr",        label:"CTR%",       align:"right", fmt:v=>v+"%"},
+    {key:"cpc",        label:"CPC",        align:"right", fmt:v=>fmtN(v)+"원"},
+    {key:"cost",       label:"광고비",     align:"right", fmt:fmtW},
+    {key:"buyConv",    label:"구매전환",   align:"right", fmt:fmtN},
+    {key:"buyRevenue", label:"구매매출",   align:"right", fmt:fmtW},
+    {key:"roas",       label:"ROAS(구매)", align:"right", fmt:v=>`${fmtN(v)}%`},
+  ];
+
+  function thClick(key) {
+    if(key==="label") return;
+    if(sortCol===key) setSortAsc(p=>!p);
+    else { setSortCol(key); setSortAsc(false); }
+  }
+
+  const roasColor = v => v>=500?C.good:v>=300?"#CA8A04":C.bad;
+
+  return (
+    <div style={{display:"flex",flexDirection:"column",gap:14}}>
+
+      {/* 헤더 */}
+      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:8}}>
+        <div>
+          <div style={{fontSize:16,fontWeight:900,color:C.ink}}>📊 네이버 광고 · <span style={{color:"#03C75A"}}>구매완료 ROAS</span></div>
+          <div style={{fontSize:11,color:C.inkLt,marginTop:2}}>CSV 업로드 · 구매완료 전환매출 기준</div>
+        </div>
+        <label style={{display:"flex",alignItems:"center",gap:8,padding:"7px 14px",borderRadius:8,
+          background:"#03C75A",color:"#fff",fontSize:11,fontWeight:800,cursor:"pointer"}}>
+          <span className="material-symbols-outlined" style={{fontSize:15}}>upload_file</span>
+          CSV 업로드
+          <input type="file" accept=".csv" onChange={onFile} style={{display:"none"}}/>
+        </label>
+      </div>
+
+      {fileName && (
+        <div style={{fontSize:11,color:C.inkMid,background:C.bg,padding:"6px 12px",borderRadius:8}}>
+          📄 {fileName} · {rows.length.toLocaleString()}행
+        </div>
+      )}
+
+      {rows.length===0 && (
+        <div style={{background:C.white,border:`2px dashed ${C.border}`,borderRadius:14,
+          padding:"60px 20px",textAlign:"center"}}>
+          <div style={{fontSize:32,marginBottom:12}}>📂</div>
+          <div style={{fontSize:14,fontWeight:800,color:C.inkMid}}>네이버 광고 CSV를 업로드하세요</div>
+          <div style={{fontSize:11,color:C.inkLt,marginTop:6}}>검색어보고서 · 구매완료/장바구니 포함 파일</div>
+        </div>
+      )}
+
+      {rows.length>0 && (
+        <>
+          {/* KPI 배너 */}
+          <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:10}}>
+            {[
+              {label:"총 광고비",   value:fmtW(total.cost),     color:C.ink},
+              {label:"구매 전환",   value:fmtN(total.buyConv)+"건", color:C.ink},
+              {label:"구매 매출",   value:fmtW(total.buyRevenue), color:C.rose},
+              {label:"ROAS(구매)",  value:totalRoas+"%",          color:roasColor(totalRoas)},
+            ].map(k=>(
+              <div key={k.label} style={{background:C.white,border:`1px solid ${C.border}`,
+                borderRadius:10,padding:"12px 14px"}}>
+                <div style={{fontSize:10,color:C.inkLt,fontWeight:700}}>{k.label}</div>
+                <div style={{fontSize:17,fontWeight:900,color:k.color,marginTop:4}}>{k.value}</div>
+              </div>
+            ))}
+          </div>
+
+          {/* 필터 바 */}
+          <div style={{display:"flex",gap:8,flexWrap:"wrap",alignItems:"center"}}>
+            {["campaign","adgroup","keyword"].map(g=>(
+              <button key={g} onClick={()=>setGroupBy(g)} style={{
+                padding:"5px 12px",borderRadius:8,fontSize:11,fontWeight:700,cursor:"pointer",
+                border:`1px solid ${groupBy===g?"#03C75A":C.border}`,
+                background:groupBy===g?"#E8FBF0":C.white,
+                color:groupBy===g?"#03C75A":C.inkMid,
+              }}>{g==="campaign"?"캠페인":g==="adgroup"?"광고그룹":"검색어"}</button>
+            ))}
+            <input value={search} onChange={e=>setSearch(e.target.value)}
+              placeholder="검색..." style={{padding:"5px 10px",borderRadius:8,fontSize:11,
+                border:`1px solid ${C.border}`,outline:"none",width:140}}/>
+            <div style={{display:"flex",alignItems:"center",gap:6,marginLeft:"auto"}}>
+              <span style={{fontSize:11,color:C.inkMid}}>최소 광고비</span>
+              <select value={minCost} onChange={e=>setMinCost(Number(e.target.value))}
+                style={{padding:"4px 8px",borderRadius:6,fontSize:11,border:`1px solid ${C.border}`,outline:"none"}}>
+                {[0,1000,5000,10000,50000,100000].map(v=>(
+                  <option key={v} value={v}>{v===0?"전체":fmtW(v)+" 이상"}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          {/* 테이블 */}
+          <div style={{background:C.white,border:`1px solid ${C.border}`,borderRadius:12,overflow:"hidden"}}>
+            <div style={{overflowX:"auto"}}>
+              <table style={{width:"100%",borderCollapse:"collapse",fontSize:11}}>
+                <thead>
+                  <tr style={{background:C.bg}}>
+                    {COLS.map(c=>(
+                      <th key={c.key} onClick={()=>thClick(c.key)}
+                        style={{padding:"9px 12px",textAlign:c.align,fontWeight:700,color:C.inkMid,
+                          borderBottom:`1px solid ${C.border}`,fontSize:10,whiteSpace:"nowrap",
+                          cursor:c.key==="label"?"default":"pointer",userSelect:"none"}}>
+                        {c.label}{sortCol===c.key?(sortAsc?"▲":"▼"):""}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {filtered.map((r,i)=>(
+                    <tr key={i} style={{borderBottom:`1px solid ${C.border}22`,
+                      background:i%2===0?C.white:"#FAFAFA"}}>
+                      {COLS.map(c=>(
+                        <td key={c.key} style={{padding:"9px 12px",textAlign:c.align,
+                          fontWeight:c.key==="roas"||c.key==="label"?800:600,
+                          color:c.key==="roas"?roasColor(r.roas):c.key==="buyRevenue"?C.rose:C.ink,
+                          maxWidth:c.key==="label"?220:undefined,
+                          overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
+                          {c.fmt(r[c.key])}
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+                <tfoot>
+                  <tr style={{background:C.bg,borderTop:`2px solid ${C.border}`}}>
+                    <td style={{padding:"9px 12px",fontWeight:800,fontSize:11}}>합계 ({filtered.length}건)</td>
+                    <td style={{padding:"9px 12px",textAlign:"right",fontWeight:700}}>{fmtN(total.imp)}</td>
+                    <td style={{padding:"9px 12px",textAlign:"right",fontWeight:700}}>{fmtN(total.click)}</td>
+                    <td/>
+                    <td/>
+                    <td style={{padding:"9px 12px",textAlign:"right",fontWeight:800,color:C.ink}}>{fmtW(total.cost)}</td>
+                    <td style={{padding:"9px 12px",textAlign:"right",fontWeight:700}}>{fmtN(total.buyConv)}</td>
+                    <td style={{padding:"9px 12px",textAlign:"right",fontWeight:800,color:C.rose}}>{fmtW(total.buyRevenue)}</td>
+                    <td style={{padding:"9px 12px",textAlign:"right",fontWeight:900,color:roasColor(totalRoas)}}>{fmtN(totalRoas)}%</td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // ERP 섹션 (이미용 판매 데이터)
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 function ErpSection() {
@@ -2541,6 +2781,7 @@ export default function OaDashboard(){
   const NAVS=[
     {id:"home",      icon:"home",           label:"홈"},
     {id:"erp",       icon:"storage",        label:"ERP"},
+    {id:"naver",     icon:"ads_click",      label:"네이버광고"},
     {id:"meta",      icon:"campaign",       label:"메타광고"},
     {id:"influencer",icon:"auto_awesome",   label:"인플루언서"},
     {id:"schedule",  icon:"calendar_month", label:"스케줄"},
@@ -9360,6 +9601,7 @@ export default function OaDashboard(){
           {sec==="influencer"  && InfluencerSection}
           {sec==="schedule"    && ScheduleSection}
           {sec==="erp"         && <ErpSection/>}
+          {sec==="naver"       && <NaverSection/>}
           {sec==="creative"    && CreativeSection}
           {sec==="keyword"     && KeywordSection}
           {sec==="review"      && ReviewSection}
