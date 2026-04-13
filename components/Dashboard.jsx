@@ -5883,13 +5883,52 @@ export default function OaDashboard(){
     async function load(tab, d, cId) {
       setLoading(true); setError(null);
       try {
-        const action = tab==="trend" ? "beauty_trend" : tab==="daily" ? "beauty_sales7" : "beauty_summary";
-        const params = new URLSearchParams({action, days:d});
-        if(cId) params.set("catId", cId);
-        const res  = await fetch(`/api/mysql?${params}`);
-        const json = await res.json();
-        if(json.error) throw new Error(json.error);
-        setData(json.rows || []);
+        const SUPA_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
+        const SUPA_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+        const since = new Date(); since.setDate(since.getDate() - d);
+        const sinceStr = since.toISOString().split('T')[0];
+
+        // 날짜 범위 내 raw 데이터 전체 조회 (카테고리 필터 포함)
+        let url = `${SUPA_URL}/rest/v1/beauty_sales?select=name,cat_id,date,qty,revenue,profit&date=gte.${sinceStr}&order=date.desc&limit=5000`;
+        if(cId) url += `&cat_id=eq.${cId}`;
+
+        const res = await fetch(url, {
+          headers: { apikey: SUPA_KEY, Authorization: `Bearer ${SUPA_KEY}` }
+        });
+        if(!res.ok) throw new Error(`Supabase 오류 ${res.status}`);
+        const raw = await res.json();
+        if(!raw.length) { setData([]); setLoading(false); return; }
+
+        if(tab === "summary") {
+          // 상품별 합산
+          const map = {};
+          raw.forEach(r => {
+            if(!map[r.name]) map[r.name] = {name:r.name, qty:0, revenue:0, profit:0};
+            map[r.name].qty     += Number(r.qty);
+            map[r.name].revenue += Number(r.revenue);
+            map[r.name].profit  += Number(r.profit);
+          });
+          setData(Object.values(map).sort((a,b)=>b.revenue-a.revenue).slice(0,50));
+
+        } else if(tab === "trend") {
+          // 이번주 vs 지난주
+          const now = new Date();
+          const w0 = new Date(now); w0.setDate(now.getDate()-7);
+          const w1 = new Date(now); w1.setDate(now.getDate()-14);
+          const w0s = w0.toISOString().split('T')[0];
+          const w1s = w1.toISOString().split('T')[0];
+          const map = {};
+          raw.forEach(r => {
+            if(!map[r.name]) map[r.name] = {name:r.name, this_week:0, last_week:0, this_revenue:0, last_revenue:0};
+            if(r.date >= w0s) { map[r.name].this_week += Number(r.qty); map[r.name].this_revenue += Number(r.revenue); }
+            else if(r.date >= w1s) { map[r.name].last_week += Number(r.qty); map[r.name].last_revenue += Number(r.revenue); }
+          });
+          setData(Object.values(map).filter(r=>r.this_week>0||r.last_week>0).sort((a,b)=>(b.this_week-b.last_week)-(a.this_week-a.last_week)));
+
+        } else {
+          // 일별 (raw 그대로 — 날짜+상품별)
+          setData(raw);
+        }
       } catch(e) { setError(e.message); setData(null); }
       finally { setLoading(false); }
     }
@@ -5933,7 +5972,7 @@ export default function OaDashboard(){
         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:8}}>
           <div>
             <div style={{fontSize:16,fontWeight:900,color:C.ink}}>🗄️ ERP · <span style={{color:C.rose}}>이미용</span> 판매</div>
-            <div style={{fontSize:11,color:C.inkLt,marginTop:2}}>db_for_ai_sm · v_daily_sales_detail</div>
+            <div style={{fontSize:11,color:C.inkLt,marginTop:2}}>매일 오전 7시 자동 동기화 · Supabase</div>
           </div>
           <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
             {/* 기간 선택 */}
