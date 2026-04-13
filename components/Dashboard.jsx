@@ -720,6 +720,7 @@ function NaverSection() {
   const [quickFilter, setQuickFilter] = useState("all");
   const [fixList, setFixList] = useState({});
   const [showFix, setShowFix] = useState(false);
+  const [loadErr, setLoadErr] = useState("");
 
   const SURL = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const SKEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
@@ -735,7 +736,15 @@ function NaverSection() {
         ]);
         if(cacheRes.ok) {
           const data = await cacheRes.json();
-          if(data[0]) { setRows(data[0].rows||[]); setFileName(data[0].filename||""); }
+          if(data[0]) {
+            setRows(data[0].rows||[]);
+            setFileName(data[0].filename||"");
+          } else {
+            setLoadErr("캐시 없음 (data[0] empty)");
+          }
+        } else {
+          const txt = await cacheRes.text();
+          setLoadErr(`캐시 로드 실패: ${cacheRes.status} ${txt}`);
         }
         if(fixRes.ok) {
           const data = await fixRes.json();
@@ -743,7 +752,9 @@ function NaverSection() {
           data.forEach(r=>{ map[r.label]=r; });
           setFixList(map);
         }
-      } catch(e){ console.error(e); }
+      } catch(e){
+        setLoadErr(`오류: ${e.message}`);
+      }
       setLoading(false);
     }
     load();
@@ -801,11 +812,15 @@ function NaverSection() {
       const parsed = parseCSV(ev.target.result);
       setRows(parsed);
       setFileName(name);
-      await fetch(`${SURL}/rest/v1/naver_ads_cache`,{
+      const saveRes = await fetch(`${SURL}/rest/v1/naver_ads_cache`,{
         method:"POST",
         headers:{...sh, Prefer:"resolution=merge-duplicates"},
         body: JSON.stringify({id:1, filename:name, rows:parsed, uploaded_at:new Date().toISOString()}),
       });
+      if(!saveRes.ok) {
+        const err = await saveRes.text();
+        alert(`Supabase 저장 실패: ${err}`);
+      }
     };
     reader.readAsText(file, "euc-kr");
   }
@@ -891,6 +906,7 @@ function NaverSection() {
   const roasColor = v => v>=500?C.good:v>=300?"#CA8A04":C.bad;
 
   if(loading) return <div style={{padding:40,textAlign:"center",color:C.inkLt,fontSize:13}}>불러오는 중...</div>;
+  if(loadErr) return <div style={{padding:20,background:"#FEF2F2",borderRadius:10,color:C.bad,fontSize:12}}>{loadErr}</div>;
 
   return (
     <div style={{display:"flex",flexDirection:"column",gap:14}}>
