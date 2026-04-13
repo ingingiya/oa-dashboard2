@@ -1175,6 +1175,9 @@ function ErpSection() {
   const [monthlyGoal, setMonthlyGoalState] = useState(0);
   const [goalEdit, setGoalEdit] = useState(false);
   const [goalInput, setGoalInput] = useState("");
+  const [blacklist, setBlacklist] = useState(["오아블링","삼대오백부속품","오아부속품","오아뷰티플러스","오아뷰티","LED"]);
+  const [blInput, setBlInput] = useState("");
+  const [showBl, setShowBl] = useState(false);
 
   const BEAUTY_CATS = [
     {id:"",   name:"전체 이미용"},
@@ -1271,8 +1274,7 @@ function ErpSection() {
   // 이번달 전체 매출 (채널 무관, 카테고리 이미용 전체)
   const monthRevenue = rawData ? rawData.filter(r=>r.date>=monthStart).reduce((s,r)=>s+Number(r.revenue),0) : 0;
 
-  const ERP_BLACKLIST = ["오아블링","삼대오백부속품","오아부속품","오아뷰티플러스","오아뷰티","LED"];
-  const isBlacklisted = name => ERP_BLACKLIST.some(kw => name.includes(kw));
+  const isBlacklisted = name => blacklist.some(kw => name.includes(kw));
 
   // 상품별 요약 (현재 + 이전 비교)
   const summaryData = erpTab==="summary" ? (() => {
@@ -1404,6 +1406,40 @@ function ErpSection() {
         </div>
       </div>
 
+      {/* 제외 목록 관리 */}
+      <div style={{background:C.white,border:`1px solid ${C.border}`,borderRadius:10,overflow:"hidden"}}>
+        <button onClick={()=>setShowBl(p=>!p)} style={{
+          width:"100%",display:"flex",alignItems:"center",justifyContent:"space-between",
+          padding:"8px 14px",background:"none",border:"none",cursor:"pointer",
+        }}>
+          <span style={{fontSize:11,fontWeight:700,color:C.inkMid}}>🚫 제외 목록 ({blacklist.length}개)</span>
+          <span style={{fontSize:11,color:C.inkLt}}>{showBl?"▲":"▼"}</span>
+        </button>
+        {showBl && (
+          <div style={{padding:"8px 14px",borderTop:`1px solid ${C.border}`,display:"flex",flexDirection:"column",gap:8}}>
+            <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
+              {blacklist.map(kw=>(
+                <span key={kw} style={{display:"flex",alignItems:"center",gap:4,padding:"3px 10px",
+                  background:"#FEF2F2",border:`1px solid #FECACA`,borderRadius:20,fontSize:11,color:C.bad}}>
+                  {kw}
+                  <button onClick={()=>setBlacklist(p=>p.filter(k=>k!==kw))}
+                    style={{background:"none",border:"none",cursor:"pointer",color:C.bad,fontSize:12,lineHeight:1,padding:0}}>✕</button>
+                </span>
+              ))}
+            </div>
+            <div style={{display:"flex",gap:6}}>
+              <input value={blInput} onChange={e=>setBlInput(e.target.value)}
+                onKeyDown={e=>{ if(e.key==="Enter"&&blInput.trim()){setBlacklist(p=>[...p,blInput.trim()]);setBlInput("");}}}
+                placeholder="제외 키워드 입력 후 Enter"
+                style={{flex:1,padding:"5px 10px",borderRadius:7,fontSize:11,border:`1px solid ${C.border}`,outline:"none"}}/>
+              <button onClick={()=>{if(blInput.trim()){setBlacklist(p=>[...p,blInput.trim()]);setBlInput("");}}}
+                style={{padding:"5px 12px",borderRadius:7,fontSize:11,fontWeight:700,cursor:"pointer",
+                  background:C.rose,color:"#fff",border:"none"}}>추가</button>
+            </div>
+          </div>
+        )}
+      </div>
+
       {/* 채널 고정 + 검색 */}
       <div style={{display:"flex",gap:8,flexWrap:"wrap",alignItems:"center"}}>
         {/* 거래처 다중 선택 (검색 가능) */}
@@ -1517,6 +1553,27 @@ function ErpSection() {
                   </tr>
                 ))}
               </tbody>
+              <tfoot>
+                {(()=>{
+                  const tot = summaryData.reduce((s,r)=>({
+                    qty:s.qty+Number(r.qty), revenue:s.revenue+Number(r.revenue),
+                    profit:s.profit+Number(r.profit), prevRevenue:s.prevRevenue+Number(r.prevRevenue),
+                  }),{qty:0,revenue:0,profit:0,prevRevenue:0});
+                  const totChg = tot.prevRevenue>0?Math.round((tot.revenue-tot.prevRevenue)/tot.prevRevenue*100):null;
+                  return (
+                    <tr style={{background:"#F1F5F9",borderTop:`2px solid ${C.border}`,fontWeight:800}}>
+                      <td style={{padding:"9px 12px",fontSize:11,color:C.ink}}>합계 ({summaryData.length}개)</td>
+                      <td style={{padding:"9px 12px",textAlign:"right",color:C.inkMid}}>{Number(tot.qty).toLocaleString()}</td>
+                      <td style={{padding:"9px 12px",textAlign:"right",color:C.rose}}>{fmtW(tot.revenue)}</td>
+                      <td style={{padding:"9px 12px",textAlign:"right",color:tot.profit>0?C.good:C.bad}}>{fmtW(tot.profit)}</td>
+                      <td style={{padding:"9px 12px",textAlign:"right",color:C.inkMid}}>{tot.prevRevenue>0?fmtW(tot.prevRevenue):"-"}</td>
+                      <td style={{padding:"9px 12px",textAlign:"right",color:totChg===null?C.inkLt:totChg>0?C.good:C.bad}}>
+                        {totChg===null?"-":totChg>0?`+${totChg}%`:`${totChg}%`}
+                      </td>
+                    </tr>
+                  );
+                })()}
+              </tfoot>
             </table>
           </div>
         </div>
