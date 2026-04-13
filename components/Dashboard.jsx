@@ -757,15 +757,23 @@ function ErpSection() {
     try {
       const SURL = process.env.NEXT_PUBLIC_SUPABASE_URL;
       const SKEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-      // 비교를 위해 항상 60일치 로드 (이번달 계산도 포함)
-      const since = new Date(); since.setDate(since.getDate() - 60);
+      // 400일치 전체 로드 (전년도 비교 포함, 페이지네이션)
+      const since = new Date(); since.setDate(since.getDate() - 400);
       const sinceStr = since.toISOString().split('T')[0];
-      let url = `${SURL}/rest/v1/beauty_sales?select=name,cat_id,channel,date,qty,revenue,profit&date=gte.${sinceStr}&order=date.desc&limit=15000`;
-      if(cId) url += `&cat_id=eq.${cId}`;
-      const res = await fetch(url, { headers: { apikey: SKEY, Authorization: `Bearer ${SKEY}` } });
-      if(!res.ok) throw new Error(`Supabase 오류 ${res.status}`);
-      const raw = await res.json();
-      setRawData(raw || []);
+      const baseUrl = `${SURL}/rest/v1/beauty_sales?select=name,cat_id,channel,date,qty,revenue,profit&date=gte.${sinceStr}&order=date.desc` + (cId ? `&cat_id=eq.${cId}` : '');
+      const PAGE = 1000;
+      let all = [], offset = 0, done = false;
+      while(!done) {
+        const res = await fetch(`${baseUrl}&limit=${PAGE}&offset=${offset}`, {
+          headers: { apikey: SKEY, Authorization: `Bearer ${SKEY}`, 'Range-Unit': 'items' }
+        });
+        if(!res.ok) throw new Error(`Supabase 오류 ${res.status}`);
+        const page = await res.json();
+        all = all.concat(page);
+        if(page.length < PAGE) done = true;
+        else offset += PAGE;
+      }
+      setRawData(all);
     } catch(e) { setError(e.message); setRawData(null); }
     finally { setLoading(false); }
   }
@@ -931,20 +939,21 @@ function ErpSection() {
       {/* 채널 고정 + 검색 */}
       <div style={{display:"flex",gap:8,flexWrap:"wrap",alignItems:"center"}}>
         {/* 거래처 선택 (고정) */}
-        <div style={{display:"flex",alignItems:"center",gap:6}}>
+        <div style={{display:"flex",alignItems:"center",gap:6,flexWrap:"wrap"}}>
           <span style={{fontSize:11,color:C.inkMid,fontWeight:700,whiteSpace:"nowrap"}}>거래처</span>
-          <select value={channel} onChange={e=>setChannel(e.target.value)} style={{...selStyle,
-            minWidth:140, borderColor: channel ? C.rose : C.border,
-            color: channel ? C.rose : C.inkMid, fontWeight: channel ? 800 : 700,
-          }}>
-            <option value="">전체</option>
-            {channels.map(ch=><option key={ch} value={ch}>{ch}</option>)}
-          </select>
-          {channel && (
-            <button onClick={()=>setChannel("")} style={{fontSize:10,padding:"3px 8px",borderRadius:6,
-              border:`1px solid ${C.border}`,background:"none",cursor:"pointer",color:C.inkMid}}>
-              초기화
-            </button>
+          {channel ? (
+            <div style={{display:"flex",alignItems:"center",gap:4,background:C.blush,
+              border:`1px solid ${C.rose}`,borderRadius:20,padding:"3px 10px 3px 12px"}}>
+              <span style={{fontSize:11,fontWeight:800,color:C.rose}}>{channel}</span>
+              <button onClick={()=>setChannel("")} style={{background:"none",border:"none",
+                cursor:"pointer",color:C.rose,fontSize:13,lineHeight:1,padding:"0 0 0 4px",fontWeight:900}}>×</button>
+            </div>
+          ) : (
+            <select value="" onChange={e=>{ if(e.target.value) setChannel(e.target.value); }}
+              style={{...selStyle, minWidth:140}}>
+              <option value="">전체 거래처 선택...</option>
+              {channels.map(ch=><option key={ch} value={ch}>{ch}</option>)}
+            </select>
           )}
         </div>
         {/* 제품명 검색 */}
