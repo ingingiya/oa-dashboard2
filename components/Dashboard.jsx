@@ -711,7 +711,7 @@ function SchModalComp({mode, initial, onSave, onClose}){
 function NaverSection() {
   const [rows, setRows]       = useState([]);
   const [fileName, setFileName] = useState("");
-  const [dateRange, setDateRange] = useState(()=>localStorage.getItem("naver_daterange")||"");
+  const [dateRange, setDateRange] = useState("");
   const [loading, setLoading] = useState(true);
   const [groupBy, setGroupBy] = useState("adgroup"); // campaign | adgroup | keyword
   const [sortCol, setSortCol] = useState("cost");
@@ -726,21 +726,12 @@ function NaverSection() {
   const SKEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
   const sh = {"apikey":SKEY,"Authorization":`Bearer ${SKEY}`,"Content-Type":"application/json"};
 
-  // 마운트: localStorage 우선 → Supabase fallback
+  // 마운트: Supabase에서 로드
   useEffect(()=>{
-    // 1. localStorage에서 즉시 로드
-    try {
-      const lsRows = localStorage.getItem("naver_rows");
-      const lsName = localStorage.getItem("naver_filename");
-      const lsDr   = localStorage.getItem("naver_daterange");
-      if(lsRows) { setRows(JSON.parse(lsRows)); setFileName(lsName||""); setDateRange(lsDr||""); setLoading(false); return; }
-    } catch(e){}
-
-    // 2. localStorage 없으면 Supabase에서 로드
-    async function loadFromSupabase() {
+    async function load() {
       try {
         const [cacheRes, fixRes] = await Promise.all([
-          fetch(`${SURL}/rest/v1/naver_ads_cache?id=eq.1&select=filename,rows`, {headers:sh}),
+          fetch(`${SURL}/rest/v1/naver_ads_cache?id=eq.1&select=filename,rows,date_range`, {headers:sh}),
           fetch(`${SURL}/rest/v1/naver_ads_fixlist?select=*`, {headers:sh}),
         ]);
         if(cacheRes.ok) {
@@ -748,8 +739,7 @@ function NaverSection() {
           if(data[0]?.rows?.length) {
             setRows(data[0].rows);
             setFileName(data[0].filename||"");
-            localStorage.setItem("naver_rows", JSON.stringify(data[0].rows));
-            localStorage.setItem("naver_filename", data[0].filename||"");
+            setDateRange(data[0].date_range||"");
           }
         }
         if(fixRes.ok) {
@@ -761,7 +751,7 @@ function NaverSection() {
       } catch(e){ console.error(e); }
       setLoading(false);
     }
-    loadFromSupabase();
+    load();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   },[]);
 
@@ -827,16 +817,12 @@ function NaverSection() {
       setRows(parsed);
       setFileName(name);
       setDateRange(dr);
-      // localStorage 즉시 저장
-      localStorage.setItem("naver_rows", JSON.stringify(parsed));
-      localStorage.setItem("naver_filename", name);
-      localStorage.setItem("naver_daterange", dr);
-      // Supabase 백그라운드 저장
-      fetch(`${SURL}/rest/v1/naver_ads_cache`,{
+      const res = await fetch(`${SURL}/rest/v1/naver_ads_cache`,{
         method:"POST",
         headers:{...sh, Prefer:"resolution=merge-duplicates"},
-        body: JSON.stringify({id:1, filename:name, rows:parsed, uploaded_at:new Date().toISOString()}),
-      }).catch(e=>console.error("Supabase 저장 실패:", e));
+        body: JSON.stringify({id:1, filename:name, rows:parsed, date_range:dr, uploaded_at:new Date().toISOString()}),
+      });
+      if(!res.ok) alert("저장 실패: "+(await res.text()));
     };
     reader.readAsText(file, "euc-kr");
   }
