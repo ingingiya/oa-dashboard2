@@ -716,6 +716,7 @@ function NaverSection() {
   const [sortAsc, setSortAsc] = useState(false);
   const [search, setSearch]   = useState("");
   const [minCost, setMinCost] = useState(0); // 최소 광고비 필터
+  const [quickFilter, setQuickFilter] = useState("all"); // all | highcost | warn
 
   const fmtN = v => Number(v||0).toLocaleString();
   const fmtW = v => {
@@ -784,10 +785,22 @@ function NaverSection() {
     }));
   })();
 
+  // 광고비 상위 20% 기준
+  const costThreshold = (() => {
+    if(!aggregated.length) return 0;
+    const sorted = [...aggregated].sort((a,b)=>b.cost-a.cost);
+    return sorted[Math.floor(sorted.length*0.2)]?.cost ?? 0;
+  })();
+
   // 필터 + 정렬
   const filtered = aggregated
     .filter(r => r.cost >= minCost)
     .filter(r => !search || r.label.toLowerCase().includes(search.toLowerCase()))
+    .filter(r => {
+      if(quickFilter==="highcost") return r.cost >= costThreshold;
+      if(quickFilter==="warn") return r.cost>0 && r.roas < 300;
+      return true;
+    })
     .sort((a,b)=> sortAsc ? a[sortCol]-b[sortCol] : b[sortCol]-a[sortCol]);
 
   // 합계
@@ -864,6 +877,22 @@ function NaverSection() {
                 <div style={{fontSize:10,color:C.inkLt,fontWeight:700}}>{k.label}</div>
                 <div style={{fontSize:17,fontWeight:900,color:k.color,marginTop:4}}>{k.value}</div>
               </div>
+            ))}
+          </div>
+
+          {/* 빠른 필터 */}
+          <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+            {[
+              {key:"all",     label:"전체",          color:C.inkMid},
+              {key:"highcost",label:"💸 광고비 상위", color:"#7C3AED"},
+              {key:"warn",    label:"⚠️ ROAS 경고 (<300%)", color:C.bad},
+            ].map(f=>(
+              <button key={f.key} onClick={()=>setQuickFilter(f.key)} style={{
+                padding:"5px 14px",borderRadius:20,fontSize:11,fontWeight:700,cursor:"pointer",
+                border:`1.5px solid ${quickFilter===f.key?f.color:C.border}`,
+                background:quickFilter===f.key? (f.key==="warn"?"#FEF2F2": f.key==="highcost"?"#F5F3FF":"#F1F5F9") :C.white,
+                color:quickFilter===f.key?f.color:C.inkMid,
+              }}>{f.label}</button>
             ))}
           </div>
 
