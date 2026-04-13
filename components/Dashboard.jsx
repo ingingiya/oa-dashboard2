@@ -922,14 +922,17 @@ function NaverSection() {
       </div>
 
       {fileName && (()=>{
-        // 날짜 범위 계산: "날짜" 또는 "일자" 컬럼 자동 감지
-        const dateKey = rows[0] ? Object.keys(rows[0]).find(k=>k.includes("날짜")||k.includes("일자")||k.includes("date")||k.includes("Date")) : null;
+        const allKeys = rows[0] ? Object.keys(rows[0]) : [];
+        const dateKey = allKeys.find(k=>k.includes("날짜")||k.includes("일자")||k.toLowerCase().includes("date"));
         const dates = dateKey ? rows.map(r=>r[dateKey]).filter(Boolean).sort() : [];
         const dateRange = dates.length ? `${dates[0]} ~ ${dates[dates.length-1]}` : null;
         return (
           <div style={{fontSize:11,color:C.inkMid,background:C.bg,padding:"6px 12px",borderRadius:8,display:"flex",gap:12,flexWrap:"wrap"}}>
             <span>📄 {fileName} · {rows.length.toLocaleString()}행</span>
-            {dateRange && <span style={{color:C.ink,fontWeight:700}}>📅 {dateRange}</span>}
+            {dateRange
+              ? <span style={{color:C.ink,fontWeight:700}}>📅 {dateRange}</span>
+              : allKeys.length>0 && <span style={{color:C.bad,fontSize:10}}>날짜 컬럼 미감지 ({allKeys.slice(0,3).join(", ")}...)</span>
+            }
           </div>
         );
       })()}
