@@ -1272,7 +1272,7 @@ function ErpSection() {
   const prevData = allFiltered ? allFiltered.filter(r => r.date >= prevStart && r.date <= prevEnd) : [];
 
   // 이번달 전체 매출 (채널 무관, 카테고리 이미용 전체)
-  const monthRevenue = rawData ? rawData.filter(r=>r.date>=monthStart).reduce((s,r)=>s+Number(r.revenue),0) : 0;
+  const monthRevenue = rawData ? rawData.filter(r=>r.date>=monthStart && !isBlacklisted(r.name)).reduce((s,r)=>s+Number(r.revenue),0) : 0;
 
   const isBlacklisted = name => blacklist.some(kw => name.includes(kw));
 
