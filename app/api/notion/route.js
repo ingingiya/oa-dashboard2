@@ -1,8 +1,8 @@
 export const dynamic = 'force-dynamic';
 
-const NOTION_DB_ID = "2c464cd9cb0280b9abbde125306fe8df";
-const MEMBERS = ["소리", "영서", "경은", "지수"];
+const SCHEDULE_DB_ID = "32964cd9-cb02-81a5-82ce-f06d2b2fe959";
 
+const MEMBERS = ["소리", "영서", "경은", "지수"];
 const MEMBER_COLORS = {
   "소리": "#f472b6",
   "영서": "#60a5fa",
@@ -10,116 +10,166 @@ const MEMBER_COLORS = {
   "지수": "#a78bfa",
 };
 
-function guessType(title, product) {
-  const text = (title + " " + (product||"")).toLowerCase();
-  if(text.includes("공구")) return "공구";
-  if(text.includes("시딩") || text.includes("체험단")) return "시딩";
-  if(text.includes("광고") || text.includes("ppl") || text.includes("협찬")) return "광고";
-  if(text.includes("이벤트") || text.includes("프로모") || text.includes("할인")) return "이벤트";
-  return "광고";
-}
-
-function extractAssignee(title) {
-  // "(경은)" "(소리)" 형식 우선 매칭
-  const bracketMatch = title.match(/[(\[（]([가-힣]{2,3})[)\]）]/);
-  if(bracketMatch) {
-    const found = MEMBERS.find(m=>bracketMatch[1].includes(m));
-    if(found) return found;
-  }
-  // 괄호 없이 이름만 있는 경우 fallback
-  for(const m of MEMBERS) {
-    if(title.includes(m)) return m;
-  }
-  return null;
-}
-
 function parseProps(props) {
-  const titleProp = props["소재명"] || props["이름"] || props["Name"] || Object.values(props).find(p=>p.type==="title");
-  const title = titleProp?.title?.map(t=>t.plain_text).join("") || "";
-  const dateProp = props["시작일"] || props["날짜"] || Object.values(props).find(p=>p.type==="date");
-  const date = dateProp?.date?.start || null;
-  const productProp = props["제품"];
-  const product = productProp?.select?.name || productProp?.rich_text?.map(t=>t.plain_text).join("") || "";
-  const statusProp = props["상태"];
-  const status = statusProp?.status?.name || statusProp?.select?.name || "";
-  const checkProp = props["체크박스"];
-  const done = checkProp?.checkbox || false;
-  return { title, date, product, status, done };
+  const title = props["이름"]?.title?.map(t => t.plain_text).join("") || "";
+  const dateRange = props["날짜"]?.date || null;
+  const date = dateRange?.start || null;
+  const endDate = dateRange?.end || null;
+  const assignee = props["담당자"]?.select?.name || null;
+  const type = props["유형"]?.select?.name || "기타";
+  const status = props["상태"]?.select?.name || "예정";
+  const done = props["완료"]?.checkbox || false;
+  const memo = props["메모"]?.rich_text?.map(t => t.plain_text).join("") || "";
+  return { title, date, endDate, assignee, type, status, done, memo };
 }
 
-export async function GET() {
+export async function GET(request) {
   const token = process.env.NOTION_TOKEN;
-  if(!token) return Response.json({error:"NOTION_TOKEN 없음"},{status:500});
+  if (!token) return Response.json({ error: "NOTION_TOKEN 없음" }, { status: 500 });
+  const { searchParams } = new URL(request.url);
+  const showCompleted = searchParams.get("completed") === "true";
+  const month = searchParams.get("month"); // "YYYY-MM" 형식
+  const from  = searchParams.get("from");  // "YYYY-MM-DD" 이후 전부
+  const to    = searchParams.get("to");    // "YYYY-MM-DD" 이전까지
   try {
-    const res = await fetch(`https://api.notion.com/v1/databases/${NOTION_DB_ID}/query`,{
-      method:"POST",
-      headers:{"Authorization":`Bearer ${token}`,"Notion-Version":"2022-06-28","Content-Type":"application/json"},
-      body:JSON.stringify({sorts:[{property:"시작일",direction:"ascending"}],page_size:100}),
-    });
-    if(!res.ok) return Response.json({error:`Notion 오류 ${res.status}`},{status:res.status});
-    const data = await res.json();
-    const items = data.results.map(page=>{
-      const {title,date,product,status,done} = parseProps(page.properties);
-      const assignee = extractAssignee(title);
-      // 담당자 이름을 제목에서 제거해서 깔끔하게 표시
-      const cleanTitle = title.replace(/[(\[（][가-힣]{2,3}[)\]）]/g,"").trim();
-      return {
-        id: page.id,
-        name: cleanTitle,
-        rawTitle: title,
-        date,
-        product,
-        status,
-        done,
-        assignee,
-        assigneeColor: MEMBER_COLORS[assignee] || "#c4b5fd",
-        select: guessType(title, product),
+    let allResults = [];
+    let cursor = undefined;
+    do {
+      const body = {
+        sorts: [{ property: "날짜", direction: "ascending" }],
+        page_size: 100,
       };
-    });
-    return Response.json({items});
-  } catch(e) { return Response.json({error:e.message},{status:500}); }
+
+      // 필터 조합
+      const filters = [];
+      if (!showCompleted) {
+        filters.push({ property: "상태", select: { does_not_equal: "완료" } });
+      }
+      if (from) {
+        filters.push({ property: "날짜", date: { on_or_after: from } });
+      }
+      if (to) {
+        filters.push({ property: "날짜", date: { on_or_before: to } });
+      }
+      if (month && !from && !to) {
+        const [y, m] = month.split("-").map(Number);
+        const start = `${y}-${String(m).padStart(2,"0")}-01`;
+        const lastD = new Date(y, m, 0).getDate();
+        const end = `${y}-${String(m).padStart(2,"0")}-${String(lastD).padStart(2,"0")}`;
+        filters.push({ property: "날짜", date: { on_or_after: start } });
+        filters.push({ property: "날짜", date: { on_or_before: end } });
+      }
+      if (filters.length === 1) {
+        body.filter = filters[0];
+      } else if (filters.length > 1) {
+        body.filter = { and: filters };
+      }
+
+      if (cursor) body.start_cursor = cursor;
+      const res = await fetch(`https://api.notion.com/v1/databases/${SCHEDULE_DB_ID}/query`, {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${token}`,
+          "Notion-Version": "2022-06-28",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(body),
+      });
+      if (!res.ok) return Response.json({ error: `Notion 오류 ${res.status}` }, { status: res.status });
+      const data = await res.json();
+      allResults = allResults.concat(data.results);
+      cursor = data.has_more ? data.next_cursor : undefined;
+    } while (cursor);
+
+    const items = allResults.map(page => ({
+      id: page.id,
+      ...parseProps(page.properties),
+      assigneeColor: MEMBER_COLORS[parseProps(page.properties).assignee] || "#c4b5fd",
+    }));
+    return Response.json({ items });
+  } catch (e) {
+    return Response.json({ error: e.message }, { status: 500 });
+  }
 }
 
 export async function POST(request) {
   const token = process.env.NOTION_TOKEN;
-  if(!token) return Response.json({error:"NOTION_TOKEN 없음"},{status:500});
+  if (!token) return Response.json({ error: "NOTION_TOKEN 없음" }, { status: 500 });
   const body = await request.json();
 
-  if(body.action === "toggle") {
-    const res = await fetch(`https://api.notion.com/v1/pages/${body.pageId}`,{
-      method:"PATCH",
-      headers:{"Authorization":`Bearer ${token}`,"Notion-Version":"2022-06-28","Content-Type":"application/json"},
-      body:JSON.stringify({properties:{"체크박스":{checkbox:body.done}}}),
-    });
-    return Response.json({ok:res.ok});
-  }
-
-  if(body.action === "create") {
+  if (body.action === "create") {
     const d = body.data;
-    const res = await fetch("https://api.notion.com/v1/pages",{
-      method:"POST",
-      headers:{"Authorization":`Bearer ${token}`,"Notion-Version":"2022-06-28","Content-Type":"application/json"},
-      body:JSON.stringify({
-        parent:{database_id:NOTION_DB_ID},
-        properties:{
-          "소재명":{title:[{text:{content:d.name||""}}]},
-          ...(d.date?{"시작일":{date:{start:d.date}}}:{}),
-          ...(d.product?{"제품":{rich_text:[{text:{content:d.product}}]}}:{}),
-          "체크박스":{checkbox:false},
-        }
-      }),
+    const props = {
+      "이름": { title: [{ text: { content: d.title || "" } }] },
+      "완료": { checkbox: false },
+    };
+    if (d.date) props["날짜"] = { date: { start: d.date, end: d.endDate || null } };
+    if (d.assignee) props["담당자"] = { select: { name: d.assignee } };
+    if (d.type) props["유형"] = { select: { name: d.type } };
+    if (d.status) props["상태"] = { select: { name: d.status } };
+    if (d.memo) props["메모"] = { rich_text: [{ text: { content: d.memo } }] };
+
+    const res = await fetch("https://api.notion.com/v1/pages", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${token}`,
+        "Notion-Version": "2022-06-28",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ parent: { database_id: SCHEDULE_DB_ID }, properties: props }),
     });
-    return Response.json({ok:res.ok});
+    const result = await res.json();
+    return Response.json({ ok: res.ok, id: result.id });
   }
 
-  if(body.action === "delete") {
-    const res = await fetch(`https://api.notion.com/v1/pages/${body.pageId}`,{
-      method:"PATCH",
-      headers:{"Authorization":`Bearer ${token}`,"Notion-Version":"2022-06-28","Content-Type":"application/json"},
-      body:JSON.stringify({archived:true}),
+  if (body.action === "update") {
+    const d = body.data;
+    const props = {};
+    if (d.title !== undefined) props["이름"] = { title: [{ text: { content: d.title } }] };
+    if (d.date !== undefined) props["날짜"] = { date: d.date ? { start: d.date, end: d.endDate || null } : null };
+    if (d.assignee !== undefined) props["담당자"] = d.assignee ? { select: { name: d.assignee } } : { select: null };
+    if (d.type !== undefined) props["유형"] = d.type ? { select: { name: d.type } } : { select: null };
+    if (d.status !== undefined) props["상태"] = d.status ? { select: { name: d.status } } : { select: null };
+    if (d.done !== undefined) props["완료"] = { checkbox: d.done };
+    if (d.memo !== undefined) props["메모"] = { rich_text: [{ text: { content: d.memo } }] };
+
+    const res = await fetch(`https://api.notion.com/v1/pages/${body.pageId}`, {
+      method: "PATCH",
+      headers: {
+        "Authorization": `Bearer ${token}`,
+        "Notion-Version": "2022-06-28",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ properties: props }),
     });
-    return Response.json({ok:res.ok});
+    return Response.json({ ok: res.ok });
   }
 
-  return Response.json({error:"unknown action"},{status:400});
+  if (body.action === "toggle") {
+    const res = await fetch(`https://api.notion.com/v1/pages/${body.pageId}`, {
+      method: "PATCH",
+      headers: {
+        "Authorization": `Bearer ${token}`,
+        "Notion-Version": "2022-06-28",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ properties: { "완료": { checkbox: body.done } } }),
+    });
+    return Response.json({ ok: res.ok });
+  }
+
+  if (body.action === "delete") {
+    const res = await fetch(`https://api.notion.com/v1/pages/${body.pageId}`, {
+      method: "PATCH",
+      headers: {
+        "Authorization": `Bearer ${token}`,
+        "Notion-Version": "2022-06-28",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ archived: true }),
+    });
+    return Response.json({ ok: res.ok });
+  }
+
+  return Response.json({ error: "unknown action" }, { status: 400 });
 }
