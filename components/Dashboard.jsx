@@ -711,6 +711,7 @@ function SchModalComp({mode, initial, onSave, onClose}){
 function NaverSection() {
   const [rows, setRows]       = useState([]);
   const [fileName, setFileName] = useState("");
+  const [dateRange, setDateRange] = useState(()=>localStorage.getItem("naver_daterange")||"");
   const [loading, setLoading] = useState(true);
   const [groupBy, setGroupBy] = useState("adgroup"); // campaign | adgroup | keyword
   const [sortCol, setSortCol] = useState("cost");
@@ -731,7 +732,8 @@ function NaverSection() {
     try {
       const lsRows = localStorage.getItem("naver_rows");
       const lsName = localStorage.getItem("naver_filename");
-      if(lsRows) { setRows(JSON.parse(lsRows)); setFileName(lsName||""); setLoading(false); return; }
+      const lsDr   = localStorage.getItem("naver_daterange");
+      if(lsRows) { setRows(JSON.parse(lsRows)); setFileName(lsName||""); setDateRange(lsDr||""); setLoading(false); return; }
     } catch(e){}
 
     // 2. localStorage 없으면 Supabase에서 로드
@@ -795,14 +797,19 @@ function NaverSection() {
 
   function parseCSV(text) {
     const lines = text.replace(/\r/g,"").split("\n").filter(l=>l.trim());
-    if(lines.length < 3) return [];
+    if(lines.length < 3) return { rows:[], dateRange:"" };
+    // 1행 타이틀에서 날짜 범위 추출 (예: 2026.04.06~2026.04.12)
+    const titleLine = lines[0].replace(/"/g,"");
+    const dateMatch = titleLine.match(/(\d{4}[.\-]\d{2}[.\-]\d{2})\s*~\s*(\d{4}[.\-]\d{2}[.\-]\d{2})/);
+    const dateRange = dateMatch ? `${dateMatch[1]} ~ ${dateMatch[2]}` : "";
     const headers = lines[1].split(",").map(h=>h.replace(/^"|"$/g,"").trim());
-    return lines.slice(2).map(line=>{
+    const rows = lines.slice(2).map(line=>{
       const vals = line.split(",").map(v=>v.replace(/^"|"$/g,"").trim());
       const o = {};
       headers.forEach((h,i)=>{ o[h] = vals[i]||""; });
       return o;
     }).filter(r=>r["캠페인"] && r["캠페인"].includes("이미용"));
+    return { rows, dateRange };
   }
 
   function onFile(e) {
@@ -811,12 +818,14 @@ function NaverSection() {
     const name = file.name;
     const reader = new FileReader();
     reader.onload = async ev => {
-      const parsed = parseCSV(ev.target.result);
+      const { rows: parsed, dateRange: dr } = parseCSV(ev.target.result);
       setRows(parsed);
       setFileName(name);
+      setDateRange(dr);
       // localStorage 즉시 저장
       localStorage.setItem("naver_rows", JSON.stringify(parsed));
       localStorage.setItem("naver_filename", name);
+      localStorage.setItem("naver_daterange", dr);
       // Supabase 백그라운드 저장
       fetch(`${SURL}/rest/v1/naver_ads_cache`,{
         method:"POST",
@@ -939,21 +948,12 @@ function NaverSection() {
         </div>
       </div>
 
-      {fileName && (()=>{
-        const allKeys = rows[0] ? Object.keys(rows[0]) : [];
-        const dateKey = allKeys.find(k=>k.includes("날짜")||k.includes("일자")||k.toLowerCase().includes("date"));
-        const dates = dateKey ? rows.map(r=>r[dateKey]).filter(Boolean).sort() : [];
-        const dateRange = dates.length ? `${dates[0]} ~ ${dates[dates.length-1]}` : null;
-        return (
-          <div style={{fontSize:11,color:C.inkMid,background:C.bg,padding:"6px 12px",borderRadius:8,display:"flex",gap:12,flexWrap:"wrap"}}>
-            <span>📄 {fileName} · {rows.length.toLocaleString()}행</span>
-            {dateRange
-              ? <span style={{color:C.ink,fontWeight:700}}>📅 {dateRange}</span>
-              : allKeys.length>0 && <span style={{color:C.bad,fontSize:10}}>날짜 컬럼 미감지 ({allKeys.slice(0,3).join(", ")}...)</span>
-            }
-          </div>
-        );
-      })()}
+      {fileName && (
+        <div style={{fontSize:11,color:C.inkMid,background:C.bg,padding:"6px 12px",borderRadius:8,display:"flex",gap:12,flexWrap:"wrap"}}>
+          <span>📄 {fileName} · {rows.length.toLocaleString()}행</span>
+          {dateRange && <span style={{color:C.ink,fontWeight:700}}>📅 {dateRange}</span>}
+        </div>
+      )}
 
       {rows.length===0 && (
         <div style={{background:C.white,border:`2px dashed ${C.border}`,borderRadius:14,
