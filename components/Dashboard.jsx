@@ -734,7 +734,7 @@ function NaverSection() {
       const o = {};
       headers.forEach((h,i)=>{ o[h] = vals[i]||""; });
       return o;
-    }).filter(r=>r["캠페인"]);
+    }).filter(r=>r["캠페인"] && r["캠페인"].includes("이미용"));
   }
 
   function onFile(e) {
