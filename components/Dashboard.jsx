@@ -709,17 +709,46 @@ function SchModalComp({mode, initial, onSave, onClose}){
 // 네이버 광고 섹션
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 function NaverSection() {
-  const [rows, setRows]       = useState(()=>{ try{ return JSON.parse(localStorage.getItem("naver_rows")||"[]"); }catch{return [];} });
-  const [fileName, setFileName] = useState(()=>localStorage.getItem("naver_filename")||"");
+  const [rows, setRows]       = useState([]);
+  const [fileName, setFileName] = useState("");
+  const [loading, setLoading] = useState(true);
   const [groupBy, setGroupBy] = useState("adgroup"); // campaign | adgroup | keyword
   const [sortCol, setSortCol] = useState("cost");
   const [sortAsc, setSortAsc] = useState(false);
   const [search, setSearch]   = useState("");
-  const [minCost, setMinCost] = useState(0); // 최소 광고비 필터
-  const [quickFilter, setQuickFilter] = useState("all"); // all | highcost | warn
-  // 수정 체크: { [label]: {label, cost, roas, memo, checkedAt} }
-  const [fixList, setFixList] = useState(()=>{ try{ return JSON.parse(localStorage.getItem("naver_fixlist")||"{}"); }catch{return {};} });
+  const [minCost, setMinCost] = useState(0);
+  const [quickFilter, setQuickFilter] = useState("all");
+  const [fixList, setFixList] = useState({});
   const [showFix, setShowFix] = useState(false);
+
+  const SURL = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const SKEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  const sh = {"apikey":SKEY,"Authorization":`Bearer ${SKEY}`,"Content-Type":"application/json"};
+
+  // 마운트 시 Supabase에서 로드
+  useEffect(()=>{
+    async function load() {
+      try {
+        const [cacheRes, fixRes] = await Promise.all([
+          fetch(`${SURL}/rest/v1/naver_ads_cache?id=eq.1&select=filename,rows,uploaded_at`, {headers:sh}),
+          fetch(`${SURL}/rest/v1/naver_ads_fixlist?select=*`, {headers:sh}),
+        ]);
+        if(cacheRes.ok) {
+          const data = await cacheRes.json();
+          if(data[0]) { setRows(data[0].rows||[]); setFileName(data[0].filename||""); }
+        }
+        if(fixRes.ok) {
+          const data = await fixRes.json();
+          const map = {};
+          data.forEach(r=>{ map[r.label]=r; });
+          setFixList(map);
+        }
+      } catch(e){ console.error(e); }
+      setLoading(false);
+    }
+    load();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  },[]);
 
   const fmtN = v => Number(v||0).toLocaleString();
   const fmtW = v => {
@@ -728,29 +757,31 @@ function NaverSection() {
     return `${Math.round(n).toLocaleString()}원`;
   };
 
-  function saveFixList(next) {
-    setFixList(next);
-    localStorage.setItem("naver_fixlist", JSON.stringify(next));
-  }
-
-  function toggleFix(r) {
+  async function toggleFix(r) {
     const next = {...fixList};
     if(next[r.label]) {
       delete next[r.label];
+      setFixList(next);
+      await fetch(`${SURL}/rest/v1/naver_ads_fixlist?label=eq.${encodeURIComponent(r.label)}`,
+        {method:"DELETE", headers:sh});
     } else {
-      next[r.label] = {label:r.label, cost:r.cost, roas:r.roas, checkedAt: new Date().toLocaleDateString("ko-KR"), memo:""};
+      const item = {label:r.label, cost:r.cost, roas:r.roas, checked_at: new Date().toLocaleDateString("ko-KR"), memo:""};
+      next[r.label] = item;
+      setFixList(next);
+      await fetch(`${SURL}/rest/v1/naver_ads_fixlist`,
+        {method:"POST", headers:{...sh, Prefer:"resolution=merge-duplicates"}, body:JSON.stringify(item)});
     }
-    saveFixList(next);
   }
 
-  function updateMemo(label, memo) {
+  async function updateMemo(label, memo) {
     const next = {...fixList, [label]:{...fixList[label], memo}};
-    saveFixList(next);
+    setFixList(next);
+    await fetch(`${SURL}/rest/v1/naver_ads_fixlist?label=eq.${encodeURIComponent(label)}`,
+      {method:"PATCH", headers:sh, body:JSON.stringify({memo})});
   }
 
   function parseCSV(text) {
     const lines = text.replace(/\r/g,"").split("\n").filter(l=>l.trim());
-    // 1행=타이틀, 2행=헤더, 3행~=데이터
     if(lines.length < 3) return [];
     const headers = lines[1].split(",").map(h=>h.replace(/^"|"$/g,"").trim());
     return lines.slice(2).map(line=>{
@@ -764,14 +795,17 @@ function NaverSection() {
   function onFile(e) {
     const file = e.target.files[0];
     if(!file) return;
-    setFileName(file.name);
-    localStorage.setItem("naver_filename", file.name);
+    const name = file.name;
     const reader = new FileReader();
-    reader.onload = ev => {
-      const text = ev.target.result;
-      const parsed = parseCSV(text);
+    reader.onload = async ev => {
+      const parsed = parseCSV(ev.target.result);
       setRows(parsed);
-      localStorage.setItem("naver_rows", JSON.stringify(parsed));
+      setFileName(name);
+      await fetch(`${SURL}/rest/v1/naver_ads_cache`,{
+        method:"POST",
+        headers:{...sh, Prefer:"resolution=merge-duplicates"},
+        body: JSON.stringify({id:1, filename:name, rows:parsed, uploaded_at:new Date().toISOString()}),
+      });
     };
     reader.readAsText(file, "euc-kr");
   }
@@ -855,6 +889,8 @@ function NaverSection() {
   }
 
   const roasColor = v => v>=500?C.good:v>=300?"#CA8A04":C.bad;
+
+  if(loading) return <div style={{padding:40,textAlign:"center",color:C.inkLt,fontSize:13}}>불러오는 중...</div>;
 
   return (
     <div style={{display:"flex",flexDirection:"column",gap:14}}>
@@ -1087,7 +1123,7 @@ function NaverSection() {
                           )}
                           <div>
                             <span style={{color:C.inkLt}}>체크일 </span>
-                            <span style={{fontWeight:600}}>{f.checkedAt}</span>
+                            <span style={{fontWeight:600}}>{f.checked_at}</span>
                           </div>
                         </div>
                         <input
