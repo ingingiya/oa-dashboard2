@@ -32,11 +32,12 @@ jobs:
 
       - name: 패키지 설치
         run: |
-          pip install playwright httpx
+          pip install playwright httpx curl_cffi playwright-stealth
           playwright install chromium --with-deps
 
       - name: 스크래퍼 실행
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+          COUPANG_COOKIE: ${{ secrets.COUPANG_COOKIE }}
         run: python scrapers/market_scraper.py ${{ inputs.platform }}

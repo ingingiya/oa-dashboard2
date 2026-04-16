@@ -10,9 +10,14 @@ from urllib.parse import quote
 
 import httpx
 from playwright.async_api import async_playwright
+try:
+    from playwright_stealth import stealth_async as _stealth
+except ImportError:
+    _stealth = None
 
 SUPABASE_URL = os.environ.get("SUPABASE_URL", "")
 SUPABASE_KEY = os.environ.get("SUPABASE_KEY", "")
+COUPANG_COOKIE = os.environ.get("COUPANG_COOKIE", "")
 PLATFORM = sys.argv[1] if len(sys.argv) > 1 else "musinsa"
 UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
 
@@ -568,20 +573,93 @@ async def find_rank_naver_channel(page, keyword, pid):
     return None
 
 
+async def _fetch_coupang_html(url):
+    """쿠팡 HTML을 브라우저 쿠키로 직접 가져옴 (Akamai 우회)"""
+    if not COUPANG_COOKIE:
+        return None
+    try:
+        from curl_cffi.requests import AsyncSession
+        async with AsyncSession(impersonate="chrome131") as s:
+            r = await s.get(url, headers={
+                "Cookie": COUPANG_COOKIE,
+                "Accept-Language": "ko-KR,ko;q=0.9",
+                "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+                "Referer": "https://www.coupang.com/",
+                "User-Agent": UA,
+            }, timeout=20)
+            if r.status_code == 200 and len(r.text) > 5000:
+                return r.text
+    except Exception as e:
+        print(f"    ⚠️ httpx 쿠팡 실패: {e}")
+    return None
+
+
+def _parse_coupang_html(t):
+    """쿠팡 HTML에서 상품 정보 추출"""
+    # JSON-LD
+    lds = re.findall(r'<script[^>]*ld\+json[^>]*>(.*?)</script>', t, re.DOTALL)
+    for raw in lds:
+        try:
+            d = json.loads(raw)
+            if isinstance(d, list): d = next((x for x in d if x.get("@type") == "Product"), {})
+            if d.get("@type") == "Product":
+                offers = d.get("offers", {})
+                if isinstance(offers, list): offers = offers[0] if offers else {}
+                sale = int(float(str(offers.get("price", 0)).replace(",", ""))) if offers.get("price") else 0
+                name = d.get("name", "")
+                imgs = d.get("image", [])
+                img = (imgs[0] if isinstance(imgs, list) and imgs else imgs) if imgs else ""
+                if name and sale:
+                    return {"name": name, "brand": "", "sale_price": sale, "original_price": sale, "image": str(img)}
+        except: pass
+
+    # 가격 패턴 — "총 결제금액" 또는 "할인가"
+    sale_m = re.search(r'class="[^"]*total-price[^"]*"[^>]*><strong[^>]*>([\d,]+)', t)
+    if not sale_m:
+        sale_m = re.search(r'"salePrice"\s*:\s*(\d+)', t)
+    name_m = re.search(r'class="[^"]*prod-buy-header__title[^"]*"[^>]*>(.*?)</h2>', t, re.DOTALL)
+    if not name_m:
+        name_m = re.search(r'"productName"\s*:\s*"([^"]+)"', t)
+    img_m = re.search(r'class="[^"]*prod-img[^"]*"[^>]*src="([^"]+)"', t)
+    if not img_m:
+        img_m = re.search(r'"mainImageUrl"\s*:\s*"([^"]+)"', t)
+
+    sale = int(sale_m.group(1).replace(",", "")) if sale_m else 0
+    name = re.sub(r'<[^>]+>', '', name_m.group(1)).strip() if name_m else ""
+    img = img_m.group(1) if img_m else ""
+    if name and sale:
+        return {"name": name, "brand": "", "sale_price": sale, "original_price": sale, "image": img}
+    return {}
+
+
 async def extract_coupang(page, pid):
     """쿠팡 상품 가격 추출"""
+    # 1) 브라우저 쿠키 있으면 httpx로 직접 가져오기 (Akamai 우회)
+    url = await page.evaluate("() => location.href")
+    html = await _fetch_coupang_html(url)
+    if html:
+        result = _parse_coupang_html(html)
+        if result:
+            return result
+        print("    ⚠️ 쿠키로 HTML 가져왔으나 파싱 실패")
+
+    # 2) Playwright 폴백 (한국 IP에서 실행 시 동작 가능)
     try:
-        # 페이지 로딩 대기
         try: await page.wait_for_load_state("networkidle", timeout=10000)
         except: pass
 
-        # 1) __NEXT_DATA__ 시도
+        title = await page.evaluate("() => document.title")
+        if "Access Denied" in title:
+            print("    ❌ Akamai 차단 — COUPANG_COOKIE 환경변수 설정 필요")
+            print("    ℹ️ Chrome에서 쿠팡 열고 F12 → Network → 요청 클릭 → Request Headers → cookie 값 복사")
+            print("    ℹ️ .env.local에 COUPANG_COOKIE=<복사한값> 추가, GitHub Secrets에도 추가")
+            return {}
+
         nd = await page.evaluate("() => { try { return JSON.stringify(window.__NEXT_DATA__); } catch(e) { return null; } }")
         if nd:
             try:
                 d = json.loads(nd)
                 pp = d.get("props", {}).get("pageProps", {})
-                # 여러 구조 시도
                 for key in ["product", "pdpData", "itemInfo", "detail"]:
                     item = pp.get(key) or pp.get("initialState", {}).get(key)
                     if item and isinstance(item, dict):
@@ -593,64 +671,10 @@ async def extract_coupang(page, pid):
                             return {"name": str(name), "brand": "", "sale_price": int(sale), "original_price": int(orig), "image": str(img)}
             except: pass
 
-        # 2) JSON-LD 시도
-        ld = await page.evaluate("""() => {
-            const scripts = document.querySelectorAll('script[type="application/ld+json"]');
-            for (const s of scripts) {
-                try {
-                    const d = JSON.parse(s.textContent);
-                    const prod = Array.isArray(d) ? d.find(x=>x['@type']==='Product') : (d['@type']==='Product' ? d : null);
-                    if (prod) return JSON.stringify(prod);
-                } catch(e) {}
-            }
-            return null;
-        }""")
-        if ld:
-            d = json.loads(ld)
-            offers = d.get("offers", {})
-            if isinstance(offers, list): offers = offers[0] if offers else {}
-            sale = int(float(str(offers.get("price", 0)).replace(",", ""))) if offers.get("price") else 0
-            name = d.get("name", "")
-            imgs = d.get("image", [])
-            img = (imgs[0] if isinstance(imgs, list) and imgs else imgs) if imgs else ""
-            if name and sale:
-                return {"name": name, "brand": "", "sale_price": sale, "original_price": sale, "image": str(img)}
-
-        # 3) DOM 폴백 — 여러 선택자 시도
-        result = await page.evaluate("""() => {
-            const nameEl = document.querySelector(
-                'h2.prod-buy-header__title, h1.prod-title, [class*="prod-buy-header__title"], ' +
-                '[class*="prod-title"], .prod-name, h1[class*="name"], h2[class*="name"]'
-            );
-            const priceEl = document.querySelector(
-                '.total-price strong, span.total-price strong, ' +
-                '[class*="total-price"] strong, .prod-price strong, ' +
-                '[class*="price-wrap"] strong, [data-price]'
-            );
-            const origEl = document.querySelector(
-                '.prod-origin-price span, [class*="origin-price"] span, ' +
-                '.base-price, [class*="base-price"]'
-            );
-            const imgEl = document.querySelector(
-                'img.prod-img, .prod-image__detail img, [class*="prod-image"] img, ' +
-                '.prod-detail-imgs img, [class*="main-img"] img'
-            );
-            const name = nameEl ? nameEl.textContent.trim() : '';
-            const sale = priceEl ? parseInt(priceEl.textContent.replace(/[^0-9]/g,'')) || 0 : 0;
-            const orig = origEl ? parseInt(origEl.textContent.replace(/[^0-9]/g,'')) || 0 : 0;
-            const img = imgEl ? imgEl.src : '';
-            return { name, sale, orig, img,
-                     title: document.title,
-                     url: location.href };
-        }""")
-        print(f"    ℹ️ 페이지 제목: {result.get('title','?')}")
-        print(f"    ℹ️ URL: {result.get('url','?')}")
-        if result.get("name") and result.get("sale"):
-            return {"name": result["name"], "brand": "", "sale_price": result["sale"],
-                    "original_price": result["orig"] or result["sale"], "image": result["img"]}
-        # 전부 실패 → HTML 일부 출력해서 구조 파악
-        html_snippet = await page.evaluate("() => document.body ? document.body.innerHTML.slice(0,2000) : 'no body'")
-        print(f"    ℹ️ HTML 스니펫:\n{html_snippet[:1000]}")
+        body_html = await page.evaluate("() => document.body ? document.body.innerHTML : ''")
+        result = _parse_coupang_html(body_html)
+        if result:
+            return result
     except Exception as e:
         print(f"    ⚠️ 쿠팡 추출 실패: {e}")
     return {}
@@ -796,6 +820,8 @@ async def main():
         context = await browser.new_context(user_agent=UA, viewport={"width": 1280, "height": 900})
         await context.add_init_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
         page = await context.new_page()
+        if _stealth:
+            await _stealth(page)
 
         total = 0
         for platform in platforms:
