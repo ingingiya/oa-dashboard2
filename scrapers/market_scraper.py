@@ -571,22 +571,49 @@ async def find_rank_naver_channel(page, keyword, pid):
 async def extract_coupang(page, pid):
     """쿠팡 상품 가격 추출"""
     try:
+        # JSON-LD 우선 시도
+        ld = await page.evaluate("""() => {
+            const scripts = document.querySelectorAll('script[type="application/ld+json"]');
+            for (const s of scripts) {
+                try {
+                    const d = JSON.parse(s.textContent);
+                    if (d['@type'] === 'Product' || (Array.isArray(d) && d[0] && d[0]['@type'] === 'Product')) {
+                        return JSON.stringify(Array.isArray(d) ? d[0] : d);
+                    }
+                } catch(e) {}
+            }
+            return null;
+        }""")
+        if ld:
+            d = json.loads(ld)
+            offers = d.get("offers", {})
+            if isinstance(offers, list): offers = offers[0] if offers else {}
+            sale = int(float(str(offers.get("price", 0)).replace(",", ""))) if offers.get("price") else 0
+            name = d.get("name", "")
+            img = ""
+            imgs = d.get("image", [])
+            if isinstance(imgs, list) and imgs: img = imgs[0] if isinstance(imgs[0], str) else ""
+            elif isinstance(imgs, str): img = imgs
+            if name and sale:
+                return {"name": name, "brand": d.get("brand", {}).get("name", "") if isinstance(d.get("brand"), dict) else "", "sale_price": sale, "original_price": sale, "image": img}
+
+        # DOM 폴백
         name = await page.evaluate("""() => {
-            const el = document.querySelector('h2.prod-buy-header__title, h1.prod-title, [class*="prod-title"]');
+            const el = document.querySelector('h2.prod-buy-header__title, h1.prod-title, .prod-buy-header__title, [class*="prod-buy-header"] h2, [class*="prod-buy-header"] h1');
             return el ? el.textContent.trim() : '';
         }""")
         sale = await page.evaluate("""() => {
-            const el = document.querySelector('span.total-price strong, .prod-price-container .total-price, [class*="total-price"] strong');
+            const el = document.querySelector('.total-price strong, span.total-price strong, .prod-price-container .total-price strong, [class*="total-price"] strong, .price-wrap strong');
             if (!el) return 0;
             return parseInt(el.textContent.replace(/[^0-9]/g,'')) || 0;
         }""")
         orig = await page.evaluate("""() => {
-            const el = document.querySelector('.prod-origin-price span, [class*="origin-price"]');
+            const el = document.querySelector('.prod-origin-price span, [class*="origin-price"] span, .base-price, [class*="base-price"]');
             if (!el) return 0;
             return parseInt(el.textContent.replace(/[^0-9]/g,'')) || 0;
         }""")
         img = await page.evaluate("""() => {
-            const el = document.querySelector('img.prod-img, .prod-image__detail img');
+            const el = document.querySelector('img.prod-img, .prod-image__detail img, [class*="prod-image"] img');
             return el ? el.src : '';
         }""")
         if name and sale:

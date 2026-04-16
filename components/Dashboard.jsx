@@ -8419,7 +8419,8 @@ export default function OaDashboard(){
                       const newProds = names
                         .filter(n=>!existing.has(n.toLowerCase()))
                         .map(n=>({id:Date.now().toString()+Math.random().toString(36).slice(2),name:n,ourPrice:0,category:mktBulkCategory,items:[]}));
-                      if(newProds.length) { setMarketData([...(marketData||[]),...newProds]); setMktCategoryTab(mktBulkCategory); }
+                      if(newProds.length) setMarketData(prev=>[...(prev||[]),...newProds]);
+                      setMktCategoryTab(mktBulkCategory);
                       setMktBulkModal(false);
                       setMktBulkText("");
                     }} style={{flex:2,fontSize:11,fontWeight:700,padding:"8px 0",borderRadius:8,border:"none",background:C.rose,color:"#fff",cursor:"pointer",fontFamily:"inherit"}}>
