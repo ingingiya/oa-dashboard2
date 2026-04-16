@@ -8371,6 +8371,7 @@ export default function OaDashboard(){
                       if(!mktProductInput.name.trim()) return;
                       const newProd = {id:Date.now().toString(),name:mktProductInput.name.trim(),ourPrice:parseInt(mktProductInput.ourPrice)||0,category:mktProductInput.category||MKT_CATEGORIES[0],items:[]};
                       setMarketData([...(marketData||[]),newProd]);
+                      setMktCategoryTab(newProd.category);
                       setMktProductModal(false);
                       setMktProductInput({name:"",ourPrice:"",category:MKT_CATEGORIES[0]});
                     }} style={{flex:2,fontSize:11,fontWeight:700,padding:"8px 0",borderRadius:8,border:"none",background:C.rose,color:"#fff",cursor:"pointer",fontFamily:"inherit"}}>추가</button>
@@ -8418,7 +8419,7 @@ export default function OaDashboard(){
                       const newProds = names
                         .filter(n=>!existing.has(n.toLowerCase()))
                         .map(n=>({id:Date.now().toString()+Math.random().toString(36).slice(2),name:n,ourPrice:0,category:mktBulkCategory,items:[]}));
-                      if(newProds.length) setMarketData([...(marketData||[]),...newProds]);
+                      if(newProds.length) { setMarketData([...(marketData||[]),...newProds]); setMktCategoryTab(mktBulkCategory); }
                       setMktBulkModal(false);
                       setMktBulkText("");
                     }} style={{flex:2,fontSize:11,fontWeight:700,padding:"8px 0",borderRadius:8,border:"none",background:C.rose,color:"#fff",cursor:"pointer",fontFamily:"inherit"}}>
