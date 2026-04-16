@@ -10,6 +10,8 @@ on:
         type: choice
         options:
           - all
+          - naver_channel
+          - coupang
           - musinsa
           - oliveyoung
           - zigzag

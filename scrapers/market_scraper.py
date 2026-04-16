@@ -2,7 +2,7 @@
 """
 시장가/순위 통합 스크래퍼
 사용: python market_scraper.py [platform]
-platform: musinsa | oliveyoung | zigzag | ably | kakao_gift
+platform: naver_channel | coupang | musinsa | oliveyoung | zigzag | ably | kakao_gift
 """
 import asyncio, json, os, re, sys
 from datetime import datetime
@@ -19,6 +19,7 @@ UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML,
 PLATFORM_NAMES = {
     "musinsa": "무신사", "oliveyoung": "올리브영",
     "zigzag": "지그재그", "ably": "에이블리", "kakao_gift": "카카오선물하기",
+    "naver_channel": "네이버채널", "coupang": "쿠팡",
 }
 
 
@@ -198,23 +199,110 @@ async def extract_zigzag(page, pid):
 
 async def find_rank_zigzag(page, keyword, pid):
     try:
+        captured_json = []
+
+        async def on_response(response):
+            try:
+                ct = response.headers.get("content-type", "")
+                if "json" not in ct: return
+                url = response.url
+                # 검색 결과 API만 수집
+                if not any(k in url for k in ["search", "catalog", "product"]): return
+                data = await response.json()
+                if isinstance(data, (dict, list)):
+                    captured_json.append({"url": url, "data": data})
+            except: pass
+
+        page.on("response", on_response)
         await page.goto(f"https://zigzag.kr/search?q={quote(keyword)}", wait_until="domcontentloaded", timeout=30000)
-        try: await page.wait_for_load_state("networkidle", timeout=8000)
+        try: await page.wait_for_load_state("networkidle", timeout=10000)
         except: pass
-        await page.wait_for_timeout(2000)
+        await page.wait_for_timeout(3000)
+        page.remove_listener("response", on_response)
+
+        # 1순위: __NEXT_DATA__ 에서 검색결과 파싱
+        rank = await page.evaluate("""(pid) => {
+            try {
+                const nd = window.__NEXT_DATA__;
+                if (!nd) return null;
+                const queries = nd?.props?.pageProps?.dehydratedState?.queries || [];
+                for (const q of queries) {
+                    const data = q?.state?.data;
+                    if (!data || typeof data !== 'object') continue;
+                    // 가능한 list 키들 재귀 탐색
+                    function findList(obj, depth) {
+                        if (depth > 5 || !obj || typeof obj !== 'object') return null;
+                        if (Array.isArray(obj) && obj.length > 1) {
+                            // 첫 아이템이 product_id 같은 걸 가지면 검색결과 리스트
+                            const first = obj[0];
+                            if (first && typeof first === 'object' &&
+                                (first.catalog_product_id || first.product_id || first.id)) {
+                                return obj;
+                            }
+                        }
+                        for (const v of Object.values(obj)) {
+                            const r = findList(v, depth + 1);
+                            if (r) return r;
+                        }
+                        return null;
+                    }
+                    const list = findList(data, 0);
+                    if (!list) continue;
+                    for (let i = 0; i < list.length; i++) {
+                        const item = list[i];
+                        const itemId = String(item?.catalog_product_id || item?.product_id || item?.id || "");
+                        if (itemId === pid) return i + 1;
+                    }
+                }
+            } catch(e) {}
+            return null;
+        }""", pid)
+
+        if isinstance(rank, int):
+            print(f"    ✅ __NEXT_DATA__ 순위: {rank}")
+            return rank
+
+        # 2순위: 인터셉트된 API 응답에서 탐색
+        def find_in_data(obj, target, depth=0):
+            if depth > 6: return None
+            if isinstance(obj, list) and len(obj) > 1:
+                for i, item in enumerate(obj):
+                    if not isinstance(item, dict): continue
+                    item_id = str(item.get("catalog_product_id") or item.get("product_id") or item.get("id") or "")
+                    if item_id == target:
+                        return i + 1
+            if isinstance(obj, dict):
+                for v in obj.values():
+                    r = find_in_data(v, target, depth + 1)
+                    if r: return r
+            return None
+
+        for entry in captured_json:
+            r = find_in_data(entry["data"], pid)
+            if r:
+                print(f"    ✅ API 인터셉트 순위: {r} ({entry['url'].split('?')[0][-50:]})")
+                return r
+
+        # 3순위: DOM — 링크의 Y 좌표 기준, 상위 1/4 영역(추천/최근본) 제외
         result = await page.evaluate("""(pid) => {
             const links = Array.from(document.querySelectorAll('a[href*="/catalog/products/"]'));
+            const pageH = document.body.scrollHeight;
+            const cutoff = pageH * 0.15; // 상위 15%는 추천/최근본으로 간주
             const seen = new Set(); let pos = 0;
             for (const a of links) {
                 const m = a.href.match(/\/catalog\/products\/(\d+)/);
                 if (!m || seen.has(m[1])) continue;
+                const rect = a.getBoundingClientRect();
+                const absTop = rect.top + window.scrollY;
+                if (absTop < cutoff) continue; // 상단 추천 영역 제외
                 seen.add(m[1]); pos++;
                 if (m[1] === pid) return pos;
             }
-            return { notFound: pos, sample: links.slice(0,3).map(a=>a.href) };
+            return { notFound: pos, sampleIds: Array.from(seen).slice(0,5) };
         }""", pid)
+
         if isinstance(result, int): return result
-        print(f"    ⚠️ 지그재그 순위 못찾음 (총{result.get('notFound')}개): {result.get('sample')}")
+        print(f"    ⚠️ 지그재그 순위 못찾음: {result}")
         return None
     except Exception as e:
         print(f"    ⚠️ 순위 실패: {e}"); return None
@@ -418,6 +506,120 @@ async def find_rank_kakao_gift(page, keyword, pid):
         print(f"    ⚠️ 순위 실패: {e}"); return None
 
 
+async def extract_naver_channel(page, pid):
+    """네이버 스마트스토어 / 브랜드스토어 가격 추출"""
+    try:
+        nd = await page.evaluate("() => JSON.stringify(window.__NEXT_DATA__)")
+        if nd:
+            d = json.loads(nd)
+            pp = d.get("props", {}).get("pageProps", {})
+            # 스마트스토어 구조
+            product = pp.get("initialState", {}).get("product", {}).get("A", {})
+            if not product:
+                product = _find_in_obj(pp, ["productName", "salePrice"], 0) or {}
+            name = product.get("productName") or product.get("name") or ""
+            sale = int(product.get("salePrice") or product.get("price") or 0)
+            orig = int(product.get("retailPrice") or product.get("originalPrice") or sale)
+            img_info = product.get("representativeImageUrl") or product.get("image") or ""
+            if name and sale:
+                return {"name": name, "brand": "", "sale_price": sale, "original_price": orig, "image": img_info}
+    except Exception as e:
+        print(f"    ⚠️ 네이버채널 추출 실패(NEXT_DATA): {e}")
+    try:
+        # DOM 폴백
+        name = await page.evaluate("""() => {
+            const el = document.querySelector('h3._2-I30XS1lA, h2.product_title, ._2aNPDQFiUD, [class*="productName"]');
+            return el ? el.textContent.trim() : '';
+        }""")
+        price = await page.evaluate("""() => {
+            const el = document.querySelector('strong._1LY7DqCnwR, ._1LY7DqCnwR, [class*="salePrice"], em._1ym0zGUNe6');
+            if (!el) return 0;
+            return parseInt(el.textContent.replace(/[^0-9]/g,'')) || 0;
+        }""")
+        if name and price:
+            return {"name": name, "brand": "", "sale_price": price, "original_price": price, "image": ""}
+    except Exception as e:
+        print(f"    ⚠️ 네이버채널 DOM 추출 실패: {e}")
+    return {}
+
+
+async def find_rank_naver_channel(page, keyword, pid):
+    """네이버 쇼핑 검색 순위"""
+    try:
+        url = f"https://search.shopping.naver.com/api/search?query={quote(keyword)}&sort=rel&pagingIndex=1&pagingSize=100&viewType=list&productSet=total"
+        res_data = await page.evaluate(f"""async () => {{
+            const r = await fetch("{url}", {{
+                headers: {{"Accept":"application/json","Referer":"https://search.shopping.naver.com"}}
+            }});
+            return r.ok ? await r.json() : null;
+        }}""")
+        if res_data:
+            products = (res_data.get("shoppingResult") or res_data.get("result") or {}).get("products") or res_data.get("products") or []
+            organic = 0
+            for p in products:
+                is_ad = bool(p.get("adId") or p.get("isAd"))
+                if not is_ad:
+                    organic += 1
+                link = p.get("mallProductUrl") or p.get("link") or ""
+                if pid in link or str(p.get("nvMid","")) == pid or str(p.get("id","")) == pid:
+                    return organic if not is_ad else None
+    except Exception as e:
+        print(f"    ⚠️ 네이버 순위 실패: {e}")
+    return None
+
+
+async def extract_coupang(page, pid):
+    """쿠팡 상품 가격 추출"""
+    try:
+        name = await page.evaluate("""() => {
+            const el = document.querySelector('h2.prod-buy-header__title, h1.prod-title, [class*="prod-title"]');
+            return el ? el.textContent.trim() : '';
+        }""")
+        sale = await page.evaluate("""() => {
+            const el = document.querySelector('span.total-price strong, .prod-price-container .total-price, [class*="total-price"] strong');
+            if (!el) return 0;
+            return parseInt(el.textContent.replace(/[^0-9]/g,'')) || 0;
+        }""")
+        orig = await page.evaluate("""() => {
+            const el = document.querySelector('.prod-origin-price span, [class*="origin-price"]');
+            if (!el) return 0;
+            return parseInt(el.textContent.replace(/[^0-9]/g,'')) || 0;
+        }""")
+        img = await page.evaluate("""() => {
+            const el = document.querySelector('img.prod-img, .prod-image__detail img');
+            return el ? el.src : '';
+        }""")
+        if name and sale:
+            return {"name": name, "brand": "", "sale_price": sale, "original_price": orig or sale, "image": img}
+    except Exception as e:
+        print(f"    ⚠️ 쿠팡 추출 실패: {e}")
+    return {}
+
+
+async def find_rank_coupang(page, keyword, pid):
+    """쿠팡 검색 순위"""
+    try:
+        await page.goto(f"https://www.coupang.com/np/search?q={quote(keyword)}&limit=72&page=1", wait_until="domcontentloaded", timeout=30000)
+        try: await page.wait_for_load_state("networkidle", timeout=8000)
+        except: pass
+        rank = await page.evaluate(f"""(pid) => {{
+            const items = document.querySelectorAll('li[id^="productUnit"], li.search-product');
+            let pos = 0;
+            for (const item of items) {{
+                const sponsored = item.querySelector('[class*="ad-badge"], [class*="adBadge"]');
+                if (sponsored) continue;
+                pos++;
+                const a = item.querySelector('a[href*="/vp/products/"]');
+                if (a && a.href.includes('/' + pid)) return pos;
+            }}
+            return null;
+        }}""", pid)
+        return rank
+    except Exception as e:
+        print(f"    ⚠️ 쿠팡 순위 실패: {e}")
+    return None
+
+
 # ── 플랫폼 매핑 ──────────────────────────────────────
 def _wrap(fn):
     """captured 파라미터 없는 extractor를 통일 시그니처로 래핑"""
@@ -425,13 +627,23 @@ def _wrap(fn):
     return wrapper
 
 EXTRACTORS = {
-    "musinsa":    _wrap(extract_musinsa),
-    "oliveyoung": _wrap(extract_oliveyoung),
-    "zigzag":     _wrap(extract_zigzag),
-    "ably":       extract_ably,
-    "kakao_gift": extract_kakao_gift,
+    "naver_channel": _wrap(extract_naver_channel),
+    "coupang":       _wrap(extract_coupang),
+    "musinsa":       _wrap(extract_musinsa),
+    "oliveyoung":    _wrap(extract_oliveyoung),
+    "zigzag":        _wrap(extract_zigzag),
+    "ably":          extract_ably,
+    "kakao_gift":    extract_kakao_gift,
 }
-RANK_FINDERS = {"musinsa": find_rank_musinsa, "oliveyoung": find_rank_oliveyoung, "zigzag": find_rank_zigzag, "ably": find_rank_ably, "kakao_gift": find_rank_kakao_gift}
+RANK_FINDERS = {
+    "naver_channel": find_rank_naver_channel,
+    "coupang":       find_rank_coupang,
+    "musinsa":       find_rank_musinsa,
+    "oliveyoung":    find_rank_oliveyoung,
+    "zigzag":        find_rank_zigzag,
+    "ably":          find_rank_ably,
+    "kakao_gift":    find_rank_kakao_gift,
+}
 
 
 INTERCEPT_PLATFORMS = {"kakao_gift", "ably"}
