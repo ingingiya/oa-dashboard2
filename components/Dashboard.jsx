@@ -8878,8 +8878,7 @@ export default function OaDashboard(){
                     );
                   }
 
-                  // 네이버 비교 탭
-                  // 데이터 로드 (market_prices + 우리제품 목록)
+                  // 네이버 비교 탭 — 서브탭 항상 먼저 렌더 후 내용 분기
                   if((!mktCompareData||mktOurProds===null) && !mktCompareLoading && !mktOurProdsLoading) {
                     setMktCompareLoading(true);
                     setMktOurProdsLoading(true);
@@ -8893,9 +8892,8 @@ export default function OaDashboard(){
                       setMktOurProdsLoading(false);
                     });
                   }
-                  if(mktCompareLoading||mktOurProdsLoading) return <Card><div style={{textAlign:"center",padding:"32px 0",color:C.inkLt,fontSize:12}}>불러오는 중...</div></Card>;
-                  if(!mktCompareData||mktOurProds===null) return null;
-                  const {prices} = mktCompareData;
+                  const isNaverLoading = mktCompareLoading||mktOurProdsLoading||!mktCompareData||mktOurProds===null;
+                  const {prices=[]} = mktCompareData||{};
                   const PLATFORM_LABEL = {"musinsa":"무신사","oliveyoung":"올리브영","zigzag":"지그재그","ably":"에이블리","kakao_gift":"카카오선물하기"};
                   const PLATFORM_COLOR = {"musinsa":"#111","oliveyoung":"#16a34a","zigzag":"#7c3aed","ably":"#ec4899","kakao_gift":"#f59e0b"};
                   const ourBrandProds = mktOurProds||[];
@@ -8923,7 +8921,12 @@ export default function OaDashboard(){
                           <MI n="refresh" size={12}/>새로고침
                         </button>
                       </div>
-                      {/* 우리 제품 추가 폼 */}
+                      {/* 경쟁사 비교 로딩/콘텐츠 */}
+                      {isNaverLoading&&innerTab==="naver"&&(
+                        <Card><div style={{textAlign:"center",padding:24,color:C.inkMid,fontSize:12}}>불러오는 중...</div></Card>
+                      )}
+                      {(!isNaverLoading||innerTab!=="naver")&&(
+                      <>{/* 우리 제품 추가 폼 */}
                       <Card>
                         <div style={{fontSize:12,fontWeight:800,color:C.ink,marginBottom:10}}>우리 브랜드 제품 추가</div>
                         <div style={{display:"flex",gap:6,flexWrap:"wrap",alignItems:"center"}}>
@@ -9071,6 +9074,7 @@ export default function OaDashboard(){
                           </Card>
                         );
                       })}
+                      </>)}
                     </div>
                   );
                 })()}
