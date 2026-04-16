@@ -643,10 +643,14 @@ async def extract_coupang(page, pid):
                      title: document.title,
                      url: location.href };
         }""")
-        print(f"    ℹ️ 페이지: {result.get('title','?')} | {result.get('url','?')}")
+        print(f"    ℹ️ 페이지 제목: {result.get('title','?')}")
+        print(f"    ℹ️ URL: {result.get('url','?')}")
         if result.get("name") and result.get("sale"):
             return {"name": result["name"], "brand": "", "sale_price": result["sale"],
                     "original_price": result["orig"] or result["sale"], "image": result["img"]}
+        # 전부 실패 → HTML 일부 출력해서 구조 파악
+        html_snippet = await page.evaluate("() => document.body ? document.body.innerHTML.slice(0,2000) : 'no body'")
+        print(f"    ℹ️ HTML 스니펫:\n{html_snippet[:1000]}")
     except Exception as e:
         print(f"    ⚠️ 쿠팡 추출 실패: {e}")
     return {}
