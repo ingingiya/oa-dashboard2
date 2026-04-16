@@ -571,15 +571,36 @@ async def find_rank_naver_channel(page, keyword, pid):
 async def extract_coupang(page, pid):
     """쿠팡 상품 가격 추출"""
     try:
-        # JSON-LD 우선 시도
+        # 페이지 로딩 대기
+        try: await page.wait_for_load_state("networkidle", timeout=10000)
+        except: pass
+
+        # 1) __NEXT_DATA__ 시도
+        nd = await page.evaluate("() => { try { return JSON.stringify(window.__NEXT_DATA__); } catch(e) { return null; } }")
+        if nd:
+            try:
+                d = json.loads(nd)
+                pp = d.get("props", {}).get("pageProps", {})
+                # 여러 구조 시도
+                for key in ["product", "pdpData", "itemInfo", "detail"]:
+                    item = pp.get(key) or pp.get("initialState", {}).get(key)
+                    if item and isinstance(item, dict):
+                        sale = item.get("salePrice") or item.get("saleUnitPrice") or item.get("finalPrice") or 0
+                        name = item.get("productName") or item.get("name") or item.get("itemName") or ""
+                        img = item.get("mainImageUrl") or item.get("imageUrl") or item.get("image") or ""
+                        orig = item.get("originalPrice") or item.get("basePrice") or sale
+                        if name and sale:
+                            return {"name": str(name), "brand": "", "sale_price": int(sale), "original_price": int(orig), "image": str(img)}
+            except: pass
+
+        # 2) JSON-LD 시도
         ld = await page.evaluate("""() => {
             const scripts = document.querySelectorAll('script[type="application/ld+json"]');
             for (const s of scripts) {
                 try {
                     const d = JSON.parse(s.textContent);
-                    if (d['@type'] === 'Product' || (Array.isArray(d) && d[0] && d[0]['@type'] === 'Product')) {
-                        return JSON.stringify(Array.isArray(d) ? d[0] : d);
-                    }
+                    const prod = Array.isArray(d) ? d.find(x=>x['@type']==='Product') : (d['@type']==='Product' ? d : null);
+                    if (prod) return JSON.stringify(prod);
                 } catch(e) {}
             }
             return null;
@@ -590,34 +611,42 @@ async def extract_coupang(page, pid):
             if isinstance(offers, list): offers = offers[0] if offers else {}
             sale = int(float(str(offers.get("price", 0)).replace(",", ""))) if offers.get("price") else 0
             name = d.get("name", "")
-            img = ""
             imgs = d.get("image", [])
-            if isinstance(imgs, list) and imgs: img = imgs[0] if isinstance(imgs[0], str) else ""
-            elif isinstance(imgs, str): img = imgs
+            img = (imgs[0] if isinstance(imgs, list) and imgs else imgs) if imgs else ""
             if name and sale:
-                return {"name": name, "brand": d.get("brand", {}).get("name", "") if isinstance(d.get("brand"), dict) else "", "sale_price": sale, "original_price": sale, "image": img}
+                return {"name": name, "brand": "", "sale_price": sale, "original_price": sale, "image": str(img)}
 
-        # DOM 폴백
-        name = await page.evaluate("""() => {
-            const el = document.querySelector('h2.prod-buy-header__title, h1.prod-title, .prod-buy-header__title, [class*="prod-buy-header"] h2, [class*="prod-buy-header"] h1');
-            return el ? el.textContent.trim() : '';
+        # 3) DOM 폴백 — 여러 선택자 시도
+        result = await page.evaluate("""() => {
+            const nameEl = document.querySelector(
+                'h2.prod-buy-header__title, h1.prod-title, [class*="prod-buy-header__title"], ' +
+                '[class*="prod-title"], .prod-name, h1[class*="name"], h2[class*="name"]'
+            );
+            const priceEl = document.querySelector(
+                '.total-price strong, span.total-price strong, ' +
+                '[class*="total-price"] strong, .prod-price strong, ' +
+                '[class*="price-wrap"] strong, [data-price]'
+            );
+            const origEl = document.querySelector(
+                '.prod-origin-price span, [class*="origin-price"] span, ' +
+                '.base-price, [class*="base-price"]'
+            );
+            const imgEl = document.querySelector(
+                'img.prod-img, .prod-image__detail img, [class*="prod-image"] img, ' +
+                '.prod-detail-imgs img, [class*="main-img"] img'
+            );
+            const name = nameEl ? nameEl.textContent.trim() : '';
+            const sale = priceEl ? parseInt(priceEl.textContent.replace(/[^0-9]/g,'')) || 0 : 0;
+            const orig = origEl ? parseInt(origEl.textContent.replace(/[^0-9]/g,'')) || 0 : 0;
+            const img = imgEl ? imgEl.src : '';
+            return { name, sale, orig, img,
+                     title: document.title,
+                     url: location.href };
         }""")
-        sale = await page.evaluate("""() => {
-            const el = document.querySelector('.total-price strong, span.total-price strong, .prod-price-container .total-price strong, [class*="total-price"] strong, .price-wrap strong');
-            if (!el) return 0;
-            return parseInt(el.textContent.replace(/[^0-9]/g,'')) || 0;
-        }""")
-        orig = await page.evaluate("""() => {
-            const el = document.querySelector('.prod-origin-price span, [class*="origin-price"] span, .base-price, [class*="base-price"]');
-            if (!el) return 0;
-            return parseInt(el.textContent.replace(/[^0-9]/g,'')) || 0;
-        }""")
-        img = await page.evaluate("""() => {
-            const el = document.querySelector('img.prod-img, .prod-image__detail img, [class*="prod-image"] img');
-            return el ? el.src : '';
-        }""")
-        if name and sale:
-            return {"name": name, "brand": "", "sale_price": sale, "original_price": orig or sale, "image": img}
+        print(f"    ℹ️ 페이지: {result.get('title','?')} | {result.get('url','?')}")
+        if result.get("name") and result.get("sale"):
+            return {"name": result["name"], "brand": "", "sale_price": result["sale"],
+                    "original_price": result["orig"] or result["sale"], "image": result["img"]}
     except Exception as e:
         print(f"    ⚠️ 쿠팡 추출 실패: {e}")
     return {}
