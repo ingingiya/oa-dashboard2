@@ -573,132 +573,68 @@ async def find_rank_naver_channel(page, keyword, pid):
     return None
 
 
-async def _fetch_coupang_html(url):
-    """쿠팡 HTML을 브라우저 쿠키로 직접 가져옴 (Akamai 우회)"""
-    if not COUPANG_COOKIE:
-        return None
+async def _naver_search_via_browser(page, keyword, pages=2):
+    """네이버쇼핑 페이지로 이동 후 API fetch (same-origin으로 CORS 우회)"""
+    all_prods = []
+    search_url = f"https://search.shopping.naver.com/search/all?query={quote(keyword)}&sort=rel"
     try:
-        from curl_cffi.requests import AsyncSession
-        async with AsyncSession(impersonate="chrome131") as s:
-            r = await s.get(url, headers={
-                "Cookie": COUPANG_COOKIE,
-                "Accept-Language": "ko-KR,ko;q=0.9",
-                "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-                "Referer": "https://www.coupang.com/",
-                "User-Agent": UA,
-            }, timeout=20)
-            if r.status_code == 200 and len(r.text) > 5000:
-                return r.text
-    except Exception as e:
-        print(f"    ⚠️ httpx 쿠팡 실패: {e}")
-    return None
+        await page.goto(search_url, wait_until="domcontentloaded", timeout=20000)
+        await page.wait_for_timeout(1500)
+    except: pass
 
-
-def _parse_coupang_html(t):
-    """쿠팡 HTML에서 상품 정보 추출"""
-    # JSON-LD
-    lds = re.findall(r'<script[^>]*ld\+json[^>]*>(.*?)</script>', t, re.DOTALL)
-    for raw in lds:
+    for pg in range(1, pages + 1):
+        api_url = (f"https://search.shopping.naver.com/api/search"
+                   f"?query={quote(keyword)}&sort=rel&pagingIndex={pg}&pagingSize=100&viewType=list&productSet=total")
         try:
-            d = json.loads(raw)
-            if isinstance(d, list): d = next((x for x in d if x.get("@type") == "Product"), {})
-            if d.get("@type") == "Product":
-                offers = d.get("offers", {})
-                if isinstance(offers, list): offers = offers[0] if offers else {}
-                sale = int(float(str(offers.get("price", 0)).replace(",", ""))) if offers.get("price") else 0
-                name = d.get("name", "")
-                imgs = d.get("image", [])
-                img = (imgs[0] if isinstance(imgs, list) and imgs else imgs) if imgs else ""
-                if name and sale:
-                    return {"name": name, "brand": "", "sale_price": sale, "original_price": sale, "image": str(img)}
-        except: pass
-
-    # 가격 패턴 — "총 결제금액" 또는 "할인가"
-    sale_m = re.search(r'class="[^"]*total-price[^"]*"[^>]*><strong[^>]*>([\d,]+)', t)
-    if not sale_m:
-        sale_m = re.search(r'"salePrice"\s*:\s*(\d+)', t)
-    name_m = re.search(r'class="[^"]*prod-buy-header__title[^"]*"[^>]*>(.*?)</h2>', t, re.DOTALL)
-    if not name_m:
-        name_m = re.search(r'"productName"\s*:\s*"([^"]+)"', t)
-    img_m = re.search(r'class="[^"]*prod-img[^"]*"[^>]*src="([^"]+)"', t)
-    if not img_m:
-        img_m = re.search(r'"mainImageUrl"\s*:\s*"([^"]+)"', t)
-
-    sale = int(sale_m.group(1).replace(",", "")) if sale_m else 0
-    name = re.sub(r'<[^>]+>', '', name_m.group(1)).strip() if name_m else ""
-    img = img_m.group(1) if img_m else ""
-    if name and sale:
-        return {"name": name, "brand": "", "sale_price": sale, "original_price": sale, "image": img}
-    return {}
+            data = await page.evaluate(f"""async () => {{
+                const r = await fetch("{api_url}", {{
+                    headers: {{"Accept":"application/json","Referer":"https://search.shopping.naver.com"}}
+                }});
+                return r.ok ? await r.json() : null;
+            }}""")
+            if not data: break
+            sr = data.get("shoppingResult") or data.get("result") or data
+            prods = sr.get("products") or sr.get("items") or data.get("products") or []
+            if not prods: break
+            all_prods.extend(prods)
+        except: break
+    return all_prods
 
 
 async def extract_coupang(page, pid):
-    """쿠팡 상품 가격 추출"""
-    # 1) 브라우저 쿠키 있으면 httpx로 직접 가져오기 (Akamai 우회)
-    url = await page.evaluate("() => location.href")
-    html = await _fetch_coupang_html(url)
-    if html:
-        result = _parse_coupang_html(html)
-        if result:
-            return result
-        print("    ⚠️ 쿠키로 HTML 가져왔으나 파싱 실패")
-
-    # 2) Playwright 폴백 (한국 IP에서 실행 시 동작 가능)
+    """쿠팡 상품 가격 — 네이버쇼핑 브라우저 fetch로 쿠팡 링크 검색"""
+    keyword = getattr(page, "_coupang_keyword", "") or pid
     try:
-        try: await page.wait_for_load_state("networkidle", timeout=10000)
-        except: pass
-
-        title = await page.evaluate("() => document.title")
-        if "Access Denied" in title:
-            print("    ❌ Akamai 차단 — COUPANG_COOKIE 환경변수 설정 필요")
-            print("    ℹ️ Chrome에서 쿠팡 열고 F12 → Network → 요청 클릭 → Request Headers → cookie 값 복사")
-            print("    ℹ️ .env.local에 COUPANG_COOKIE=<복사한값> 추가, GitHub Secrets에도 추가")
-            return {}
-
-        nd = await page.evaluate("() => { try { return JSON.stringify(window.__NEXT_DATA__); } catch(e) { return null; } }")
-        if nd:
-            try:
-                d = json.loads(nd)
-                pp = d.get("props", {}).get("pageProps", {})
-                for key in ["product", "pdpData", "itemInfo", "detail"]:
-                    item = pp.get(key) or pp.get("initialState", {}).get(key)
-                    if item and isinstance(item, dict):
-                        sale = item.get("salePrice") or item.get("saleUnitPrice") or item.get("finalPrice") or 0
-                        name = item.get("productName") or item.get("name") or item.get("itemName") or ""
-                        img = item.get("mainImageUrl") or item.get("imageUrl") or item.get("image") or ""
-                        orig = item.get("originalPrice") or item.get("basePrice") or sale
-                        if name and sale:
-                            return {"name": str(name), "brand": "", "sale_price": int(sale), "original_price": int(orig), "image": str(img)}
-            except: pass
-
-        body_html = await page.evaluate("() => document.body ? document.body.innerHTML : ''")
-        result = _parse_coupang_html(body_html)
-        if result:
-            return result
+        prods = await _naver_search_via_browser(page, keyword)
+        for p in prods:
+            link = p.get("mallProductUrl") or p.get("link") or ""
+            mall = p.get("mallName") or p.get("storeName") or ""
+            if "coupang.com" in link or mall == "쿠팡":
+                name = (p.get("productTitle") or p.get("title") or "").replace("<b>","").replace("</b>","")
+                price = p.get("price") or p.get("lprice") or 0
+                img = p.get("imageUrl") or p.get("image") or ""
+                if name and price:
+                    print(f"    ✅ 쿠팡 상품 발견: {name} / {int(price):,}원")
+                    return {"name": name, "brand": p.get("brand",""), "sale_price": int(price),
+                            "original_price": int(price), "image": img, "url": link}
+        print(f"    ⚠️ 네이버쇼핑에 쿠팡 상품 없음 (키워드: {keyword})")
     except Exception as e:
         print(f"    ⚠️ 쿠팡 추출 실패: {e}")
     return {}
 
 
 async def find_rank_coupang(page, keyword, pid):
-    """쿠팡 검색 순위"""
+    """쿠팡 네이버쇼핑 순위"""
     try:
-        await page.goto(f"https://www.coupang.com/np/search?q={quote(keyword)}&limit=72&page=1", wait_until="domcontentloaded", timeout=30000)
-        try: await page.wait_for_load_state("networkidle", timeout=8000)
-        except: pass
-        rank = await page.evaluate(f"""(pid) => {{
-            const items = document.querySelectorAll('li[id^="productUnit"], li.search-product');
-            let pos = 0;
-            for (const item of items) {{
-                const sponsored = item.querySelector('[class*="ad-badge"], [class*="adBadge"]');
-                if (sponsored) continue;
-                pos++;
-                const a = item.querySelector('a[href*="/vp/products/"]');
-                if (a && a.href.includes('/' + pid)) return pos;
-            }}
-            return null;
-        }}""", pid)
-        return rank
+        prods = await _naver_search_via_browser(page, keyword, pages=3)
+        rank = 0
+        for p in prods:
+            link = p.get("mallProductUrl") or p.get("link") or ""
+            mall = p.get("mallName") or p.get("storeName") or ""
+            if not (p.get("adId") or p.get("isAd")):
+                rank += 1
+                if ("coupang.com" in link or mall == "쿠팡") and pid in link:
+                    return rank
     except Exception as e:
         print(f"    ⚠️ 쿠팡 순위 실패: {e}")
     return None
@@ -772,6 +708,8 @@ async def run_platform(platform, page):
                 page.remove_listener("response", _on_response)
 
             captured = {"all": all_responses}
+            if platform == "coupang":
+                page._coupang_keyword = keyword  # keyword를 extractor에 전달
             price_data = await EXTRACTORS[platform](page, pid, captured)
             if price_data and price_data.get("sale_price"):
                 row = {"platform": platform, "product_id": pid, "url": url,

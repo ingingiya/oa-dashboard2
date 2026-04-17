@@ -803,7 +803,7 @@ function NaverSection() {
       const slim = {};
       KEEP_COLS.forEach(k=>{ if(o[k]!==undefined) slim[k]=o[k]; });
       return slim;
-    }).filter(r=>r["캠페인"] && r["캠페인"].includes("이미용"));
+    }).filter(r=>r["캠페인"]);
     return { rows, dateRange };
   }
 
@@ -811,20 +811,42 @@ function NaverSection() {
     const file = e.target.files[0];
     if(!file) return;
     const name = file.name;
-    const reader = new FileReader();
-    reader.onload = async ev => {
-      const { rows: parsed, dateRange: dr } = parseCSV(ev.target.result);
-      setRows(parsed);
-      setFileName(name);
-      setDateRange(dr);
-      const res = await fetch(`${SURL}/rest/v1/naver_ads_cache`,{
-        method:"POST",
-        headers:{...sh, Prefer:"resolution=merge-duplicates"},
-        body: JSON.stringify({id:1, filename:name, rows:parsed, date_range:dr, uploaded_at:new Date().toISOString()}),
-      });
-      if(!res.ok) alert("저장 실패: "+(await res.text()));
+    // UTF-8 먼저 시도, 한국어 깨지면 EUC-KR 재시도
+    function tryParse(text) {
+      const { rows: parsed, dateRange: dr } = parseCSV(text);
+      return { parsed, dr };
+    }
+    const readerUtf8 = new FileReader();
+    readerUtf8.onload = async ev => {
+      let text = ev.target.result;
+      // EUC-KR 깨짐 감지: 한글이 없으면 EUC-KR 재시도
+      const hasKorean = /[\uAC00-\uD7A3]/.test(text);
+      const doSave = async (finalText) => {
+        const { parsed, dr } = tryParse(finalText);
+        if(!parsed.length) {
+          alert(`파싱된 데이터가 없습니다.\n파일: ${name}\n헤더 확인 필요 (캠페인, 검색어, 총비용, 구매완료 전환매출액 등 포함 여부)`);
+          return;
+        }
+        setRows(parsed);
+        setFileName(name);
+        setDateRange(dr);
+        const res = await fetch(`${SURL}/rest/v1/naver_ads_cache`,{
+          method:"POST",
+          headers:{...sh, Prefer:"resolution=merge-duplicates"},
+          body: JSON.stringify({id:1, filename:name, rows:parsed, date_range:dr, uploaded_at:new Date().toISOString()}),
+        });
+        if(!res.ok) alert("저장 실패: "+(await res.text()));
+      };
+      if(hasKorean) {
+        await doSave(text);
+      } else {
+        // EUC-KR 재시도
+        const readerEuc = new FileReader();
+        readerEuc.onload = async ev2 => { await doSave(ev2.target.result); };
+        readerEuc.readAsText(file, "euc-kr");
+      }
     };
-    reader.readAsText(file, "euc-kr");
+    readerUtf8.readAsText(file, "utf-8");
   }
 
   // 그룹 키
@@ -8740,10 +8762,12 @@ export default function OaDashboard(){
                               <button onClick={()=>{
                                 if(running2) return;
                                 setMktPlatformRunning(p=>({...p,[platform]:true}));
-                                fetch("/api/github-scrape",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({platform})})
+                                const apiUrl = platform==="coupang" ? "/api/market/collect-coupang" : "/api/github-scrape";
+                                const body = platform==="coupang" ? {} : {platform};
+                                fetch(apiUrl,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)})
                                   .then(r=>r.json()).then(d=>{
-                                    if(d.ok) alert("수집 시작! GitHub Actions 실행 중. 2~3분 후 새로고침.");
-                                    else alert("오류: "+d.error);
+                                    if(d.ok) alert(platform==="coupang"?`쿠팡 수집 완료! ${d.collected}/${d.total}개 성공. 새로고침 버튼 눌러주세요.`:"수집 시작! GitHub Actions 실행 중. 2~3분 후 새로고침.");
+                                    else alert("오류: "+(d.error||JSON.stringify(d)));
                                     setMktPlatformRunning(p=>({...p,[platform]:false}));
                                   }).catch(e=>{alert("오류: "+e.message);setMktPlatformRunning(p=>({...p,[platform]:false}));});
                               }} style={{display:"flex",alignItems:"center",gap:5,padding:"7px 14px",borderRadius:8,border:"none",background:running2?"#e5e7eb":"#111",color:running2?C.inkMid:"#fff",fontWeight:700,fontSize:11,cursor:running2?"not-allowed":"pointer",fontFamily:"inherit"}}>
@@ -9241,10 +9265,12 @@ export default function OaDashboard(){
                             <button onClick={()=>{
                               if(running) return;
                               setMktPlatformRunning(p=>({...p,[platform]:true}));
-                              fetch("/api/github-scrape",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({platform})})
+                              const apiUrl = platform==="coupang" ? "/api/market/collect-coupang" : "/api/github-scrape";
+                              const body = platform==="coupang" ? {} : {platform};
+                              fetch(apiUrl,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)})
                                 .then(r=>r.json()).then(d=>{
-                                  if(d.ok) alert("수집 시작! GitHub Actions 실행 중. 2~3분 후 새로고침.");
-                                  else alert("오류: "+d.error);
+                                  if(d.ok) alert(platform==="coupang"?`쿠팡 수집 완료! ${d.collected}/${d.total}개 성공. 새로고침 버튼 눌러주세요.`:"수집 시작! GitHub Actions 실행 중. 2~3분 후 새로고침.");
+                                  else alert("오류: "+(d.error||JSON.stringify(d)));
                                   setMktPlatformRunning(p=>({...p,[platform]:false}));
                                 }).catch(e=>{alert("오류: "+e.message);setMktPlatformRunning(p=>({...p,[platform]:false}));});
                             }} style={{display:"flex",alignItems:"center",gap:5,padding:"7px 14px",borderRadius:8,border:"none",background:running?"#e5e7eb":"#111",color:running?C.inkMid:"#fff",fontWeight:700,fontSize:11,cursor:running?"not-allowed":"pointer",fontFamily:"inherit"}}>
