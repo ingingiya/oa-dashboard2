@@ -218,6 +218,10 @@ async def find_rank_zigzag(page, keyword, pid):
                     captured_json.append({"url": url, "data": data})
             except: pass
 
+        # 최근 본 상품이 DOM에 섞이지 않도록 스토리지/쿠키 초기화
+        await page.context.clear_cookies()
+        await page.evaluate("try{localStorage.clear();sessionStorage.clear();}catch(e){}")
+
         page.on("response", on_response)
         await page.goto(f"https://zigzag.kr/search?q={quote(keyword)}", wait_until="domcontentloaded", timeout=30000)
         try: await page.wait_for_load_state("networkidle", timeout=10000)
