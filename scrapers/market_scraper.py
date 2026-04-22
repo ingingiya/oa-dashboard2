@@ -225,34 +225,40 @@ async def find_rank_zigzag(page, keyword, pid):
         await page.wait_for_timeout(3000)
         page.remove_listener("response", on_response)
 
-        # 1순위: __NEXT_DATA__ 에서 검색결과 파싱
+        # 1순위: __NEXT_DATA__ 에서 검색결과 파싱 — 가장 긴 리스트를 검색결과로 사용
         rank = await page.evaluate("""(pid) => {
             try {
                 const nd = window.__NEXT_DATA__;
                 if (!nd) return null;
                 const queries = nd?.props?.pageProps?.dehydratedState?.queries || [];
+                // 모든 product-like 리스트를 수집해서 가장 긴 것을 검색결과로 사용
+                function collectLists(obj, depth, result) {
+                    if (depth > 6 || !obj || typeof obj !== 'object') return;
+                    if (Array.isArray(obj) && obj.length > 1) {
+                        const first = obj[0];
+                        if (first && typeof first === 'object' &&
+                            (first.catalog_product_id || first.product_id || first.id)) {
+                            result.push(obj);
+                            return; // 이 배열 안에서 더 탐색하지 않음
+                        }
+                    }
+                    if (!Array.isArray(obj)) {
+                        for (const v of Object.values(obj)) {
+                            collectLists(v, depth + 1, result);
+                        }
+                    } else {
+                        for (const v of obj) collectLists(v, depth + 1, result);
+                    }
+                }
+                const allLists = [];
                 for (const q of queries) {
                     const data = q?.state?.data;
                     if (!data || typeof data !== 'object') continue;
-                    // 가능한 list 키들 재귀 탐색
-                    function findList(obj, depth) {
-                        if (depth > 5 || !obj || typeof obj !== 'object') return null;
-                        if (Array.isArray(obj) && obj.length > 1) {
-                            // 첫 아이템이 product_id 같은 걸 가지면 검색결과 리스트
-                            const first = obj[0];
-                            if (first && typeof first === 'object' &&
-                                (first.catalog_product_id || first.product_id || first.id)) {
-                                return obj;
-                            }
-                        }
-                        for (const v of Object.values(obj)) {
-                            const r = findList(v, depth + 1);
-                            if (r) return r;
-                        }
-                        return null;
-                    }
-                    const list = findList(data, 0);
-                    if (!list) continue;
+                    collectLists(data, 0, allLists);
+                }
+                // 가장 긴 리스트 = 검색결과
+                allLists.sort((a, b) => b.length - a.length);
+                for (const list of allLists) {
                     for (let i = 0; i < list.length; i++) {
                         const item = list[i];
                         const itemId = String(item?.catalog_product_id || item?.product_id || item?.id || "");
@@ -267,26 +273,32 @@ async def find_rank_zigzag(page, keyword, pid):
             print(f"    ✅ __NEXT_DATA__ 순위: {rank}")
             return rank
 
-        # 2순위: 인터셉트된 API 응답에서 탐색
-        def find_in_data(obj, target, depth=0):
-            if depth > 6: return None
+        # 2순위: 인터셉트된 API 응답에서 탐색 — 가장 긴 product 리스트 기준
+        def collect_lists_from(obj, result, depth=0):
+            if depth > 6: return
             if isinstance(obj, list) and len(obj) > 1:
-                for i, item in enumerate(obj):
-                    if not isinstance(item, dict): continue
-                    item_id = str(item.get("catalog_product_id") or item.get("product_id") or item.get("id") or "")
-                    if item_id == target:
-                        return i + 1
+                first = obj[0]
+                if isinstance(first, dict) and (first.get("catalog_product_id") or first.get("product_id") or first.get("id")):
+                    result.append(obj)
+                    return
             if isinstance(obj, dict):
                 for v in obj.values():
-                    r = find_in_data(v, target, depth + 1)
-                    if r: return r
-            return None
+                    collect_lists_from(v, result, depth + 1)
+            elif isinstance(obj, list):
+                for v in obj:
+                    collect_lists_from(v, result, depth + 1)
 
+        all_api_lists = []
         for entry in captured_json:
-            r = find_in_data(entry["data"], pid)
-            if r:
-                print(f"    ✅ API 인터셉트 순위: {r} ({entry['url'].split('?')[0][-50:]})")
-                return r
+            collect_lists_from(entry["data"], all_api_lists)
+        all_api_lists.sort(key=lambda x: len(x), reverse=True)
+        for lst in all_api_lists:
+            for i, item in enumerate(lst):
+                if not isinstance(item, dict): continue
+                item_id = str(item.get("catalog_product_id") or item.get("product_id") or item.get("id") or "")
+                if item_id == pid:
+                    print(f"    ✅ API 인터셉트 순위: {i+1}")
+                    return i + 1
 
         # 3순위: DOM — 링크의 Y 좌표 기준, 상위 1/4 영역(추천/최근본) 제외
         result = await page.evaluate("""(pid) => {
@@ -518,10 +530,40 @@ async def extract_naver_channel(page, pid):
         if nd:
             d = json.loads(nd)
             pp = d.get("props", {}).get("pageProps", {})
-            # 스마트스토어 구조
-            product = pp.get("initialState", {}).get("product", {}).get("A", {})
-            if not product:
-                product = _find_in_obj(pp, ["productName", "salePrice"], 0) or {}
+            initial = pp.get("initialState", {})
+
+            # Path 1: Smart Store — initialState.product.A
+            product = initial.get("product", {}).get("A", {})
+
+            # Path 2: Brand Store or other structures — search for dict containing
+            # both productName and salePrice using _find_in_obj
+            if not product or not (product.get("productName") and product.get("salePrice")):
+                # Try initialState.products (Brand Store may use list or dict)
+                products_node = initial.get("products")
+                if isinstance(products_node, dict):
+                    # keyed by product id — grab first value that has productName
+                    for v in products_node.values():
+                        if isinstance(v, dict) and v.get("productName") and v.get("salePrice"):
+                            product = v
+                            break
+                elif isinstance(products_node, list) and products_node:
+                    for v in products_node:
+                        if isinstance(v, dict) and v.get("productName") and v.get("salePrice"):
+                            product = v
+                            break
+
+            # Path 2b: recursive search across full pageProps for productName + salePrice
+            if not product or not (product.get("productName") and product.get("salePrice")):
+                found = _find_in_obj(pp, ["productName", "salePrice"])
+                if isinstance(found, dict) and found.get("productName") and found.get("salePrice"):
+                    product = found
+                elif found is not None:
+                    # _find_in_obj returned the value of the first matched key; walk up
+                    pass
+
+            if not isinstance(product, dict):
+                product = {}
+
             name = product.get("productName") or product.get("name") or ""
             sale = int(product.get("salePrice") or product.get("price") or 0)
             orig = int(product.get("retailPrice") or product.get("originalPrice") or sale)
@@ -531,13 +573,21 @@ async def extract_naver_channel(page, pid):
     except Exception as e:
         print(f"    ⚠️ 네이버채널 추출 실패(NEXT_DATA): {e}")
     try:
-        # DOM 폴백
+        # Path 3: DOM fallback — expanded selectors covering Smart Store & Brand Store
         name = await page.evaluate("""() => {
-            const el = document.querySelector('h3._2-I30XS1lA, h2.product_title, ._2aNPDQFiUD, [class*="productName"]');
+            const el = document.querySelector(
+                'h3._2-I30XS1lA, h2.product_title, ._2aNPDQFiUD, ' +
+                '[class*="productName"], [class*="Product_title"], ' +
+                '[class*="product_name"], [class*="ProductName"]'
+            );
             return el ? el.textContent.trim() : '';
         }""")
         price = await page.evaluate("""() => {
-            const el = document.querySelector('strong._1LY7DqCnwR, ._1LY7DqCnwR, [class*="salePrice"], em._1ym0zGUNe6');
+            const el = document.querySelector(
+                'strong._1LY7DqCnwR, ._1LY7DqCnwR, [class*="salePrice"], ' +
+                'em._1ym0zGUNe6, strong._1LY7DqCnwR, [class*="SalePrice"], ' +
+                '[class*="sale_price"]'
+            );
             if (!el) return 0;
             return parseInt(el.textContent.replace(/[^0-9]/g,'')) || 0;
         }""")
@@ -566,7 +616,21 @@ async def find_rank_naver_channel(page, keyword, pid):
                 if not is_ad:
                     organic += 1
                 link = p.get("mallProductUrl") or p.get("link") or ""
-                if pid in link or str(p.get("nvMid","")) == pid or str(p.get("id","")) == pid:
+                nv_mid = str(p.get("nvMid") or p.get("id") or "")
+                # Match by URL-embedded pid (Smart Store: /products/{pid}, Brand Store: brand.naver.com/...)
+                # or by nvMid which may differ from URL pid on Naver Shopping aggregation
+                url_match = pid in link
+                nv_match = nv_mid == pid
+                # Also extract pid from URL path to compare (handles /products/{pid} pattern)
+                url_pid_match = False
+                m = re.search(r'/products?/(\d+)', link)
+                if m and m.group(1) == pid:
+                    url_pid_match = True
+                # Brand Store: brand.naver.com/{brand}/products/{pid}
+                bm = re.search(r'brand\.naver\.com/[^/]+/products?/(\d+)', link)
+                if bm and bm.group(1) == pid:
+                    url_pid_match = True
+                if url_match or nv_match or url_pid_match:
                     return organic if not is_ad else None
     except Exception as e:
         print(f"    ⚠️ 네이버 순위 실패: {e}")
@@ -606,6 +670,7 @@ async def extract_coupang(page, pid):
     keyword = getattr(page, "_coupang_keyword", "") or pid
     try:
         prods = await _naver_search_via_browser(page, keyword)
+        first_coupang = None
         for p in prods:
             link = p.get("mallProductUrl") or p.get("link") or ""
             mall = p.get("mallName") or p.get("storeName") or ""
@@ -614,9 +679,17 @@ async def extract_coupang(page, pid):
                 price = p.get("price") or p.get("lprice") or 0
                 img = p.get("imageUrl") or p.get("image") or ""
                 if name and price:
-                    print(f"    ✅ 쿠팡 상품 발견: {name} / {int(price):,}원")
-                    return {"name": name, "brand": p.get("brand",""), "sale_price": int(price),
-                            "original_price": int(price), "image": img, "url": link}
+                    result = {"name": name, "brand": p.get("brand",""), "sale_price": int(price),
+                              "original_price": int(price), "image": img, "url": link}
+                    if pid and pid in link:
+                        # pid가 URL에 있으면 정확한 제품
+                        print(f"    ✅ 쿠팡 상품 발견(정확): {name} / {int(price):,}원")
+                        return result
+                    if first_coupang is None:
+                        first_coupang = result  # 일치 없으면 첫 번째 쿠팡 상품 저장
+        if first_coupang:
+            print(f"    ✅ 쿠팡 상품 발견(첫번째): {first_coupang['name']} / {first_coupang['sale_price']:,}원")
+            return first_coupang
         print(f"    ⚠️ 네이버쇼핑에 쿠팡 상품 없음 (키워드: {keyword})")
     except Exception as e:
         print(f"    ⚠️ 쿠팡 추출 실패: {e}")
@@ -698,8 +771,10 @@ async def run_platform(platform, page):
                     except: pass
                 page.on("response", _on_response)
 
-            await page.goto(url, wait_until="domcontentloaded", timeout=60000)
-            await page.wait_for_timeout(3000)
+            # 쿠팡은 URL 방문 불필요 (extract_coupang이 네이버쇼핑으로 직접 검색)
+            if platform != "coupang":
+                await page.goto(url, wait_until="domcontentloaded", timeout=60000)
+                await page.wait_for_timeout(3000)
 
             if platform in INTERCEPT_PLATFORMS:
                 try:
@@ -712,7 +787,8 @@ async def run_platform(platform, page):
                 page._coupang_keyword = keyword  # keyword를 extractor에 전달
             price_data = await EXTRACTORS[platform](page, pid, captured)
             if price_data and price_data.get("sale_price"):
-                row = {"platform": platform, "product_id": pid, "url": url,
+                row = {"platform": platform, "product_id": pid,
+                       "url": price_data.get("url") or url,
                        "name": price_data.get("name",""), "brand": price_data.get("brand",""),
                        "sale_price": int(price_data["sale_price"]),
                        "original_price": int(price_data.get("original_price", price_data["sale_price"])),
