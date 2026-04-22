@@ -203,6 +203,11 @@ async def extract_zigzag(page, pid):
 
 
 async def find_rank_zigzag(page, keyword, pid):
+    # 새 컨텍스트(시크릿 모드)로 검색 — 최근 본 상품 기록 완전 차단
+    fresh_ctx = await page.context.browser.new_context(
+        user_agent=UA, viewport={"width": 1280, "height": 900}
+    )
+    fresh_page = await fresh_ctx.new_page()
     try:
         captured_json = []
 
@@ -211,26 +216,21 @@ async def find_rank_zigzag(page, keyword, pid):
                 ct = response.headers.get("content-type", "")
                 if "json" not in ct: return
                 url = response.url
-                # 검색 결과 API만 수집
                 if not any(k in url for k in ["search", "catalog", "product"]): return
                 data = await response.json()
                 if isinstance(data, (dict, list)):
                     captured_json.append({"url": url, "data": data})
             except: pass
 
-        # 최근 본 상품이 DOM에 섞이지 않도록 스토리지/쿠키 초기화
-        await page.context.clear_cookies()
-        await page.evaluate("try{localStorage.clear();sessionStorage.clear();}catch(e){}")
-
-        page.on("response", on_response)
-        await page.goto(f"https://zigzag.kr/search?q={quote(keyword)}", wait_until="domcontentloaded", timeout=30000)
-        try: await page.wait_for_load_state("networkidle", timeout=10000)
+        fresh_page.on("response", on_response)
+        await fresh_page.goto(f"https://zigzag.kr/search?q={quote(keyword)}", wait_until="domcontentloaded", timeout=30000)
+        try: await fresh_page.wait_for_load_state("networkidle", timeout=10000)
         except: pass
-        await page.wait_for_timeout(3000)
-        page.remove_listener("response", on_response)
+        await fresh_page.wait_for_timeout(3000)
+        fresh_page.remove_listener("response", on_response)
 
         # 1순위: __NEXT_DATA__ — "search" 포함 쿼리 우선, 그 다음 가장 긴 product 리스트
-        rank = await page.evaluate("""(pid) => {
+        rank = await fresh_page.evaluate("""(pid) => {
             try {
                 const nd = window.__NEXT_DATA__;
                 if (!nd) return null;
@@ -280,6 +280,7 @@ async def find_rank_zigzag(page, keyword, pid):
 
         if isinstance(rank, int):
             print(f"    ✅ __NEXT_DATA__ 순위: {rank}")
+            await fresh_ctx.close()
             return rank
         if isinstance(rank, dict):
             print(f"    ℹ️ __NEXT_DATA__ 미발견: {rank}")
@@ -315,12 +316,13 @@ async def find_rank_zigzag(page, keyword, pid):
                 item_id = str(item.get("catalog_product_id") or item.get("product_id") or item.get("id") or "")
                 if item_id == pid:
                     print(f"    ✅ API 인터셉트 순위: {i+1}")
+                    await fresh_ctx.close()
                     return i + 1
 
         # 3순위: 스크롤 후 DOM — data-index 속성 우선, 없으면 문서 순서
-        await page.evaluate("window.scrollTo(0, document.body.scrollHeight / 3)")
-        await page.wait_for_timeout(1500)
-        result = await page.evaluate("""(pid) => {
+        await fresh_page.evaluate("window.scrollTo(0, document.body.scrollHeight / 3)")
+        await fresh_page.wait_for_timeout(1500)
+        result = await fresh_page.evaluate("""(pid) => {
             const seen = new Set(); let pos = 0;
             // data-index 속성 있는 경우 우선
             const indexed = Array.from(document.querySelectorAll('[data-index] a[href*="/catalog/products/"]'));
@@ -345,11 +347,17 @@ async def find_rank_zigzag(page, keyword, pid):
             return { notFound: pos, sample: Array.from(seen).slice(0,5) };
         }""", pid)
 
-        if isinstance(result, int): return result
+        if isinstance(result, int):
+            await fresh_ctx.close()
+            return result
         print(f"    ⚠️ 지그재그 순위 못찾음: {result}")
+        await fresh_ctx.close()
         return None
     except Exception as e:
-        print(f"    ⚠️ 순위 실패: {e}"); return None
+        print(f"    ⚠️ 순위 실패: {e}")
+        try: await fresh_ctx.close()
+        except: pass
+        return None
 
 
 # ── 에이블리 ─────────────────────────────────────────
