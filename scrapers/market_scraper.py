@@ -225,13 +225,13 @@ async def find_rank_zigzag(page, keyword, pid):
         await page.wait_for_timeout(3000)
         page.remove_listener("response", on_response)
 
-        # 1순위: __NEXT_DATA__ 에서 검색결과 파싱 — 가장 긴 리스트를 검색결과로 사용
+        # 1순위: __NEXT_DATA__ — "search" 포함 쿼리 우선, 그 다음 가장 긴 product 리스트
         rank = await page.evaluate("""(pid) => {
             try {
                 const nd = window.__NEXT_DATA__;
                 if (!nd) return null;
                 const queries = nd?.props?.pageProps?.dehydratedState?.queries || [];
-                // 모든 product-like 리스트를 수집해서 가장 긴 것을 검색결과로 사용
+
                 function collectLists(obj, depth, result) {
                     if (depth > 6 || !obj || typeof obj !== 'object') return;
                     if (Array.isArray(obj) && obj.length > 1) {
@@ -239,41 +239,48 @@ async def find_rank_zigzag(page, keyword, pid):
                         if (first && typeof first === 'object' &&
                             (first.catalog_product_id || first.product_id || first.id)) {
                             result.push(obj);
-                            return; // 이 배열 안에서 더 탐색하지 않음
+                            return;
                         }
                     }
                     if (!Array.isArray(obj)) {
-                        for (const v of Object.values(obj)) {
-                            collectLists(v, depth + 1, result);
-                        }
+                        for (const v of Object.values(obj)) collectLists(v, depth + 1, result);
                     } else {
                         for (const v of obj) collectLists(v, depth + 1, result);
                     }
                 }
-                const allLists = [];
+
+                // search 관련 쿼리 우선 탐색
+                const searchLists = [], otherLists = [];
                 for (const q of queries) {
                     const data = q?.state?.data;
                     if (!data || typeof data !== 'object') continue;
-                    collectLists(data, 0, allLists);
+                    const keyStr = JSON.stringify(q?.queryKey || "").toLowerCase();
+                    const isSearch = keyStr.includes("search") || keyStr.includes("catalog_product");
+                    const bucket = isSearch ? searchLists : otherLists;
+                    collectLists(data, 0, bucket);
                 }
-                // 가장 긴 리스트 = 검색결과
-                allLists.sort((a, b) => b.length - a.length);
-                for (const list of allLists) {
+                // search 쿼리에서 긴 것 우선, 없으면 전체 중 긴 것
+                const candidates = [...searchLists, ...otherLists];
+                candidates.sort((a, b) => b.length - a.length);
+                for (const list of candidates) {
                     for (let i = 0; i < list.length; i++) {
                         const item = list[i];
                         const itemId = String(item?.catalog_product_id || item?.product_id || item?.id || "");
                         if (itemId === pid) return i + 1;
                     }
                 }
-            } catch(e) {}
-            return null;
+                // debug: 찾은 후보 리스트 길이들
+                return { debug: candidates.map(l=>l.length) };
+            } catch(e) { return { error: String(e) }; }
         }""", pid)
 
         if isinstance(rank, int):
             print(f"    ✅ __NEXT_DATA__ 순위: {rank}")
             return rank
+        if isinstance(rank, dict):
+            print(f"    ℹ️ __NEXT_DATA__ 미발견: {rank}")
 
-        # 2순위: 인터셉트된 API 응답에서 탐색 — 가장 긴 product 리스트 기준
+        # 2순위: 인터셉트된 API 응답에서 탐색 — search URL 우선, 가장 긴 리스트 기준
         def collect_lists_from(obj, result, depth=0):
             if depth > 6: return
             if isinstance(obj, list) and len(obj) > 1:
@@ -288,10 +295,16 @@ async def find_rank_zigzag(page, keyword, pid):
                 for v in obj:
                     collect_lists_from(v, result, depth + 1)
 
-        all_api_lists = []
+        search_api_lists, other_api_lists = [], []
         for entry in captured_json:
-            collect_lists_from(entry["data"], all_api_lists)
+            url_lower = entry["url"].lower()
+            is_search = "search" in url_lower or "catalog_product" in url_lower
+            bucket = search_api_lists if is_search else other_api_lists
+            collect_lists_from(entry["data"], bucket)
+
+        all_api_lists = search_api_lists + other_api_lists
         all_api_lists.sort(key=lambda x: len(x), reverse=True)
+        print(f"    ℹ️ API 인터셉트 후보: {[len(l) for l in all_api_lists[:5]]}")
         for lst in all_api_lists:
             for i, item in enumerate(lst):
                 if not isinstance(item, dict): continue
@@ -300,22 +313,32 @@ async def find_rank_zigzag(page, keyword, pid):
                     print(f"    ✅ API 인터셉트 순위: {i+1}")
                     return i + 1
 
-        # 3순위: DOM — 링크의 Y 좌표 기준, 상위 1/4 영역(추천/최근본) 제외
+        # 3순위: 스크롤 후 DOM — data-index 속성 우선, 없으면 문서 순서
+        await page.evaluate("window.scrollTo(0, document.body.scrollHeight / 3)")
+        await page.wait_for_timeout(1500)
         result = await page.evaluate("""(pid) => {
-            const links = Array.from(document.querySelectorAll('a[href*="/catalog/products/"]'));
-            const pageH = document.body.scrollHeight;
-            const cutoff = pageH * 0.15; // 상위 15%는 추천/최근본으로 간주
             const seen = new Set(); let pos = 0;
-            for (const a of links) {
-                const m = a.href.match(/\/catalog\/products\/(\d+)/);
+            // data-index 속성 있는 경우 우선
+            const indexed = Array.from(document.querySelectorAll('[data-index] a[href*="/catalog/products/"]'));
+            if (indexed.length > 2) {
+                for (const a of indexed) {
+                    const m = a.href.match(/\\/catalog\\/products\\/(\\d+)/);
+                    if (!m || seen.has(m[1])) continue;
+                    const idx = parseInt(a.closest('[data-index]')?.getAttribute('data-index') ?? -1);
+                    if (idx >= 0) { seen.add(m[1]); if (m[1] === pid) return idx + 1; }
+                }
+            }
+            // 문서 순서 기반 (헤더/추천 영역 제거)
+            const allLinks = Array.from(document.querySelectorAll('main a[href*="/catalog/products/"], [class*="search"] a[href*="/catalog/products/"], [class*="product"] a[href*="/catalog/products/"]'));
+            const fallback = allLinks.length > 2 ? allLinks : Array.from(document.querySelectorAll('a[href*="/catalog/products/"]'));
+            seen.clear(); pos = 0;
+            for (const a of fallback) {
+                const m = a.href.match(/\\/catalog\\/products\\/(\\d+)/);
                 if (!m || seen.has(m[1])) continue;
-                const rect = a.getBoundingClientRect();
-                const absTop = rect.top + window.scrollY;
-                if (absTop < cutoff) continue; // 상단 추천 영역 제외
                 seen.add(m[1]); pos++;
                 if (m[1] === pid) return pos;
             }
-            return { notFound: pos, sampleIds: Array.from(seen).slice(0,5) };
+            return { notFound: pos, sample: Array.from(seen).slice(0,5) };
         }""", pid)
 
         if isinstance(result, int): return result
