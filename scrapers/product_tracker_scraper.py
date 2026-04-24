@@ -23,7 +23,7 @@ SB_HEADERS = {
     "Content-Type": "application/json",
 }
 
-PLAYWRIGHT_PLATFORMS = {"musinsa", "oliveyoung", "zigzag", "coupang"}
+PLAYWRIGHT_PLATFORMS = {"musinsa", "oliveyoung", "zigzag", "coupang", "naver"}
 
 
 async def fetch_tracked_products():
@@ -218,20 +218,67 @@ async def scrape_coupang(page, prod):
     return None
 
 
+async def scrape_naver(page, prod):
+    url = prod.get("url", "")
+    if not url:
+        return None
+    try:
+        await page.goto(url, wait_until="domcontentloaded", timeout=30000)
+        await page.wait_for_timeout(3000)
+
+        result = await page.evaluate("""() => {
+            // __NEXT_DATA__ 파싱
+            try {
+                const nd = window.__NEXT_DATA__;
+                if (nd) {
+                    const pp = nd?.props?.pageProps || {};
+                    const product = pp.product || pp.initialState?.product?.productDetail?.product || {};
+                    const rv = pp.reviewSummary || pp.initialState?.review?.reviewSummary || {};
+                    return {
+                        price: product.salePrice || product.discountedSalePrice || product.price || null,
+                        reviews: rv.totalReviewCount ?? rv.reviewCount ?? null,
+                        rating: rv.averageReviewScore ? parseFloat(rv.averageReviewScore) : null,
+                        likes: product.wish || product.wishCount || null,
+                    };
+                }
+            } catch(e) {}
+            // DOM 폴백
+            const priceEl = document.querySelector('._2BIhY2Ffcj, [class*="price"] em, [class*="salePrice"]');
+            const reviewEl = document.querySelector('[class*="reviewCount"], [class*="totalReviewCount"]');
+            const ratingEl = document.querySelector('[class*="averageScore"], [class*="ratingScore"]');
+            const likeEl = document.querySelector('[class*="wishCount"], [class*="likeCount"]');
+            return {
+                price: priceEl ? parseInt(priceEl.textContent.replace(/[^0-9]/g,'')) || null : null,
+                reviews: reviewEl ? parseInt(reviewEl.textContent.replace(/[^0-9]/g,'')) || null : null,
+                rating: ratingEl ? parseFloat(ratingEl.textContent) || null : null,
+                likes: likeEl ? parseInt(likeEl.textContent.replace(/[^0-9]/g,'')) || null : null,
+            };
+        }""")
+        return result
+    except Exception as e:
+        print(f"  네이버 스크래핑 오류 ({url}): {e}")
+    return None
+
+
 SCRAPERS = {
     "musinsa": scrape_musinsa,
     "oliveyoung": scrape_oliveyoung,
     "zigzag": scrape_zigzag,
     "coupang": scrape_coupang,
+    "naver": scrape_naver,
 }
 
 
 async def main():
     products = await fetch_tracked_products()
-    target = [p for p in products if p.get("platform") in PLAYWRIGHT_PLATFORMS]
+    print(f"전체 등록 제품: {len(products)}개")
+    for p in products:
+        print(f"  - [{p.get('platform')}] {p.get('name')} url={p.get('url','(없음)')[:60]}")
+
+    target = [p for p in products if p.get("platform") in PLAYWRIGHT_PLATFORMS and p.get("url")]
 
     if not target:
-        print("트래킹할 Playwright 제품이 없습니다.")
+        print("트래킹할 Playwright 제품이 없습니다. (URL이 있는 무신사/올리브영/지그재그/쿠팡/네이버 제품 필요)")
         return
 
     print(f"총 {len(target)}개 제품 트래킹 시작")
