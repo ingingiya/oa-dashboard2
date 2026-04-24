@@ -80,30 +80,46 @@ async def scrape_musinsa(page, prod):
     if not url:
         return None
     try:
-        await page.goto(url, wait_until="domcontentloaded", timeout=30000)
-        await page.wait_for_timeout(2000)
+        await page.goto(url, wait_until="domcontentloaded", timeout=60000)
+        await page.wait_for_timeout(3000)
 
+        # 1) __NEXT_DATA__
         result = await page.evaluate("""() => {
-            const nd = window.__NEXT_DATA__;
-            if (nd) {
-                const pp = nd?.props?.pageProps || {};
-                const p = pp.product || pp.goodsDetail || pp.item || {};
-                return {
-                    price: p.price || p.salePrice || p.goodsPrice || null,
-                    name: p.goodsName || p.name || p.title || null,
-                    reviews: p.reviewCount || p.review_count || null,
-                    rating: p.reviewScore || p.avgRating || null,
-                };
-            }
-            const priceEl = document.querySelector('#goods_price strong, .price-box .txt-price');
-            const reviewEl = document.querySelector('.review-count, [class*="review"] em');
-            return {
-                price: priceEl ? parseInt(priceEl.textContent.replace(/[^0-9]/g,'')) || null : null,
-                reviews: reviewEl ? parseInt(reviewEl.textContent.replace(/[^0-9]/g,'')) || null : null,
-                name: null,
-                rating: null,
-            };
+            try {
+                const nd = window.__NEXT_DATA__;
+                if (nd) {
+                    const pp = nd?.props?.pageProps || {};
+                    const p = pp.product || pp.goodsDetail || pp.item || {};
+                    const price = parseInt(p.salePrice || p.immediateDiscountedPrice || p.goodsPrice || p.price || 0) || null;
+                    if (price) return {
+                        price,
+                        reviews: p.reviewCount || p.review_count || null,
+                        rating: p.reviewScore || p.avgRating || null,
+                    };
+                }
+            } catch(e) {}
+            return null;
         }""")
+
+        # 2) JSON-LD 폴백
+        if not result:
+            html = await page.content()
+            import re as _re
+            for m in _re.finditer(r'<script[^>]*type=["\']application/ld\+json["\'][^>]*>(.*?)</script>', html, _re.DOTALL):
+                try:
+                    import json as _json
+                    ld = _json.loads(m.group(1).strip())
+                    if isinstance(ld, list):
+                        ld = next((x for x in ld if x.get("@type") == "Product"), {})
+                    if ld.get("@type") == "Product":
+                        offer = ld.get("offers", {})
+                        if isinstance(offer, list): offer = offer[0]
+                        price = int(float(offer.get("price", 0))) or None
+                        result = {"price": price, "reviews": None, "rating": None}
+                        break
+                except Exception:
+                    pass
+
         if result:
             return {
                 "price": result.get("price"),
@@ -218,46 +234,107 @@ async def scrape_coupang(page, prod):
     return None
 
 
-async def scrape_naver(page, prod):
-    url = prod.get("url", "")
-    if not url:
-        return None
-    try:
-        await page.goto(url, wait_until="domcontentloaded", timeout=30000)
-        await page.wait_for_timeout(3000)
+OA_IDENTIFIERS = ["오아", "oa뷰티", "oabeauty", "oa beauty", "소닉플로우", "프리온", "에어리소닉"]
 
-        result = await page.evaluate("""() => {
-            // __NEXT_DATA__ 파싱
-            try {
-                const nd = window.__NEXT_DATA__;
-                if (nd) {
-                    const pp = nd?.props?.pageProps || {};
-                    const product = pp.product || pp.initialState?.product?.productDetail?.product || {};
-                    const rv = pp.reviewSummary || pp.initialState?.review?.reviewSummary || {};
-                    return {
-                        price: product.salePrice || product.discountedSalePrice || product.price || null,
-                        reviews: rv.totalReviewCount ?? rv.reviewCount ?? null,
-                        rating: rv.averageReviewScore ? parseFloat(rv.averageReviewScore) : null,
-                        likes: product.wish || product.wishCount || null,
-                    };
-                }
-            } catch(e) {}
-            // DOM 폴백
-            const priceEl = document.querySelector('._2BIhY2Ffcj, [class*="price"] em, [class*="salePrice"]');
-            const reviewEl = document.querySelector('[class*="reviewCount"], [class*="totalReviewCount"]');
-            const ratingEl = document.querySelector('[class*="averageScore"], [class*="ratingScore"]');
-            const likeEl = document.querySelector('[class*="wishCount"], [class*="likeCount"]');
-            return {
-                price: priceEl ? parseInt(priceEl.textContent.replace(/[^0-9]/g,'')) || null : null,
-                reviews: reviewEl ? parseInt(reviewEl.textContent.replace(/[^0-9]/g,'')) || null : null,
-                rating: ratingEl ? parseFloat(ratingEl.textContent) || null : null,
-                likes: likeEl ? parseInt(likeEl.textContent.replace(/[^0-9]/g,'')) || null : null,
-            };
-        }""")
-        return result
-    except Exception as e:
-        print(f"  네이버 스크래핑 오류 ({url}): {e}")
-    return None
+
+async def naver_rank_search(keyword: str, brand: str):
+    """네이버 쇼핑 검색 API로 순위·가격 조회 (httpx 사용)"""
+    url = f"https://search.shopping.naver.com/api/search?query={keyword}&sort=rel&pagingIndex=1&pagingSize=100&viewType=list&productSet=total"
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+        "Accept": "application/json, text/plain, */*",
+        "Accept-Language": "ko-KR,ko;q=0.9",
+        "Referer": f"https://search.shopping.naver.com/search/all?query={keyword}",
+        "Origin": "https://search.shopping.naver.com",
+    }
+    async with httpx.AsyncClient(timeout=20) as client:
+        res = await client.get(url, headers=headers)
+        if res.status_code != 200:
+            return None, None, None
+
+    data = res.json()
+    products = (data.get("shoppingResult") or data.get("result") or data).get("products", [])
+
+    brand_lower = brand.lower()
+    organic_rank = 0
+    for p in products:
+        is_ad = bool(p.get("adId") or p.get("isAd") or p.get("adProductId"))
+        if not is_ad:
+            organic_rank += 1
+        fields = [(p.get(f) or "").lower() for f in ["brand", "maker", "mallName", "storeName"]]
+        title = (p.get("productTitle") or p.get("title") or "").lower()
+
+        if brand_lower in ("오아", "oa"):
+            matched = any(ident in " ".join(fields + [title]) for ident in OA_IDENTIFIERS)
+        else:
+            matched = any(brand_lower in f for f in fields + [title])
+
+        if matched and not is_ad:
+            price = p.get("price") or p.get("lprice")
+            return organic_rank, int(price) if price else None, p.get("productTitle") or p.get("title")
+
+    return None, None, None
+
+
+async def scrape_naver(page, prod):
+    keyword = prod.get("keyword", "")
+    brand = prod.get("brand", prod.get("name", ""))
+    url = prod.get("url", "")
+
+    rank, price, matched_name = None, None, None
+
+    # 1) 키워드 있으면 순위·가격 HTTP 검색
+    if keyword:
+        try:
+            rank, price, matched_name = await naver_rank_search(keyword, brand)
+            print(f"  순위={rank}, 가격={price}, 매칭={matched_name}")
+        except Exception as e:
+            print(f"  네이버 순위 검색 오류: {e}")
+
+    # 2) 스마트스토어 URL 있으면 Playwright로 리뷰·별점 수집
+    reviews, rating, likes = None, None, None
+    if url:
+        try:
+            await page.goto(url, wait_until="domcontentloaded", timeout=30000)
+            await page.wait_for_timeout(3000)
+
+            result = await page.evaluate("""() => {
+                try {
+                    const nd = window.__NEXT_DATA__;
+                    if (nd) {
+                        const pp = nd?.props?.pageProps || {};
+                        const product = pp.product || pp.initialState?.product?.productDetail?.product || {};
+                        const rv = pp.reviewSummary || pp.initialState?.review?.reviewSummary || pp.initialState?.product?.reviewSummary || {};
+                        return {
+                            price: product.salePrice || product.discountedSalePrice || product.price || null,
+                            reviews: rv.totalReviewCount ?? rv.reviewCount ?? null,
+                            rating: rv.averageReviewScore ? parseFloat(rv.averageReviewScore) : null,
+                            likes: product.wish || product.wishCount || null,
+                        };
+                    }
+                } catch(e) {}
+                const reviewEl = document.querySelector('[class*="reviewCount"], [class*="totalReviewCount"]');
+                const ratingEl = document.querySelector('[class*="averageScore"], [class*="ratingScore"]');
+                return {
+                    price: null,
+                    reviews: reviewEl ? parseInt(reviewEl.textContent.replace(/[^0-9]/g,'')) || null : null,
+                    rating: ratingEl ? parseFloat(ratingEl.textContent) || null : null,
+                    likes: null,
+                };
+            }""")
+            if result:
+                reviews = result.get("reviews")
+                rating = result.get("rating")
+                likes = result.get("likes")
+                if not price and result.get("price"):
+                    price = result.get("price")
+        except Exception as e:
+            print(f"  네이버 스마트스토어 스크래핑 오류 ({url}): {e}")
+
+    if rank is None and price is None and reviews is None:
+        return None
+
+    return {"rank": rank, "price": price, "reviews": reviews, "rating": rating, "likes": likes}
 
 
 SCRAPERS = {
@@ -285,10 +362,17 @@ async def main():
     history = await load_history()
 
     async with async_playwright() as pw:
-        browser = await pw.chromium.launch(headless=True)
+        browser = await pw.chromium.launch(
+            headless=True,
+            args=["--no-sandbox", "--disable-blink-features=AutomationControlled"],
+        )
         context = await browser.new_context(
             user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
             locale="ko-KR",
+            viewport={"width": 1280, "height": 900},
+        )
+        await context.add_init_script(
+            "Object.defineProperty(navigator, 'webdriver', {get: () => undefined})"
         )
         page = await context.new_page()
 
@@ -310,12 +394,12 @@ async def main():
                     "reviews": data.get("reviews"),
                     "rating": data.get("rating"),
                     "likes": data.get("likes"),
-                    "rank": None,
+                    "rank": data.get("rank"),
                     "notes": "",
                     "auto": True,
                 }
                 history.append(entry)
-                print(f"  ✅ 가격={data.get('price')}, 리뷰={data.get('reviews')}, 별점={data.get('rating')}")
+                print(f"  ✅ 순위={data.get('rank')}, 가격={data.get('price')}, 리뷰={data.get('reviews')}, 별점={data.get('rating')}")
             else:
                 print(f"  ⚠️ 데이터 없음")
 
