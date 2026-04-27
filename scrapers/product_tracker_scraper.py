@@ -352,10 +352,15 @@ async def main():
     for p in products:
         print(f"  - [{p.get('platform')}] {p.get('name')} url={p.get('url','(없음)')[:60]}")
 
-    target = [p for p in products if p.get("platform") in PLAYWRIGHT_PLATFORMS and p.get("url")]
+    # 네이버는 키워드만 있어도 처리 가능 (URL 없어도 순위 검색), 나머지는 URL 필수
+    target = [
+        p for p in products
+        if (p.get("platform") == "naver" and p.get("keyword"))
+        or (p.get("platform") in PLAYWRIGHT_PLATFORMS and p.get("platform") != "naver" and p.get("url"))
+    ]
 
     if not target:
-        print("트래킹할 Playwright 제품이 없습니다. (URL이 있는 무신사/올리브영/지그재그/쿠팡/네이버 제품 필요)")
+        print("트래킹할 제품이 없습니다. (네이버: 키워드 필요 / 무신사 등: URL 필요)")
         return
 
     print(f"총 {len(target)}개 제품 트래킹 시작")
