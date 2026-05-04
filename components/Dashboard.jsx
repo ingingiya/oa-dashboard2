@@ -3013,14 +3013,14 @@ function ErpSection() {
               <table style={{width:"100%",borderCollapse:"collapse",fontSize:11,minWidth:540}}>
                 <thead>
                   <tr style={{background:C.bg}}>
-                    {["제품명","현재고","발주잔량","생산중","출하예정","운송중","원가"].map(h=>(
+                    {["제품명","현재고","생산중","운송중","발주잔량","출하예정","원가"].map(h=>(
                       <th key={h} style={{padding:"8px 12px",textAlign:h==="제품명"?"left":"right",
                         fontWeight:700,color:C.inkMid,borderBottom:`1px solid ${C.border}`,fontSize:10}}>{h}</th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
-                  {(stockData||[]).filter(r=>!/(케이블|케이스|집게|흡입봉|커버|헤드팁|헤드|필터세트|필터|뚜껑|청소솔|실리콘|브러쉬|브러시|부속|파우치|고무마개|노즐|테이프|세트|패들|팁|리무버링|충전거치대|에어리스마트거치대|그루프롤|헤어롤|네일젤제거비트|블레이드|충전기|진동클렌저-거치대|면도망|배터리)/i.test(r.name)).map((r,i)=>{
+                  {(stockData||[]).filter(r=>!/(케이블|케이스|집게|흡입봉|커버|헤드팁|헤드|필터세트|필터|뚜껑|청소솔|실리콘|브러쉬|브러시|부속|파우치|고무마개|노즐|테이프|세트|패들|팁|리무버링|충전거치대|에어리스마트거치대|그루프롤|헤어롤|네일젤제거비트|블레이드|충전기|진동클렌저-거치대|면도망|배터리)/i.test(r.name)).sort((a,b)=>(Number(a.stock_qty)||0)===0&&(Number(b.stock_qty)||0)!==0?1:(Number(a.stock_qty)||0)!==0&&(Number(b.stock_qty)||0)===0?-1:0).map((r,i)=>{
                     const stockNum = Number(r.stock_qty)||0;
                     const rowBg = stockNum===0 ? "#FEF2F2" : i%2===0 ? C.white : "#FAFAFA";
                     return (
@@ -3035,10 +3035,10 @@ function ErpSection() {
                           {stockNum.toLocaleString()}
                           {stockNum===0&&<div style={{fontSize:9,color:C.bad}}>품절</div>}
                         </td>
-                        <td style={{padding:"9px 12px",textAlign:"right",color:C.inkMid}}>{Number(r.order_pending||0).toLocaleString()}</td>
                         <td style={{padding:"9px 12px",textAlign:"right",color:C.inkMid}}>{Number(r.production_qty||0).toLocaleString()}</td>
-                        <td style={{padding:"9px 12px",textAlign:"right",color:C.inkMid}}>{Number(r.ship_qty||0).toLocaleString()}</td>
                         <td style={{padding:"9px 12px",textAlign:"right",color:C.inkMid}}>{Number(r.transport_qty||0).toLocaleString()}</td>
+                        <td style={{padding:"9px 12px",textAlign:"right",color:C.inkMid}}>{Number(r.order_pending||0).toLocaleString()}</td>
+                        <td style={{padding:"9px 12px",textAlign:"right",color:C.inkMid}}>{Number(r.ship_qty||0)>0?<span style={{border:`1px solid #3B82F6`,borderRadius:4,padding:"1px 5px",color:"#3B82F6",fontWeight:700}}>{Number(r.ship_qty||0).toLocaleString()}</span>:"—"}</td>
                         <td style={{padding:"9px 12px",textAlign:"right",color:C.inkMid}}>{r.cost>0?fmtW(Number(r.cost)):"-"}</td>
                       </tr>
                     );
