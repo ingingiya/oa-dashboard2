@@ -2536,24 +2536,41 @@ function ErpSection() {
   useEffect(() => {
     if (erpTab !== "stock") return;
     setStockLoading(true);
+    const today = new Date();
+    const d7 = new Date(today); d7.setDate(d7.getDate()-7);
+    const d7str = d7.toISOString().split('T')[0];
     Promise.all([
       fetch(`${SURL}/rest/v1/beauty_stock?select=name,model,cost,stock_qty,order_pending,production_qty,ship_qty,transport_qty,lead_days&order=name.asc`, {
         headers: { apikey: SKEY, Authorization: `Bearer ${SKEY}` }
       }).then(r => r.json()),
-      fetch(`${SURL}/rest/v1/coupang_avg?select=sku_name,avg_14d`, {
+      fetch(`${SURL}/rest/v1/coupang_avg?select=sku_name,avg_7d,coupang_stock`, {
         headers: { apikey: SKEY, Authorization: `Bearer ${SKEY}` }
       }).then(r => r.json()),
-    ]).then(([stock, coupang]) => {
-      const avgMap = {};
+      fetch(`${SURL}/rest/v1/beauty_sales?select=name,qty&date=gte.${d7str}&channel=neq.쿠팡&limit=10000`, {
+        headers: { apikey: SKEY, Authorization: `Bearer ${SKEY}` }
+      }).then(r => r.json()),
+    ]).then(([stock, coupang, sales]) => {
+      // 쿠팡 map
+      const coupangMap = {};
       (Array.isArray(coupang) ? coupang : []).forEach(c => {
-        avgMap[c.sku_name.replace(/\s/g,'')] = c.avg_14d;
+        coupangMap[c.sku_name.replace(/\s/g,'')] = { avg7: c.avg_7d||0, cStock: c.coupang_stock||0 };
+      });
+      // ERP 7일 평균 (쿠팡 제외)
+      const salesMap = {};
+      (Array.isArray(sales) ? sales : []).forEach(s => {
+        const k = (s.name||'').replace(/\s/g,'');
+        salesMap[k] = (salesMap[k]||0) + (Number(s.qty)||0);
       });
       const merged = (Array.isArray(stock) ? stock : []).map(r => {
         const key = r.name.replace(/\s/g,'');
-        const avg = avgMap[key] || 0;
-        const daysLeft = avg > 0 ? Math.floor(Number(r.stock_qty) / avg) : null;
+        const erpAvg7 = (salesMap[key]||0) / 7;
+        const cpData = coupangMap[key] || { avg7:0, cStock:0 };
+        const erpDays = erpAvg7 > 0 ? Math.floor(Number(r.stock_qty) / erpAvg7) : null;
+        const cpDays  = cpData.avg7 > 0 ? Math.floor(cpData.cStock / cpData.avg7) : null;
         const lead = Number(r.lead_days) || 0;
-        return { ...r, avg_14d: avg, days_left: daysLeft, need_order: daysLeft !== null && lead > 0 && daysLeft <= lead };
+        return { ...r, erp_avg7: erpAvg7, cp_avg7: cpData.avg7, coupang_stock: cpData.cStock,
+          erp_days: erpDays, cp_days: cpDays,
+          need_order: (erpDays!==null && lead>0 && erpDays<=lead) || (cpDays!==null && lead>0 && cpDays<=lead) };
       });
       setStockData(merged);
     }).catch(() => setStockData([]))
@@ -3040,14 +3057,14 @@ function ErpSection() {
               <table style={{width:"100%",borderCollapse:"collapse",fontSize:11,minWidth:540}}>
                 <thead>
                   <tr style={{background:C.bg}}>
-                    {["제품명","현재고","생산중","운송중","발주잔량","출하예정","소진예상","원가"].map(h=>(
+                    {["제품명","현재고","쿠팡재고","생산중","운송중","발주잔량","출하예정","소진(일반)","소진(쿠팡)","원가"].map(h=>(
                       <th key={h} style={{padding:"8px 12px",textAlign:h==="제품명"?"left":"right",
                         fontWeight:700,color:C.inkMid,borderBottom:`1px solid ${C.border}`,fontSize:10}}>{h}</th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
-                  {(stockData||[]).filter(r=>!/(케이블|케이스|집게|흡입봉|커버|헤드팁|헤드|필터세트|필터|뚜껑|청소솔|실리콘|브러쉬|브러시|부속|파우치|고무마개|노즐|테이프|세트|패들|팁|리무버링|충전거치대|에어리스마트거치대|그루프롤|헤어롤|네일젤제거비트|블레이드|충전기|진동클렌저-거치대|면도망|배터리|갈바닉클렌저-거치대|갈바닉-거치대)/i.test(r.name)).filter(r=>showZeroStock||(Number(r.stock_qty)||0)>0).sort((a,b)=>{
+                  {(stockData||[]).filter(r=>!/(케이블|케이스|집게|흡입봉|커버|헤드팁|헤드|필터세트|필터|뚜껑|청소솔|실리콘|브러쉬|브러시|부속|파우치|고무마개|노즐|테이프|세트|패들|팁|리무버링|충전거치대|에어리스마트거치대|그루프롤|헤어롤|네일젤제거비트|블레이드|충전기|진동클렌저-거치대|면도망|배터리|갈바닉클렌저-거치대|갈바닉-거치대|거치대스티커|화이트거치대)/i.test(r.name)&&!['ODRY-C00502'].includes(r.model)).filter(r=>showZeroStock||(Number(r.stock_qty)||0)>0).sort((a,b)=>{
                     const aq=Number(a.stock_qty)||0, bq=Number(b.stock_qty)||0;
                     if(stockSort==="stock_asc") return aq-bq;
                     if(stockSort==="stock_desc") return bq-aq;
@@ -3075,16 +3092,26 @@ function ErpSection() {
                           {stockNum.toLocaleString()}
                           {stockNum===0&&<div style={{fontSize:9,color:C.bad}}>품절</div>}
                         </td>
+                        <td style={{padding:"9px 12px",textAlign:"right",color:C.inkMid}}>
+                          {(r.coupang_stock||0)>0?<span style={{fontWeight:700,color:"#E85C2A"}}>{Number(r.coupang_stock).toLocaleString()}</span>:"—"}
+                        </td>
                         <td style={{padding:"9px 12px",textAlign:"right",color:C.inkMid}}>{Number(r.production_qty||0)>0?<span style={{border:`1px solid #F59E0B`,borderRadius:4,padding:"1px 5px",color:"#F59E0B",fontWeight:700}}>{Number(r.production_qty||0).toLocaleString()}</span>:"—"}</td>
                         <td style={{padding:"9px 12px",textAlign:"right",color:C.inkMid}}>{Number(r.transport_qty||0)>0?<span style={{border:`1px solid #8B5CF6`,borderRadius:4,padding:"1px 5px",color:"#8B5CF6",fontWeight:700}}>{Number(r.transport_qty||0).toLocaleString()}</span>:"—"}</td>
                         <td style={{padding:"9px 12px",textAlign:"right",color:C.inkMid}}>{Number(r.order_pending||0).toLocaleString()}</td>
                         <td style={{padding:"9px 12px",textAlign:"right",color:C.inkMid}}>{Number(r.ship_qty||0)>0?<span style={{border:`1px solid #3B82F6`,borderRadius:4,padding:"1px 5px",color:"#3B82F6",fontWeight:700}}>{Number(r.ship_qty||0).toLocaleString()}</span>:"—"}</td>
                         <td style={{padding:"9px 12px",textAlign:"right"}}
-                          title={r.days_left!==null?`재고 ${Number(r.stock_qty).toLocaleString()}개 ÷ 쿠팡 일평균 ${r.avg_14d?.toFixed(1)}개 = ${r.days_left}일${r.lead_days?` (생산 ${r.lead_days}일)`:''}`:''}>
-                          {r.days_left===null?<span style={{color:C.inkLt}}>—</span>:
-                           r.need_order?<span style={{border:`1px solid ${C.rose}`,borderRadius:4,padding:"1px 5px",color:C.rose,fontWeight:800}}>{r.days_left}일⚠️</span>:
-                           r.days_left<=30?<span style={{color:C.warn,fontWeight:700}}>{r.days_left}일</span>:
-                           <span style={{color:C.good}}>{r.days_left}일</span>}
+                          title={r.erp_days!==null?`ERP재고 ${Number(r.stock_qty).toLocaleString()}개 ÷ 일반채널 7일평균 ${r.erp_avg7?.toFixed(1)}개 = ${r.erp_days}일`:''}>
+                          {r.erp_days===null?<span style={{color:C.inkLt}}>—</span>:
+                           (r.lead_days>0&&r.erp_days<=r.lead_days)?<span style={{border:`1px solid ${C.rose}`,borderRadius:4,padding:"1px 5px",color:C.rose,fontWeight:800}}>{r.erp_days}일⚠️</span>:
+                           r.erp_days<=30?<span style={{color:C.warn,fontWeight:700}}>{r.erp_days}일</span>:
+                           <span style={{color:C.good}}>{r.erp_days}일</span>}
+                        </td>
+                        <td style={{padding:"9px 12px",textAlign:"right"}}
+                          title={r.cp_days!==null?`쿠팡재고 ${Number(r.coupang_stock).toLocaleString()}개 ÷ 쿠팡 7일평균 ${r.cp_avg7?.toFixed(1)}개 = ${r.cp_days}일`:''}>
+                          {r.cp_days===null?<span style={{color:C.inkLt}}>—</span>:
+                           (r.lead_days>0&&r.cp_days<=r.lead_days)?<span style={{border:`1px solid ${C.rose}`,borderRadius:4,padding:"1px 5px",color:C.rose,fontWeight:800}}>{r.cp_days}일⚠️</span>:
+                           r.cp_days<=30?<span style={{color:C.warn,fontWeight:700}}>{r.cp_days}일</span>:
+                           <span style={{color:"#E85C2A"}}>{r.cp_days}일</span>}
                         </td>
                         <td style={{padding:"9px 12px",textAlign:"right",color:C.inkMid}}>{r.cost>0?fmtW(Number(r.cost)):"-"}</td>
                       </tr>
