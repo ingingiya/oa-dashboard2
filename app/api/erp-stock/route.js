@@ -6,6 +6,7 @@ const SUPA_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLI
 
 export async function GET() {
   try {
+    console.log('[erp-stock] SUPA_URL:', SUPA_URL?.slice(0,40), 'KEY exists:', !!SUPA_KEY);
     const res = await fetch(
       `${SUPA_URL}/rest/v1/beauty_stock?select=name,model,cost,stock_qty,order_pending,production_qty,ship_qty,transport_qty&order=name.asc`,
       {
