@@ -3020,7 +3020,7 @@ function ErpSection() {
                   </tr>
                 </thead>
                 <tbody>
-                  {(stockData||[]).filter(r=>!/(케이블|헤드|실리콘|브러쉬|부속)/i.test(r.name)).map((r,i)=>{
+                  {(stockData||[]).filter(r=>!/(케이블|케이스|집게|흡입본|커버|헤드팁|헤드|필터세트|필터|뚜껑|청소솔|실리콘|브러쉬|부속|파우치)/i.test(r.name)).map((r,i)=>{
                     const stockNum = Number(r.stock_qty)||0;
                     const rowBg = stockNum===0 ? "#FEF2F2" : i%2===0 ? C.white : "#FAFAFA";
                     return (
