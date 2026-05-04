@@ -2423,7 +2423,8 @@ function ErpSection() {
   const [chanPresets,setChanPresets] = useState([]);
   const [stockData,  setStockData]  = useState(null);
   const [stockLoading, setStockLoading] = useState(false);
-  const [stockSort, setStockSort] = useState("danger");
+  const [stockSortCol, setStockSortCol] = useState(null);
+  const [stockSortDir, setStockSortDir] = useState('asc');
   const [showZeroStock, setShowZeroStock] = useState(false);
 
   const SURL = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -2567,8 +2568,10 @@ function ErpSection() {
         const erpDays = totalAvg7 > 0 ? Math.floor(Number(r.stock_qty) / totalAvg7) : null;
         const cpDays  = cpData.avg7 > 0 ? Math.floor(cpData.cStock / cpData.avg7) : null;
         const lead = Number(r.lead_days) || 0;
+        const totalStock = Number(r.stock_qty||0) + Number(r.production_qty||0) + Number(r.order_pending||0) + Number(r.transport_qty||0) + Number(r.ship_qty||0);
+        const totalDays = totalAvg7 > 0 ? Math.floor(totalStock / totalAvg7) : null;
         return { ...r, erp_avg7: erpAvg7, total_avg7: totalAvg7, cp_avg7: cpData.avg7||0, coupang_stock: cpData.cStock,
-          erp_days: erpDays, cp_days: cpDays,
+          erp_days: erpDays, cp_days: cpDays, total_days: totalDays, total_stock: totalStock,
           need_order: (erpDays!==null && lead>0 && erpDays<=lead) || (cpDays!==null && lead>0 && cpDays<=lead) };
       });
       setStockData(merged);
@@ -3042,12 +3045,7 @@ function ErpSection() {
             <button onClick={()=>setShowZeroStock(v=>!v)} style={{fontSize:11,border:`1px solid ${C.border}`,borderRadius:6,padding:"3px 8px",background:showZeroStock?C.blush:C.white,color:showZeroStock?C.rose:C.inkMid,cursor:"pointer"}}>
               {showZeroStock?"품절 숨기기":"품절 보기"}
             </button>
-            <select value={stockSort} onChange={e=>setStockSort(e.target.value)} style={{fontSize:11,border:`1px solid ${C.border}`,borderRadius:6,padding:"3px 8px",color:C.ink,background:C.white}}>
-              <option value="danger">재고위험순</option>
-              <option value="name">이름순</option>
-              <option value="stock_asc">재고 적은순</option>
-              <option value="stock_desc">재고 많은순</option>
-            </select>
+            <button onClick={()=>{setStockSortCol(null);setStockSortDir('asc');}} style={{fontSize:11,border:`1px solid ${C.border}`,borderRadius:6,padding:"3px 8px",background:!stockSortCol?C.blush:C.white,color:!stockSortCol?C.rose:C.inkMid,cursor:"pointer"}}>재고위험순</button>
             </div>
           </div>
           {stockLoading && <div style={{padding:"40px",textAlign:"center",color:C.inkLt,fontSize:12}}>⏳ 불러오는 중...</div>}
@@ -3056,26 +3054,27 @@ function ErpSection() {
               <table style={{width:"100%",borderCollapse:"collapse",fontSize:11,minWidth:540}}>
                 <thead>
                   <tr style={{background:C.bg}}>
-                    {["제품명","현재고","쿠팡재고","생산중","운송중","발주잔량","출하예정","소진(일반)","소진(쿠팡)","원가"].map(h=>(
-                      <th key={h} style={{padding:"8px 12px",textAlign:h==="제품명"?"left":"right",
-                        fontWeight:700,color:C.inkMid,borderBottom:`1px solid ${C.border}`,fontSize:10}}>{h}</th>
+                    {[["제품명",null],["현재고","stock"],["쿠팡재고","cp_stock"],["생산중",null],["운송중",null],["발주잔량",null],["출하예정",null],["소진(일반)","erp_days"],["소진(쿠팡)","cp_days"],["소진(전체재고)","total_days"],["원가","cost"]].map(([h,col])=>(
+                      <th key={h} onClick={col?()=>{if(stockSortCol===col)setStockSortDir(d=>d==='asc'?'desc':'asc');else{setStockSortCol(col);setStockSortDir('asc');}}:null}
+                        style={{padding:"8px 12px",textAlign:h==="제품명"?"left":"right",fontWeight:700,
+                          color:stockSortCol===col?C.rose:C.inkMid,borderBottom:`1px solid ${C.border}`,
+                          fontSize:10,cursor:col?"pointer":"default",userSelect:"none",whiteSpace:"nowrap"}}>
+                        {h}{col&&stockSortCol===col?(stockSortDir==='asc'?' ↑':' ↓'):col?' ↕':''}
+                      </th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
                   {(stockData||[]).filter(r=>!/(케이블|케이스|집게|흡입봉|커버|헤드팁|헤드|필터세트|필터|뚜껑|청소솔|실리콘|브러쉬|브러시|부속|파우치|고무마개|노즐|테이프|세트|패들|팁|리무버링|충전거치대|에어리스마트거치대|그루프롤|헤어롤|네일젤제거비트|블레이드|충전기|진동클렌저-거치대|면도망|배터리|갈바닉클렌저-거치대|갈바닉-거치대|거치대스티커|화이트거치대|에어리스마트-화이트-거치대)/i.test(r.name)&&!['ODRY-C00502'].includes(r.model)).filter(r=>showZeroStock||(Number(r.stock_qty)||0)>0).sort((a,b)=>{
                     const aq=Number(a.stock_qty)||0, bq=Number(b.stock_qty)||0;
-                    if(stockSort==="stock_asc") return aq-bq;
-                    if(stockSort==="stock_desc") return bq-aq;
-                    if(stockSort==="danger"){
-                      // 위험(>0,<50) → 주의(>=50,<100) → 정상 → 품절
-                      const rank=q=>q===0?3:q<50?0:q<100?1:2;
-                      return rank(aq)-rank(bq)||aq-bq;
+                    if(stockSortCol){
+                      const getVal=r=>stockSortCol==='stock'?Number(r.stock_qty)||0:stockSortCol==='cp_stock'?Number(r.coupang_stock)||0:stockSortCol==='erp_days'?(r.erp_days??9999):stockSortCol==='cp_days'?(r.cp_days??9999):stockSortCol==='total_days'?(r.total_days??9999):stockSortCol==='cost'?Number(r.cost)||0:0;
+                      const diff=getVal(a)-getVal(b);
+                      return stockSortDir==='asc'?diff:-diff;
                     }
-                    // 이름순: 재고0 하단
-                    if(aq===0&&bq!==0) return 1;
-                    if(aq!==0&&bq===0) return -1;
-                    return a.name.localeCompare(b.name,'ko');
+                    // 기본: 재고위험순
+                    const rank=q=>q===0?3:q<50?0:q<100?1:2;
+                    return rank(aq)-rank(bq)||aq-bq;
                   }).map((r,i)=>{
                     const stockNum = Number(r.stock_qty)||0;
                     const rowBg = stockNum===0 ? "#FEF2F2" : i%2===0 ? C.white : "#FAFAFA";
@@ -3111,6 +3110,13 @@ function ErpSection() {
                            (r.lead_days>0&&r.cp_days<=r.lead_days)?<span style={{border:`1px solid ${C.rose}`,borderRadius:4,padding:"1px 5px",color:C.rose,fontWeight:800}}>{r.cp_days}일⚠️</span>:
                            r.cp_days<=30?<span style={{color:C.warn,fontWeight:700}}>{r.cp_days}일</span>:
                            <span style={{color:"#E85C2A"}}>{r.cp_days}일</span>}
+                        </td>
+                        <td style={{padding:"9px 12px",textAlign:"right"}}
+                          title={r.total_days!==null?`총가용재고 ${Number(r.total_stock).toLocaleString()}개(현재고+생산중+발주+운송+출하) ÷ 전체 7일평균 ${r.total_avg7?.toFixed(1)}개 = ${r.total_days}일`:''}>
+                          {r.total_days===null?<span style={{color:C.inkLt}}>—</span>:
+                           (r.lead_days>0&&r.total_days<=r.lead_days)?<span style={{border:`1px solid ${C.rose}`,borderRadius:4,padding:"1px 5px",color:C.rose,fontWeight:800}}>{r.total_days}일⚠️</span>:
+                           r.total_days<=30?<span style={{color:C.warn,fontWeight:700}}>{r.total_days}일</span>:
+                           <span style={{color:C.good}}>{r.total_days}일</span>}
                         </td>
                         <td style={{padding:"9px 12px",textAlign:"right",color:C.inkMid}}>{r.cost>0?fmtW(Number(r.cost)):"-"}</td>
                       </tr>
