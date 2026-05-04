@@ -3020,7 +3020,7 @@ function ErpSection() {
                   </tr>
                 </thead>
                 <tbody>
-                  {(stockData||[]).map((r,i)=>{
+                  {(stockData||[]).filter(r=>!/(케이블|헤드|실리콘|브러쉬|부속)/i.test(r.name)).map((r,i)=>{
                     const stockNum = Number(r.stock_qty)||0;
                     const rowBg = stockNum===0 ? "#FEF2F2" : i%2===0 ? C.white : "#FAFAFA";
                     return (
