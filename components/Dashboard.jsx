@@ -2536,12 +2536,27 @@ function ErpSection() {
   useEffect(() => {
     if (erpTab !== "stock") return;
     setStockLoading(true);
-    fetch(`${SURL}/rest/v1/beauty_stock?select=name,model,cost,stock_qty,order_pending,production_qty,ship_qty,transport_qty&order=name.asc`, {
+    Promise.all([
+      fetch(`${SURL}/rest/v1/beauty_stock?select=name,model,cost,stock_qty,order_pending,production_qty,ship_qty,transport_qty,lead_days&order=name.asc`, {
         headers: { apikey: SKEY, Authorization: `Bearer ${SKEY}` }
-      })
-      .then(r => r.json())
-      .then(d => setStockData(Array.isArray(d) ? d : []))
-      .catch(() => setStockData([]))
+      }).then(r => r.json()),
+      fetch(`${SURL}/rest/v1/coupang_avg?select=sku_name,avg_14d`, {
+        headers: { apikey: SKEY, Authorization: `Bearer ${SKEY}` }
+      }).then(r => r.json()),
+    ]).then(([stock, coupang]) => {
+      const avgMap = {};
+      (Array.isArray(coupang) ? coupang : []).forEach(c => {
+        avgMap[c.sku_name.replace(/\s/g,'')] = c.avg_14d;
+      });
+      const merged = (Array.isArray(stock) ? stock : []).map(r => {
+        const key = r.name.replace(/\s/g,'');
+        const avg = avgMap[key] || 0;
+        const daysLeft = avg > 0 ? Math.floor(Number(r.stock_qty) / avg) : null;
+        const lead = Number(r.lead_days) || 0;
+        return { ...r, avg_14d: avg, days_left: daysLeft, need_order: daysLeft !== null && lead > 0 && daysLeft <= lead };
+      });
+      setStockData(merged);
+    }).catch(() => setStockData([]))
       .finally(() => setStockLoading(false));
   }, [erpTab]);
 
@@ -3025,7 +3040,7 @@ function ErpSection() {
               <table style={{width:"100%",borderCollapse:"collapse",fontSize:11,minWidth:540}}>
                 <thead>
                   <tr style={{background:C.bg}}>
-                    {["제품명","현재고","생산중","운송중","발주잔량","출하예정","원가"].map(h=>(
+                    {["제품명","현재고","생산중","운송중","발주잔량","출하예정","소진예상","원가"].map(h=>(
                       <th key={h} style={{padding:"8px 12px",textAlign:h==="제품명"?"left":"right",
                         fontWeight:700,color:C.inkMid,borderBottom:`1px solid ${C.border}`,fontSize:10}}>{h}</th>
                     ))}
@@ -3060,10 +3075,16 @@ function ErpSection() {
                           {stockNum.toLocaleString()}
                           {stockNum===0&&<div style={{fontSize:9,color:C.bad}}>품절</div>}
                         </td>
-                        <td style={{padding:"9px 12px",textAlign:"right",color:C.inkMid}}>{Number(r.production_qty||0).toLocaleString()}</td>
-                        <td style={{padding:"9px 12px",textAlign:"right",color:C.inkMid}}>{Number(r.transport_qty||0).toLocaleString()}</td>
+                        <td style={{padding:"9px 12px",textAlign:"right",color:C.inkMid}}>{Number(r.production_qty||0)>0?<span style={{border:`1px solid #F59E0B`,borderRadius:4,padding:"1px 5px",color:"#F59E0B",fontWeight:700}}>{Number(r.production_qty||0).toLocaleString()}</span>:"—"}</td>
+                        <td style={{padding:"9px 12px",textAlign:"right",color:C.inkMid}}>{Number(r.transport_qty||0)>0?<span style={{border:`1px solid #8B5CF6`,borderRadius:4,padding:"1px 5px",color:"#8B5CF6",fontWeight:700}}>{Number(r.transport_qty||0).toLocaleString()}</span>:"—"}</td>
                         <td style={{padding:"9px 12px",textAlign:"right",color:C.inkMid}}>{Number(r.order_pending||0).toLocaleString()}</td>
                         <td style={{padding:"9px 12px",textAlign:"right",color:C.inkMid}}>{Number(r.ship_qty||0)>0?<span style={{border:`1px solid #3B82F6`,borderRadius:4,padding:"1px 5px",color:"#3B82F6",fontWeight:700}}>{Number(r.ship_qty||0).toLocaleString()}</span>:"—"}</td>
+                        <td style={{padding:"9px 12px",textAlign:"right"}}>
+                          {r.days_left===null?<span style={{color:C.inkLt}}>—</span>:
+                           r.need_order?<span style={{border:`1px solid ${C.rose}`,borderRadius:4,padding:"1px 5px",color:C.rose,fontWeight:800}}>{r.days_left}일⚠️</span>:
+                           r.days_left<=30?<span style={{color:C.warn,fontWeight:700}}>{r.days_left}일</span>:
+                           <span style={{color:C.good}}>{r.days_left}일</span>}
+                        </td>
                         <td style={{padding:"9px 12px",textAlign:"right",color:C.inkMid}}>{r.cost>0?fmtW(Number(r.cost)):"-"}</td>
                       </tr>
                     );
