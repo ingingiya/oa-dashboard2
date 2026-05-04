@@ -61,6 +61,8 @@ async function scrapeNaverShopping(query) {
         isAd: !!(p.adId || p.isAd || p.adProductId),
         isCatalog,
         mallCount: null,
+        reviewCount: p.reviewCount != null ? parseInt(p.reviewCount) : null,
+        reviewScore: p.reviewScore != null ? parseFloat(p.reviewScore) : (p.starScore != null ? parseFloat(p.starScore) : null),
       });
     });
   }

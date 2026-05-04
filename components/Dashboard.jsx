@@ -44,7 +44,7 @@ function useSupabaseState(key, def) {
 }
 import {
   AreaChart, Area, BarChart, Bar, LineChart, Line,
-  XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell
+  XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell
 } from "recharts";
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -68,6 +68,1003 @@ const C = {
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 function MI({n, size=16, style={}}) {
   return <span className="material-symbols-outlined" style={{fontSize:size,lineHeight:1,verticalAlign:"middle",flexShrink:0,...style}}>{n}</span>;
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// ⭐ 네이버 리뷰 분석 (독립 컴포넌트)
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+const STAR_COLORS = { 1:"#ef4444", 2:"#f97316", 3:"#eab308", 4:"#84cc16", 5:"#22c55e" };
+
+const KO_STOPWORDS = new Set([
+  "이","가","은","는","을","를","의","에","에서","로","으로","와","과","도","만","하고","그리고","하지만","근데",
+  "그냥","진짜","정말","너무","좀","잘","더","다","것","거","게","건","제","저","내","이거","그거","이게","그게",
+  "있어요","없어요","같아요","했어요","해요","인데","이에요","예요","네요","아요","어요","어서","이라","라서",
+  "구요","고요","는데","은데","는지","으로","부터","까지","한테","에게","랑","이랑","하며","하면","하는","한","않","못",
+  "수","때","좀","막","뭔가","아주","매우","완전","약간","조금","그냥","일단","또","다시","이번","처음","나중",
+  "사용","구매","제품","상품","리뷰","후기","주문","배송","포장","색상","사이즈","옵션",
+  "정도","같은","다른","어떤","이런","그런","저런","어떻게","왜","뭐","어","아","네","헐","ㅋ","ㅠ","ㅎ",
+]);
+
+function extractKeywords(reviews, minLen=2) {
+  const freq = {};
+  for (const r of reviews) {
+    // 특수문자 제거 후 공백 분리
+    const tokens = r.content
+      .replace(/[^\uAC00-\uD7A3a-zA-Z0-9\s]/g, " ")
+      .split(/\s+/)
+      .map(t => t.trim())
+      .filter(t => t.length >= minLen && !KO_STOPWORDS.has(t) && !/^\d+$/.test(t));
+    const seen = new Set();
+    for (const t of tokens) {
+      if (!seen.has(t)) { freq[t] = (freq[t]||0)+1; seen.add(t); }
+    }
+  }
+  return Object.entries(freq)
+    .filter(([,c]) => c >= 2)
+    .sort((a,b) => b[1]-a[1])
+    .slice(0, 30)
+    .map(([word, count]) => ({ word, count }));
+}
+
+function NaverReviewSection() {
+  const [file, setFile] = useState(null);
+  const [rows, setRows] = useState([]);
+  const [products, setProducts] = useState([]); // 상품번호 목록
+  const [prodNames, setProdNames] = useState({}); // { [상품번호]: 상품명 }
+  const [selProd, setSelProd] = useState("");
+  const [analyzing, setAnalyzing] = useState(false);
+  const [kwTab, setKwTab] = useState("all"); // all | pos | neg
+  const [expandKw, setExpandKw] = useState(null); // 클릭한 키워드 원문 보기
+  const [parsing, setParsing] = useState(false);
+  const [resultMap, setResultMap] = useSupabaseState("oa_review_analysis_v1", {}); // { [상품번호]: result }
+  const [error, setError] = useState("");
+  const [dragOver, setDragOver] = useState(false);
+  const fileInputRef = useRef(null);
+
+  const result = resultMap[selProd] || null;
+
+  async function parseExcel(f) {
+    setError("");
+    setParsing(true);
+    try {
+      const XLSX = await import("xlsx");
+      const buf = await f.arrayBuffer();
+      const wb = XLSX.read(buf, { type: "array" });
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const data = XLSX.utils.sheet_to_json(ws, { defval: "" });
+      if (!data.length) { setError("시트가 비어 있어요."); setParsing(false); return; }
+
+      const keys = Object.keys(data[0]);
+      const find = (...cands) => keys.find(k => cands.some(c => k.includes(c))) || "";
+      const colProductId = find("상품번호","품번호","번호");
+      const colProductName = find("상품명","제품명","품명") || keys.find(k => k.includes("상품") && !k.includes("번호") && !k.includes("코드")) || "";
+      const colRating  = find("구매자평점","별점","평점","점수");
+      const colContent = find("리뷰상세내용","리뷰내용","리뷰 내용","내용","후기");
+      const colDate    = find("리뷰등록일","작성일","등록일","날짜");
+      const colPhoto   = find("포토/영상","포토","사진","이미지","photo","영상");
+
+      const parsed = data.map(r => {
+        const pid = colProductId ? String(r[colProductId]||"").trim() : "";
+        const pname = colProductName ? String(r[colProductName]||"").trim() : "";
+        return {
+          product: pid || pname || f.name.replace(/\.[^.]+$/,""), // 그룹핑 키 = 상품번호
+          productName: pname || pid || f.name.replace(/\.[^.]+$/,""), // 표시용 이름
+          rating:  colRating  ? Number(String(r[colRating]||"0").replace(/[^0-9.]/g,""))||0 : 0,
+          content: colContent ? String(r[colContent]||"").trim() : "",
+          date:    colDate    ? String(r[colDate]||"").trim() : "",
+          hasPhoto: colPhoto  ? String(r[colPhoto]||"").trim().length > 0 && String(r[colPhoto]||"").trim() !== "0" : false,
+        };
+      }).filter(r => r.content && r.content.length > 2);
+
+      if (!parsed.length) {
+        setError(`리뷰 내용 컬럼을 찾지 못했어요.\n감지된 컬럼: ${keys.join(", ")}`);
+        setParsing(false); return;
+      }
+
+      // 상품번호 → 상품명 맵 구성 (첫 번째 등장 기준)
+      const newNameMap = {};
+      parsed.forEach(r => { if (!newNameMap[r.product]) newNameMap[r.product] = r.productName; });
+      const newProds = Object.keys(newNameMap);
+
+      setRows(prev => {
+        const existingFiltered = prev.filter(r => !newProds.includes(r.product));
+        return [...existingFiltered, ...parsed];
+      });
+      setProducts(prev => [...new Set([...prev, ...newProds])]);
+      setProdNames(prev => ({ ...prev, ...newNameMap }));
+      setResultMap(prev => {
+        const next = { ...prev };
+        newProds.forEach(p => { delete next[p]; });
+        return next;
+      });
+      setSelProd(newProds[0]);
+    } catch(e) { setError("파싱 실패: " + e.message); }
+    setParsing(false);
+  }
+
+  function handleFile(f) { if (!f) return; setFile(f); parseExcel(f); }
+
+  function removeProduct(p) {
+    setRows(prev => prev.filter(r => r.product !== p));
+    setProducts(prev => {
+      const next = prev.filter(x => x !== p);
+      setSelProd(cur => cur === p ? (next[0] || "") : cur);
+      return next;
+    });
+    setResultMap(prev => { const n = {...prev}; delete n[p]; return n; });
+    setProdNames(prev => { const n = {...prev}; delete n[p]; return n; });
+  }
+
+  async function analyze() {
+    if (!rows.length) return;
+    setAnalyzing(true); setError("");
+    const prod = selProd;
+    const target = prod === "__all__" ? rows : rows.filter(r => r.product === prod);
+    try {
+      const res = await fetch("/api/review-analysis", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ product: prod, reviews: target }),
+      });
+      const data = await res.json();
+      if (data.error) setError(data.error);
+      else setResultMap(prev => ({ ...prev, [prod]: data }));
+    } catch(e) { setError(e.message); }
+    setAnalyzing(false);
+  }
+
+  const starDist = result?.starDist || {};
+  const total = result?.total || 0;
+
+  // 현재 선택 제품 필터링
+  const filteredRows = selProd === "__all__" ? rows : rows.filter(r => r.product === selProd);
+  const posRows = filteredRows.filter(r => r.rating >= 4);
+  const negRows = filteredRows.filter(r => r.rating <= 2);
+  const photoCount = filteredRows.filter(r => r.hasPhoto).length;
+
+  // 키워드 추출
+  const kwAll = extractKeywords(filteredRows);
+  const kwPos = extractKeywords(posRows);
+  const kwNeg = extractKeywords(negRows);
+  const kwData = kwTab==="pos" ? kwPos : kwTab==="neg" ? kwNeg : kwAll;
+  const kwMax = kwData[0]?.count || 1;
+
+  // 월별 리뷰 수
+  const monthMap = {};
+  for (const r of filteredRows) {
+    const m = r.date ? r.date.slice(0,7).replace(/\./g,"-").replace(/(\d{4})-(\d{1,2}).*/,"$1-$2").padEnd(7,"0") : "";
+    if (m && /^\d{4}-\d{2}$/.test(m)) monthMap[m] = (monthMap[m]||0)+1;
+  }
+  const allMonths = Object.keys(monthMap).sort();
+  const months = allMonths.slice(-6); // 최근 6개월 차트용
+  const monthMax = Math.max(...months.map(m=>monthMap[m]), 1);
+  const avgMonthly = allMonths.length > 0 ? Math.round(allMonths.reduce((s,m)=>s+monthMap[m],0)/allMonths.length) : 0;
+
+  return (
+    <div style={{display:"flex",flexDirection:"column",gap:16}}>
+      <div>
+        <div style={{fontSize:20,fontWeight:900,color:C.ink}}>리뷰 분석</div>
+        <div style={{fontSize:12,color:C.inkMid,marginTop:2}}>네이버 스마트스토어 리뷰 엑셀 업로드 → AI 자동 분석</div>
+      </div>
+
+      {/* 업로드 */}
+      <div
+        onDragOver={e=>{e.preventDefault();setDragOver(true);}}
+        onDragLeave={()=>setDragOver(false)}
+        onDrop={e=>{e.preventDefault();setDragOver(false);handleFile(e.dataTransfer.files[0]);}}
+        onClick={()=>fileInputRef.current?.click()}
+        style={{border:`2px dashed ${dragOver?C.rose:C.border}`,borderRadius:12,padding:"32px 0",textAlign:"center",cursor:"pointer",background:dragOver?"#fff5f5":C.cream}}
+      >
+        <input ref={fileInputRef} type="file" accept=".xlsx,.xls" style={{display:"none"}} onChange={e=>handleFile(e.target.files[0])}/>
+        <MI n="upload_file" size={32} style={{color:C.rose}}/>
+        <div style={{marginTop:8,fontSize:13,fontWeight:700,color:C.inkMid}}>
+          {parsing ? "⏳ 파일 읽는 중..." : products.length > 0 ? "+ 제품 추가 업로드 (엑셀)" : "엑셀 파일을 드래그하거나 클릭해서 업로드"}
+        </div>
+        {rows.length > 0 && <div style={{marginTop:4,fontSize:11,color:C.inkMid}}>총 {rows.length}개 리뷰 · {products.length}종 제품</div>}
+      </div>
+
+      {error && <div style={{background:"#fff5f5",border:"1px solid #fca5a5",borderRadius:8,padding:"10px 14px",fontSize:12,color:"#dc2626",whiteSpace:"pre-wrap"}}>{error}</div>}
+
+      {/* 제품 탭 */}
+      {products.length > 0 && (
+        <div style={{background:C.white,border:`1px solid ${C.border}`,borderRadius:12,overflow:"hidden"}}>
+          <div style={{padding:"10px 14px 0",borderBottom:`1px solid ${C.border}`,display:"flex",gap:2,flexWrap:"wrap",alignItems:"flex-end"}}>
+            {[...(products.length > 1 ? ["__all__"] : []), ...products].map(p=>{
+              const label = p === "__all__" ? "전체" : (prodNames[p] || p);
+              const cnt = p === "__all__" ? rows.length : rows.filter(r=>r.product===p).length;
+              const done = !!resultMap[p];
+              const active = selProd === p;
+              return (
+                <div key={p} style={{display:"flex",alignItems:"center",borderRadius:"8px 8px 0 0",border:`1px solid ${active?C.border:"transparent"}`,borderBottom:active?"1px solid #fff":"none",background:active?"#fff":"transparent",marginBottom:active?-1:0,overflow:"hidden"}}>
+                  <button onClick={()=>{setSelProd(p);setKwTab("all");setExpandKw(null);}}
+                    style={{padding:"7px 10px 7px 14px",background:"transparent",border:"none",color:active?C.ink:C.inkMid,fontSize:12,fontWeight:active?800:500,cursor:"pointer",fontFamily:"inherit",display:"flex",alignItems:"center",gap:5}}>
+                    {label}
+                    <span style={{fontSize:10,background:active?C.blush:"#f4f4f5",color:active?C.rose:C.inkLt,padding:"1px 6px",borderRadius:8,fontWeight:700}}>{cnt}</span>
+                    {done && <span style={{fontSize:10}}>✅</span>}
+                  </button>
+                  {p !== "__all__" && (
+                    <button onClick={e=>{e.stopPropagation();removeProduct(p);}}
+                      style={{padding:"0 8px 0 2px",background:"transparent",border:"none",color:C.inkLt,fontSize:13,cursor:"pointer",lineHeight:1,fontFamily:"inherit"}} title="삭제">×</button>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+          <div style={{padding:"12px 14px",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+            <span style={{fontSize:11,color:C.inkMid}}>
+              {selProd==="__all__"?"전체 제품 합산":(prodNames[selProd]||selProd)} · {filteredRows.length.toLocaleString()}개 리뷰
+            </span>
+            <button onClick={analyze} disabled={analyzing}
+              style={{padding:"7px 18px",borderRadius:8,border:"none",background:analyzing?"#e5e7eb":result?"#16a34a":C.rose,color:analyzing?"#9ca3af":"#fff",fontSize:12,fontWeight:800,cursor:analyzing?"not-allowed":"pointer",fontFamily:"inherit",display:"flex",alignItems:"center",gap:6}}>
+              {analyzing ? "⏳ 분석 중..." : result ? "✅ 재분석" : "✨ AI 분석하기"}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* 통계 카드 — 파일 로드 후 바로 표시 */}
+      {filteredRows.length > 0 && (
+        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(130px,1fr))",gap:10}}>
+          {[
+            {label:"전체 리뷰",value:filteredRows.length.toLocaleString()+"개",color:C.rose},
+            {label:"월평균 리뷰",value:`${avgMonthly.toLocaleString()}개/월`,color:"#0891b2"},
+            {label:"포토/영상 리뷰",value:`${photoCount.toLocaleString()}개 (${filteredRows.length?Math.round(photoCount/filteredRows.length*100):0}%)`,color:"#7c3aed"},
+            {label:"긍정 리뷰 (★4-5)",value:`${posRows.length.toLocaleString()}개 (${filteredRows.length?Math.round(posRows.length/filteredRows.length*100):0}%)`,color:"#16a34a"},
+            {label:"부정 리뷰 (★1-2)",value:`${negRows.length.toLocaleString()}개 (${filteredRows.length?Math.round(negRows.length/filteredRows.length*100):0}%)`,color:"#dc2626"},
+          ].map((s,i)=>(
+            <div key={i} style={{background:C.white,border:`1px solid ${C.border}`,borderRadius:10,padding:"12px 14px"}}>
+              <div style={{fontSize:10,color:C.inkMid,marginBottom:4}}>{s.label}</div>
+              <div style={{fontSize:15,fontWeight:900,color:s.color}}>{s.value}</div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* 월별 추이 */}
+      {months.length > 0 && (
+        <div style={{background:C.white,border:`1px solid ${C.border}`,borderRadius:12,padding:"16px 20px"}}>
+          <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:12}}>
+            <div style={{fontSize:13,fontWeight:800,color:C.ink}}>📅 월별 리뷰 작성 수</div>
+            <span style={{fontSize:11,color:"#0891b2",fontWeight:700,marginLeft:"auto"}}>월평균 {avgMonthly.toLocaleString()}개</span>
+          </div>
+          <div style={{display:"flex",gap:8,alignItems:"flex-end",height:90}}>
+            {months.map(m=>{
+              const cnt=monthMap[m], pct=Math.round(cnt/monthMax*100);
+              const isLatest = m === months[months.length-1];
+              return(
+                <div key={m} style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",gap:3}}>
+                  <span style={{fontSize:10,fontWeight:700,color:isLatest?C.rose:C.inkMid}}>{cnt}</span>
+                  <div style={{width:"100%",height:`${Math.max(pct,4)}%`,background:isLatest?C.rose:"#93c5fd",borderRadius:"4px 4px 0 0",minHeight:4}}/>
+                  <span style={{fontSize:9,color:isLatest?C.rose:C.inkMid,whiteSpace:"nowrap",fontWeight:isLatest?700:400}}>{m.slice(0,4).slice(2)}년 {m.slice(5)}월</span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* 키워드 빈도 */}
+      {filteredRows.length > 0 && (
+        <div style={{background:C.white,border:`1px solid ${C.border}`,borderRadius:12,padding:"16px 20px"}}>
+          <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:12}}>
+            <div style={{fontSize:13,fontWeight:800,color:C.ink}}>🔑 실제 언급 키워드</div>
+            <div style={{display:"flex",gap:4,marginLeft:"auto"}}>
+              {[{id:"all",label:"전체"},{id:"pos",label:"👍 긍정"},{id:"neg",label:"👎 부정"}].map(t=>(
+                <button key={t.id} onClick={()=>{setKwTab(t.id);setExpandKw(null);}}
+                  style={{padding:"3px 10px",borderRadius:12,border:`1px solid ${kwTab===t.id?C.rose:C.border}`,background:kwTab===t.id?C.blush:"#fff",color:kwTab===t.id?C.rose:C.inkMid,fontSize:10,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
+                  {t.label}
+                </button>
+              ))}
+            </div>
+          </div>
+          {kwData.length === 0 && <div style={{fontSize:12,color:C.inkMid}}>키워드 없음</div>}
+          <div style={{display:"flex",flexDirection:"column",gap:4}}>
+            {kwData.slice(0,20).map((kw,i)=>{
+              const pct = Math.round(kw.count/kwMax*100);
+              const isOpen = expandKw===kw.word;
+              const samples = filteredRows.filter(r=>r.content.includes(kw.word)).slice(0,5);
+              return(
+                <div key={i}>
+                  <div onClick={()=>setExpandKw(isOpen?null:kw.word)}
+                    style={{display:"flex",alignItems:"center",gap:8,cursor:"pointer",padding:"4px 0"}}>
+                    <span style={{width:18,fontSize:10,color:C.inkLt,textAlign:"right"}}>{i+1}</span>
+                    <span style={{width:80,fontSize:12,fontWeight:700,color:C.ink,flexShrink:0}}>{kw.word}</span>
+                    <div style={{flex:1,height:12,background:"#f3f4f6",borderRadius:6,overflow:"hidden"}}>
+                      <div style={{width:`${pct}%`,height:"100%",background:kwTab==="neg"?"#ef4444":kwTab==="pos"?"#22c55e":C.rose,borderRadius:6}}/>
+                    </div>
+                    <span style={{width:50,fontSize:11,fontWeight:700,color:C.inkMid,textAlign:"right"}}>{kw.count}건</span>
+                    <span style={{fontSize:10,color:C.inkLt}}>{isOpen?"▲":"▼"}</span>
+                  </div>
+                  {isOpen && (
+                    <div style={{marginLeft:26,marginBottom:6,display:"flex",flexDirection:"column",gap:4}}>
+                      {samples.map((r,j)=>(
+                        <div key={j} style={{background:C.cream,borderRadius:6,padding:"6px 10px",fontSize:11,color:C.ink,lineHeight:1.5}}>
+                          <span style={{color:STAR_COLORS[r.rating]||C.inkMid,fontWeight:700,marginRight:6}}>★{r.rating}</span>
+                          {r.date&&<span style={{fontSize:10,color:C.inkLt,marginRight:6}}>{r.date}</span>}
+                          {r.content.length>150?r.content.slice(0,150)+"…":r.content}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* AI 분석 결과 */}
+      {result && (
+        <div style={{display:"flex",flexDirection:"column",gap:14}}>
+          {/* 별점 분포 */}
+          <div style={{background:C.white,border:`1px solid ${C.border}`,borderRadius:12,padding:"16px 20px"}}>
+            <div style={{fontSize:13,fontWeight:800,color:C.ink,marginBottom:12}}>⭐ 별점 분포 <span style={{fontSize:11,fontWeight:400,color:C.inkMid}}>총 {total.toLocaleString()}개</span></div>
+            {[5,4,3,2,1].map(s=>{
+              const cnt=starDist[s]||0, pct=total>0?Math.round(cnt/total*100):0;
+              return(
+                <div key={s} style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
+                  <span style={{width:24,fontSize:11,fontWeight:700,color:STAR_COLORS[s],textAlign:"right"}}>★{s}</span>
+                  <div style={{flex:1,height:14,background:"#f3f4f6",borderRadius:7,overflow:"hidden"}}>
+                    <div style={{width:`${pct}%`,height:"100%",background:STAR_COLORS[s],borderRadius:7}}/>
+                  </div>
+                  <span style={{width:70,fontSize:11,color:C.inkMid}}>{cnt.toLocaleString()}개 ({pct}%)</span>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* 요약 */}
+          <div style={{background:"#eff6ff",border:"1px solid #bfdbfe",borderRadius:12,padding:"14px 18px",fontSize:12,color:"#1e40af",lineHeight:1.7}}>
+            💬 {result.analysis?.summary}
+          </div>
+
+          {/* 긍정/부정 */}
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
+            <div style={{background:C.white,border:`1px solid ${C.border}`,borderRadius:12,padding:"16px 18px"}}>
+              <div style={{fontSize:13,fontWeight:800,color:"#16a34a",marginBottom:10}}>👍 좋은 리뷰</div>
+              {(result.analysis?.positive||[]).map((p,i)=>(
+                <div key={i} style={{marginBottom:8,paddingBottom:8,borderBottom:i<(result.analysis.positive.length-1)?`1px solid ${C.border}`:"none"}}>
+                  <div style={{fontSize:12,fontWeight:700,color:C.ink}}>{p.title} <span style={{fontSize:10,color:"#16a34a",fontWeight:400}}>({p.count}건)</span></div>
+                  <div style={{fontSize:11,color:C.inkMid,marginTop:2,lineHeight:1.5}}>{p.desc}</div>
+                </div>
+              ))}
+              <div style={{marginTop:8,display:"flex",flexWrap:"wrap",gap:4}}>
+                {(result.analysis?.keywords?.positive||[]).map((k,i)=>(
+                  <span key={i} style={{fontSize:10,background:"#dcfce7",color:"#15803d",padding:"2px 8px",borderRadius:10,fontWeight:700}}>#{k}</span>
+                ))}
+              </div>
+            </div>
+            <div style={{background:C.white,border:`1px solid ${C.border}`,borderRadius:12,padding:"16px 18px"}}>
+              <div style={{fontSize:13,fontWeight:800,color:"#dc2626",marginBottom:10}}>👎 나쁜 리뷰</div>
+              {(result.analysis?.negative||[]).map((n,i)=>(
+                <div key={i} style={{marginBottom:8,paddingBottom:8,borderBottom:i<(result.analysis.negative.length-1)?`1px solid ${C.border}`:"none"}}>
+                  <div style={{fontSize:12,fontWeight:700,color:C.ink}}>{n.title} <span style={{fontSize:10,color:"#dc2626",fontWeight:400}}>({n.count}건)</span></div>
+                  <div style={{fontSize:11,color:C.inkMid,marginTop:2,lineHeight:1.5}}>{n.desc}</div>
+                </div>
+              ))}
+              <div style={{marginTop:8,display:"flex",flexWrap:"wrap",gap:4}}>
+                {(result.analysis?.keywords?.negative||[]).map((k,i)=>(
+                  <span key={i} style={{fontSize:10,background:"#fee2e2",color:"#dc2626",padding:"2px 8px",borderRadius:10,fontWeight:700}}>#{k}</span>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* 개선 제안 */}
+          <div style={{background:C.white,border:`1px solid ${C.border}`,borderRadius:12,padding:"16px 18px"}}>
+            <div style={{fontSize:13,fontWeight:800,color:"#7c3aed",marginBottom:10}}>💡 개선 제안</div>
+            {(result.analysis?.suggestions||[]).map((s,i)=>(
+              <div key={i} style={{display:"flex",gap:10,padding:"10px 12px",background:"#f5f3ff",borderRadius:8,alignItems:"flex-start",marginBottom:6}}>
+                <span style={{fontSize:16,flexShrink:0}}>{["🔧","📦","📝","🎯"][i]||"•"}</span>
+                <div>
+                  <div style={{fontSize:12,fontWeight:700,color:"#5b21b6"}}>{s.title}</div>
+                  <div style={{fontSize:11,color:C.inkMid,marginTop:2,lineHeight:1.5}}>{s.desc}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 📍 제품 트래킹 (독립 컴포넌트)
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+const PLATFORM_LABELS = { musinsa:"무신사", naver:"네이버", coupang:"쿠팡", oliveyoung:"올리브영", zigzag:"지그재그", unknown:"기타" };
+const PLATFORM_COLORS = { musinsa:"#93c5fd", naver:"#86efac", coupang:"#fde68a", oliveyoung:"#a7f3d0", zigzag:"#c4b5fd", unknown:"#e5e7eb" };
+
+function detectPlatformClient(url) {
+  if (url.includes('musinsa.com')) return 'musinsa';
+  if (url.includes('smartstore.naver.com') || url.includes('shopping.naver.com')) return 'naver';
+  if (url.includes('coupang.com')) return 'coupang';
+  if (url.includes('oliveyoung.co.kr')) return 'oliveyoung';
+  if (url.includes('zigzag.kr')) return 'zigzag';
+  return 'unknown';
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 📂 인플루언서 아카이브
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+const INF_CATS = ["공동구매", "뷰티릴스", "제품리뷰", "언박싱", "브이로그", "기타"];
+const INF_PLATFORMS = ["Instagram", "YouTube", "TikTok", "블로그", "기타"];
+const INF_STATUSES = ["잠재", "컨택예정", "컨택중", "협업완료", "보류"];
+const INF_STATUS_COLORS = { "잠재":"#e0f2fe", "컨택예정":"#fef9c3", "컨택중":"#dcfce7", "협업완료":"#ede9fe", "보류":"#fee2e2" };
+const INF_STATUS_TEXT   = { "잠재":"#0284c7", "컨택예정":"#854d0e", "컨택중":"#16a34a", "협업완료":"#7c3aed", "보류":"#dc2626" };
+
+function InfluencerArchiveSection() {
+  const [archive, setArchive] = useSupabaseState("oa_inf_archive_v1", []);
+  const [catFilter, setCatFilter] = useState("전체");
+  const [statusFilter, setStatusFilter] = useState("전체");
+  const [search, setSearch] = useState("");
+  const [modal, setModal] = useState(null); // null | {mode:"add"|"edit", item}
+  const [form, setForm] = useState({account:"",name:"",platform:"Instagram",profileUrl:"",followers:"",categories:[],status:"잠재",notes:""});
+  const [fetching, setFetching] = useState(false);
+  const [fetchError, setFetchError] = useState("");
+
+  const items = Array.isArray(archive) ? archive : [];
+
+  const filtered = items.filter(p => {
+    if (catFilter !== "전체" && !(p.categories||[]).includes(catFilter)) return false;
+    if (statusFilter !== "전체" && p.status !== statusFilter) return false;
+    if (search && !`${p.account}${p.name}${p.notes}`.toLowerCase().includes(search.toLowerCase())) return false;
+    return true;
+  });
+
+  function openAdd() {
+    setForm({account:"",name:"",platform:"Instagram",profileUrl:"",followers:"",categories:[],status:"잠재",notes:""});
+    setFetchError("");
+    setModal({mode:"add"});
+  }
+  function openEdit(item) {
+    setForm({...item, followers: item.followers ?? ""});
+    setFetchError("");
+    setModal({mode:"edit", item});
+  }
+  function saveItem() {
+    const entry = {
+      ...form,
+      followers: form.followers !== "" ? Number(String(form.followers).replace(/,/g,"")) || null : null,
+      addedAt: modal.item?.addedAt || new Date().toISOString().slice(0,10),
+      id: modal.item?.id || Date.now().toString(),
+    };
+    if (modal.mode === "add") setArchive([...items, entry]);
+    else setArchive(items.map(x => x.id === entry.id ? entry : x));
+    setModal(null);
+  }
+  function deleteItem(id) {
+    if (!confirm("삭제할까요?")) return;
+    setArchive(items.filter(x => x.id !== id));
+  }
+  function toggleCat(cat) {
+    setForm(f => ({...f, categories: f.categories.includes(cat) ? f.categories.filter(c=>c!==cat) : [...f.categories, cat]}));
+  }
+
+  async function fetchFromUrl() {
+    const url = form.profileUrl.trim();
+    if (!url) return;
+    setFetching(true); setFetchError("");
+    try {
+      // Instagram 프로필 URL에서 username 추출
+      const igMatch = url.match(/instagram\.com\/([^/?#]+)/);
+      if (igMatch) {
+        const username = igMatch[1].replace(/^@/,"");
+        const res = await fetch("/api/apify", {
+          method: "POST",
+          headers: {"Content-Type":"application/json"},
+          body: JSON.stringify({mode:"profile_url", username}),
+        });
+        const data = await res.json();
+        if (data.profile) {
+          setForm(f => ({
+            ...f,
+            account: "@" + (data.profile.username || username),
+            name: data.profile.fullName || f.name,
+            followers: data.profile.followers || f.followers,
+          }));
+        } else {
+          setFetchError("자동 조회 실패 — 직접 입력하세요");
+        }
+      } else {
+        setFetchError("Instagram URL만 자동 조회 가능");
+      }
+    } catch(e) { setFetchError(e.message); }
+    setFetching(false);
+  }
+
+  const fmtFollowers = n => n == null ? "" : n >= 1000000 ? (n/1000000).toFixed(1)+"M" : n >= 1000 ? (n/1000).toFixed(0)+"K" : String(n);
+
+  return (
+    <div style={{display:"flex",flexDirection:"column",gap:14}}>
+      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:8}}>
+        <div>
+          <div style={{fontSize:20,fontWeight:900,color:C.ink}}>인플루언서 아카이브</div>
+          <div style={{fontSize:12,color:C.inkMid,marginTop:2}}>공동구매·뷰티릴스·협업 후보 인플루언서를 분류·저장합니다</div>
+        </div>
+        <button onClick={openAdd} style={{padding:"8px 18px",borderRadius:9,border:"none",background:C.rose,color:"#fff",fontSize:13,fontWeight:800,cursor:"pointer",fontFamily:"inherit"}}>
+          + 추가
+        </button>
+      </div>
+
+      {/* 필터 바 */}
+      <div style={{display:"flex",gap:8,flexWrap:"wrap",alignItems:"center"}}>
+        <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="🔍 검색..." style={{padding:"6px 12px",borderRadius:8,border:`1px solid ${C.border}`,fontSize:12,fontFamily:"inherit",outline:"none",width:160}}/>
+        <div style={{display:"flex",gap:4,flexWrap:"wrap"}}>
+          {["전체",...INF_CATS].map(c=>(
+            <button key={c} onClick={()=>setCatFilter(c)} style={{padding:"4px 12px",borderRadius:20,border:"none",background:catFilter===c?C.rose:"#e5e7eb",color:catFilter===c?"#fff":C.inkMid,fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>{c}</button>
+          ))}
+        </div>
+        <div style={{display:"flex",gap:4,flexWrap:"wrap"}}>
+          {["전체",...INF_STATUSES].map(s=>(
+            <button key={s} onClick={()=>setStatusFilter(s)} style={{padding:"4px 12px",borderRadius:20,border:"none",background:statusFilter===s?"#374151":"#e5e7eb",color:statusFilter===s?"#fff":C.inkMid,fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>{s}</button>
+          ))}
+        </div>
+      </div>
+
+      {/* 카드 그리드 */}
+      {filtered.length === 0 ? (
+        <div style={{background:C.white,border:`1px solid ${C.border}`,borderRadius:12,padding:"48px 0",textAlign:"center",color:C.inkLt,fontSize:13}}>
+          {items.length === 0 ? "아직 저장된 인플루언서가 없어요. + 추가 버튼으로 시작하세요." : "조건에 맞는 인플루언서가 없어요."}
+        </div>
+      ) : (
+        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(280px,1fr))",gap:12}}>
+          {filtered.map(p => (
+            <div key={p.id} style={{background:C.white,border:`1px solid ${C.border}`,borderRadius:12,padding:"14px 16px",display:"flex",flexDirection:"column",gap:8}}>
+              <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",gap:8}}>
+                <div style={{flex:1,minWidth:0}}>
+                  <div style={{fontSize:14,fontWeight:800,color:C.ink,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.account||p.name||"(이름없음)"}</div>
+                  {p.name && p.account && <div style={{fontSize:11,color:C.inkMid}}>{p.name}</div>}
+                </div>
+                <span style={{fontSize:10,background:INF_STATUS_COLORS[p.status]||"#f3f4f6",color:INF_STATUS_TEXT[p.status]||C.inkMid,padding:"2px 8px",borderRadius:10,fontWeight:700,whiteSpace:"nowrap"}}>{p.status}</span>
+              </div>
+              <div style={{display:"flex",alignItems:"center",gap:8,fontSize:11,color:C.inkMid}}>
+                <span style={{fontWeight:700,color:C.ink}}>{p.platform}</span>
+                {p.followers && <span>👥 {fmtFollowers(p.followers)}</span>}
+                {p.profileUrl && <a href={p.profileUrl} target="_blank" rel="noreferrer" style={{color:C.rose,textDecoration:"none",marginLeft:"auto"}}><MI n="open_in_new" size={13}/></a>}
+              </div>
+              {(p.categories||[]).length > 0 && (
+                <div style={{display:"flex",gap:4,flexWrap:"wrap"}}>
+                  {p.categories.map(c=><span key={c} style={{fontSize:10,background:"#eff6ff",color:"#2563eb",padding:"2px 8px",borderRadius:10,fontWeight:700}}>#{c}</span>)}
+                </div>
+              )}
+              {p.notes && <div style={{fontSize:11,color:C.inkMid,borderTop:`1px solid ${C.border}`,paddingTop:6}}>{p.notes}</div>}
+              <div style={{display:"flex",gap:6,marginTop:2}}>
+                <button onClick={()=>openEdit(p)} style={{flex:1,padding:"5px 0",borderRadius:7,border:`1px solid ${C.border}`,background:C.white,color:C.ink,fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>편집</button>
+                <button onClick={()=>deleteItem(p.id)} style={{padding:"5px 10px",borderRadius:7,border:"none",background:"#fee2e2",color:"#dc2626",fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>삭제</button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* 추가/편집 모달 */}
+      {modal && (
+        <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.4)",zIndex:9000,display:"flex",alignItems:"center",justifyContent:"center",padding:16}} onClick={()=>setModal(null)}>
+          <div style={{background:C.white,borderRadius:16,padding:24,width:"100%",maxWidth:480,display:"flex",flexDirection:"column",gap:14,maxHeight:"90vh",overflowY:"auto"}} onClick={e=>e.stopPropagation()}>
+            <div style={{fontSize:16,fontWeight:900,color:C.ink}}>{modal.mode==="add"?"인플루언서 추가":"인플루언서 편집"}</div>
+
+            {/* URL 자동 조회 */}
+            <div>
+              <div style={{fontSize:11,color:C.inkMid,marginBottom:4,fontWeight:700}}>프로필/릴스 URL <span style={{color:C.inkLt}}>(붙여넣으면 자동 조회)</span></div>
+              <div style={{display:"flex",gap:6}}>
+                <input value={form.profileUrl} onChange={e=>setForm(f=>({...f,profileUrl:e.target.value}))} placeholder="https://www.instagram.com/..." style={{flex:1,padding:"7px 10px",border:`1px solid ${C.border}`,borderRadius:7,fontSize:12,fontFamily:"inherit"}}/>
+                <button onClick={fetchFromUrl} disabled={fetching||!form.profileUrl.trim()} style={{padding:"7px 14px",borderRadius:7,border:"none",background:fetching?"#e5e7eb":C.rose,color:fetching?"#9ca3af":"#fff",fontSize:11,fontWeight:800,cursor:fetching?"not-allowed":"pointer",fontFamily:"inherit",whiteSpace:"nowrap"}}>
+                  {fetching?"조회중...":"조회"}
+                </button>
+              </div>
+              {fetchError && <div style={{fontSize:11,color:C.warn,marginTop:4}}>{fetchError}</div>}
+            </div>
+
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+              <div>
+                <div style={{fontSize:11,color:C.inkMid,marginBottom:4,fontWeight:700}}>계정명</div>
+                <input value={form.account} onChange={e=>setForm(f=>({...f,account:e.target.value}))} placeholder="@username" style={{width:"100%",padding:"7px 10px",border:`1px solid ${C.border}`,borderRadius:7,fontSize:12,fontFamily:"inherit",boxSizing:"border-box"}}/>
+              </div>
+              <div>
+                <div style={{fontSize:11,color:C.inkMid,marginBottom:4,fontWeight:700}}>이름</div>
+                <input value={form.name} onChange={e=>setForm(f=>({...f,name:e.target.value}))} placeholder="김OO" style={{width:"100%",padding:"7px 10px",border:`1px solid ${C.border}`,borderRadius:7,fontSize:12,fontFamily:"inherit",boxSizing:"border-box"}}/>
+              </div>
+            </div>
+
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+              <div>
+                <div style={{fontSize:11,color:C.inkMid,marginBottom:4,fontWeight:700}}>플랫폼</div>
+                <select value={form.platform} onChange={e=>setForm(f=>({...f,platform:e.target.value}))} style={{width:"100%",padding:"7px 10px",border:`1px solid ${C.border}`,borderRadius:7,fontSize:12,fontFamily:"inherit"}}>
+                  {INF_PLATFORMS.map(p=><option key={p}>{p}</option>)}
+                </select>
+              </div>
+              <div>
+                <div style={{fontSize:11,color:C.inkMid,marginBottom:4,fontWeight:700}}>팔로워</div>
+                <input value={form.followers} onChange={e=>setForm(f=>({...f,followers:e.target.value}))} placeholder="50000" style={{width:"100%",padding:"7px 10px",border:`1px solid ${C.border}`,borderRadius:7,fontSize:12,fontFamily:"inherit",boxSizing:"border-box"}}/>
+              </div>
+            </div>
+
+            <div>
+              <div style={{fontSize:11,color:C.inkMid,marginBottom:6,fontWeight:700}}>카테고리 <span style={{color:C.inkLt}}>(복수 선택)</span></div>
+              <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+                {INF_CATS.map(c=>(
+                  <button key={c} onClick={()=>toggleCat(c)} style={{padding:"4px 12px",borderRadius:20,border:`1px solid ${form.categories.includes(c)?C.rose:C.border}`,background:form.categories.includes(c)?"#eff6ff":"#fff",color:form.categories.includes(c)?"#2563eb":C.inkMid,fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>{c}</button>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <div style={{fontSize:11,color:C.inkMid,marginBottom:4,fontWeight:700}}>상태</div>
+              <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+                {INF_STATUSES.map(s=>(
+                  <button key={s} onClick={()=>setForm(f=>({...f,status:s}))} style={{padding:"4px 12px",borderRadius:20,border:"none",background:form.status===s?(INF_STATUS_COLORS[s]||"#e5e7eb"):"#e5e7eb",color:form.status===s?(INF_STATUS_TEXT[s]||C.ink):C.inkMid,fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>{s}</button>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <div style={{fontSize:11,color:C.inkMid,marginBottom:4,fontWeight:700}}>메모</div>
+              <textarea value={form.notes} onChange={e=>setForm(f=>({...f,notes:e.target.value}))} placeholder="릴스 퀄리티 좋음, 뷰티 전문, 공동구매 의향 있음..." rows={3} style={{width:"100%",padding:"7px 10px",border:`1px solid ${C.border}`,borderRadius:7,fontSize:12,fontFamily:"inherit",resize:"vertical",boxSizing:"border-box"}}/>
+            </div>
+
+            <div style={{display:"flex",gap:8}}>
+              <button onClick={saveItem} disabled={!form.account.trim()&&!form.name.trim()} style={{flex:1,padding:"10px",borderRadius:9,border:"none",background:C.rose,color:"#fff",fontSize:13,fontWeight:800,cursor:"pointer",fontFamily:"inherit"}}>저장</button>
+              <button onClick={()=>setModal(null)} style={{flex:1,padding:"10px",borderRadius:9,border:`1px solid ${C.border}`,background:C.white,color:C.ink,fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>취소</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ProductTrackerSection() {
+  const [trackedProducts, setTrackedProducts] = useSupabaseState("oa_tracked_products_v1", []);
+  const [trackedHistory, setTrackedHistory] = useSupabaseState("oa_tracked_history_v1", []);
+  const [selProduct, setSelProduct] = useState(null);
+  // 추가 폼
+  const [addPlatform, setAddPlatform] = useState("naver");
+  const [addUrl, setAddUrl] = useState("");
+  const [addName, setAddName] = useState("");
+  const [addKeyword, setAddKeyword] = useState(""); // 네이버 검색 키워드
+  const [addBrand, setAddBrand] = useState("");     // 네이버 브랜드/제품 식별어
+  const [fetching, setFetching] = useState(null);
+  const [manualEntry, setManualEntry] = useState(null);
+  const [error, setError] = useState("");
+
+  const products = Array.isArray(trackedProducts) ? trackedProducts : [];
+  const history = Array.isArray(trackedHistory) ? trackedHistory : [];
+
+  function addProduct() {
+    if (addPlatform === "naver") {
+      if (!addKeyword.trim() || !addName.trim()) return;
+      const newProd = { id: Date.now().toString(), name: addName.trim(), platform: "naver", keyword: addKeyword.trim(), brand: addBrand.trim() || addName.trim(), url: addUrl.trim(), createdAt: new Date().toISOString() };
+      setTrackedProducts([...products, newProd]);
+      setAddName(""); setAddKeyword(""); setAddBrand(""); setAddUrl("");
+      setSelProduct(newProd.id);
+    } else {
+      if (!addUrl.trim()) return;
+      const platform = detectPlatformClient(addUrl.trim()) !== "unknown" ? detectPlatformClient(addUrl.trim()) : addPlatform;
+      const newProd = { id: Date.now().toString(), name: addName.trim() || addUrl.trim(), url: addUrl.trim(), platform, createdAt: new Date().toISOString() };
+      setTrackedProducts([...products, newProd]);
+      setAddUrl(""); setAddName("");
+      setSelProduct(newProd.id);
+    }
+  }
+
+  function removeProduct(id) {
+    setTrackedProducts(products.filter(p => p.id !== id));
+    setTrackedHistory(history.filter(h => h.productId !== id));
+    if (selProduct === id) setSelProduct(null);
+  }
+
+  async function fetchNow(prod) {
+    setFetching(prod.id); setError("");
+    try {
+      let entry = { id: Date.now().toString(), productId: prod.id, date: new Date().toISOString().slice(0,10), price: null, reviews: null, rating: null, likes: null, rank: null, notes: "", auto: true };
+
+      if (prod.platform === "naver") {
+        // 네이버: 키워드 검색으로 순위 조회
+        const res = await fetch(`/api/naver-rank?query=${encodeURIComponent(prod.keyword||"")}&brand=${encodeURIComponent(prod.brand||prod.name||"")}`);
+        const text = await res.text();
+        let data;
+        try { data = JSON.parse(text); } catch(e) { setError("응답 파싱 실패: " + text.slice(0,100)); setFetching(null); return; }
+        if (data.error) { setError(String(data.error)); setFetching(null); return; }
+        entry.rank = (data.rank != null && !isNaN(Number(data.rank))) ? Number(data.rank) : null;
+        entry.notes = data.matchedProduct ? `"${data.matchedProduct}" (${data.matchedMall||""})` : (data.rank ? "" : "순위권 외");
+        // 가격: 매칭된 아이템에서 추출
+        const matchedItem = (data.topItems||[]).find(i => i.isTarget && !i.isAd);
+        if (matchedItem?.lprice) entry.price = matchedItem.lprice;
+        // 리뷰/별점: 스마트스토어 URL 있으면 내부 API로 수집
+        if (prod.url) {
+          try {
+            const r2 = await fetch("/api/track-product", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ url: prod.url }) });
+            const d2 = await r2.json();
+            if (!d2.error) { entry.reviews = d2.reviews ?? null; entry.rating = d2.rating ?? null; }
+          } catch(_) {}
+        }
+      } else {
+        // 무신사/쿠팡 등: URL로 데이터 수집
+        const res = await fetch("/api/track-product", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ url: prod.url }) });
+        const data = await res.json();
+        if (data.error) { setError(data.error); setFetching(null); return; }
+        entry.price = data.price ?? null;
+        entry.reviews = data.reviews ?? null;
+        entry.rating = data.rating ?? null;
+        entry.likes = data.likes ?? null;
+      }
+
+      setTrackedHistory([...history, entry]);
+    } catch(e) { setError(e.message); }
+    setFetching(null);
+  }
+
+  function saveManual() {
+    if (!manualEntry) return;
+    const entry = {
+      id: Date.now().toString(),
+      productId: manualEntry.productId,
+      date: manualEntry.date || new Date().toISOString().slice(0,10),
+      price: manualEntry.price ? parseInt(String(manualEntry.price).replace(/,/g,'')) : null,
+      reviews: manualEntry.reviews ? parseInt(String(manualEntry.reviews).replace(/,/g,'')) : null,
+      rating: manualEntry.rating ? parseFloat(manualEntry.rating) : null,
+      likes: manualEntry.likes ? parseInt(String(manualEntry.likes).replace(/,/g,'')) : null,
+      rank: manualEntry.rank ? parseInt(manualEntry.rank) : null,
+      notes: manualEntry.notes || "",
+      auto: false,
+    };
+    setTrackedHistory([...history, entry]);
+    setManualEntry(null);
+  }
+
+  function deleteEntry(id) {
+    setTrackedHistory(history.filter(h => h.id !== id));
+  }
+
+  const selProd = products.find(p => p.id === selProduct);
+  const selHistory = history.filter(h => h.productId === selProduct).sort((a,b) => a.date > b.date ? 1 : -1);
+
+  // 차트 데이터 (가격, 순위, 리뷰)
+  const chartData = selHistory.map(h => ({
+    date: h.date,
+    price: h.price,
+    rank: h.rank,
+    reviews: h.reviews,
+    rating: h.rating,
+  }));
+
+  return (
+    <div style={{display:"flex",flexDirection:"column",gap:16}}>
+      <div>
+        <div style={{fontSize:20,fontWeight:900,color:C.ink}}>제품 트래킹</div>
+        <div style={{fontSize:12,color:C.inkMid,marginTop:2}}>특정 제품의 날짜별 순위·가격·리뷰 변화를 기록합니다</div>
+      </div>
+
+      {/* 제품 추가 */}
+      <div style={{background:C.white,border:`1px solid ${C.border}`,borderRadius:12,padding:"14px 16px",display:"flex",flexDirection:"column",gap:10}}>
+        {/* 플랫폼 선택 */}
+        <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+          {[{id:"naver",label:"🔍 네이버"},{id:"musinsa",label:"👟 무신사"},{id:"coupang",label:"📦 쿠팡"},{id:"oliveyoung",label:"🌿 올리브영"},{id:"zigzag",label:"👗 지그재그"}].map(p=>(
+            <button key={p.id} onClick={()=>setAddPlatform(p.id)}
+              style={{padding:"4px 12px",borderRadius:16,border:`1.5px solid ${addPlatform===p.id?C.rose:C.border}`,background:addPlatform===p.id?C.blush:"#fff",color:addPlatform===p.id?C.rose:C.inkMid,fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
+              {p.label}
+            </button>
+          ))}
+        </div>
+        <div style={{display:"flex",gap:8,flexWrap:"wrap",alignItems:"flex-end"}}>
+          {addPlatform === "naver" ? (<>
+            <div style={{flex:1,minWidth:120}}>
+              <div style={{fontSize:10,color:C.inkMid,marginBottom:4,fontWeight:700}}>제품명</div>
+              <input value={addName} onChange={e=>setAddName(e.target.value)} placeholder="예: 소닉플로우 드라이기"
+                style={{width:"100%",padding:"7px 10px",border:`1px solid ${C.border}`,borderRadius:7,fontSize:12,fontFamily:"inherit",boxSizing:"border-box"}}/>
+            </div>
+            <div style={{flex:1,minWidth:130}}>
+              <div style={{fontSize:10,color:C.inkMid,marginBottom:4,fontWeight:700}}>검색 키워드</div>
+              <input value={addKeyword} onChange={e=>setAddKeyword(e.target.value)} placeholder="예: 헤어드라이기"
+                style={{width:"100%",padding:"7px 10px",border:`1px solid ${C.border}`,borderRadius:7,fontSize:12,fontFamily:"inherit",boxSizing:"border-box"}}/>
+            </div>
+            <div style={{flex:1,minWidth:120}}>
+              <div style={{fontSize:10,color:C.inkMid,marginBottom:4,fontWeight:700}}>식별 키워드 (브랜드/제품명)</div>
+              <input value={addBrand} onChange={e=>setAddBrand(e.target.value)} placeholder="예: 소닉플로우"
+                style={{width:"100%",padding:"7px 10px",border:`1px solid ${C.border}`,borderRadius:7,fontSize:12,fontFamily:"inherit",boxSizing:"border-box"}}/>
+            </div>
+            <div style={{flex:2,minWidth:160}}>
+              <div style={{fontSize:10,color:C.inkMid,marginBottom:4,fontWeight:700}}>스마트스토어 URL <span style={{color:C.inkLt}}>(선택 · 리뷰/별점 수집용)</span></div>
+              <input value={addUrl} onChange={e=>setAddUrl(e.target.value)} placeholder="https://smartstore.naver.com/..."
+                style={{width:"100%",padding:"7px 10px",border:`1px solid ${C.border}`,borderRadius:7,fontSize:12,fontFamily:"inherit",boxSizing:"border-box"}}
+                onKeyDown={e=>e.key==="Enter"&&addProduct()}/>
+            </div>
+          </>) : (<>
+            <div style={{flex:2,minWidth:200}}>
+              <div style={{fontSize:10,color:C.inkMid,marginBottom:4,fontWeight:700}}>제품 URL</div>
+              <input value={addUrl} onChange={e=>setAddUrl(e.target.value)} placeholder={`https://www.${addPlatform}.com/...`}
+                style={{width:"100%",padding:"7px 10px",border:`1px solid ${C.border}`,borderRadius:7,fontSize:12,fontFamily:"inherit",boxSizing:"border-box"}}/>
+            </div>
+            <div style={{flex:1,minWidth:120}}>
+              <div style={{fontSize:10,color:C.inkMid,marginBottom:4,fontWeight:700}}>제품명</div>
+              <input value={addName} onChange={e=>setAddName(e.target.value)} placeholder="이름 설정"
+                style={{width:"100%",padding:"7px 10px",border:`1px solid ${C.border}`,borderRadius:7,fontSize:12,fontFamily:"inherit",boxSizing:"border-box"}}
+                onKeyDown={e=>e.key==="Enter"&&addProduct()}/>
+            </div>
+          </>)}
+          <button onClick={addProduct} style={{padding:"7px 16px",borderRadius:7,border:"none",background:C.rose,color:"#fff",fontSize:12,fontWeight:800,cursor:"pointer",fontFamily:"inherit",whiteSpace:"nowrap"}}>
+            + 추가
+          </button>
+        </div>
+      </div>
+
+      {error && <div style={{background:"#fff5f5",border:"1px solid #fca5a5",borderRadius:8,padding:"8px 12px",fontSize:12,color:"#dc2626"}}>{error}</div>}
+
+      <div style={{display:"flex",gap:14}}>
+        {/* 왼쪽: 제품 목록 */}
+        <div style={{width:200,flexShrink:0,display:"flex",flexDirection:"column",gap:6}}>
+          <div style={{fontSize:11,fontWeight:700,color:C.inkMid}}>추적 중인 제품 ({products.length})</div>
+          {products.length === 0 && <div style={{fontSize:12,color:C.inkLt,padding:"10px 0"}}>제품을 추가해주세요</div>}
+          {products.map(p=>{
+            const pHistory = history.filter(h=>h.productId===p.id);
+            const active = selProduct === p.id;
+            return (
+              <div key={p.id} onClick={()=>setSelProduct(p.id)}
+                style={{background:active?C.blush:C.white,border:`1.5px solid ${active?C.rose:C.border}`,borderRadius:10,padding:"10px 12px",cursor:"pointer",position:"relative"}}>
+                <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:3}}>
+                  <span style={{fontSize:10,background:PLATFORM_COLORS[p.platform]||"#e5e7eb",color:"#374151",padding:"1px 6px",borderRadius:6,fontWeight:700,flexShrink:0}}>
+                    {PLATFORM_LABELS[p.platform]||p.platform}
+                  </span>
+                </div>
+                <div style={{fontSize:12,fontWeight:700,color:active?C.rose:C.ink,lineHeight:1.3}}>{p.name}</div>
+                {p.platform==="naver" && p.keyword && <div style={{fontSize:10,color:C.inkLt,marginTop:1}}>키워드: {p.keyword}</div>}
+                <div style={{fontSize:10,color:C.inkLt,marginTop:2}}>{pHistory.length}개 기록</div>
+                <button onClick={e=>{e.stopPropagation();removeProduct(p.id);}}
+                  style={{position:"absolute",top:6,right:8,background:"none",border:"none",color:C.inkLt,cursor:"pointer",fontSize:14,lineHeight:1}}>×</button>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* 오른쪽: 히스토리 */}
+        <div style={{flex:1,minWidth:0}}>
+          {!selProd ? (
+            <div style={{background:C.white,border:`1px solid ${C.border}`,borderRadius:12,padding:"40px 0",textAlign:"center",color:C.inkLt,fontSize:13}}>
+              왼쪽에서 제품을 선택하세요
+            </div>
+          ) : (
+            <div style={{display:"flex",flexDirection:"column",gap:12}}>
+              {/* 제품 헤더 */}
+              <div style={{background:C.white,border:`1px solid ${C.border}`,borderRadius:12,padding:"14px 16px",display:"flex",alignItems:"center",gap:10}}>
+                <span style={{fontSize:11,background:PLATFORM_COLORS[selProd.platform],color:"#374151",padding:"2px 8px",borderRadius:6,fontWeight:700}}>
+                  {PLATFORM_LABELS[selProd.platform]}
+                </span>
+                <div style={{flex:1}}>
+                  <div style={{fontSize:14,fontWeight:800,color:C.ink}}>{selProd.name}</div>
+                  {selProd.platform==="naver"
+                    ? <span style={{fontSize:10,color:C.inkLt}}>키워드: {selProd.keyword} · 식별: {selProd.brand}</span>
+                    : <a href={selProd.url} target="_blank" rel="noreferrer" style={{fontSize:10,color:C.inkLt,textDecoration:"none"}} onClick={e=>e.stopPropagation()}>
+                        {(selProd.url||"").slice(0,60)}{(selProd.url||"").length>60?"...":""}
+                      </a>
+                  }
+                </div>
+                {selProd.platform === "naver" && (
+                  <button onClick={()=>fetchNow(selProd)} disabled={fetching===selProd.id}
+                    style={{padding:"7px 14px",borderRadius:8,border:"none",background:fetching===selProd.id?"#e5e7eb":C.rose,color:fetching===selProd.id?"#9ca3af":"#fff",fontSize:12,fontWeight:800,cursor:fetching===selProd.id?"not-allowed":"pointer",fontFamily:"inherit",whiteSpace:"nowrap"}}>
+                    {fetching===selProd.id?"⏳ 조회 중...":"🔄 순위 체크"}
+                  </button>
+                )}
+                <button onClick={async()=>{
+                    setFetching(selProd.id); setError("");
+                    try {
+                      const res = await fetch("/api/github-scrape-tracker", { method:"POST", headers:{"Content-Type":"application/json"}, body:"{}" });
+                      const d = await res.json();
+                      if(d.error) setError(d.error);
+                      else setError("✅ GitHub Actions 실행됨 (2~5분 후 데이터 업데이트)");
+                    } catch(e) { setError(e.message); }
+                    setFetching(null);
+                  }} disabled={fetching===selProd.id}
+                    style={{padding:"7px 14px",borderRadius:8,border:"none",background:fetching===selProd.id?"#e5e7eb":"#1f6feb",color:fetching===selProd.id?"#9ca3af":"#fff",fontSize:12,fontWeight:800,cursor:fetching===selProd.id?"not-allowed":"pointer",fontFamily:"inherit",whiteSpace:"nowrap",display:"flex",alignItems:"center",gap:5}}>
+                    {fetching===selProd.id?"⏳ 실행 중...":"▶ GitHub Actions 실행"}
+                  </button>
+                <button onClick={()=>setManualEntry({productId:selProd.id,date:new Date().toISOString().slice(0,10),rank:"",price:"",reviews:"",rating:"",likes:"",notes:""})}
+                  style={{padding:"7px 14px",borderRadius:8,border:`1px solid ${C.border}`,background:C.white,color:C.ink,fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit",whiteSpace:"nowrap"}}>
+                  ✏️ 직접 입력
+                </button>
+              </div>
+
+              {/* 직접 입력 폼 */}
+              {manualEntry && (
+                <div style={{background:"#fffbeb",border:"1px solid #fde68a",borderRadius:12,padding:"14px 16px"}}>
+                  <div style={{fontSize:12,fontWeight:800,color:"#92400e",marginBottom:10}}>✏️ 데이터 직접 입력</div>
+                  <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(110px,1fr))",gap:8}}>
+                    {[
+                      {key:"date",label:"날짜",type:"date"},
+                      {key:"rank",label:"순위",placeholder:"예: 3"},
+                      {key:"price",label:"가격 (원)",placeholder:"예: 29900"},
+                      {key:"reviews",label:"리뷰 수",placeholder:"예: 1204"},
+                      {key:"rating",label:"별점",placeholder:"예: 4.8"},
+                      {key:"likes",label:"좋아요",placeholder:"예: 520"},
+                    ].map(f=>(
+                      <div key={f.key}>
+                        <div style={{fontSize:10,color:"#92400e",marginBottom:3,fontWeight:700}}>{f.label}</div>
+                        <input type={f.type||"text"} value={manualEntry[f.key]} onChange={e=>setManualEntry({...manualEntry,[f.key]:e.target.value})}
+                          placeholder={f.placeholder||""}
+                          style={{width:"100%",padding:"6px 8px",border:"1px solid #fde68a",borderRadius:6,fontSize:12,fontFamily:"inherit",boxSizing:"border-box",background:"#fffdf0"}}/>
+                      </div>
+                    ))}
+                  </div>
+                  <div style={{marginTop:8}}>
+                    <div style={{fontSize:10,color:"#92400e",marginBottom:3,fontWeight:700}}>메모</div>
+                    <input value={manualEntry.notes} onChange={e=>setManualEntry({...manualEntry,notes:e.target.value})}
+                      placeholder="특이사항, 프로모션 등"
+                      style={{width:"100%",padding:"6px 8px",border:"1px solid #fde68a",borderRadius:6,fontSize:12,fontFamily:"inherit",boxSizing:"border-box",background:"#fffdf0"}}/>
+                  </div>
+                  <div style={{display:"flex",gap:8,marginTop:10}}>
+                    <button onClick={saveManual} style={{padding:"6px 16px",borderRadius:7,border:"none",background:"#d97706",color:"#fff",fontSize:12,fontWeight:800,cursor:"pointer",fontFamily:"inherit"}}>저장</button>
+                    <button onClick={()=>setManualEntry(null)} style={{padding:"6px 12px",borderRadius:7,border:`1px solid ${C.border}`,background:C.white,fontSize:12,cursor:"pointer",fontFamily:"inherit"}}>취소</button>
+                  </div>
+                </div>
+              )}
+
+              {/* 미니 차트 (가격/순위 추이) */}
+              {chartData.length >= 2 && (
+                <div style={{background:C.white,border:`1px solid ${C.border}`,borderRadius:12,padding:"14px 16px"}}>
+                  <div style={{fontSize:12,fontWeight:800,color:C.ink,marginBottom:10}}>📈 추이</div>
+                  <ResponsiveContainer width="100%" height={140}>
+                    <LineChart data={chartData} margin={{top:4,right:8,left:-20,bottom:0}}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0"/>
+                      <XAxis dataKey="date" tick={{fontSize:9}} tickFormatter={v=>v.slice(5)}/>
+                      <YAxis yAxisId="price" orientation="left" tick={{fontSize:9}} tickFormatter={v=>`${(v/1000).toFixed(0)}k`}/>
+                      <YAxis yAxisId="reviews" orientation="right" tick={{fontSize:9}}/>
+                      <Tooltip formatter={(v,n)=>n==="price"?`₩${v?.toLocaleString()}`:v} labelFormatter={l=>l}/>
+                      <Legend wrapperStyle={{fontSize:10}}/>
+                      {chartData.some(d=>d.price) && <Line yAxisId="price" type="monotone" dataKey="price" name="가격" stroke={C.rose} strokeWidth={2} dot={{r:3}} connectNulls/>}
+                      {chartData.some(d=>d.reviews) && <Line yAxisId="reviews" type="monotone" dataKey="reviews" name="리뷰수" stroke="#7c3aed" strokeWidth={2} dot={{r:3}} connectNulls/>}
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+              )}
+
+              {/* 히스토리 테이블 */}
+              <div style={{background:C.white,border:`1px solid ${C.border}`,borderRadius:12,overflow:"hidden"}}>
+                <div style={{padding:"12px 16px",borderBottom:`1px solid ${C.border}`,fontSize:12,fontWeight:800,color:C.ink}}>
+                  기록 ({selHistory.length}개)
+                </div>
+                {selHistory.length === 0 ? (
+                  <div style={{padding:"24px",textAlign:"center",fontSize:12,color:C.inkLt}}>
+                    "지금 체크" 또는 "직접 입력"으로 데이터를 추가하세요
+                  </div>
+                ) : (
+                  <div style={{overflowX:"auto"}}>
+                    <table style={{width:"100%",borderCollapse:"collapse",fontSize:12}}>
+                      <thead>
+                        <tr style={{background:C.cream}}>
+                          {["날짜","순위","가격","리뷰수","별점","좋아요","메모",""].map((h,i)=>(
+                            <th key={i} style={{padding:"8px 12px",textAlign:"left",fontSize:10,fontWeight:700,color:C.inkMid,whiteSpace:"nowrap"}}>{h}</th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {[...selHistory].reverse().map((h,i)=>(
+                          <tr key={h.id} style={{borderBottom:`1px solid ${C.border}`,background:i%2===0?C.white:C.cream}}>
+                            <td style={{padding:"8px 12px",fontWeight:700,whiteSpace:"nowrap"}}>
+                              {h.date}
+                              {!h.auto && <span style={{fontSize:9,color:"#d97706",marginLeft:4}}>수동</span>}
+                            </td>
+                            <td style={{padding:"8px 12px"}}>{h.rank ? `${h.rank}위` : "-"}</td>
+                            <td style={{padding:"8px 12px"}}>{h.price ? `₩${h.price.toLocaleString()}` : "-"}</td>
+                            <td style={{padding:"8px 12px"}}>{h.reviews?.toLocaleString() ?? "-"}</td>
+                            <td style={{padding:"8px 12px"}}>{h.rating ? `★${h.rating}` : "-"}</td>
+                            <td style={{padding:"8px 12px"}}>{h.likes?.toLocaleString() ?? "-"}</td>
+                            <td style={{padding:"8px 12px",color:C.inkMid,maxWidth:160,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{h.notes||""}</td>
+                            <td style={{padding:"8px 12px"}}>
+                              <button onClick={()=>deleteEntry(h.id)} style={{background:"none",border:"none",color:"#fca5a5",cursor:"pointer",fontSize:14,lineHeight:1}}>×</button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -261,10 +1258,23 @@ function schTypeIcon(t){  return {소재제작:"brush",광고:"campaign",시딩:
 function useSyncState(key, def) {
   const [data, setDataRaw] = useState(def);
   const loadedRef = useRef(false);
+  const latestRef = useRef(def); // 항상 최신 값 추적
 
   useEffect(()=>{
     getSetting(key).then(v=>{
-      if(v !== null && v !== undefined) setDataRaw(v);
+      if(v !== null && v !== undefined) {
+        setDataRaw(curr => {
+          if(curr === def) {
+            // 로컬 변경 없음 — Supabase 값 적용
+            latestRef.current = v;
+            return v;
+          } else {
+            // 로컬 변경 있음 — 로컬값 유지하고 Supabase에 저장
+            setSetting(key, curr).catch(()=>{});
+            return curr;
+          }
+        });
+      }
       loadedRef.current = true;
     }).catch(()=>{ loadedRef.current = true; });
   // eslint-disable-next-line
@@ -273,7 +1283,7 @@ function useSyncState(key, def) {
   const setData = useCallback((vOrFn)=>{
     setDataRaw(prev=>{
       const val = typeof vOrFn==="function" ? vOrFn(prev) : vOrFn;
-      // 로드 완료 후에만 Supabase에 저장 (초기화 방지)
+      latestRef.current = val;
       if(loadedRef.current) setSetting(key, val).catch(()=>{});
       return val;
     });
@@ -708,12 +1718,20 @@ function SchModalComp({mode, initial, onSave, onClose}){
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // 네이버 광고 섹션
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 1일/7일/14일/30일 슬롯 → DB id: 1/2/3/4
+const PERIODS = [
+  {key:"1",  label:"1일",  id:1},
+  {key:"7",  label:"7일",  id:2},
+  {key:"14", label:"14일", id:3},
+  {key:"30", label:"30일", id:4},
+];
+
 function NaverSection() {
-  const [rows, setRows]       = useState([]);
-  const [fileName, setFileName] = useState("");
-  const [dateRange, setDateRange] = useState("");
+  // 단일 슬롯 — 날짜 범위 선택기로 기간 필터
+  const [adData, setAdData] = useState({rows:[],filename:"",dateRange:"",uploadedAt:""});
   const [loading, setLoading] = useState(true);
-  const [groupBy, setGroupBy] = useState("adgroup"); // campaign | adgroup | keyword
+  const [uploading, setUploading] = useState(false);
+  const [groupBy, setGroupBy] = useState("adgroup");
   const [sortCol, setSortCol] = useState("cost");
   const [sortAsc, setSortAsc] = useState(false);
   const [search, setSearch]   = useState("");
@@ -721,26 +1739,27 @@ function NaverSection() {
   const [quickFilter, setQuickFilter] = useState("all");
   const [fixList, setFixList] = useState({});
   const [showFix, setShowFix] = useState(false);
+  const [fixAddInput, setFixAddInput] = useState({label:"", checked_at:new Date().toLocaleDateString("ko-KR"), memo:""});
+  const [fixDateAdd, setFixDateAdd] = useState({}); // {label: "YYYY-MM-DD"} — 날짜 추가 입력 중인 항목
+  const [fixMemoEdit, setFixMemoEdit] = useState({}); // {label: true} — 메모 편집 중인 항목
+  const [dateFilter, setDateFilter] = useState({from:"",to:""});
+  const [compareDateFilter, setCompareDateFilter] = useState({from:"",to:""});
+  const [showCompare, setShowCompare] = useState(false);
 
   const SURL = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const SKEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
   const sh = {"apikey":SKEY,"Authorization":`Bearer ${SKEY}`,"Content-Type":"application/json"};
 
-  // 마운트: Supabase에서 로드
   useEffect(()=>{
     async function load() {
       try {
-        const [cacheRes, fixRes] = await Promise.all([
-          fetch(`${SURL}/rest/v1/naver_ads_cache?id=eq.1&select=filename,rows,date_range`, {headers:sh}),
+        const [r1, fixRes] = await Promise.all([
+          fetch(`${SURL}/rest/v1/naver_ads_cache?id=eq.1&select=filename,rows,date_range,uploaded_at`, {headers:sh}),
           fetch(`${SURL}/rest/v1/naver_ads_fixlist?select=*`, {headers:sh}),
         ]);
-        if(cacheRes.ok) {
-          const data = await cacheRes.json();
-          if(data[0]?.rows?.length) {
-            setRows(data[0].rows);
-            setFileName(data[0].filename||"");
-            setDateRange(data[0].date_range||"");
-          }
+        if(r1.ok) {
+          const d = await r1.json();
+          if(d[0]?.rows?.length) setAdData({rows:d[0].rows, filename:d[0].filename||"", dateRange:d[0].date_range||"", uploadedAt:d[0].uploaded_at||""});
         }
         if(fixRes.ok) {
           const data = await fixRes.json();
@@ -785,62 +1804,90 @@ function NaverSection() {
       {method:"PATCH", headers:sh, body:JSON.stringify({memo})});
   }
 
-  function parseCSV(text) {
-    const lines = text.replace(/\r/g,"").split("\n").filter(l=>l.trim());
+  async function addCheckDate(label, newDate) {
+    if(!newDate) return;
+    const existing = fixList[label]?.checked_at || "";
+    const dates = existing ? existing.split("|") : [];
+    if(dates.includes(newDate)) return;
+    const updatedDates = [...dates, newDate].join("|");
+    const existingMemo = fixList[label]?.memo || "";
+    const updatedMemo = existingMemo ? `${existingMemo}\n[${newDate}]` : `[${newDate}]`;
+    const next = {...fixList, [label]:{...fixList[label], checked_at:updatedDates, memo:updatedMemo}};
+    setFixList(next);
+    setFixDateAdd(p=>({...p, [label]:""}));
+    await fetch(`${SURL}/rest/v1/naver_ads_fixlist?label=eq.${encodeURIComponent(label)}`,
+      {method:"PATCH", headers:sh, body:JSON.stringify({checked_at:updatedDates, memo:updatedMemo})});
+  }
+
+  async function removeCheckDate(label, dateToRemove) {
+    const existing = fixList[label]?.checked_at || "";
+    const updated = existing.split("|").filter(d=>d!==dateToRemove).join("|");
+    const next = {...fixList, [label]:{...fixList[label], checked_at:updated}};
+    setFixList(next);
+    await fetch(`${SURL}/rest/v1/naver_ads_fixlist?label=eq.${encodeURIComponent(label)}`,
+      {method:"PATCH", headers:sh, body:JSON.stringify({checked_at:updated})});
+  }
+
+  function parseNaverCSV(text) {
+    // RFC4180 파서 — "1,234" 같은 따옴표 안 쉼표 정확히 처리
+    const parseLine = line => {
+      const res=[]; let cur="", inQ=false;
+      for(let i=0;i<line.length;i++){
+        const c=line[i];
+        if(c==='"'){ if(inQ&&line[i+1]==='"'){cur+='"';i++;}else inQ=!inQ; }
+        else if(c===','&&!inQ){ res.push(cur.trim()); cur=""; }
+        else cur+=c;
+      }
+      res.push(cur.trim());
+      return res;
+    };
+    const lines = text.replace(/^\uFEFF/,"").replace(/\r/g,"").split("\n").filter(l=>l.trim());
     if(lines.length < 3) return { rows:[], dateRange:"" };
     // 1행 타이틀에서 날짜 범위 추출
     const titleLine = lines[0].replace(/"/g,"");
     const dateMatch = titleLine.match(/(\d{4}[./\-]\d{1,2}[./\-]\d{1,2})\.?\s*~\s*(\d{4}[./\-]\d{1,2}[./\-]\d{1,2})\.?/);
     const dateRange = dateMatch ? `${dateMatch[1]} ~ ${dateMatch[2]}` : "";
-    const headers = lines[1].split(",").map(h=>h.replace(/^"|"$/g,"").trim());
-    const KEEP_COLS = ["캠페인","광고그룹","검색어","노출수","클릭수","총비용",
+    const headers = parseLine(lines[1]);
+    const KEEP_COLS = ["일","일별","날짜","일자","보고 시작일","캠페인","광고그룹","검색어","키워드","노출수","클릭수","총비용",
       "총 전환수","총 전환매출액(원)","구매완료 전환수","구매완료 전환매출액(원)"];
     const rows = lines.slice(2).map(line=>{
-      const vals = line.split(",").map(v=>v.replace(/^"|"$/g,"").trim());
+      const vals = parseLine(line);
       const o = {};
       headers.forEach((h,i)=>{ o[h] = vals[i]||""; });
-      // 필요한 컬럼만 추려서 저장 용량 최소화
       const slim = {};
       KEEP_COLS.forEach(k=>{ if(o[k]!==undefined) slim[k]=o[k]; });
       return slim;
-    }).filter(r=>r["캠페인"]);
+    }).filter(r=>r["캠페인"] && r["캠페인"].includes("이미용"));
     return { rows, dateRange };
   }
 
-  function onFile(e) {
+  function onUpload(e) {
     const file = e.target.files[0];
     if(!file) return;
+    e.target.value = "";
     const name = file.name;
-    // UTF-8 먼저 시도, 한국어 깨지면 EUC-KR 재시도
-    function tryParse(text) {
-      const { rows: parsed, dateRange: dr } = parseCSV(text);
-      return { parsed, dr };
-    }
     const readerUtf8 = new FileReader();
     readerUtf8.onload = async ev => {
-      let text = ev.target.result;
-      // EUC-KR 깨짐 감지: 한글이 없으면 EUC-KR 재시도
+      const text = ev.target.result;
       const hasKorean = /[\uAC00-\uD7A3]/.test(text);
       const doSave = async (finalText) => {
-        const { parsed, dr } = tryParse(finalText);
-        if(!parsed.length) {
-          alert(`파싱된 데이터가 없습니다.\n파일: ${name}\n헤더 확인 필요 (캠페인, 검색어, 총비용, 구매완료 전환매출액 등 포함 여부)`);
-          return;
-        }
-        setRows(parsed);
-        setFileName(name);
-        setDateRange(dr);
-        const res = await fetch(`${SURL}/rest/v1/naver_ads_cache`,{
-          method:"POST",
-          headers:{...sh, Prefer:"resolution=merge-duplicates"},
-          body: JSON.stringify({id:1, filename:name, rows:parsed, date_range:dr, uploaded_at:new Date().toISOString()}),
-        });
-        if(!res.ok) alert("저장 실패: "+(await res.text()));
+        setUploading(true);
+        try {
+          const { rows: parsed, dateRange: dr } = parseNaverCSV(finalText);
+          if(!parsed.length) { alert(`파싱된 데이터가 없습니다.\n파일: ${name}`); return; }
+          const uploadedAt = new Date().toISOString();
+          setAdData({rows:parsed, filename:name, dateRange:dr, uploadedAt});
+          setDateFilter({from:"",to:""});
+          const res = await fetch(`${SURL}/rest/v1/naver_ads_cache`,{
+            method:"POST",
+            headers:{...sh, Prefer:"resolution=merge-duplicates"},
+            body: JSON.stringify({id:1, filename:name, rows:parsed, date_range:dr, uploaded_at:uploadedAt}),
+          });
+          if(!res.ok) alert("저장 실패: "+(await res.text()));
+        } finally { setUploading(false); }
       };
-      if(hasKorean) {
-        await doSave(text);
-      } else {
-        // EUC-KR 재시도
+      if(hasKorean) { await doSave(text); }
+      else {
         const readerEuc = new FileReader();
         readerEuc.onload = async ev2 => { await doSave(ev2.target.result); };
         readerEuc.readAsText(file, "euc-kr");
@@ -850,12 +1897,54 @@ function NaverSection() {
   }
 
   // 그룹 키
-  const groupKey = r => groupBy==="campaign" ? r["캠페인"] : groupBy==="adgroup" ? r["광고그룹"] : r["검색어"];
+  const groupKey = r => groupBy==="campaign" ? r["캠페인"] : groupBy==="adgroup" ? r["광고그룹"] : (r["검색어"] || r["키워드"]);
+
+  const allActiveRows = adData.rows || [];
+  // 날짜 컬럼 정규화 헬퍼 (YYYY-MM-DD)
+  const getRowDate = r => {
+    const raw = r["일"] || r["일별"] || r["날짜"] || r["일자"] || r["보고 시작일"] || "";
+    if(!raw || raw==="-") return "";
+    const s = String(raw).trim();
+    if(/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+    const m = s.match(/^(\d{4})[.\s\/]+(\d{1,2})[.\s\/]+(\d{1,2})/);
+    if(m) return `${m[1]}-${m[2].padStart(2,"0")}-${m[3].padStart(2,"0")}`;
+    return "";
+  };
+  // 날짜 컬럼 추출 (있으면)
+  const availableDates = (() => {
+    const set = new Set();
+    allActiveRows.forEach(r => { const d = getRowDate(r); if(d) set.add(d); });
+    return [...set].sort();
+  })();
+  const minDate = availableDates[0] || "";
+  const maxDate = availableDates[availableDates.length-1] || "";
+  const activeRows = (() => {
+    const {from, to} = dateFilter;
+    if(!from && !to) return allActiveRows;
+    return allActiveRows.filter(r => {
+      const d = getRowDate(r);
+      if(!d) return false;
+      if(from && d < from) return false;
+      if(to && d > to) return false;
+      return true;
+    });
+  })();
+  const compareRows = (() => {
+    const {from, to} = compareDateFilter;
+    if(!showCompare || (!from && !to)) return [];
+    return allActiveRows.filter(r => {
+      const d = getRowDate(r);
+      if(!d) return false;
+      if(from && d < from) return false;
+      if(to && d > to) return false;
+      return true;
+    });
+  })();
 
   // 집계
   const aggregated = (() => {
     const map = {};
-    rows.forEach(r => {
+    activeRows.forEach(r => {
       const key = groupKey(r);
       if(!key) return;
       if(!map[key]) map[key] = {
@@ -881,6 +1970,24 @@ function NaverSection() {
       roas:   r.cost>0  ? Math.round(r.buyRevenue/r.cost*100) : 0,  // 구매완료 기준
       roasTotal: r.cost>0 ? Math.round(r.totalRevenue/r.cost*100) : 0, // 참고용
     }));
+  })();
+
+  // 비교 기간 집계
+  const prevAggMap = (() => {
+    if(!showCompare || !compareRows.length) return {};
+    const map = {};
+    compareRows.forEach(r => {
+      const key = groupKey(r);
+      if(!key) return;
+      if(!map[key]) map[key] = {buyRevenue:0, cost:0};
+      map[key].cost       += Number(r["총비용"])||0;
+      map[key].buyRevenue += Number(r["구매완료 전환매출액(원)"])||0;
+    });
+    const res = {};
+    Object.entries(map).forEach(([k,v])=>{
+      res[k] = {cost:v.cost, roas:v.cost>0?Math.round(v.buyRevenue/v.cost*100):0};
+    });
+    return res;
   })();
 
   // 광고비 상위 20% 기준
@@ -918,6 +2025,12 @@ function NaverSection() {
     {key:"buyConv",    label:"구매전환",   align:"right", fmt:fmtN},
     {key:"buyRevenue", label:"구매매출",   align:"right", fmt:fmtW},
     {key:"roas",       label:"ROAS(구매)", align:"right", fmt:v=>`${fmtN(v)}%`},
+    ...(showCompare&&compareRows.length?[
+      {key:"_cmp_cost",    label:"비교 광고비",  align:"right", fmt:()=>null},
+      {key:"_cmp_revenue", label:"비교 매출",    align:"right", fmt:()=>null},
+      {key:"_cmp_roas",    label:"비교 ROAS",   align:"right", fmt:()=>null},
+      {key:"_diff",        label:"ROAS 변화",   align:"right", fmt:()=>null},
+    ]:[]),
     {key:"_fix",       label:"수정",       align:"center", fmt:()=>null},
   ];
 
@@ -939,45 +2052,57 @@ function NaverSection() {
       <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:8}}>
         <div>
           <div style={{fontSize:16,fontWeight:900,color:C.ink}}>📊 네이버 광고 · <span style={{color:"#03C75A"}}>구매완료 ROAS</span></div>
-          <div style={{fontSize:11,color:C.inkLt,marginTop:2}}>CSV 업로드 · 구매완료 전환매출 기준</div>
+          <div style={{fontSize:11,color:C.inkLt,marginTop:2}}>CSV 업로드 · 구매완료 전환매출 기준 · <span style={{color:"#f59e0b",fontWeight:700}}>📅 매주 월요일 업로드</span></div>
         </div>
-        <div style={{display:"flex",gap:8,alignItems:"center"}}>
-          {Object.keys(fixList).length>0 && (
-            <button onClick={()=>setShowFix(p=>!p)} style={{
-              display:"flex",alignItems:"center",gap:5,padding:"7px 12px",borderRadius:8,
-              background:"#FEF3C7",border:`1.5px solid #F59E0B`,color:"#92400E",
-              fontSize:11,fontWeight:800,cursor:"pointer",
-            }}>
-              <span className="material-symbols-outlined" style={{fontSize:14}}>flag</span>
-              수정 {Object.keys(fixList).length}건
-            </button>
-          )}
-          <label style={{display:"flex",alignItems:"center",gap:8,padding:"7px 14px",borderRadius:8,
-            background:"#03C75A",color:"#fff",fontSize:11,fontWeight:800,cursor:"pointer"}}>
-            <span className="material-symbols-outlined" style={{fontSize:15}}>upload_file</span>
+        <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}>
+          <button onClick={()=>setShowFix(p=>!p)} style={{display:"flex",alignItems:"center",gap:5,padding:"7px 12px",borderRadius:8,background:"#FEF3C7",border:`1.5px solid #F59E0B`,color:"#92400E",fontSize:11,fontWeight:800,cursor:"pointer"}}><span className="material-symbols-outlined" style={{fontSize:14}}>flag</span>수정 체크{Object.keys(fixList).length>0?` ${Object.keys(fixList).length}건`:""}</button>
+          {uploading&&<span style={{fontSize:11,fontWeight:700,color:"#03C75A",display:"flex",alignItems:"center",gap:5}}><span className="material-symbols-outlined" style={{fontSize:14,animation:"spin 1s linear infinite"}}>progress_activity</span>업로드 중...</span>}
+          <label style={{display:"flex",alignItems:"center",gap:6,padding:"7px 12px",borderRadius:8,background:C.white,border:`1.5px solid ${C.border}`,color:uploading?C.inkLt:C.inkMid,fontSize:11,fontWeight:800,cursor:uploading?"not-allowed":"pointer",opacity:uploading?0.5:1}}>
+            <span className="material-symbols-outlined" style={{fontSize:14}}>upload_file</span>
             CSV 업로드
-            <input type="file" accept=".csv" onChange={onFile} style={{display:"none"}}/>
+            <input type="file" accept=".csv" onChange={onUpload} disabled={uploading} style={{display:"none"}}/>
           </label>
         </div>
       </div>
 
-      {fileName && (
-        <div style={{fontSize:11,color:C.inkMid,background:C.bg,padding:"6px 12px",borderRadius:8,display:"flex",gap:12,flexWrap:"wrap"}}>
-          <span>📄 {fileName} · {rows.length.toLocaleString()}행</span>
-          {dateRange && <span style={{color:C.ink,fontWeight:700}}>📅 {dateRange}</span>}
+      {/* 업로드 파일 정보 */}
+      {adData.filename&&<div style={{fontSize:10,color:C.inkLt}}>📄 {adData.dateRange||adData.filename}{adData.uploadedAt&&` · 업로드: ${new Date(adData.uploadedAt).toLocaleDateString("ko-KR")}`}</div>}
+
+      {/* 기간 선택 + 비교 */}
+      {allActiveRows.length > 0 && (
+        <div style={{display:"flex",flexDirection:"column",gap:8}}>
+          <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
+            <span style={{fontSize:11,color:C.inkLt,fontWeight:700}}>조회 기간:</span>
+            <input type="date" value={dateFilter.from} min={minDate||undefined} max={dateFilter.to||maxDate||undefined} onChange={e=>setDateFilter(p=>({...p,from:e.target.value}))} style={{padding:"4px 8px",borderRadius:7,border:`1.5px solid ${dateFilter.from?"#03C75A":C.border}`,fontSize:11,fontFamily:"inherit",outline:"none"}}/>
+            <span style={{fontSize:11,color:C.inkLt}}>~</span>
+            <input type="date" value={dateFilter.to} min={dateFilter.from||minDate||undefined} max={maxDate||undefined} onChange={e=>setDateFilter(p=>({...p,to:e.target.value}))} style={{padding:"4px 8px",borderRadius:7,border:`1.5px solid ${dateFilter.to?"#03C75A":C.border}`,fontSize:11,fontFamily:"inherit",outline:"none"}}/>
+            {(dateFilter.from||dateFilter.to)&&<button onClick={()=>setDateFilter({from:"",to:""})} style={{padding:"4px 10px",borderRadius:7,border:`1px solid ${C.border}`,background:"none",color:C.inkMid,fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>전체</button>}
+            {availableDates.length===0&&<span style={{fontSize:10,color:C.inkLt}}>(CSV 재업로드 시 날짜 필터 활성화)</span>}
+            <button onClick={()=>{setShowCompare(p=>!p);if(showCompare)setCompareDateFilter({from:"",to:""});}} style={{marginLeft:"auto",padding:"4px 12px",borderRadius:7,border:`1.5px solid ${showCompare?"#7C3AED":C.border}`,background:showCompare?"#F5F3FF":"none",color:showCompare?"#7C3AED":C.inkMid,fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>{showCompare?"비교 닫기":"기간 비교"}</button>
+          </div>
+          {showCompare&&(
+            <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
+              <span style={{fontSize:11,color:"#7C3AED",fontWeight:700}}>비교 기간:</span>
+              <input type="date" value={compareDateFilter.from} min={minDate||undefined} max={compareDateFilter.to||maxDate||undefined} onChange={e=>setCompareDateFilter(p=>({...p,from:e.target.value}))} style={{padding:"4px 8px",borderRadius:7,border:`1.5px solid ${compareDateFilter.from?"#7C3AED":C.border}`,fontSize:11,fontFamily:"inherit",outline:"none"}}/>
+              <span style={{fontSize:11,color:C.inkLt}}>~</span>
+              <input type="date" value={compareDateFilter.to} min={compareDateFilter.from||minDate||undefined} max={maxDate||undefined} onChange={e=>setCompareDateFilter(p=>({...p,to:e.target.value}))} style={{padding:"4px 8px",borderRadius:7,border:`1.5px solid ${compareDateFilter.to?"#7C3AED":C.border}`,fontSize:11,fontFamily:"inherit",outline:"none"}}/>
+              {(compareDateFilter.from||compareDateFilter.to)&&<button onClick={()=>setCompareDateFilter({from:"",to:""})} style={{padding:"4px 10px",borderRadius:7,border:`1px solid ${C.border}`,background:"none",color:C.inkMid,fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>초기화</button>}
+              {compareRows.length>0&&<span style={{fontSize:10,color:"#7C3AED",fontWeight:700}}>✓ {compareRows.length}개 행</span>}
+            </div>
+          )}
         </div>
       )}
 
-      {rows.length===0 && (
+      {allActiveRows.length===0 && (
         <div style={{background:C.white,border:`2px dashed ${C.border}`,borderRadius:14,
           padding:"60px 20px",textAlign:"center"}}>
           <div style={{fontSize:32,marginBottom:12}}>📂</div>
-          <div style={{fontSize:14,fontWeight:800,color:C.inkMid}}>네이버 광고 CSV를 업로드하세요</div>
+          <div style={{fontSize:14,fontWeight:800,color:C.inkMid}}>CSV를 업로드하세요</div>
           <div style={{fontSize:11,color:C.inkLt,marginTop:6}}>검색어보고서 · 구매완료/장바구니 포함 파일</div>
         </div>
       )}
 
-      {rows.length>0 && (
+      {allActiveRows.length>0 && (
         <>
           {/* KPI 배너 */}
           <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:10}}>
@@ -998,14 +2123,13 @@ function NaverSection() {
           {/* 빠른 필터 */}
           <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
             {[
-              {key:"all",     label:"전체",          color:C.inkMid},
-              {key:"highcost",label:"💸 광고비 상위", color:"#7C3AED"},
-              {key:"warn",    label:"⚠️ ROAS 경고 (<300%)", color:C.bad},
+              {key:"all",  label:"전체",               color:C.inkMid},
+              {key:"warn", label:"⚠️ ROAS 경고 (<300%)", color:C.bad},
             ].map(f=>(
               <button key={f.key} onClick={()=>setQuickFilter(f.key)} style={{
                 padding:"5px 14px",borderRadius:20,fontSize:11,fontWeight:700,cursor:"pointer",
                 border:`1.5px solid ${quickFilter===f.key?f.color:C.border}`,
-                background:quickFilter===f.key? (f.key==="warn"?"#FEF2F2": f.key==="highcost"?"#F5F3FF":"#F1F5F9") :C.white,
+                background:quickFilter===f.key? (f.key==="warn"?"#FEF2F2":"#F1F5F9") :C.white,
                 color:quickFilter===f.key?f.color:C.inkMid,
               }}>{f.label}</button>
             ))}
@@ -1070,6 +2194,31 @@ function NaverSection() {
                             }}>{isFixed?"✓수정중":"체크"}</button>
                           </td>
                         );
+                        if(c.key==="_cmp_cost") {
+                          const prev = prevAggMap[r.label];
+                          return <td key={c.key} style={{padding:"9px 12px",textAlign:"right",fontSize:11,color:C.inkMid}}>{prev?fmtW(prev.cost):<span style={{color:C.inkLt}}>—</span>}</td>;
+                        }
+                        if(c.key==="_cmp_revenue") {
+                          const prev = prevAggMap[r.label];
+                          return <td key={c.key} style={{padding:"9px 12px",textAlign:"right",fontSize:11,color:C.rose}}>{prev?fmtW(prev.buyRevenue):<span style={{color:C.inkLt}}>—</span>}</td>;
+                        }
+                        if(c.key==="_cmp_roas") {
+                          const prev = prevAggMap[r.label];
+                          return <td key={c.key} style={{padding:"9px 12px",textAlign:"right",fontSize:11,fontWeight:700,color:prev?roasColor(prev.roas):C.inkLt}}>{prev?`${fmtN(prev.roas)}%`:"—"}</td>;
+                        }
+                        if(c.key==="_diff") {
+                          const prev = prevAggMap[r.label];
+                          const diff = prev ? r.roas - prev.roas : null;
+                          return (
+                            <td key="_diff" style={{padding:"9px 12px",textAlign:"right",fontWeight:800,fontSize:11}}>
+                              {diff===null ? <span style={{color:C.inkLt}}>—</span> : (
+                                <span style={{color:diff>0?C.good:diff<0?C.bad:C.inkMid}}>
+                                  {diff>0?"+":""}{Math.round(diff)}%p
+                                </span>
+                              )}
+                            </td>
+                          );
+                        }
                         return (
                         <td key={c.key} style={{padding:"9px 12px",textAlign:c.align,
                           fontWeight:c.key==="roas"||c.key==="label"?800:600,
@@ -1077,11 +2226,6 @@ function NaverSection() {
                           maxWidth:c.key==="label"?220:undefined,
                           overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
                           {c.fmt(r[c.key])}
-                          {c.key==="roas" && roasDiff!==null && (
-                            <span style={{fontSize:9,marginLeft:4,color:roasDiff>0?C.good:C.bad}}>
-                              {roasDiff>0?"+":""}{Math.round(roasDiff)}%p
-                            </span>
-                          )}
                         </td>
                         );
                       })}
@@ -1100,6 +2244,11 @@ function NaverSection() {
                     <td style={{padding:"9px 12px",textAlign:"right",fontWeight:700}}>{fmtN(total.buyConv)}</td>
                     <td style={{padding:"9px 12px",textAlign:"right",fontWeight:800,color:C.rose}}>{fmtW(total.buyRevenue)}</td>
                     <td style={{padding:"9px 12px",textAlign:"right",fontWeight:900,color:roasColor(totalRoas)}}>{fmtN(totalRoas)}%</td>
+                    {showCompare&&compareRows.length>0&&(()=>{
+                      const cmpTotal = Object.values(prevAggMap).reduce((acc,p)=>({cost:acc.cost+p.cost,buyRevenue:acc.buyRevenue+p.buyRevenue}),{cost:0,buyRevenue:0});
+                      const cmpRoas = cmpTotal.cost>0?Math.round(cmpTotal.buyRevenue/cmpTotal.cost*100):0;
+                      return(<><td style={{padding:"9px 12px",textAlign:"right",fontWeight:700,fontSize:11,color:C.inkMid}}>{fmtW(cmpTotal.cost)}</td><td style={{padding:"9px 12px",textAlign:"right",fontWeight:700,fontSize:11,color:C.rose}}>{fmtW(cmpTotal.buyRevenue)}</td><td style={{padding:"9px 12px",textAlign:"right",fontWeight:900,fontSize:11,color:roasColor(cmpRoas)}}>{cmpRoas}%</td><td/></>);
+                    })()}
                     <td/>
                   </tr>
                 </tfoot>
@@ -1108,14 +2257,14 @@ function NaverSection() {
           </div>
 
           {/* 수정 목록 패널 */}
-          {Object.keys(fixList).length>0 && (
+          {(Object.keys(fixList).length>0||true) && (
             <div style={{background:C.white,border:`1.5px solid #F59E0B`,borderRadius:12,overflow:"hidden"}}>
               <button onClick={()=>setShowFix(p=>!p)} style={{
                 width:"100%",display:"flex",alignItems:"center",justifyContent:"space-between",
                 padding:"11px 16px",background:"#FFFBEB",border:"none",cursor:"pointer",
               }}>
                 <div style={{fontWeight:800,fontSize:13,color:"#92400E"}}>
-                  ⚠️ 수정 체크 목록 — {Object.keys(fixList).length}건
+                  ⚠️ 수정 체크 목록 {Object.keys(fixList).length>0?`— ${Object.keys(fixList).length}건`:""}
                 </div>
                 <span className="material-symbols-outlined" style={{fontSize:18,color:"#92400E"}}>
                   {showFix?"expand_less":"expand_more"}
@@ -1123,6 +2272,30 @@ function NaverSection() {
               </button>
               {showFix && (
                 <div style={{padding:"12px 16px",display:"flex",flexDirection:"column",gap:10}}>
+                  {/* 수동 추가 폼 */}
+                  <div style={{background:"#FFFBEB",border:`1px dashed #F59E0B`,borderRadius:8,padding:"10px 14px",display:"flex",flexDirection:"column",gap:8}}>
+                    <div style={{fontSize:11,fontWeight:800,color:"#92400E"}}>+ 항목 추가</div>
+                    <input value={fixAddInput.label} onChange={e=>setFixAddInput(p=>({...p,label:e.target.value}))}
+                      placeholder="항목명 (캠페인/광고그룹/검색어)"
+                      style={{padding:"6px 10px",borderRadius:6,fontSize:11,border:`1px solid ${C.border}`,outline:"none",width:"100%",boxSizing:"border-box",fontFamily:"inherit"}}/>
+                    <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}>
+                      <div style={{display:"flex",alignItems:"center",gap:6}}>
+                        <span style={{fontSize:11,color:C.inkLt,whiteSpace:"nowrap"}}>체크일</span>
+                        <input type="date" value={fixAddInput.checked_at} onChange={e=>setFixAddInput(p=>({...p,checked_at:e.target.value}))}
+                          style={{padding:"4px 8px",borderRadius:6,fontSize:11,border:`1px solid ${C.border}`,outline:"none",fontFamily:"inherit"}}/>
+                      </div>
+                      <input value={fixAddInput.memo} onChange={e=>setFixAddInput(p=>({...p,memo:e.target.value}))}
+                        placeholder="메모"
+                        style={{flex:1,minWidth:120,padding:"6px 10px",borderRadius:6,fontSize:11,border:`1px solid ${C.border}`,outline:"none",fontFamily:"inherit"}}/>
+                      <button onClick={async()=>{
+                        if(!fixAddInput.label.trim()) return;
+                        const item = {label:fixAddInput.label.trim(), cost:0, roas:0, checked_at:fixAddInput.checked_at||new Date().toLocaleDateString("ko-KR"), memo:fixAddInput.memo};
+                        setFixList(p=>({...p,[item.label]:item}));
+                        setFixAddInput({label:"",checked_at:new Date().toLocaleDateString("ko-KR"),memo:""});
+                        await fetch(`${SURL}/rest/v1/naver_ads_fixlist`,{method:"POST",headers:{...sh,Prefer:"resolution=merge-duplicates"},body:JSON.stringify(item)});
+                      }} style={{padding:"6px 14px",borderRadius:6,border:"none",background:"#F59E0B",color:"#fff",fontSize:11,fontWeight:800,cursor:"pointer",fontFamily:"inherit",whiteSpace:"nowrap"}}>추가</button>
+                    </div>
+                  </div>
                   {Object.values(fixList).map(f=>{
                     const cur = aggregated.find(a=>a.label===f.label);
                     const curRoas = cur?.roas ?? null;
@@ -1148,25 +2321,62 @@ function NaverSection() {
                             <div>
                               <span style={{color:C.inkLt}}>현재 ROAS </span>
                               <span style={{fontWeight:700,color:roasColor(curRoas)}}>{curRoas}%</span>
-                              {roasDiff!==null && (
-                                <span style={{marginLeft:4,fontSize:10,fontWeight:700,color:roasDiff>0?C.good:C.bad}}>
-                                  ({roasDiff>0?"+":""}{Math.round(roasDiff)}%p)
-                                </span>
-                              )}
                             </div>
                           )}
-                          <div>
-                            <span style={{color:C.inkLt}}>체크일 </span>
-                            <span style={{fontWeight:600}}>{f.checked_at}</span>
+                          <div style={{display:"flex",alignItems:"center",gap:4,flexWrap:"wrap"}}>
+                            <span style={{color:C.inkLt,marginRight:2}}>체크일</span>
+                            {(f.checked_at||"").split("|").filter(Boolean).map(d=>(
+                              <span key={d} style={{display:"inline-flex",alignItems:"center",gap:3,background:"#FEF9C3",border:"1px solid #FDE68A",borderRadius:10,padding:"1px 7px",fontSize:11,fontWeight:600}}>
+                                {d}
+                                <span onClick={()=>removeCheckDate(f.label,d)} style={{cursor:"pointer",color:"#92400E",fontSize:12,lineHeight:1,marginLeft:1}}>×</span>
+                              </span>
+                            ))}
+                            {fixDateAdd[f.label]!==undefined ? (
+                              <span style={{display:"inline-flex",alignItems:"center",gap:4}}>
+                                <input type="date" value={fixDateAdd[f.label]||""} onChange={e=>setFixDateAdd(p=>({...p,[f.label]:e.target.value}))}
+                                  style={{fontSize:11,padding:"1px 6px",borderRadius:6,border:`1px solid ${C.border}`,outline:"none"}}/>
+                                <button onClick={()=>addCheckDate(f.label,fixDateAdd[f.label])}
+                                  style={{padding:"1px 8px",borderRadius:6,border:"none",background:"#03C75A",color:"#fff",fontSize:11,fontWeight:700,cursor:"pointer"}}>확인</button>
+                                <button onClick={()=>setFixDateAdd(p=>{const n={...p};delete n[f.label];return n;})}
+                                  style={{padding:"1px 6px",borderRadius:6,border:`1px solid ${C.border}`,background:C.white,fontSize:11,cursor:"pointer"}}>취소</button>
+                              </span>
+                            ) : (
+                              <button onClick={()=>setFixDateAdd(p=>({...p,[f.label]:new Date().toISOString().slice(0,10)}))}
+                                style={{padding:"1px 7px",borderRadius:10,border:`1px solid #FDE68A`,background:"#FFFBEB",fontSize:11,fontWeight:700,cursor:"pointer",color:"#92400E"}}>+ 날짜</button>
+                            )}
                           </div>
                         </div>
-                        <input
-                          value={f.memo||""}
-                          onChange={e=>updateMemo(f.label, e.target.value)}
-                          placeholder="메모 (수정 내용, 조치사항...)"
-                          style={{padding:"6px 10px",borderRadius:6,fontSize:11,border:`1px solid ${C.border}`,
-                            outline:"none",background:"#fff",width:"100%",boxSizing:"border-box"}}
-                        />
+                        {fixMemoEdit[f.label] ? (
+                          <div style={{display:"flex",gap:4}}>
+                            <input
+                              autoFocus
+                              value={f.memo||""}
+                              onChange={e=>updateMemo(f.label, e.target.value)}
+                              onBlur={()=>setFixMemoEdit(p=>{const n={...p};delete n[f.label];return n;})}
+                              placeholder="메모 (수정 내용, 조치사항...)"
+                              style={{flex:1,padding:"6px 10px",borderRadius:6,fontSize:11,border:`1.5px solid #F59E0B`,
+                                outline:"none",background:"#fff",boxSizing:"border-box"}}
+                            />
+                          </div>
+                        ) : (
+                          <div onClick={()=>setFixMemoEdit(p=>({...p,[f.label]:true}))}
+                            style={{minHeight:30,padding:"6px 10px",borderRadius:6,fontSize:11,border:`1px solid ${C.border}`,
+                              background:"#fff",cursor:"text",display:"flex",flexWrap:"wrap",alignItems:"center",gap:4}}>
+                            {f.memo ? (
+                              f.memo.split(/(\[[^\]]+\])/).map((part,i)=>
+                                /^\[\d{4}-\d{2}-\d{2}\]$/.test(part) ? (
+                                  <span key={i} style={{background:"#FEF9C3",border:"1px solid #FDE68A",borderRadius:10,padding:"1px 7px",fontSize:11,fontWeight:600,color:"#92400E"}}>
+                                    {part.slice(1,-1)}
+                                  </span>
+                                ) : (
+                                  <span key={i} style={{color:C.inkMid,whiteSpace:"pre-wrap"}}>{part}</span>
+                                )
+                              )
+                            ) : (
+                              <span style={{color:C.inkLt}}>메모 (수정 내용, 조치사항...)</span>
+                            )}
+                          </div>
+                        )}
                       </div>
                     );
                   })}
@@ -1187,7 +2397,11 @@ function ErpSection() {
   const [erpTab,  setErpTab]  = useState("summary");
   const [days,    setDays]    = useState(7);
   const [catId,   setCatId]   = useState("");
-  const [rawData, setRawData] = useState(null);
+  const [curAggData, setCurAggData] = useState(null);
+  const [prevAggData, setPrevAggData] = useState(null);
+  const [monthAgg, setMonthAgg] = useState([]);
+  const [dailyData, setDailyData] = useState(null);
+  const [dailyLoading, setDailyLoading] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error,   setError]   = useState(null);
   const [selChannels, setSelChannelsRaw] = useState([]); // 선택된 거래처 목록
@@ -1197,16 +2411,38 @@ function ErpSection() {
   const [monthlyGoal, setMonthlyGoalState] = useState(0);
   const [goalEdit, setGoalEdit] = useState(false);
   const [goalInput, setGoalInput] = useState("");
-  const [blacklist, setBlacklist] = useState(["오아블링","삼대오백부속품","오아부속품","오아뷰티플러스","오아뷰티","LED"]);
+  const [blacklist, setBlacklist] = useState(["오아블링","삼대오백부속품","오아부속품","오아뷰티플러스","오아뷰티","LED","노즐","정리팁","칼날","스티커","부속품"]);
   const [blInput, setBlInput] = useState("");
   const [showBl, setShowBl] = useState(false);
+  const [useCustom, setUseCustom] = useState(false);
+  const [fromDate,  setFromDate]  = useState("");
+  const [toDate,    setToDate]    = useState("");
+  const [useCompare,setUseCompare]= useState(false);
+  const [compFrom,  setCompFrom]  = useState("");
+  const [compTo,    setCompTo]    = useState("");
+  const [chanPresets,setChanPresets] = useState([]);
+  const [stockData,  setStockData]  = useState(null);
+  const [stockLoading, setStockLoading] = useState(false);
 
+  const SURL = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const SKEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+  // 실제 ERP 이미용 카테고리코드
+  const IMIRYONG_IDS = ["DRY","CLS","FLL","SIH","STR","GVN","NDR","ERZ","HEC","HMK","USC","NHT"];
   const BEAUTY_CATS = [
-    {id:"",   name:"전체 이미용"},
-    {id:"70", name:"헤어"},
-    {id:"71", name:"피부미용"},
-    {id:"72", name:"이미용잡화"},
-    {id:"73", name:"기타이미용"},
+    {id:"",    name:"전체 이미용"},
+    {id:"DRY", name:"드라이기"},
+    {id:"STR", name:"고데기"},
+    {id:"CLS", name:"클렌저"},
+    {id:"FLL", name:"필링기"},
+    {id:"SIH", name:"피지흡입기"},
+    {id:"GVN", name:"갈바닉"},
+    {id:"NDR", name:"네일드릴"},
+    {id:"ERZ", name:"면도기/트리머"},
+    {id:"HEC", name:"뷰러"},
+    {id:"HMK", name:"히팅마스크"},
+    {id:"USC", name:"렌즈세척기"},
+    {id:"NHT", name:"코털제거기"},
   ];
 
   const fmtW = v => {
@@ -1239,82 +2475,129 @@ function ErpSection() {
     getSetting("oa_erp_monthly_goal").then(v => { if(v) setMonthlyGoalState(Number(v)||0); }).catch(()=>{});
   }, []);
 
-  async function load(tab, d, cId) {
+  async function load(cId) {
     setLoading(true); setError(null);
+    const cats = cId ? [cId] : ["DRY","CLS","FLL","SIH","STR","GVN","NDR","ERZ","HEC","HMK","USC","NHT"];
     try {
-      const SURL = process.env.NEXT_PUBLIC_SUPABASE_URL;
-      const SKEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-      // 400일치 전체 로드 (전년도 비교 포함, 페이지네이션)
-      const since = new Date(); since.setDate(since.getDate() - 400);
-      const sinceStr = since.toISOString().split('T')[0];
-      const baseUrl = `${SURL}/rest/v1/beauty_sales?select=name,cat_id,channel,date,qty,revenue,profit&date=gte.${sinceStr}&order=date.desc` + (cId ? `&cat_id=eq.${cId}` : '');
-      const PAGE = 1000;
-      let all = [], offset = 0, done = false;
-      while(!done) {
-        const res = await fetch(`${baseUrl}&limit=${PAGE}&offset=${offset}`, {
-          headers: { apikey: SKEY, Authorization: `Bearer ${SKEY}`, 'Range-Unit': 'items' }
-        });
-        if(!res.ok) throw new Error(`Supabase 오류 ${res.status}`);
-        const page = await res.json();
-        all = all.concat(page);
-        if(page.length < PAGE) done = true;
-        else offset += PAGE;
-      }
-      setRawData(all);
-    } catch(e) { setError(e.message); setRawData(null); }
+      const res = await fetch('/api/erp-query', {
+        method: 'POST', headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({
+          p_from: effCurStart, p_to: effCurEnd,
+          p_from2: effPrevStart, p_to2: effPrevEnd,
+          p_cats: cats,
+        }),
+      });
+      if (!res.ok) throw new Error(`조회 오류 ${res.status}`);
+      const d = await res.json();
+      setCurAggData(Array.isArray(d.cur) ? d.cur : []);
+      setPrevAggData(Array.isArray(d.prev) ? d.prev : []);
+    } catch(e) { setError(e.message); setCurAggData(null); setPrevAggData(null); }
     finally { setLoading(false); }
   }
 
-  useEffect(() => { load(erpTab, days, catId); }, [catId]);
+  useEffect(() => { load(catId); }, [catId, days, useCustom, fromDate, toDate, useCompare, compFrom, compTo]);
+
+  // 이번달 매출 (배너용 — 선택 기간과 무관)
+  useEffect(() => {
+    const cats = catId ? [catId] : ["DRY","CLS","FLL","SIH","STR","GVN","NDR","ERZ","HEC","HMK","USC","NHT"];
+    const t = new Date();
+    const mStart = `${t.getFullYear()}-${String(t.getMonth()+1).padStart(2,'0')}-01`;
+    const mEnd = t.toISOString().split('T')[0];
+    fetch('/api/erp-query', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({p_from: mStart, p_to: mEnd, p_cats: cats})
+    }).then(r => r.json()).then(d => setMonthAgg(Array.isArray(d) ? d : [])).catch(() => {});
+  }, [catId]);
+
+  // 일별 탭 — 현재 기간 원시 데이터 (탭 선택 시 로드)
+  useEffect(() => {
+    if (erpTab !== "daily") return;
+    setDailyLoading(true); setDailyData(null);
+    const catFilter = catId ? `&cat_id=eq.${catId}` : `&cat_id=in.(DRY,CLS,FLL,SIH,STR,GVN,NDR,ERZ,HEC,HMK,USC,NHT)`;
+    const baseUrl = `${SURL}/rest/v1/beauty_sales?select=name,date,qty,revenue&date=gte.${effCurStart}&date=lte.${effCurEnd}&order=date.asc${catFilter}`;
+    const sh = { apikey: SKEY, Authorization: `Bearer ${SKEY}` };
+    const PAGE = 2000;
+    let all = [], offset = 0;
+    function fetchPage() {
+      fetch(`${baseUrl}&limit=${PAGE}&offset=${offset}`, { headers: sh })
+        .then(r => r.json())
+        .then(data => {
+          all = all.concat(data);
+          if (data.length < PAGE) { setDailyData(all); setDailyLoading(false); }
+          else { offset += PAGE; fetchPage(); }
+        })
+        .catch(() => setDailyLoading(false));
+    }
+    fetchPage();
+  }, [erpTab, days, useCustom, fromDate, toDate, catId]);
+
+  useEffect(() => {
+    if (erpTab !== "stock") return;
+    setStockLoading(true);
+    fetch('/api/erp-stock')
+      .then(r => r.json())
+      .then(d => setStockData(Array.isArray(d) ? d : []))
+      .catch(() => setStockData([]))
+      .finally(() => setStockLoading(false));
+  }, [erpTab]);
 
   // 날짜 범위 계산
   const today = new Date();
   const toStr  = d => d.toISOString().split('T')[0];
   const addDay = (d,n) => { const x=new Date(d); x.setDate(x.getDate()+n); return x; };
-  const curStart = toStr(addDay(today, -days + 1));   // 현재 기간 시작
-  const curEnd   = toStr(today);                       // 오늘
-  const prevStart= toStr(addDay(today, -days*2 + 1)); // 이전 기간 시작
-  const prevEnd  = toStr(addDay(today, -days));        // 이전 기간 끝
+  const yesterday = addDay(today, -1);
+  const curEnd   = toStr(yesterday);                        // 어제
+  const curStart = toStr(addDay(yesterday, -days + 1));     // 현재 기간 시작
+  const prevEnd  = toStr(addDay(yesterday, -days));         // 이전 기간 끝
+  const prevStart= toStr(addDay(yesterday, -days*2 + 1));  // 이전 기간 시작
+
+  const effCurStart = (useCustom && fromDate) ? fromDate : curStart;
+  const effCurEnd   = (useCustom && toDate)   ? toDate   : curEnd;
+  const effPrevStart= (useCustom && useCompare && compFrom) ? compFrom : prevStart;
+  const effPrevEnd  = (useCustom && useCompare && compTo)   ? compTo   : prevEnd;
 
   // 이번달 시작
   const monthStart = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-01`;
 
-  // 채널 목록 (선택 안 된 것만 드롭다운에 표시)
-  const channels = rawData ? [...new Set(rawData.map(r=>r.channel).filter(Boolean))].sort() : [];
-  const availChannels = channels.filter(c=>!selChannels.includes(c));
-
-  // 채널 + 검색 필터된 전체 데이터
-  const allFiltered = rawData ? rawData.filter(r =>
-    (selChannels.length===0 || selChannels.includes(r.channel)) &&
-    (!search || r.name.toLowerCase().includes(search.toLowerCase()))
-  ) : null;
-
-  // 현재 기간 / 이전 기간 분리
-  const curData  = allFiltered ? allFiltered.filter(r => r.date >= curStart  && r.date <= curEnd)  : [];
-  const prevData = allFiltered ? allFiltered.filter(r => r.date >= prevStart && r.date <= prevEnd) : [];
-
-  // 이번달 전체 매출 (채널 무관, 카테고리 이미용 전체)
-  const monthRevenue = rawData ? rawData.filter(r=>r.date>=monthStart && !isBlacklisted(r.name)).reduce((s,r)=>s+Number(r.revenue),0) : 0;
-
   const isBlacklisted = name => blacklist.some(kw => name.includes(kw));
 
-  // 상품별 요약 (현재 + 이전 비교)
+  const chanFilter = r => selChannels.length===0 && chanPresets.length===0
+    || selChannels.includes(r.channel)
+    || chanPresets.some(kw => r.channel && r.channel.includes(kw));
+
+  // 채널 목록 (선택 안 된 것만 드롭다운에 표시)
+  const channels = curAggData ? [...new Set(curAggData.map(r=>r.channel).filter(Boolean))].sort() : [];
+  const availChannels = channels.filter(c=>!selChannels.includes(c));
+
+  // 현재 기간 / 이전 기간 (RPC로 이미 집계됨 — 날짜 필터 불필요)
+  const curData  = curAggData  ? curAggData.filter(r => chanFilter(r) && (!search || r.name.toLowerCase().includes(search.toLowerCase()))) : [];
+  const prevData = prevAggData ? prevAggData.filter(r => chanFilter(r)) : [];
+
+  // 이번달 전체 매출 (배너용)
+  const monthRevenue = monthAgg.filter(r => !isBlacklisted(r.name)).reduce((s,r) => s + Number(r.revenue), 0);
+
+  const summaryTotal = curData.filter(r => !isBlacklisted(r.name)).reduce((s,r) => s + Number(r.revenue), 0);
   const summaryData = erpTab==="summary" ? (() => {
     const cur={}, prev={};
     curData.forEach(r => {
-      if(!cur[r.name]) cur[r.name]={qty:0,revenue:0,profit:0};
+      if(!cur[r.name]) cur[r.name]={qty:0,revenue:0,profit:0,cost:0,return_qty:0,return_amt:0};
       cur[r.name].qty+=Number(r.qty); cur[r.name].revenue+=Number(r.revenue); cur[r.name].profit+=Number(r.profit);
+      cur[r.name].cost+=Number(r.cost||0); cur[r.name].return_qty+=Number(r.return_qty||0); cur[r.name].return_amt+=Number(r.return_amt||0);
     });
     prevData.forEach(r => {
-      if(!prev[r.name]) prev[r.name]={revenue:0};
-      prev[r.name].revenue+=Number(r.revenue);
+      if(!prev[r.name]) prev[r.name]={revenue:0,profit:0};
+      prev[r.name].revenue+=Number(r.revenue); prev[r.name].profit+=Number(r.profit);
     });
     return Object.entries(cur)
       .filter(([name])=>!isBlacklisted(name))
       .map(([name,v])=>({
         name, ...v,
+        marginPct: v.revenue>0 ? Math.round((v.revenue-v.cost)/v.revenue*100) : null,
+        returnPct: (v.qty+v.return_qty)>0 ? ((v.return_qty/(v.qty+v.return_qty))*100).toFixed(1) : null,
         prevRevenue: prev[name]?.revenue||0,
+        prevProfit:  prev[name]?.profit||0,
         revChg: prev[name]?.revenue>0 ? Math.round((v.revenue-prev[name].revenue)/prev[name].revenue*100) : null,
+        profitChg: prev[name]?.profit>0 ? Math.round((v.profit-prev[name].profit)/prev[name].profit*100) : null,
       })).sort((a,b)=>b.revenue-a.revenue);
   })() : [];
 
@@ -1336,19 +2619,20 @@ function ErpSection() {
 
   const dailyAgg = erpTab==="daily" ? (() => {
     const map = {};
-    curData.forEach(r=>{
+    (dailyData||[]).filter(r => !isBlacklisted(r.name) && chanFilter(r)).forEach(r=>{
       if(!map[r.date]) map[r.date]={date:r.date, qty:0, revenue:0};
       map[r.date].qty+=Number(r.qty); map[r.date].revenue+=Number(r.revenue);
     });
     return Object.values(map).sort((a,b)=>a.date.localeCompare(b.date));
   })() : [];
 
-  const periodLabel = days===1 ? "어제 대비" : `전 ${days}일 대비`;
+  const periodLabel = (useCustom&&fromDate) ? `${fromDate}~${toDate||'오늘'}${useCompare&&compFrom?` vs ${compFrom}~${compTo||'오늘'}`:''}`  : days===1 ? '어제 대비' : `전 ${days}일 대비`;
 
   const TABS = [
     {id:"summary", label:"📊 상품별"},
     {id:"trend",   label:"📈 급등/급락"},
     {id:"daily",   label:"📅 일별"},
+    {id:"stock",   label:"📦 재고"},
   ];
 
   const selStyle = {padding:"5px 10px",borderRadius:8,fontSize:11,fontWeight:700,cursor:"pointer",
@@ -1412,20 +2696,46 @@ function ErpSection() {
       <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",flexWrap:"wrap",gap:8}}>
         <div>
           <div style={{fontSize:16,fontWeight:900,color:C.ink}}>🗄️ ERP · <span style={{color:C.rose}}>이미용</span> 판매</div>
-          <div style={{fontSize:11,color:C.inkLt,marginTop:2}}>매일 오전 7시 자동 동기화 · {periodLabel}</div>
+          <div style={{fontSize:11,color:C.inkLt,marginTop:2}}>매일 오전 7시 자동 동기화 · {periodLabel}{effCurEnd ? ` · ${effCurEnd} 기준` : ""}</div>
         </div>
         <div style={{display:"flex",gap:6,flexWrap:"wrap",alignItems:"center"}}>
-          {[1,7,14,30].map(d=>(
+          {!useCustom && [1,7,14,30].map(d=>(
             <button key={d} onClick={()=>setDays(d)} style={{
               padding:"5px 12px",borderRadius:8,fontSize:11,fontWeight:700,cursor:"pointer",
               border:`1px solid ${days===d?C.rose:C.border}`,
               background:days===d?C.blush:C.white, color:days===d?C.rose:C.inkMid,
-            }}>{d===1?"오늘":d+"일"}</button>
+            }}>{d===1?"어제":d+"일"}</button>
           ))}
+          <button onClick={()=>{setUseCustom(p=>!p);if(useCustom){setFromDate("");setToDate("");setUseCompare(false);setCompFrom("");setCompTo("");}}}
+            style={{padding:"5px 12px",borderRadius:8,fontSize:11,fontWeight:700,cursor:"pointer",
+              border:`1px solid ${useCustom?C.rose:C.border}`,background:useCustom?C.blush:C.white,
+              color:useCustom?C.rose:C.inkMid}}>📅 직접선택</button>
           <select value={catId} onChange={e=>setCatId(e.target.value)} style={selStyle}>
             {BEAUTY_CATS.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}
           </select>
         </div>
+        {useCustom && (
+          <div style={{display:"flex",gap:6,alignItems:"center",flexWrap:"wrap",marginTop:6}}>
+            <span style={{fontSize:11,fontWeight:700,color:C.rose}}>기간:</span>
+            <input type="date" value={fromDate} onChange={e=>setFromDate(e.target.value)}
+              style={{padding:"4px 8px",borderRadius:7,border:`1.5px solid ${fromDate?C.rose:C.border}`,fontSize:11,outline:"none"}}/>
+            <span style={{fontSize:11,color:C.inkMid}}>~</span>
+            <input type="date" value={toDate} onChange={e=>setToDate(e.target.value)}
+              style={{padding:"4px 8px",borderRadius:7,border:`1.5px solid ${toDate?C.rose:C.border}`,fontSize:11,outline:"none"}}/>
+            <button onClick={()=>{setUseCompare(p=>!p);if(useCompare){setCompFrom("");setCompTo("");}}}
+              style={{padding:"4px 12px",borderRadius:7,fontSize:11,fontWeight:700,cursor:"pointer",
+                border:`1.5px solid ${useCompare?"#7C3AED":C.border}`,background:useCompare?"#F5F3FF":"none",
+                color:useCompare?"#7C3AED":C.inkMid}}>비교 기간</button>
+            {useCompare && (<>
+              <span style={{fontSize:11,fontWeight:700,color:"#7C3AED"}}>vs</span>
+              <input type="date" value={compFrom} onChange={e=>setCompFrom(e.target.value)}
+                style={{padding:"4px 8px",borderRadius:7,border:`1.5px solid ${compFrom?"#7C3AED":C.border}`,fontSize:11,outline:"none"}}/>
+              <span style={{fontSize:11,color:C.inkMid}}>~</span>
+              <input type="date" value={compTo} onChange={e=>setCompTo(e.target.value)}
+                style={{padding:"4px 8px",borderRadius:7,border:`1.5px solid ${compTo?"#7C3AED":C.border}`,fontSize:11,outline:"none"}}/>
+            </>)}
+          </div>
+        )}
       </div>
 
       {/* 제외 목록 관리 */}
@@ -1465,6 +2775,20 @@ function ErpSection() {
       {/* 채널 고정 + 검색 */}
       <div style={{display:"flex",gap:8,flexWrap:"wrap",alignItems:"center"}}>
         {/* 거래처 다중 선택 (검색 가능) */}
+        <div style={{display:"flex",alignItems:"center",gap:6,flexWrap:"wrap"}}>
+          <span style={{fontSize:11,color:C.inkMid,fontWeight:700,whiteSpace:"nowrap"}}>채널</span>
+          {[{label:"무신사",kw:"무신사"},{label:"지그재그",kw:"지그재그"},{label:"에이블리",kw:"에이블리"},
+            {label:"카카오",kw:"카카오"},{label:"네이버",kw:"네이버"},{label:"11번가",kw:"11번가"},
+            {label:"이베이",kw:"이베이"},{label:"쿠팡",kw:"쿠팡"}].map(p=>{
+            const active=chanPresets.includes(p.kw);
+            return <button key={p.kw} onClick={()=>setChanPresets(prev=>active?prev.filter(k=>k!==p.kw):[...prev,p.kw])}
+              style={{padding:"4px 10px",borderRadius:20,fontSize:11,fontWeight:700,cursor:"pointer",
+                border:`1px solid ${active?C.rose:C.border}`,background:active?C.blush:C.white,
+                color:active?C.rose:C.inkMid}}>{p.label}</button>;
+          })}
+          {chanPresets.length>0&&<button onClick={()=>setChanPresets([])} style={{fontSize:10,padding:"3px 8px",
+            borderRadius:6,border:`1px solid ${C.border}`,background:"none",cursor:"pointer",color:C.inkMid}}>전체</button>}
+        </div>
         <div style={{display:"flex",alignItems:"center",gap:6,flexWrap:"wrap"}}>
           <span style={{fontSize:11,color:C.inkMid,fontWeight:700,whiteSpace:"nowrap"}}>거래처</span>
           {selChannels.map(ch=>(
@@ -1544,13 +2868,13 @@ function ErpSection() {
       {!loading && !error && erpTab==="summary" && (
         <div style={{background:C.white,border:`1px solid ${C.border}`,borderRadius:12,overflow:"hidden"}}>
           <div style={{padding:"12px 16px",borderBottom:`1px solid ${C.border}`,fontSize:12,fontWeight:800,color:C.ink}}>
-            상품별 판매 ({days===1?"오늘":days+"일"}) · {summaryData.length}개 제품
+            상품별 판매 ({useCustom&&fromDate ? `${fromDate}~${toDate||"오늘"}` : days===1?"어제":days+"일"}) · {summaryData.length}개 제품
           </div>
           <div style={{overflowX:"auto"}}>
             <table style={{width:"100%",borderCollapse:"collapse",fontSize:11,minWidth:540}}>
               <thead>
                 <tr style={{background:C.bg}}>
-                  {["제품명","판매수량","총매출","이익","전기간 매출","전기간 대비"].map(h=>(
+                  {["제품명","판매수량","총매출","이익","마진율","반품률","전기간 매출","전기간 이익","이익 변동","매출 변동"].map(h=>(
                     <th key={h} style={{padding:"8px 12px",textAlign:h==="제품명"?"left":"right",
                       fontWeight:700,color:C.inkMid,borderBottom:`1px solid ${C.border}`,fontSize:10}}>{h}</th>
                   ))}
@@ -1562,11 +2886,30 @@ function ErpSection() {
                     <td style={{padding:"9px 12px",fontWeight:700,color:C.ink,maxWidth:200,
                       overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{r.name}</td>
                     <td style={{padding:"9px 12px",textAlign:"right",fontWeight:700,color:C.inkMid}}>{Number(r.qty).toLocaleString()}</td>
-                    <td style={{padding:"9px 12px",textAlign:"right",fontWeight:700,color:C.rose}}>{fmtW(r.revenue)}</td>
+                    <td style={{padding:"9px 12px",textAlign:"right",fontWeight:700,color:C.rose}}>
+                      {fmtW(r.revenue)}
+                      {summaryTotal>0&&<div style={{fontSize:9,color:C.inkLt,fontWeight:400,marginTop:1}}>{(Number(r.revenue)/summaryTotal*100).toFixed(1)}%</div>}
+                    </td>
                     <td style={{padding:"9px 12px",textAlign:"right",fontWeight:700,
                       color:Number(r.profit)>0?C.good:C.bad}}>{fmtW(r.profit)}</td>
+                    <td style={{padding:"9px 12px",textAlign:"right",fontWeight:700,
+                      color:r.marginPct===null?C.inkLt:r.marginPct>=50?C.good:r.marginPct>=30?C.warn:C.bad}}>
+                      {r.marginPct===null?"-":`${r.marginPct}%`}
+                    </td>
+                    <td style={{padding:"9px 12px",textAlign:"right",
+                      color:r.returnPct===null?C.inkLt:Number(r.returnPct)>=10?C.bad:Number(r.returnPct)>=5?C.warn:C.inkMid}}>
+                      {r.returnPct===null?"-":`${r.returnPct}%`}
+                      {r.return_qty>0&&<div style={{fontSize:9,color:C.inkLt,marginTop:1}}>{Number(r.return_qty).toLocaleString()}개</div>}
+                    </td>
                     <td style={{padding:"9px 12px",textAlign:"right",color:C.inkMid}}>
                       {r.prevRevenue>0 ? fmtW(r.prevRevenue) : <span style={{color:C.inkLt}}>-</span>}
+                    </td>
+                    <td style={{padding:"9px 12px",textAlign:"right",color:C.inkMid}}>
+                      {r.prevProfit>0 ? fmtW(r.prevProfit) : <span style={{color:C.inkLt}}>-</span>}
+                    </td>
+                    <td style={{padding:"9px 12px",textAlign:"right",fontWeight:800,
+                      color:r.profitChg===null?C.inkLt:r.profitChg>0?C.good:C.bad}}>
+                      {r.profitChg===null?"NEW":r.profitChg>0?`+${r.profitChg}%`:`${r.profitChg}%`}
                     </td>
                     <td style={{padding:"9px 12px",textAlign:"right",fontWeight:800,
                       color:r.revChg===null?C.inkLt:r.revChg>0?C.good:C.bad}}>
@@ -1655,9 +2998,63 @@ function ErpSection() {
         </div>
       )}
 
+      {/* 재고 현황 */}
+      {erpTab==="stock" && (
+        <div style={{background:C.white,border:`1px solid ${C.border}`,borderRadius:12,overflow:"hidden"}}>
+          <div style={{padding:"12px 16px",borderBottom:`1px solid ${C.border}`,fontSize:12,fontWeight:800,color:C.ink}}>
+            📦 재고 현황 {stockData&&`· ${stockData.length}개 제품`}
+            <span style={{fontSize:10,fontWeight:400,color:C.inkLt,marginLeft:8}}>ERP 실시간 기준</span>
+          </div>
+          {stockLoading && <div style={{padding:"40px",textAlign:"center",color:C.inkLt,fontSize:12}}>⏳ 불러오는 중...</div>}
+          {!stockLoading && stockData && (
+            <div style={{overflowX:"auto"}}>
+              <table style={{width:"100%",borderCollapse:"collapse",fontSize:11,minWidth:540}}>
+                <thead>
+                  <tr style={{background:C.bg}}>
+                    {["제품명","현재고","발주잔량","생산중","출하예정","운송중","원가"].map(h=>(
+                      <th key={h} style={{padding:"8px 12px",textAlign:h==="제품명"?"left":"right",
+                        fontWeight:700,color:C.inkMid,borderBottom:`1px solid ${C.border}`,fontSize:10}}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {(stockData||[]).map((r,i)=>{
+                    const stockNum = Number(r.stock_qty)||0;
+                    const rowBg = stockNum===0 ? "#FEF2F2" : i%2===0 ? C.white : "#FAFAFA";
+                    return (
+                      <tr key={i} style={{borderBottom:`1px solid ${C.border}33`,background:rowBg}}>
+                        <td style={{padding:"9px 12px",fontWeight:700,color:stockNum===0?C.bad:C.ink,
+                          maxWidth:220,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
+                          {r.name}
+                          {r.model&&<div style={{fontSize:9,color:C.inkLt,fontWeight:400}}>{r.model}</div>}
+                        </td>
+                        <td style={{padding:"9px 12px",textAlign:"right",fontWeight:800,
+                          color:stockNum===0?C.bad:stockNum<50?C.warn:C.good}}>
+                          {stockNum.toLocaleString()}
+                          {stockNum===0&&<div style={{fontSize:9,color:C.bad}}>품절</div>}
+                        </td>
+                        <td style={{padding:"9px 12px",textAlign:"right",color:C.inkMid}}>{Number(r.order_pending||0).toLocaleString()}</td>
+                        <td style={{padding:"9px 12px",textAlign:"right",color:C.inkMid}}>{Number(r.production_qty||0).toLocaleString()}</td>
+                        <td style={{padding:"9px 12px",textAlign:"right",color:C.inkMid}}>{Number(r.ship_qty||0).toLocaleString()}</td>
+                        <td style={{padding:"9px 12px",textAlign:"right",color:C.inkMid}}>{Number(r.transport_qty||0).toLocaleString()}</td>
+                        <td style={{padding:"9px 12px",textAlign:"right",color:C.inkMid}}>{r.cost>0?fmtW(Number(r.cost)):"-"}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+          {!stockLoading && stockData && stockData.length===0 && (
+            <div style={{padding:"40px",textAlign:"center",color:C.inkLt,fontSize:12}}>재고 데이터 없음 — erp_sync.py 실행 후 확인하세요</div>
+          )}
+        </div>
+      )}
+
       {/* 일별 차트 + 상세 */}
-      {!loading && !error && erpTab==="daily" && allFiltered && (
+      {!loading && !error && erpTab==="daily" && (
         <div style={{display:"flex",flexDirection:"column",gap:14}}>
+          {dailyLoading && <div style={{textAlign:"center",padding:"40px 0",color:C.inkLt,fontSize:13}}>⏳ 일별 데이터 로딩 중...</div>}
           <div style={{background:C.white,border:`1px solid ${C.border}`,borderRadius:12,padding:16}}>
             <div style={{fontSize:12,fontWeight:800,color:C.ink,marginBottom:12}}>일별 매출 추이</div>
             <ResponsiveContainer width="100%" height={180}>
@@ -2120,7 +3517,7 @@ export default function OaDashboard(){
   const [creativeLib, setCreativeLib] = useSyncState("oa_creative_lib_v8", []);
   const [recreateReqs, setRecreateReqs] = useSyncState("oa_recreate_req_v8", []);
   const [kwData, setKwData] = useSyncState("oa_kw_v1", {
-    keywords: [{id:"oa-fixed",name:"OA",competitor:"",color:"#2563EB",type:"my",addedAt:"",fixed:true}],
+    keywords: [],
     logs: []
   });
 
@@ -3090,11 +4487,13 @@ export default function OaDashboard(){
     {id:"naver",     icon:"ads_click",      label:"네이버광고"},
     {id:"meta",      icon:"campaign",       label:"메타광고"},
     {id:"influencer",icon:"auto_awesome",   label:"인플루언서"},
+    {id:"inf_archive",icon:"photo_library", label:"아카이브"},
     {id:"schedule",  icon:"calendar_month", label:"스케줄"},
     {id:"creative",  icon:"palette",        label:"소재"},
     {id:"keyword",   icon:"search",         label:"키워드"},
     {id:"market",    icon:"storefront",     label:"시장조사"},
     {id:"review",    icon:"check_circle",   label:"콘텐츠리뷰"},
+    {id:"naver_review", icon:"star_rate",   label:"리뷰분석"},
     {id:"insight",   icon:"edit_note",      label:"팀 노트"},
   ];
 
@@ -5799,6 +7198,14 @@ export default function OaDashboard(){
             border:`1px solid ${C.border}`,background:C.cream,cursor:"pointer",fontFamily:"inherit",fontWeight:700,flexShrink:0}}>
             <MI n="refresh" size={14}/>
           </button>
+          <button onClick={()=>{
+            const targets = notionSch.filter(s => s.status!=="완료" && !(s.date||"").startsWith("2026-04") && !(s.endDate||"").startsWith("2026-04"));
+            if(!targets.length){alert("처리할 항목이 없어요.");return;}
+            if(!confirm(`4월 제외 미완료 ${targets.length}개를 완료 처리할까요?`))return;
+            targets.forEach(s=>toggleNotionDone(s.id, true));
+          }} style={{fontSize:11,padding:"4px 10px",borderRadius:20,border:`1px solid #16a34a44`,background:"#f0fdf4",color:"#16a34a",cursor:"pointer",fontFamily:"inherit",fontWeight:700,flexShrink:0,whiteSpace:"nowrap"}}>
+            ✓ 4월 외 완료
+          </button>
         </div>
         {/* 필터 버튼 — 가로 스크롤 */}
         <div style={{overflowX:"auto",WebkitOverflowScrolling:"touch",paddingBottom:2}}>
@@ -7385,7 +8792,7 @@ export default function OaDashboard(){
   })();
 
 
-  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
   // 📝 팀 노트
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   const InsightSection = (()=>{
@@ -7747,12 +9154,13 @@ export default function OaDashboard(){
     const [mktEditId, setMktEditId] = useState(null);
     const [mktEditKeyword, setMktEditKeyword] = useState("");
     const [marketData, setMarketData] = useSyncState("oa_market_research_v1", []);
-    // 구버전 "우리브랜드" → "크롤링검색" 마이그레이션
+    // 구버전 "우리브랜드" → "크롤링검색" 마이그레이션 (Supabase 로드 후 실행)
     useEffect(()=>{
-      if((marketData||[]).some(p=>p.category==="우리브랜드")){
-        setMarketData((marketData||[]).map(p=>p.category==="우리브랜드"?{...p,category:"크롤링검색"}:p));
+      if((marketData||[]).some(p=>p.category==="우리브랜드"||!p.category)){
+        setMarketData(prev=>(prev||[]).map(p=>(p.category==="우리브랜드"||!p.category)?{...p,category:"크롤링검색"}:p));
       }
-    },[]);
+    // eslint-disable-next-line
+    },[marketData]);
     const [mktProductModal, setMktProductModal] = useState(false);
     const [mktBulkModal, setMktBulkModal] = useState(false);
     const COLOR_SUFFIXES = /[-\s]*(베이지|화이트|핑크|블랙|퍼플|블루|아이보리|레드|그린|옐로우|골드|실버|그레이|민트|라벤더|코랄|스카이|네이비|브라운|오렌지|크림|카키|연두|하늘|노랑|노랑이|파랑|보라|빨강|초록|검정|흰색|흰|검|살구|연핑크|딥블루|버건디|샴페인|카멜|머스타드|파우더|누드|앤틱|올리브|바이올렛|라일락|로즈|루비|에메랄드|틸|세이지|차콜|슬레이트|애쉬|인디고|테라코타|샌드|스모키|젯블랙)+$/gi;
@@ -7782,6 +9190,13 @@ export default function OaDashboard(){
     const [mktModalSearch, setMktModalSearch] = useState(""); // 모달 내 검색어
     const [mktModalResults, setMktModalResults] = useState([]); // 모달 내 검색 결과
     const [mktModalSearching, setMktModalSearching] = useState(false);
+    const [mktChQuery, setMktChQuery] = useState({}); // {platform: keyword}
+    const [mktChResults, setMktChResults] = useState({}); // {platform: [{rank,name,price,image,...}]}
+    const [mktChSearching, setMktChSearching] = useState({}); // {platform: bool}
+    const [mktChCategory, setMktChCategory] = useState({}); // {platform: selected_category}
+    const [mktChApiError, setMktChApiError] = useState(false);
+    const [mktCompChOpen, setMktCompChOpen] = useState({}); // {prodId: bool}
+    const [mktCompChTab, setMktCompChTab] = useState({}); // {prodId: "naver_channel"|"coupang"}
     const CHANNELS = ["스마트스토어","쿠팡","무신사","올리브영","에이블리","지그재그","11번가","G마켓","기타"];
 
     const CHANNEL_MALL_DETECT = [
@@ -8044,14 +9459,43 @@ export default function OaDashboard(){
       setMktFetching(prev=>({...prev,[itemId]:false}));
     }
 
-    // OA 고정 키워드 보장
-    const OA_FIXED = {id:"oa-fixed",name:"OA",competitor:"",color:"#2563EB",type:"my",addedAt:"",fixed:true};
+
+    const CH_QUICK_CATS = ["드라이기","고데기","케어제품"];
+
+    async function doChannelSearch(platform, q, key) {
+      const rKey = key||platform;
+      if(!q?.trim()) return;
+      if(!key) setMktChQuery(p=>({...p,[platform]:q}));
+      setMktChSearching(p=>({...p,[rKey]:true}));
+      try {
+        const apiUrl = platform==="coupang_best"
+          ? `/api/market/coupang-search?keyword=${encodeURIComponent(q)}`
+          : platform==="amazon"
+          ? `/api/market/amazon-search?keyword=${encodeURIComponent(q)}`
+          : `/api/market/channel-search?keyword=${encodeURIComponent(q)}&platform=${platform}`;
+        const res = await fetch(apiUrl);
+        const data = await res.json();
+        if(data?.error==="NAVER_API_KEY_MISSING"||data?.error==="COUPANG_API_KEY_MISSING") {
+          setMktChApiError(true);
+          setMktChResults(p=>({...p,[rKey]:[]}));
+        } else {
+          setMktChApiError(false);
+          setMktChResults(p=>({...p,[rKey]:Array.isArray(data)?data:[]}));
+        }
+      } catch { setMktChResults(p=>({...p,[rKey]:[]})); }
+      setMktChSearching(p=>({...p,[rKey]:false}));
+    }
+
+    // 네이버채널/쿠팡 탭 진입 시 기본 카테고리 자동 검색
     useEffect(()=>{
-      if(!(kwData?.keywords||[]).some(k=>k.id==="oa-fixed")){
-        setKwData({...kwData, keywords:[OA_FIXED,...(kwData?.keywords||[])]});
-      }
+      if(mktCategoryTab!==MKT_COMPARE_TAB) return;
+      const platform = mktCompareInnerTab;
+      if(platform!=="naver_channel"&&platform!=="coupang"&&platform!=="coupang_best") return;
+      if(mktChResults[platform]!==undefined) return; // 이미 로드됨
+      const cat = mktChCategory[platform]||CH_QUICK_CATS[0];
+      doChannelSearch(platform, cat);
     // eslint-disable-next-line
-    },[]);
+    },[mktCompareInnerTab, mktCategoryTab]);
 
     async function searchKeywords(overrideQuery) {
       const q = (overrideQuery || searchInput).trim();
@@ -8215,18 +9659,22 @@ export default function OaDashboard(){
       return { ...kw, latest, prev, change, logs: kwLogs };
     });
 
-    const filtered = kwTab==="my" ? kwStats.filter(k=>k.type==="my")
-      : kwTab==="competitor" ? kwStats.filter(k=>k.type==="competitor")
-      : kwStats;
+    const filtered = kwTab==="competitor" ? kwStats.filter(k=>k.type==="competitor") : kwStats;
 
-    // 차트용 데이터: 선택된 키워드들의 날짜별 순위
-    const chartKws = selectedKw ? kwStats.filter(k=>k.id===selectedKw) : kwStats.slice(0,5);
-    const allDates = [...new Set(logs.map(l=>l.date))].sort();
+    // 차트용 데이터: 선택된 키워드와 같은 이름의 브랜드 전체 표시
+    const selectedKwName = selectedKw ? filtered.find(k=>k.id===selectedKw)?.name : null;
+    const chartKws = selectedKwName
+      ? filtered.filter(k=>k.name===selectedKwName)
+      : filtered.slice(0,5);
+    const filteredLogs = logs.filter(l=>filtered.some(k=>k.id===l.keywordId));
+    const allDates = [...new Set(filteredLogs.map(l=>l.date))].sort();
     const chartData = allDates.map(date => {
       const entry = { date: date.slice(5) }; // MM-DD
       chartKws.forEach(kw => {
         const log = kw.logs.find(l=>l.date===date);
-        if(log) entry[kw.name] = log.rank;
+        const brand = log?.brand || kw.competitor || "오아";
+        const lineKey = `${kw.name}(${brand})`;
+        if(log) entry[lineKey] = log.rank;
       });
       return entry;
     });
@@ -8392,7 +9840,7 @@ export default function OaDashboard(){
                     <button onClick={()=>{
                       if(!mktProductInput.name.trim()) return;
                       const newProd = {id:Date.now().toString(),name:mktProductInput.name.trim(),ourPrice:parseInt(mktProductInput.ourPrice)||0,category:mktProductInput.category||MKT_CATEGORIES[0],items:[]};
-                      setMarketData([...(marketData||[]),newProd]);
+                      setMarketData(prev=>[...(prev||[]),newProd]);
                       setMktCategoryTab(newProd.category);
                       setMktProductModal(false);
                       setMktProductInput({name:"",ourPrice:"",category:MKT_CATEGORIES[0]});
@@ -8581,20 +10029,32 @@ export default function OaDashboard(){
               </Card>
             ) : (
               <>
-                <div style={{display:"flex",alignItems:"center",gap:0,borderBottom:`1px solid ${C.border}`,marginBottom:8,flexWrap:"wrap"}}>
+                {(()=>{
+                  const PRICE_CATS = ["드라이기","고데기","케어제품"]; // 제품 금액 크롤링 하위
+                  const inPriceCrawl = PRICE_CATS.includes(mktCategoryTab);
+                  return(
+                  <>
+                  <div style={{display:"flex",alignItems:"center",gap:0,borderBottom:`1px solid ${C.border}`,marginBottom:inPriceCrawl?0:8,flexWrap:"wrap"}}>
                   <button onClick={()=>setMktCategoryTab(MKT_COMPARE_TAB)}
                     style={{padding:"8px 14px",background:"none",border:"none",borderBottom:`2px solid ${mktCategoryTab===MKT_COMPARE_TAB?"#0891b2":"transparent"}`,color:mktCategoryTab===MKT_COMPARE_TAB?"#0891b2":C.inkMid,fontWeight:mktCategoryTab===MKT_COMPARE_TAB?800:600,fontSize:12,cursor:"pointer",fontFamily:"inherit",marginBottom:-1}}>
                     📊 시장비교
                   </button>
-                  {MKT_CATEGORIES.map(cat=>(
-                    <button key={cat} onClick={()=>setMktCategoryTab(cat)}
-                      style={{padding:"8px 14px",background:"none",border:"none",borderBottom:`2px solid ${mktCategoryTab===cat?C.rose:"transparent"}`,color:mktCategoryTab===cat?C.rose:C.inkMid,fontWeight:mktCategoryTab===cat?800:600,fontSize:12,cursor:"pointer",fontFamily:"inherit",marginBottom:-1}}>
-                      {cat}
-                      <span style={{marginLeft:4,fontSize:10,color:mktCategoryTab===cat?C.rose:C.inkLt}}>
-                        {(marketData||[]).filter(p=>(p.category||MKT_CATEGORIES[0])===cat).length}
-                      </span>
-                    </button>
-                  ))}
+                  {/* 제품 금액 크롤링 그룹 탭 */}
+                  <button onClick={()=>{ if(!inPriceCrawl) setMktCategoryTab(PRICE_CATS[0]); }}
+                    style={{padding:"8px 14px",background:"none",border:"none",borderBottom:`2px solid ${inPriceCrawl?"#e55":"transparent"}`,color:inPriceCrawl?"#e55":C.inkMid,fontWeight:inPriceCrawl?800:600,fontSize:12,cursor:"pointer",fontFamily:"inherit",marginBottom:-1}}>
+                    💰 제품 금액 크롤링
+                    <span style={{marginLeft:4,fontSize:10,opacity:0.7}}>
+                      {(marketData||[]).filter(p=>PRICE_CATS.includes(p.category||"")).length}
+                    </span>
+                  </button>
+                  {/* 크롤링검색 탭 */}
+                  <button onClick={()=>setMktCategoryTab("크롤링검색")}
+                    style={{padding:"8px 14px",background:"none",border:"none",borderBottom:`2px solid ${mktCategoryTab==="크롤링검색"?C.rose:"transparent"}`,color:mktCategoryTab==="크롤링검색"?C.rose:C.inkMid,fontWeight:mktCategoryTab==="크롤링검색"?800:600,fontSize:12,cursor:"pointer",fontFamily:"inherit",marginBottom:-1}}>
+                    🔎 크롤링검색
+                    <span style={{marginLeft:4,fontSize:10,color:mktCategoryTab==="크롤링검색"?C.rose:C.inkLt}}>
+                      {(marketData||[]).filter(p=>(p.category||MKT_CATEGORIES[0])==="크롤링검색").length}
+                    </span>
+                  </button>
                   <button onClick={()=>setMktCategoryTab(MKT_FAV_TAB)}
                     style={{padding:"8px 14px",background:"none",border:"none",borderBottom:`2px solid ${mktCategoryTab===MKT_FAV_TAB?"#f59e0b":"transparent"}`,color:mktCategoryTab===MKT_FAV_TAB?"#f59e0b":C.inkMid,fontWeight:mktCategoryTab===MKT_FAV_TAB?800:600,fontSize:12,cursor:"pointer",fontFamily:"inherit",marginBottom:-1}}>
                     ⭐ 즐겨찾기
@@ -8605,6 +10065,10 @@ export default function OaDashboard(){
                   <button onClick={()=>setMktCategoryTab(MKT_PRICE_TAB)}
                     style={{padding:"8px 14px",background:"none",border:"none",borderBottom:`2px solid ${mktCategoryTab===MKT_PRICE_TAB?"#7c3aed":"transparent"}`,color:mktCategoryTab===MKT_PRICE_TAB?"#7c3aed":C.inkMid,fontWeight:mktCategoryTab===MKT_PRICE_TAB?800:600,fontSize:12,cursor:"pointer",fontFamily:"inherit",marginBottom:-1}}>
                     🔍 크롤링체크
+                  </button>
+                  <button onClick={()=>setMktCategoryTab("📍트래킹")}
+                    style={{padding:"8px 14px",background:"none",border:"none",borderBottom:`2px solid ${mktCategoryTab==="📍트래킹"?"#0891b2":"transparent"}`,color:mktCategoryTab==="📍트래킹"?"#0891b2":C.inkMid,fontWeight:mktCategoryTab==="📍트래킹"?800:600,fontSize:12,cursor:"pointer",fontFamily:"inherit",marginBottom:-1}}>
+                    📍 트래킹
                   </button>
                   <div style={{flex:1}}/>
                   {mktCategoryTab===MKT_COMPARE_TAB&&(
@@ -8625,6 +10089,22 @@ export default function OaDashboard(){
                   <Btn small onClick={()=>{setMktBulkCategory(MKT_CATEGORIES.includes(mktCategoryTab)?mktCategoryTab:"크롤링검색");setMktBulkModal(true);setMktBulkText("");}}>일괄 추가</Btn>
                   <Btn small onClick={()=>{setMktProductInput(p=>({...p,category:MKT_CATEGORIES.includes(mktCategoryTab)?mktCategoryTab:MKT_CATEGORIES[0]}));setMktProductModal(true);}}>+ 제품 추가</Btn>
                 </div>
+                {/* 제품 금액 크롤링 하위 탭 바 */}
+                {inPriceCrawl&&(
+                  <div style={{display:"flex",alignItems:"center",gap:0,borderBottom:`1px solid ${C.border}`,marginBottom:8,background:"#fafafa",paddingLeft:8}}>
+                    <span style={{fontSize:10,color:"#e55",fontWeight:800,marginRight:6}}>▸</span>
+                    {PRICE_CATS.map(cat=>(
+                      <button key={cat} onClick={()=>setMktCategoryTab(cat)}
+                        style={{padding:"6px 12px",background:"none",border:"none",borderBottom:`2px solid ${mktCategoryTab===cat?"#e55":"transparent"}`,color:mktCategoryTab===cat?"#e55":C.inkMid,fontWeight:mktCategoryTab===cat?800:600,fontSize:11,cursor:"pointer",fontFamily:"inherit",marginBottom:-1}}>
+                        {cat}
+                        <span style={{marginLeft:3,fontSize:9,opacity:0.7}}>
+                          {(marketData||[]).filter(p=>(p.category||"")===cat).length}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+                </>);})()}
 
                 {/* 즐겨찾기 탭 */}
                 {mktCategoryTab===MKT_FAV_TAB&&(()=>{
@@ -8696,15 +10176,162 @@ export default function OaDashboard(){
                   const COMPARE_INNER_TABS = [
                     {id:"naver",label:"경쟁사 비교",color:"#0891b2"},
                     {id:"naver_channel",label:"🟢네이버 채널",color:"#03c75a"},
-                    {id:"coupang",label:"🛒쿠팡 채널",color:"#e4173e"},
+                    {id:"coupang",label:"🛒쿠팡(네이버)",color:"#e4173e"},
+                    {id:"coupang_best",label:"🏆쿠팡 베스트",color:"#c0392b"},
                     {id:"oliveyoung",label:"🫒올리브영",color:"#16a34a"},
                     {id:"musinsa",label:"🛍무신사",color:"#111"},
                     {id:"zigzag",label:"👗지그재그",color:"#7c3aed"},
                     {id:"ably",label:"🎀에이블리",color:"#ec4899"},
                     {id:"kakao_gift",label:"🎁카카오",color:"#f59e0b"},
+                    {id:"amazon",label:"🛒아마존",color:"#ff9900"},
                   ];
                   const innerTab = mktCompareInnerTab;
                   const innerTabInfo = COMPARE_INNER_TABS.find(t=>t.id===innerTab)||COMPARE_INNER_TABS[0];
+
+                  // 네이버채널/쿠팡/쿠팡베스트: 키워드 실시간 검색 UI
+                  if(innerTab==="naver_channel"||innerTab==="coupang"||innerTab==="coupang_best") {
+                    const platform = innerTab;
+                    const chQuery = mktChQuery[platform]||"";
+                    const chResults = mktChResults[platform]; // undefined=미검색, []=결과없음
+                    const chSearching = mktChSearching[platform]||false;
+                    const chCat = mktChCategory[platform]||CH_QUICK_CATS[0];
+                    const accentColor = innerTabInfo.color;
+
+                    const selectCat = (cat) => {
+                      setMktChCategory(p=>({...p,[platform]:cat}));
+                      doChannelSearch(platform, cat);
+                    };
+
+                    return(
+                      <div style={{display:"flex",flexDirection:"column",gap:14}}>
+                        {/* 서브탭 */}
+                        <div style={{display:"flex",alignItems:"center",gap:0,borderBottom:`1px solid ${C.border}`,marginBottom:2,flexWrap:"wrap"}}>
+                          {COMPARE_INNER_TABS.map(t=>(
+                            <button key={t.id} onClick={()=>setMktCompareInnerTab(t.id)}
+                              style={{padding:"6px 12px",background:"none",border:"none",borderBottom:`2px solid ${innerTab===t.id?t.color:"transparent"}`,color:innerTab===t.id?t.color:C.inkMid,fontWeight:innerTab===t.id?800:600,fontSize:11,cursor:"pointer",fontFamily:"inherit",marginBottom:-1,whiteSpace:"nowrap"}}>
+                              {t.label}
+                            </button>
+                          ))}
+                        </div>
+
+                        {/* API 키 오류 */}
+                        {mktChApiError&&(
+                          <div style={{background:"#fef3c7",border:"1px solid #fcd34d",borderRadius:10,padding:"12px 16px",fontSize:12,color:"#92400e"}}>
+                            <strong>⚠️ 네이버 API 키 필요</strong><br/>
+                            <span>Vercel 환경변수에 <code>NAVER_CLIENT_ID</code>, <code>NAVER_CLIENT_SECRET</code> 을 추가해주세요.<br/>
+                            <a href="https://developers.naver.com/apps/#/register" target="_blank" rel="noopener noreferrer" style={{color:"#1d4ed8"}}>네이버 개발자센터</a>에서 "검색" API 앱 생성 후 발급받으세요.</span>
+                          </div>
+                        )}
+
+                        {/* 카테고리 탭 */}
+                        <div style={{display:"flex",gap:6,flexWrap:"wrap",alignItems:"center"}}>
+                          <span style={{fontSize:11,color:C.inkMid,fontWeight:600,marginRight:4}}>카테고리:</span>
+                          {CH_QUICK_CATS.map(cat=>{
+                            const active = chCat===cat && chResults!==undefined;
+                            return(
+                              <button key={cat} onClick={()=>selectCat(cat)} disabled={chSearching}
+                                style={{padding:"6px 14px",borderRadius:20,border:`1.5px solid ${active?accentColor:C.border}`,background:active?accentColor:"#fff",color:active?"#fff":C.ink,fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit",transition:"all .15s"}}>
+                                {cat}
+                              </button>
+                            );
+                          })}
+                          {/* 커스텀 검색 */}
+                          <div style={{display:"flex",gap:6,marginLeft:"auto",flexShrink:0}}>
+                            <input value={chQuery} onChange={e=>setMktChQuery(p=>({...p,[platform]:e.target.value}))}
+                              onKeyDown={e=>e.key==="Enter"&&doChannelSearch(platform,chQuery)}
+                              placeholder="직접 검색..."
+                              style={{width:130,padding:"5px 10px",border:`1.5px solid ${C.border}`,borderRadius:8,fontSize:11,fontFamily:"inherit",outline:"none"}}/>
+                            <button onClick={()=>{ setMktChCategory(p=>({...p,[platform]:chQuery})); doChannelSearch(platform,chQuery); }}
+                              disabled={chSearching||!chQuery.trim()}
+                              style={{padding:"5px 12px",borderRadius:8,border:"none",background:chSearching||!chQuery.trim()?"#e5e7eb":"#111",color:chSearching||!chQuery.trim()?C.inkMid:"#fff",fontWeight:700,fontSize:11,cursor:"pointer",fontFamily:"inherit",whiteSpace:"nowrap"}}>
+                              {chSearching?"검색중":"검색"}
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* 검색 중 */}
+                        {chSearching&&(
+                          <div style={{textAlign:"center",padding:"40px 0",color:C.inkMid,fontSize:13}}>
+                            <div style={{display:"inline-block",width:20,height:20,border:`2px solid ${accentColor}`,borderTopColor:"transparent",borderRadius:"50%",animation:"spin 0.8s linear infinite",marginBottom:8}}/>
+                            <div>검색 중...</div>
+                          </div>
+                        )}
+
+                        {/* 미검색 상태 */}
+                        {!chSearching&&chResults===undefined&&(
+                          <Card><div style={{textAlign:"center",padding:"32px 0",color:C.inkLt,fontSize:12}}>카테고리를 선택하면 검색됩니다</div></Card>
+                        )}
+
+                        {/* 결과 없음 */}
+                        {!chSearching&&chResults!==undefined&&chResults.length===0&&!mktChApiError&&(
+                          <Card><div style={{textAlign:"center",padding:"32px 0",color:C.inkLt,fontSize:12}}>
+                            <div style={{fontSize:24,marginBottom:8}}>🔍</div>
+                            <div>"{chCat}" 검색 결과가 없습니다</div>
+                            <div style={{fontSize:11,marginTop:4,color:C.inkLt}}>다른 키워드로 검색해보세요</div>
+                          </div></Card>
+                        )}
+
+                        {/* 결과 카드 그리드 */}
+                        {!chSearching&&chResults&&chResults.length>0&&(
+                          <>
+                            <div style={{fontSize:11,color:C.inkMid}}>
+                              <strong style={{color:accentColor}}>{platform==="naver_channel"?"네이버 쇼핑":"쿠팡"}</strong>
+                              {" "}&quot;{chCat}&quot; 검색결과 {chResults.length}개
+                            </div>
+                            <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(160px,1fr))",gap:12}}>
+                              {chResults.map((item,i)=>{
+                                const discountPct = item.originalPrice>item.price ? Math.round((1-item.price/item.originalPrice)*100) : 0;
+                                const rankColor = item.rank<=3?"#dc2626":item.rank<=10?"#ea580c":item.rank<=20?"#d97706":"rgba(0,0,0,0.55)";
+                                const isOA = /오아|oa\b/i.test((item.brand||"")+" "+(item.mallName||"")+" "+(item.name||""));
+                                return(
+                                  <a key={i} href={item.url} target="_blank" rel="noopener noreferrer"
+                                    style={{display:"flex",flexDirection:"column",background:isOA?"#f0fdf4":"#fff",borderRadius:14,border:`1.5px solid ${isOA?"#16a34a":C.border}`,overflow:"hidden",textDecoration:"none",color:C.ink,boxShadow:isOA?"0 0 0 2px #16a34a33":"0 1px 4px rgba(0,0,0,0.06)",transition:"box-shadow .15s"}}>
+                                    {/* 이미지 영역 */}
+                                    <div style={{position:"relative",width:"100%",paddingBottom:"100%",background:"#f8f8f8",overflow:"hidden"}}>
+                                      {item.image?(
+                                        <img src={item.image} alt={item.name} style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover"}}/>
+                                      ):(
+                                        <div style={{position:"absolute",inset:0,display:"flex",alignItems:"center",justifyContent:"center",fontSize:32,color:"#ddd"}}>📦</div>
+                                      )}
+                                      {/* 순위 배지 */}
+                                      {item.rank&&(
+                                        <span style={{position:"absolute",top:8,left:8,background:rankColor,color:"#fff",fontWeight:900,fontSize:11,padding:"3px 7px",borderRadius:7,letterSpacing:"-0.5px"}}>
+                                          {item.rank}위
+                                        </span>
+                                      )}
+                                      {/* 할인율 배지 */}
+                                      {discountPct>=5&&(
+                                        <span style={{position:"absolute",top:8,right:8,background:"#dc2626",color:"#fff",fontWeight:900,fontSize:10,padding:"3px 6px",borderRadius:6}}>
+                                          {discountPct}%↓
+                                        </span>
+                                      )}
+                                      {/* OA 배지 */}
+                                      {isOA&&(
+                                        <span style={{position:"absolute",bottom:6,left:6,background:"#16a34a",color:"#fff",fontSize:9,fontWeight:900,padding:"2px 6px",borderRadius:4}}>우리브랜드</span>
+                                      )}
+                                    </div>
+                                    {/* 텍스트 영역 */}
+                                    <div style={{padding:"10px 11px 12px",display:"flex",flexDirection:"column",gap:3,flex:1}}>
+                                      {item.brand&&<div style={{fontSize:10,color:isOA?"#16a34a":C.inkMid,fontWeight:700,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{item.brand}</div>}
+                                      <div style={{fontSize:11,fontWeight:600,color:C.ink,lineHeight:1.4,overflow:"hidden",display:"-webkit-box",WebkitLineClamp:2,WebkitBoxOrient:"vertical"}}>{item.name}</div>
+                                      <div style={{marginTop:4,display:"flex",flexDirection:"column",gap:1}}>
+                                        {item.originalPrice>item.price&&(
+                                          <div style={{fontSize:10,color:"#aaa",textDecoration:"line-through"}}>₩{item.originalPrice.toLocaleString()}</div>
+                                        )}
+                                        <div style={{fontSize:14,fontWeight:900,color:discountPct>=5?"#dc2626":C.ink}}>
+                                          ₩{item.price.toLocaleString()}
+                                        </div>
+                                      </div>
+                                    </div>
+                                  </a>
+                                );
+                              })}
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    );
+                  }
 
                   // 플랫폼 탭이면 PLATFORM_TAB_MAP 로직 위임
                   const PLATFORM_KEYS = ["naver_channel","coupang","oliveyoung","musinsa","zigzag","ably","kakao_gift"];
@@ -8728,10 +10355,17 @@ export default function OaDashboard(){
                     }
                     const linkMap2 = {};
                     (links2||[]).forEach(l=>{ linkMap2[l.product_id]=l; });
+                    const guessCategory = name => {
+                      const t = (name||"").toLowerCase();
+                      if(t.includes("드라이")) return "드라이기";
+                      if(t.includes("고데기")||t.includes("컬링")||t.includes("뷰러")||t.includes("매직기")) return "고데기";
+                      if(t.includes("트리트먼트")||t.includes("에센스")||t.includes("샴푸")||t.includes("두피")||t.includes("헤어팩")) return "케어제품";
+                      return "기타";
+                    };
                     const byKeyword2 = {};
                     (prices2||[]).forEach(item=>{
                       const link = linkMap2[item.product_id];
-                      const kw = link?.search_keyword || item.name || "기타";
+                      const kw = link?.category || link?.search_keyword || guessCategory(item.name);
                       if(!byKeyword2[kw]) byKeyword2[kw]=[];
                       byKeyword2[kw].push(item);
                     });
@@ -8762,11 +10396,9 @@ export default function OaDashboard(){
                               <button onClick={()=>{
                                 if(running2) return;
                                 setMktPlatformRunning(p=>({...p,[platform]:true}));
-                                const apiUrl = platform==="coupang" ? "/api/market/collect-coupang" : "/api/github-scrape";
-                                const body = platform==="coupang" ? {} : {platform};
-                                fetch(apiUrl,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)})
+                                fetch("/api/github-scrape",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({platform})})
                                   .then(r=>r.json()).then(d=>{
-                                    if(d.ok) alert(platform==="coupang"?`쿠팡 수집 완료! ${d.collected}/${d.total}개 성공. 새로고침 버튼 눌러주세요.`:"수집 시작! GitHub Actions 실행 중. 2~3분 후 새로고침.");
+                                    if(d.ok) alert("수집 시작! GitHub Actions 실행 중. 2~3분 후 새로고침.");
                                     else alert("오류: "+(d.error||JSON.stringify(d)));
                                     setMktPlatformRunning(p=>({...p,[platform]:false}));
                                   }).catch(e=>{alert("오류: "+e.message);setMktPlatformRunning(p=>({...p,[platform]:false}));});
@@ -8992,7 +10624,7 @@ export default function OaDashboard(){
                           return (p.name||"").toLowerCase().includes(sq)||(p.brand||"").toLowerCase().includes(sq)||(PLATFORM_LABEL[p.platform]||"").includes(sq);
                         }).slice(0,50);
                         return(
-                          <Card key={prod.id}>
+                          <Card key={prod.id} data-prod-id={prod.id}>
                             {/* 우리 제품 헤더 */}
                             <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12}}>
                               <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
@@ -9096,6 +10728,183 @@ export default function OaDashboard(){
                                 </div>
                               </div>
                             )}
+
+                            {/* 채널 랭킹 섹션 */}
+                            {(()=>{
+                              const chOpen = mktCompChOpen[prod.id]!==false;
+                              const chTab = mktCompChTab[prod.id]||"naver_channel";
+                              const chKey = `comp_${prod.id}_${chTab}`;
+                              const chRes = mktChResults[chKey];
+                              const chSearching = mktChSearching[chKey]||false;
+                              const chAccent = chTab==="naver_channel"?"#03c75a":"#e4173e";
+                              const isOA = s => /오아|oa\b/i.test(s||"");
+                              return(
+                                <div style={{marginTop:12,borderTop:`1px solid ${C.border}`,paddingTop:10}}>
+                                  <button onClick={()=>{
+                                    const next = !chOpen;
+                                    setMktCompChOpen(p=>({...p,[prod.id]:next}));
+                                    if(next && chRes===undefined) {
+                                      const kw = prod.category||prod.name||"드라이기";
+                                      doChannelSearch(chTab, kw, `comp_${prod.id}_${chTab}`);
+                                    }
+                                  }} style={{display:"flex",alignItems:"center",gap:5,background:"none",border:"none",cursor:"pointer",fontFamily:"inherit",fontSize:11,fontWeight:700,color:C.inkMid,padding:0}}>
+                                    <span style={{fontSize:13}}>{chOpen?"▲":"▼"}</span> 채널 랭킹 보기
+                                    <span style={{fontSize:9,color:C.inkLt,fontWeight:400}}>(네이버/쿠팡 실시간)</span>
+                                  </button>
+                                  {chOpen&&(
+                                    <div style={{marginTop:10,display:"flex",flexDirection:"column",gap:8}}>
+                                      {/* 미검색 상태 */}
+                                      {chRes===undefined&&!chSearching&&(
+                                        <div style={{textAlign:"center",padding:"10px 0"}}>
+                                          <button onClick={()=>doChannelSearch(chTab,prod.category||prod.name||"드라이기",chKey)}
+                                            style={{padding:"5px 16px",borderRadius:7,border:"none",background:C.rose,color:"#fff",fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
+                                            🔍 랭킹 불러오기
+                                          </button>
+                                        </div>
+                                      )}
+                                      {/* 플랫폼 탭 */}
+                                      <div style={{display:"flex",gap:6}}>
+                                        {[{id:"naver_channel",label:"🟢 네이버",color:"#03c75a"},{id:"coupang",label:"🛒 쿠팡(네이버)",color:"#e4173e"},{id:"coupang_best",label:"🏆 쿠팡 베스트",color:"#c0392b"},{id:"amazon",label:"🛒 아마존",color:"#ff9900"}].map(t=>(
+                                          <button key={t.id} onClick={()=>{
+                                            setMktCompChTab(p=>({...p,[prod.id]:t.id}));
+                                            const rKey = `comp_${prod.id}_${t.id}`;
+                                            if(mktChResults[rKey]===undefined) {
+                                              const kw = prod.category||prod.name||"드라이기";
+                                              doChannelSearch(t.id, kw, rKey);
+                                            }
+                                          }} style={{padding:"5px 12px",borderRadius:20,border:`1.5px solid ${chTab===t.id?t.color:C.border}`,background:chTab===t.id?t.color:"#fff",color:chTab===t.id?"#fff":C.inkMid,fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
+                                            {t.label}
+                                          </button>
+                                        ))}
+                                        <button onClick={()=>{
+                                          const kw = prod.category||prod.name||"드라이기";
+                                          doChannelSearch(chTab, kw, chKey);
+                                        }} style={{marginLeft:"auto",display:"flex",alignItems:"center",gap:3,padding:"4px 10px",borderRadius:6,border:`1px solid ${C.border}`,background:"none",color:C.inkMid,fontSize:10,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
+                                          <MI n="refresh" size={11}/>새로고침
+                                        </button>
+                                      </div>
+                                      {/* 검색 중 */}
+                                      {chSearching&&<div style={{textAlign:"center",padding:"16px 0",color:C.inkMid,fontSize:11}}>검색 중...</div>}
+                                      {/* 결과 테이블 */}
+                                      {!chSearching&&chRes&&chRes.length>0&&(
+                                        <div style={{overflowX:"auto"}}>
+                                          <table style={{width:"100%",borderCollapse:"collapse",fontSize:11}}>
+                                            <thead>
+                                              <tr style={{background:C.cream}}>
+                                                {(chTab==="amazon"?["순위","상품명","가격","별점","리뷰수","비교"]:["순위","브랜드","상품명","플랫폼","판매가","정가","할인율","비교"]).map(h=>(
+                                                  <th key={h} style={{padding:"7px 10px",textAlign:h==="순위"||h==="판매가"||h==="정가"||h==="할인율"||h==="가격"||h==="별점"||h==="리뷰수"?"center":"left",fontWeight:700,color:C.inkMid,borderBottom:`1px solid ${C.border}`,whiteSpace:"nowrap",fontSize:10}}>{h}</th>
+                                                ))}
+                                              </tr>
+                                            </thead>
+                                            <tbody>
+                                              {chRes.map((item,i)=>{
+                                                const discountPct = item.originalPrice>item.price ? Math.round((1-item.price/item.originalPrice)*100) : 0;
+                                                const rankColor = item.rank<=3?"#dc2626":item.rank<=10?"#ea580c":item.rank<=20?"#d97706":C.inkMid;
+                                                const oaBrand = isOA(item.brand)||isOA(item.mallName)||isOA(item.name);
+                                                const urlHash = item.url.replace(/https?:\/\//,"").replace(/[^a-zA-Z0-9]/g,"-").slice(0,40);
+                                                const compKey = `${chTab}__${urlHash}`;
+                                                const isConfirmedComp = hasLink(prod, compKey);
+                                                const platformLabel = chTab==="naver_channel"?"네이버":chTab==="coupang_best"?"쿠팡 베스트":"쿠팡";
+                                                const platformColor = chTab==="naver_channel"?"#03c75a":"#e4173e";
+                                                if(chTab==="amazon") return(
+                                                  <tr key={i} style={{borderBottom:`1px solid ${C.border}`,background:"#fff"}}>
+                                                    <td style={{padding:"8px 10px",textAlign:"center",fontWeight:900,color:rankColor,whiteSpace:"nowrap"}}>{item.rank}위</td>
+                                                    <td style={{padding:"8px 10px",maxWidth:240}}>
+                                                      <a href={item.url} target="_blank" rel="noopener noreferrer" style={{textDecoration:"none",color:C.ink,display:"flex",alignItems:"center",gap:6}}>
+                                                        {item.image&&<img src={item.image} alt="" style={{width:32,height:32,objectFit:"cover",borderRadius:4,flexShrink:0}}/>}
+                                                        <span style={{overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",fontSize:11}}>{item.name}</span>
+                                                      </a>
+                                                    </td>
+                                                    <td style={{padding:"8px 10px",textAlign:"center",fontWeight:700,color:C.ink,whiteSpace:"nowrap"}}>{item.priceLabel||"—"}</td>
+                                                    <td style={{padding:"8px 10px",textAlign:"center",whiteSpace:"nowrap"}}>
+                                                      {item.rating>0&&<span style={{color:"#f59e0b",fontWeight:700}}>★{item.rating}</span>}
+                                                    </td>
+                                                    <td style={{padding:"8px 10px",textAlign:"center",color:C.inkMid,whiteSpace:"nowrap"}}>
+                                                      {item.reviews>0?item.reviews.toLocaleString():"—"}
+                                                    </td>
+                                                    <td style={{padding:"6px 10px",textAlign:"center"}}>
+                                                      <button type="button" onClick={(e)=>{
+                                                        e.preventDefault();e.stopPropagation();
+                                                        const links=getCompLinks(prod);
+                                                        const adding=!links.includes(compKey);
+                                                        const next=adding?[...links,compKey]:links.filter(k=>k!==compKey);
+                                                        setMktOurProds(prev=>(prev||[]).map(p=>p.id===prod.id?{...p,comp_links:next}:p));
+                                                        fetch("/api/market/compare-prods",{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({id:prod.id,comp_links:next})}).catch(()=>{});
+                                                        if(adding){
+                                                          const newPriceRow={platform:"amazon",product_id:urlHash,url:item.url,name:item.name,brand:"Amazon",sale_price:item.price,original_price:item.price,image:item.image||"",rank:item.rank||null,collected_at:new Date().toISOString()};
+                                                          setMktCompareData(prev=>{const existing=prev?.prices||[];const idx=existing.findIndex(p=>p.platform==="amazon"&&p.product_id===urlHash);const updated=idx>=0?existing.map((p,i2)=>i2===idx?{...p,...newPriceRow}:p):[...existing,newPriceRow];return{...prev,prices:updated};});
+                                                          fetch("/api/market/prices",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(newPriceRow)}).catch(()=>{});
+                                                          document.querySelector(`[data-prod-id="${prod.id}"]`)?.scrollIntoView({behavior:"smooth",block:"start"});
+                                                        }
+                                                        const removing=links.includes(compKey)&&!adding;
+                                                        if(removing){setMktCompareData(prev=>{const existing=prev?.prices||[];return{...prev,prices:existing.filter(p=>!(p.platform==="amazon"&&p.product_id===urlHash))};});}
+                                                      }} style={{padding:"3px 10px",borderRadius:6,border:`1px solid ${isConfirmedComp?"#3b82f6":C.border}`,background:isConfirmedComp?"#eff6ff":"none",color:isConfirmedComp?"#3b82f6":C.inkMid,fontSize:10,fontWeight:700,cursor:"pointer",fontFamily:"inherit",whiteSpace:"nowrap"}}>
+                                                        {isConfirmedComp?"✓ 경쟁사":"+ 경쟁사"}
+                                                      </button>
+                                                    </td>
+                                                  </tr>
+                                                );
+                                                return(
+                                                  <tr key={i} style={{borderBottom:`1px solid ${C.border}`,background:oaBrand?"#f0fdf4":isConfirmedComp?"#eff6ff":"#fff"}}>
+                                                    <td style={{padding:"8px 10px",textAlign:"center",fontWeight:900,color:rankColor,whiteSpace:"nowrap"}}>{item.rank?`${item.rank}위`:"—"}</td>
+                                                    <td style={{padding:"8px 10px",whiteSpace:"nowrap"}}>
+                                                      <span style={{fontWeight:700,color:oaBrand?"#16a34a":isConfirmedComp?"#3b82f6":C.ink,fontSize:11}}>
+                                                        {item.brand||item.mallName||"—"}
+                                                      </span>
+                                                      {oaBrand&&<span style={{marginLeft:4,fontSize:9,background:"#16a34a",color:"#fff",padding:"1px 5px",borderRadius:8,fontWeight:700}}>우리</span>}
+                                                    </td>
+                                                    <td style={{padding:"8px 10px",maxWidth:200}}>
+                                                      <a href={item.url} target="_blank" rel="noopener noreferrer" style={{textDecoration:"none",color:C.ink,display:"flex",alignItems:"center",gap:6}}>
+                                                        {item.image&&<img src={item.image} alt="" style={{width:28,height:28,objectFit:"cover",borderRadius:4,flexShrink:0}}/>}
+                                                        <span style={{overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",fontSize:11}}>{item.name}</span>
+                                                      </a>
+                                                    </td>
+                                                    <td style={{padding:"8px 10px",textAlign:"center"}}>
+                                                      <span style={{fontSize:10,fontWeight:700,color:platformColor,background:chTab==="naver_channel"?"#f0fdf4":"#fff5f5",padding:"2px 8px",borderRadius:10}}>{platformLabel}</span>
+                                                    </td>
+                                                    <td style={{padding:"8px 10px",textAlign:"right",fontWeight:900,color:discountPct>=5?"#dc2626":C.ink,whiteSpace:"nowrap"}}>₩{item.price.toLocaleString()}</td>
+                                                    <td style={{padding:"8px 10px",textAlign:"right",color:C.inkMid,whiteSpace:"nowrap"}}>{item.originalPrice>item.price?`₩${item.originalPrice.toLocaleString()}`:"—"}</td>
+                                                    <td style={{padding:"8px 10px",textAlign:"center",fontWeight:800,color:discountPct>=5?"#dc2626":C.inkLt}}>{discountPct>=1?`${discountPct}%`:"—"}</td>
+                                                    <td style={{padding:"6px 10px",textAlign:"center"}}>
+                                                      {oaBrand ? (
+                                                        <span style={{fontSize:10,color:"#16a34a",fontWeight:700}}>우리 제품</span>
+                                                      ) : (
+                                                        <button type="button" onClick={(e)=>{
+                                                          e.preventDefault(); e.stopPropagation();
+                                                          const links = getCompLinks(prod);
+                                                          const adding = !links.includes(compKey);
+                                                          const next = adding?[...links,compKey]:links.filter(k=>k!==compKey);
+                                                          setMktOurProds(prev=>(prev||[]).map(p=>p.id===prod.id?{...p,comp_links:next}:p));
+                                                          fetch("/api/market/compare-prods",{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({id:prod.id,comp_links:next})}).catch(()=>{});
+                                                          if(adding){
+                                                            const newPriceRow = {platform:chTab,product_id:urlHash,url:item.url,name:item.name,brand:item.brand||"",sale_price:item.price,original_price:item.originalPrice||item.price,image:item.image||"",rank:item.rank||null,collected_at:new Date().toISOString()};
+                                                            setMktCompareData(prev=>{
+                                                              const existing = prev?.prices||[];
+                                                              const idx = existing.findIndex(p=>p.platform===chTab&&p.product_id===urlHash);
+                                                              const updated = idx>=0?existing.map((p,i)=>i===idx?{...p,...newPriceRow}:p):[...existing,newPriceRow];
+                                                              return {...prev,prices:updated};
+                                                            });
+                                                            fetch("/api/market/prices",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(newPriceRow)}).catch(()=>{});
+                                                            document.querySelector(`[data-prod-id="${prod.id}"]`)?.scrollIntoView({behavior:"smooth",block:"start"});
+                                                          }
+                                                        }} style={{padding:"3px 10px",borderRadius:8,border:`1px solid ${isConfirmedComp?"#3b82f6":C.border}`,background:isConfirmedComp?"#dbeafe":"#f9fafb",color:isConfirmedComp?"#1d4ed8":C.inkMid,fontSize:10,fontWeight:700,cursor:"pointer",fontFamily:"inherit",whiteSpace:"nowrap"}}>
+                                                          {isConfirmedComp?"✓ 경쟁사":"+ 경쟁사"}
+                                                        </button>
+                                                      )}
+                                                    </td>
+                                                  </tr>
+                                                );
+                                              })}
+                                            </tbody>
+                                          </table>
+                                        </div>
+                                      )}
+                                      {!chSearching&&chRes&&chRes.length===0&&<div style={{textAlign:"center",padding:"12px 0",color:C.inkLt,fontSize:11}}>결과 없음</div>}
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            })()}
                           </Card>
                         );
                       })}
@@ -9237,13 +11046,20 @@ export default function OaDashboard(){
                       setMktPlatformLoading(p=>({...p,[platform]:false}));
                     }).catch(()=>setMktPlatformLoading(p=>({...p,[platform]:false})));
                   }
-                  // 키워드별 그루핑 (search_keyword 기준, 없으면 product_id 기준)
+                  // 카테고리별 그루핑 (category → search_keyword → 이름에서 추론)
                   const linkMap = {};
                   (links||[]).forEach(l=>{ linkMap[l.product_id]=l; });
+                  const guessCategory2 = name => {
+                    const t = (name||"").toLowerCase();
+                    if(t.includes("드라이")) return "드라이기";
+                    if(t.includes("고데기")||t.includes("컬링")||t.includes("뷰러")||t.includes("매직기")) return "고데기";
+                    if(t.includes("트리트먼트")||t.includes("에센스")||t.includes("샴푸")||t.includes("두피")||t.includes("헤어팩")) return "케어제품";
+                    return "기타";
+                  };
                   const byKeyword = {};
                   (prices||[]).forEach(item=>{
                     const link = linkMap[item.product_id];
-                    const kw = link?.search_keyword || item.name || "기타";
+                    const kw = link?.category || link?.search_keyword || guessCategory2(item.name);
                     if(!byKeyword[kw]) byKeyword[kw]=[];
                     byKeyword[kw].push(item);
                   });
@@ -9804,6 +11620,8 @@ export default function OaDashboard(){
                 })}
               </>
             )}
+          {/* 📍 트래킹 탭 */}
+          {mktCategoryTab==="📍트래킹"&&<ProductTrackerSection/>}
           </div>
         )}
 
@@ -9813,7 +11631,6 @@ export default function OaDashboard(){
         {/* 서브 탭 */}
         <div style={{display:"flex",gap:4,background:C.cream,borderRadius:12,padding:4,width:"fit-content"}}>
           {[{id:"all",label:"전체"},
-            {id:"my",label:"우리 브랜드"},
             {id:"competitor",label:"경쟁사"}
           ].map(t=>(
             <button key={t.id} onClick={()=>setKwTab(t.id)} style={{
@@ -9864,12 +11681,15 @@ export default function OaDashboard(){
                     </div>
                     {kw.competitor&&<div style={{fontSize:10,color:C.inkLt,marginBottom:6}}>{kw.competitor}</div>}
                     <div style={{display:"flex",alignItems:"flex-end",gap:8}}>
-                      <div style={{fontSize:28,fontWeight:900,color:kw.latest?kw.color:C.inkLt,lineHeight:1}}>
-                        {kw.latest ? `${kw.latest.rank}위` : "—"}
+                      <div style={{fontSize:kw.latest?.rank!=null?28:16,fontWeight:900,color:kw.latest?kw.color:C.inkLt,lineHeight:1}}>
+                        {kw.latest ? (kw.latest.rank!=null ? `${kw.latest.rank}위` : "300위↓") : "—"}
                       </div>
                       {ch&&<div style={{fontSize:11,fontWeight:800,color:ch.color,marginBottom:2}}>{ch.text}</div>}
                     </div>
-                    {kw.latest&&<div style={{fontSize:10,color:C.inkLt,marginTop:4}}>{kw.latest.date} 기준</div>}
+                    {kw.latest&&<div style={{fontSize:10,color:C.inkLt,marginTop:4,display:"flex",gap:6,flexWrap:"wrap"}}>
+                      <span>{kw.latest.date} 기준</span>
+                      {kw.latest.brand&&<span style={{background:"#EFF6FF",color:C.rose,padding:"0 6px",borderRadius:8,fontWeight:700}}>브랜드: {kw.latest.brand}</span>}
+                    </div>}
                     <div style={{display:"flex",gap:4,marginTop:6}}>
                       {autoRank[kw.name]?.topItems?.length>0&&(
                         <button onClick={e=>{e.stopPropagation();setRankModal(kw.name);}}
@@ -9905,18 +11725,28 @@ export default function OaDashboard(){
             {/* 순위 추이 차트 */}
             {chartData.length > 0 && (
               <Card>
-                <CardTitle title="순위 추이" sub={selectedKw?"선택 키워드":"상위 5개 키워드 · 클릭으로 선택"}/>
+                <CardTitle title="순위 추이" sub={selectedKwName?`"${selectedKwName}" 브랜드별 비교`:"상위 5개 키워드 · 카드 클릭 시 브랜드별 비교"}/>
                 <div style={{fontSize:10,color:C.inkLt,marginBottom:8}}>낮을수록 상위 노출 (1위가 최상위)</div>
+                {allDates.length < 2 && (
+                  <div style={{fontSize:11,color:"#f59e0b",background:"#fffbeb",border:"1px solid #fde68a",borderRadius:8,padding:"6px 10px",marginBottom:8}}>
+                    📅 날짜가 2일 이상 쌓여야 추이 선이 표시됩니다. 지금은 {allDates.length}일치 데이터예요.
+                  </div>
+                )}
                 <ResponsiveContainer width="100%" height={200}>
                   <LineChart data={chartData}>
                     <CartesianGrid strokeDasharray="3 3" stroke={C.border}/>
                     <XAxis dataKey="date" tick={{fontSize:10}} stroke={C.border}/>
                     <YAxis reversed tick={{fontSize:10}} stroke={C.border} domain={['dataMin - 2','dataMax + 2']}/>
-                    <Tooltip formatter={(v,n)=>[`${v}위`,n]}/>
-                    {chartKws.map(kw=>(
-                      <Line key={kw.id} type="monotone" dataKey={kw.name}
-                        stroke={kw.color} strokeWidth={2} dot={{r:4}} connectNulls/>
-                    ))}
+                    <Tooltip formatter={(v,n)=>[v!=null?`${v}위`:"300위↓",n]}/>
+                    <Legend wrapperStyle={{fontSize:11}}/>
+                    {chartKws.map(kw=>{
+                      const brand = kw.logs[kw.logs.length-1]?.brand || kw.competitor || "오아";
+                      const lineKey = `${kw.name}(${brand})`;
+                      return (
+                        <Line key={kw.id} type="monotone" dataKey={lineKey}
+                          stroke={kw.color} strokeWidth={2} dot={{r:4}} connectNulls/>
+                      );
+                    })}
                   </LineChart>
                 </ResponsiveContainer>
               </Card>
@@ -10242,6 +12072,7 @@ export default function OaDashboard(){
           {sec==="home"        && <HomeSection/>}
           {sec==="meta"        && MetaSection}
           {sec==="influencer"  && InfluencerSection}
+          {sec==="inf_archive" && <InfluencerArchiveSection/>}
           {sec==="schedule"    && ScheduleSection}
           {sec==="erp"         && <ErpSection/>}
           {sec==="naver"       && <NaverSection/>}
@@ -10249,6 +12080,7 @@ export default function OaDashboard(){
           {sec==="keyword"     && KeywordSection}
           {sec==="market"      && KeywordSection}
           {sec==="review"      && ReviewSection}
+          {sec==="naver_review" && <NaverReviewSection/>}
           {sec==="insight"     && InsightSection}
           {sec==="coupang"     && CoupangSection}
         </main>

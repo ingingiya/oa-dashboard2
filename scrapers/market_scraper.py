@@ -27,6 +27,9 @@ PLATFORM_NAMES = {
     "naver_channel": "네이버채널", "coupang": "쿠팡",
 }
 
+# 지그재그 키워드 검색 캐시: keyword → [pid1, pid2, ...] 순위 순서
+_zigzag_search_cache: dict = {}
+
 
 
 
@@ -202,8 +205,8 @@ async def extract_zigzag(page, pid):
     return {}
 
 
-async def find_rank_zigzag(page, keyword, pid):
-    # 새 컨텍스트(시크릿 모드)로 검색 — 최근 본 상품 기록 완전 차단
+async def _zigzag_fetch_ranked_ids(page, keyword) -> list:
+    """키워드로 지그재그 검색 후 상품 ID 순위 리스트 반환 (캐시 저장용)"""
     fresh_ctx = await page.context.browser.new_context(
         user_agent=UA, viewport={"width": 1280, "height": 900}
     )
@@ -229,8 +232,8 @@ async def find_rank_zigzag(page, keyword, pid):
         await fresh_page.wait_for_timeout(3000)
         fresh_page.remove_listener("response", on_response)
 
-        # 1순위: __NEXT_DATA__ — "search" 포함 쿼리 우선, 그 다음 가장 긴 product 리스트
-        rank = await fresh_page.evaluate("""(pid) => {
+        # 1순위: __NEXT_DATA__ — "search" 포함 쿼리 우선, 가장 긴 product 리스트
+        ranked_ids = await fresh_page.evaluate("""() => {
             try {
                 const nd = window.__NEXT_DATA__;
                 if (!nd) return null;
@@ -253,7 +256,6 @@ async def find_rank_zigzag(page, keyword, pid):
                     }
                 }
 
-                // search 관련 쿼리 우선 탐색
                 const searchLists = [], otherLists = [];
                 for (const q of queries) {
                     const data = q?.state?.data;
@@ -263,29 +265,21 @@ async def find_rank_zigzag(page, keyword, pid):
                     const bucket = isSearch ? searchLists : otherLists;
                     collectLists(data, 0, bucket);
                 }
-                // search 쿼리에서 긴 것 우선, 없으면 전체 중 긴 것
                 const candidates = [...searchLists, ...otherLists];
                 candidates.sort((a, b) => b.length - a.length);
-                for (const list of candidates) {
-                    for (let i = 0; i < list.length; i++) {
-                        const item = list[i];
-                        const itemId = String(item?.catalog_product_id || item?.product_id || item?.id || "");
-                        if (itemId === pid) return i + 1;
-                    }
-                }
-                // debug: 찾은 후보 리스트 길이들
-                return { debug: candidates.map(l=>l.length) };
-            } catch(e) { return { error: String(e) }; }
-        }""", pid)
+                if (candidates.length === 0) return null;
+                // 가장 긴 리스트에서 ID 추출
+                const best = candidates[0];
+                return best.map(item => String(item?.catalog_product_id || item?.product_id || item?.id || "")).filter(Boolean);
+            } catch(e) { return null; }
+        }""")
 
-        if isinstance(rank, int):
-            print(f"    ✅ __NEXT_DATA__ 순위: {rank}")
+        if isinstance(ranked_ids, list) and len(ranked_ids) > 0:
+            print(f"    ✅ __NEXT_DATA__ 결과 {len(ranked_ids)}개")
             await fresh_ctx.close()
-            return rank
-        if isinstance(rank, dict):
-            print(f"    ℹ️ __NEXT_DATA__ 미발견: {rank}")
+            return ranked_ids
 
-        # 2순위: 인터셉트된 API 응답에서 탐색 — search URL 우선, 가장 긴 리스트 기준
+        # 2순위: 인터셉트된 API 응답
         def collect_lists_from(obj, result, depth=0):
             if depth > 6: return
             if isinstance(obj, list) and len(obj) > 1:
@@ -310,54 +304,74 @@ async def find_rank_zigzag(page, keyword, pid):
         all_api_lists = search_api_lists + other_api_lists
         all_api_lists.sort(key=lambda x: len(x), reverse=True)
         print(f"    ℹ️ API 인터셉트 후보: {[len(l) for l in all_api_lists[:5]]}")
-        for lst in all_api_lists:
-            for i, item in enumerate(lst):
-                if not isinstance(item, dict): continue
-                item_id = str(item.get("catalog_product_id") or item.get("product_id") or item.get("id") or "")
-                if item_id == pid:
-                    print(f"    ✅ API 인터셉트 순위: {i+1}")
-                    await fresh_ctx.close()
-                    return i + 1
+        if all_api_lists:
+            best = all_api_lists[0]
+            ids = [str(item.get("catalog_product_id") or item.get("product_id") or item.get("id") or "") for item in best if isinstance(item, dict)]
+            ids = [x for x in ids if x]
+            if ids:
+                print(f"    ✅ API 인터셉트 결과 {len(ids)}개")
+                await fresh_ctx.close()
+                return ids
 
-        # 3순위: 스크롤 후 DOM — data-index 속성 우선, 없으면 문서 순서
+        # 3순위: 스크롤 후 DOM
         await fresh_page.evaluate("window.scrollTo(0, document.body.scrollHeight / 3)")
         await fresh_page.wait_for_timeout(1500)
-        result = await fresh_page.evaluate("""(pid) => {
-            const seen = new Set(); let pos = 0;
-            // data-index 속성 있는 경우 우선
+        dom_ids = await fresh_page.evaluate("""() => {
+            const seen = new Set(); const result = [];
             const indexed = Array.from(document.querySelectorAll('[data-index] a[href*="/catalog/products/"]'));
             if (indexed.length > 2) {
+                const byIndex = [];
                 for (const a of indexed) {
                     const m = a.href.match(/\\/catalog\\/products\\/(\\d+)/);
                     if (!m || seen.has(m[1])) continue;
                     const idx = parseInt(a.closest('[data-index]')?.getAttribute('data-index') ?? -1);
-                    if (idx >= 0) { seen.add(m[1]); if (m[1] === pid) return idx + 1; }
+                    if (idx >= 0) { seen.add(m[1]); byIndex.push([idx, m[1]]); }
                 }
+                byIndex.sort((a, b) => a[0] - b[0]);
+                return byIndex.map(x => x[1]);
             }
-            // 문서 순서 기반 (헤더/추천 영역 제거)
             const allLinks = Array.from(document.querySelectorAll('main a[href*="/catalog/products/"], [class*="search"] a[href*="/catalog/products/"], [class*="product"] a[href*="/catalog/products/"]'));
             const fallback = allLinks.length > 2 ? allLinks : Array.from(document.querySelectorAll('a[href*="/catalog/products/"]'));
-            seen.clear(); pos = 0;
             for (const a of fallback) {
                 const m = a.href.match(/\\/catalog\\/products\\/(\\d+)/);
                 if (!m || seen.has(m[1])) continue;
-                seen.add(m[1]); pos++;
-                if (m[1] === pid) return pos;
+                seen.add(m[1]); result.push(m[1]);
             }
-            return { notFound: pos, sample: Array.from(seen).slice(0,5) };
-        }""", pid)
+            return result;
+        }""")
 
-        if isinstance(result, int):
+        if isinstance(dom_ids, list) and len(dom_ids) > 0:
+            print(f"    ✅ DOM 결과 {len(dom_ids)}개")
             await fresh_ctx.close()
-            return result
-        print(f"    ⚠️ 지그재그 순위 못찾음: {result}")
+            return dom_ids
+
+        print(f"    ⚠️ 지그재그 결과 없음")
         await fresh_ctx.close()
-        return None
+        return []
     except Exception as e:
-        print(f"    ⚠️ 순위 실패: {e}")
+        print(f"    ⚠️ 지그재그 검색 실패: {e}")
         try: await fresh_ctx.close()
         except: pass
-        return None
+        return []
+
+
+async def find_rank_zigzag(page, keyword, pid):
+    global _zigzag_search_cache
+    # 캐시 히트: 같은 키워드는 한 번만 검색
+    if keyword not in _zigzag_search_cache:
+        print(f"    🔍 지그재그 '{keyword}' 첫 검색 → 캐시 저장")
+        _zigzag_search_cache[keyword] = await _zigzag_fetch_ranked_ids(page, keyword)
+    else:
+        print(f"    ⚡ 지그재그 '{keyword}' 캐시 사용")
+
+    ranked_ids = _zigzag_search_cache[keyword]
+    if pid in ranked_ids:
+        rank = ranked_ids.index(pid) + 1
+        print(f"    ✅ 순위: {rank}")
+        return rank
+    print(f"    ⚠️ '{pid}' 결과에 없음 (총 {len(ranked_ids)}개)")
+    return None
+
 
 
 # ── 에이블리 ─────────────────────────────────────────
