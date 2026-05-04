@@ -2536,9 +2536,6 @@ function ErpSection() {
   useEffect(() => {
     if (erpTab !== "stock") return;
     setStockLoading(true);
-    const today = new Date();
-    const d7 = new Date(today); d7.setDate(d7.getDate()-7);
-    const d7str = d7.toISOString().split('T')[0];
     Promise.all([
       fetch(`${SURL}/rest/v1/beauty_stock?select=name,model,cost,stock_qty,order_pending,production_qty,ship_qty,transport_qty,lead_days&order=name.asc`, {
         headers: { apikey: SKEY, Authorization: `Bearer ${SKEY}` }
@@ -2546,8 +2543,9 @@ function ErpSection() {
       fetch(`${SURL}/rest/v1/coupang_avg?select=sku_name,avg_7d,coupang_stock`, {
         headers: { apikey: SKEY, Authorization: `Bearer ${SKEY}` }
       }).then(r => r.json()),
-      fetch(`${SURL}/rest/v1/beauty_sales?select=name,qty&date=gte.${d7str}&channel=neq.쿠팡&limit=10000`, {
-        headers: { apikey: SKEY, Authorization: `Bearer ${SKEY}` }
+      fetch(`${SURL}/rest/v1/rpc/get_7d_avg_ex_coupang`, {
+        method: 'POST', headers: { apikey: SKEY, Authorization: `Bearer ${SKEY}`, 'Content-Type': 'application/json' },
+        body: '{}'
       }).then(r => r.json()),
     ]).then(([stock, coupang, sales]) => {
       // 쿠팡 map
@@ -2555,11 +2553,11 @@ function ErpSection() {
       (Array.isArray(coupang) ? coupang : []).forEach(c => {
         coupangMap[c.sku_name.replace(/\s/g,'')] = { avg7: c.avg_7d||0, cStock: c.coupang_stock||0 };
       });
-      // ERP 7일 평균 (쿠팡 제외)
+      // ERP 7일 평균 (쿠팡 제외) - RPC 집계 결과
       const salesMap = {};
       (Array.isArray(sales) ? sales : []).forEach(s => {
         const k = (s.name||'').replace(/\s/g,'');
-        salesMap[k] = (salesMap[k]||0) + (Number(s.qty)||0);
+        salesMap[k] = Number(s.total_qty)||0;
       });
       const merged = (Array.isArray(stock) ? stock : []).map(r => {
         const key = r.name.replace(/\s/g,'');
