@@ -2534,7 +2534,9 @@ function ErpSection() {
   useEffect(() => {
     if (erpTab !== "stock") return;
     setStockLoading(true);
-    fetch('/api/erp-stock')
+    fetch(`${SURL}/rest/v1/beauty_stock?select=name,model,cost,stock_qty,order_pending,production_qty,ship_qty,transport_qty&order=name.asc`, {
+        headers: { apikey: SKEY, Authorization: `Bearer ${SKEY}` }
+      })
       .then(r => r.json())
       .then(d => setStockData(Array.isArray(d) ? d : []))
       .catch(() => setStockData([]))
