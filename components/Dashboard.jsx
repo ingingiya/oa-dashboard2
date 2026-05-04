@@ -2423,6 +2423,7 @@ function ErpSection() {
   const [chanPresets,setChanPresets] = useState([]);
   const [stockData,  setStockData]  = useState(null);
   const [stockLoading, setStockLoading] = useState(false);
+  const [stockSort, setStockSort] = useState("name");
 
   const SURL = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const SKEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
@@ -3003,9 +3004,13 @@ function ErpSection() {
       {/* 재고 현황 */}
       {erpTab==="stock" && (
         <div style={{background:C.white,border:`1px solid ${C.border}`,borderRadius:12,overflow:"hidden"}}>
-          <div style={{padding:"12px 16px",borderBottom:`1px solid ${C.border}`,fontSize:12,fontWeight:800,color:C.ink}}>
-            📦 재고 현황 {stockData&&`· ${stockData.length}개 제품`}
-            <span style={{fontSize:10,fontWeight:400,color:C.inkLt,marginLeft:8}}>ERP 실시간 기준</span>
+          <div style={{padding:"12px 16px",borderBottom:`1px solid ${C.border}`,display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+            <div style={{fontSize:12,fontWeight:800,color:C.ink}}>📦 재고 현황 <span style={{fontSize:10,fontWeight:400,color:C.inkLt,marginLeft:8}}>ERP 실시간 기준</span></div>
+            <select value={stockSort} onChange={e=>setStockSort(e.target.value)} style={{fontSize:11,border:`1px solid ${C.border}`,borderRadius:6,padding:"3px 8px",color:C.ink,background:C.white}}>
+              <option value="name">이름순</option>
+              <option value="stock_asc">재고 적은순</option>
+              <option value="stock_desc">재고 많은순</option>
+            </select>
           </div>
           {stockLoading && <div style={{padding:"40px",textAlign:"center",color:C.inkLt,fontSize:12}}>⏳ 불러오는 중...</div>}
           {!stockLoading && stockData && (
@@ -3020,7 +3025,15 @@ function ErpSection() {
                   </tr>
                 </thead>
                 <tbody>
-                  {(stockData||[]).filter(r=>!/(케이블|케이스|집게|흡입봉|커버|헤드팁|헤드|필터세트|필터|뚜껑|청소솔|실리콘|브러쉬|브러시|부속|파우치|고무마개|노즐|테이프|세트|패들|팁|리무버링|충전거치대|에어리스마트거치대|그루프롤|헤어롤|네일젤제거비트|블레이드|충전기|진동클렌저-거치대|면도망|배터리)/i.test(r.name)).sort((a,b)=>(Number(a.stock_qty)||0)===0&&(Number(b.stock_qty)||0)!==0?1:(Number(a.stock_qty)||0)!==0&&(Number(b.stock_qty)||0)===0?-1:0).map((r,i)=>{
+                  {(stockData||[]).filter(r=>!/(케이블|케이스|집게|흡입봉|커버|헤드팁|헤드|필터세트|필터|뚜껑|청소솔|실리콘|브러쉬|브러시|부속|파우치|고무마개|노즐|테이프|세트|패들|팁|리무버링|충전거치대|에어리스마트거치대|그루프롤|헤어롤|네일젤제거비트|블레이드|충전기|진동클렌저-거치대|면도망|배터리)/i.test(r.name)).sort((a,b)=>{
+                    const aq=Number(a.stock_qty)||0, bq=Number(b.stock_qty)||0;
+                    if(stockSort==="stock_asc") return aq-bq;
+                    if(stockSort==="stock_desc") return bq-aq;
+                    // 이름순: 재고0 하단
+                    if(aq===0&&bq!==0) return 1;
+                    if(aq!==0&&bq===0) return -1;
+                    return a.name.localeCompare(b.name,'ko');
+                  }).map((r,i)=>{
                     const stockNum = Number(r.stock_qty)||0;
                     const rowBg = stockNum===0 ? "#FEF2F2" : i%2===0 ? C.white : "#FAFAFA";
                     return (
