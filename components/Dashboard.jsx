@@ -2565,10 +2565,11 @@ function ErpSection() {
         const key = r.name.replace(/\s/g,'');
         const erpAvg7 = (salesMap[key]||0) / 7;
         const cpData = coupangMap[key] || { avg7:0, cStock:0 };
-        const erpDays = erpAvg7 > 0 ? Math.floor(Number(r.stock_qty) / erpAvg7) : null;
+        const totalAvg7 = erpAvg7 + (cpData.avg7||0);
+        const erpDays = totalAvg7 > 0 ? Math.floor(Number(r.stock_qty) / totalAvg7) : null;
         const cpDays  = cpData.avg7 > 0 ? Math.floor(cpData.cStock / cpData.avg7) : null;
         const lead = Number(r.lead_days) || 0;
-        return { ...r, erp_avg7: erpAvg7, cp_avg7: cpData.avg7, coupang_stock: cpData.cStock,
+        return { ...r, erp_avg7: erpAvg7, total_avg7: totalAvg7, cp_avg7: cpData.avg7||0, coupang_stock: cpData.cStock,
           erp_days: erpDays, cp_days: cpDays,
           need_order: (erpDays!==null && lead>0 && erpDays<=lead) || (cpDays!==null && lead>0 && cpDays<=lead) };
       });
@@ -3064,7 +3065,7 @@ function ErpSection() {
                   </tr>
                 </thead>
                 <tbody>
-                  {(stockData||[]).filter(r=>!/(케이블|케이스|집게|흡입봉|커버|헤드팁|헤드|필터세트|필터|뚜껑|청소솔|실리콘|브러쉬|브러시|부속|파우치|고무마개|노즐|테이프|세트|패들|팁|리무버링|충전거치대|에어리스마트거치대|그루프롤|헤어롤|네일젤제거비트|블레이드|충전기|진동클렌저-거치대|면도망|배터리|갈바닉클렌저-거치대|갈바닉-거치대|거치대스티커|화이트거치대)/i.test(r.name)&&!['ODRY-C00502'].includes(r.model)).filter(r=>showZeroStock||(Number(r.stock_qty)||0)>0).sort((a,b)=>{
+                  {(stockData||[]).filter(r=>!/(케이블|케이스|집게|흡입봉|커버|헤드팁|헤드|필터세트|필터|뚜껑|청소솔|실리콘|브러쉬|브러시|부속|파우치|고무마개|노즐|테이프|세트|패들|팁|리무버링|충전거치대|에어리스마트거치대|그루프롤|헤어롤|네일젤제거비트|블레이드|충전기|진동클렌저-거치대|면도망|배터리|갈바닉클렌저-거치대|갈바닉-거치대|거치대스티커|화이트거치대|에어리스마트-화이트-거치대)/i.test(r.name)&&!['ODRY-C00502'].includes(r.model)).filter(r=>showZeroStock||(Number(r.stock_qty)||0)>0).sort((a,b)=>{
                     const aq=Number(a.stock_qty)||0, bq=Number(b.stock_qty)||0;
                     if(stockSort==="stock_asc") return aq-bq;
                     if(stockSort==="stock_desc") return bq-aq;
@@ -3100,7 +3101,7 @@ function ErpSection() {
                         <td style={{padding:"9px 12px",textAlign:"right",color:C.inkMid}}>{Number(r.order_pending||0).toLocaleString()}</td>
                         <td style={{padding:"9px 12px",textAlign:"right",color:C.inkMid}}>{Number(r.ship_qty||0)>0?<span style={{border:`1px solid #3B82F6`,borderRadius:4,padding:"1px 5px",color:"#3B82F6",fontWeight:700}}>{Number(r.ship_qty||0).toLocaleString()}</span>:"—"}</td>
                         <td style={{padding:"9px 12px",textAlign:"right"}}
-                          title={r.erp_days!==null?`ERP재고 ${Number(r.stock_qty).toLocaleString()}개 ÷ 일반채널 7일평균 ${r.erp_avg7?.toFixed(1)}개 = ${r.erp_days}일`:''}>
+                          title={r.erp_days!==null?`ERP재고 ${Number(r.stock_qty).toLocaleString()}개 ÷ 전체 7일평균 ${r.total_avg7?.toFixed(1)}개(일반${r.erp_avg7?.toFixed(1)}+쿠팡${r.cp_avg7?.toFixed(1)}) = ${r.erp_days}일`:''}>
                           {r.erp_days===null?<span style={{color:C.inkLt}}>—</span>:
                            (r.lead_days>0&&r.erp_days<=r.lead_days)?<span style={{border:`1px solid ${C.rose}`,borderRadius:4,padding:"1px 5px",color:C.rose,fontWeight:800}}>{r.erp_days}일⚠️</span>:
                            r.erp_days<=30?<span style={{color:C.warn,fontWeight:700}}>{r.erp_days}일</span>:
