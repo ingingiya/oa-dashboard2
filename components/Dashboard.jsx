@@ -3079,7 +3079,8 @@ function ErpSection() {
                         <td style={{padding:"9px 12px",textAlign:"right",color:C.inkMid}}>{Number(r.transport_qty||0)>0?<span style={{border:`1px solid #8B5CF6`,borderRadius:4,padding:"1px 5px",color:"#8B5CF6",fontWeight:700}}>{Number(r.transport_qty||0).toLocaleString()}</span>:"—"}</td>
                         <td style={{padding:"9px 12px",textAlign:"right",color:C.inkMid}}>{Number(r.order_pending||0).toLocaleString()}</td>
                         <td style={{padding:"9px 12px",textAlign:"right",color:C.inkMid}}>{Number(r.ship_qty||0)>0?<span style={{border:`1px solid #3B82F6`,borderRadius:4,padding:"1px 5px",color:"#3B82F6",fontWeight:700}}>{Number(r.ship_qty||0).toLocaleString()}</span>:"—"}</td>
-                        <td style={{padding:"9px 12px",textAlign:"right"}}>
+                        <td style={{padding:"9px 12px",textAlign:"right"}}
+                          title={r.days_left!==null?`재고 ${Number(r.stock_qty).toLocaleString()}개 ÷ 쿠팡 일평균 ${r.avg_14d?.toFixed(1)}개 = ${r.days_left}일${r.lead_days?` (생산 ${r.lead_days}일)`:''}`:''}>
                           {r.days_left===null?<span style={{color:C.inkLt}}>—</span>:
                            r.need_order?<span style={{border:`1px solid ${C.rose}`,borderRadius:4,padding:"1px 5px",color:C.rose,fontWeight:800}}>{r.days_left}일⚠️</span>:
                            r.days_left<=30?<span style={{color:C.warn,fontWeight:700}}>{r.days_left}일</span>:
