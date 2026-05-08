@@ -2691,11 +2691,11 @@ function ErpSection() {
               {today.getMonth()+1}월 이미용 매출 현황
             </div>
             <div style={{fontSize:22,fontWeight:900,lineHeight:1.1}}>
-              {monthRevenue>=100000000?`${(monthRevenue/100000000).toFixed(2)}억`:`${Math.round(monthRevenue/10000).toLocaleString()}만원`}
+              ₩{Number(monthRevenue).toLocaleString()}
             </div>
             {monthlyGoal>0 && (
               <div style={{fontSize:11,opacity:0.8,marginTop:4}}>
-                목표까지 {goalRemain>=100000000?`${(goalRemain/100000000).toFixed(2)}억`:`${Math.round(goalRemain/10000).toLocaleString()}만원`} 남음
+                목표까지 ₩{Number(goalRemain).toLocaleString()} 남음
               </div>
             )}
           </div>
@@ -2703,7 +2703,7 @@ function ErpSection() {
             {monthlyGoal>0 ? (
               <div>
                 <div style={{fontSize:28,fontWeight:900}}>{goalPct}%</div>
-                <div style={{fontSize:10,opacity:0.7}}>목표 {Math.round(monthlyGoal/10000).toLocaleString()}만원</div>
+                <div style={{fontSize:10,opacity:0.7}}>목표 ₩{Number(monthlyGoal).toLocaleString()}</div>
               </div>
             ) : null}
             {goalEdit ? (
@@ -2926,14 +2926,12 @@ function ErpSection() {
                       overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{r.name}</td>
                     <td style={{padding:"9px 12px",textAlign:"right",fontWeight:700,color:C.inkMid}}>{Number(r.qty).toLocaleString()}</td>
                     <td style={{padding:"9px 12px",textAlign:"right",fontWeight:700,color:C.rose}}>
-                      {fmtW(r.revenue)}
-                      <div style={{fontSize:9,color:C.inkLt,fontWeight:400,marginTop:1}}>₩{Math.round(Number(r.revenue)).toLocaleString()}</div>
-                      {summaryTotal>0&&<div style={{fontSize:9,color:C.inkLt,fontWeight:400}}>{(Number(r.revenue)/summaryTotal*100).toFixed(1)}%</div>}
+                      ₩{Number(r.revenue).toLocaleString()}
+                      {summaryTotal>0&&<div style={{fontSize:9,color:C.inkLt,fontWeight:400,marginTop:1}}>{(Number(r.revenue)/summaryTotal*100).toFixed(1)}%</div>}
                     </td>
                     <td style={{padding:"9px 12px",textAlign:"right",fontWeight:700,
                       color:Number(r.profit)>0?C.good:C.bad}}>
-                      {fmtW(r.profit)}
-                      <div style={{fontSize:9,color:C.inkLt,fontWeight:400,marginTop:1}}>₩{Math.round(Number(r.profit)).toLocaleString()}</div>
+                      ₩{Number(r.profit).toLocaleString()}
                     </td>
                     <td style={{padding:"9px 12px",textAlign:"right",fontWeight:700,
                       color:r.marginPct===null?C.inkLt:r.marginPct>=50?C.good:r.marginPct>=30?C.warn:C.bad}}>
@@ -2945,10 +2943,10 @@ function ErpSection() {
                       {r.return_qty>0&&<div style={{fontSize:9,color:C.inkLt,marginTop:1}}>{Number(r.return_qty).toLocaleString()}개</div>}
                     </td>
                     <td style={{padding:"9px 12px",textAlign:"right",color:C.inkMid}}>
-                      {r.prevRevenue>0 ? fmtW(r.prevRevenue) : <span style={{color:C.inkLt}}>-</span>}
+                      {r.prevRevenue>0 ? `₩${Number(r.prevRevenue).toLocaleString()}` : <span style={{color:C.inkLt}}>-</span>}
                     </td>
                     <td style={{padding:"9px 12px",textAlign:"right",color:C.inkMid}}>
-                      {r.prevProfit>0 ? fmtW(r.prevProfit) : <span style={{color:C.inkLt}}>-</span>}
+                      {r.prevProfit>0 ? `₩${Number(r.prevProfit).toLocaleString()}` : <span style={{color:C.inkLt}}>-</span>}
                     </td>
                     <td style={{padding:"9px 12px",textAlign:"right",fontWeight:800,
                       color:r.profitChg===null?C.inkLt:r.profitChg>0?C.good:C.bad}}>
@@ -2972,15 +2970,9 @@ function ErpSection() {
                     <tr style={{background:"#F1F5F9",borderTop:`2px solid ${C.border}`,fontWeight:800}}>
                       <td style={{padding:"9px 12px",fontSize:11,color:C.ink}}>합계 ({summaryData.length}개)</td>
                       <td style={{padding:"9px 12px",textAlign:"right",color:C.inkMid}}>{Number(tot.qty).toLocaleString()}</td>
-                      <td style={{padding:"9px 12px",textAlign:"right",color:C.rose}}>
-                        {fmtW(tot.revenue)}
-                        <div style={{fontSize:9,color:C.inkLt,fontWeight:400,marginTop:1}}>₩{Math.round(tot.revenue).toLocaleString()}</div>
-                      </td>
-                      <td style={{padding:"9px 12px",textAlign:"right",color:tot.profit>0?C.good:C.bad}}>
-                        {fmtW(tot.profit)}
-                        <div style={{fontSize:9,color:C.inkLt,fontWeight:400,marginTop:1}}>₩{Math.round(tot.profit).toLocaleString()}</div>
-                      </td>
-                      <td style={{padding:"9px 12px",textAlign:"right",color:C.inkMid}}>{tot.prevRevenue>0?fmtW(tot.prevRevenue):"-"}</td>
+                      <td style={{padding:"9px 12px",textAlign:"right",color:C.rose}}>₩{Number(tot.revenue).toLocaleString()}</td>
+                      <td style={{padding:"9px 12px",textAlign:"right",color:tot.profit>0?C.good:C.bad}}>₩{Number(tot.profit).toLocaleString()}</td>
+                      <td style={{padding:"9px 12px",textAlign:"right",color:C.inkMid}}>{tot.prevRevenue>0?`₩${Number(tot.prevRevenue).toLocaleString()}`:"-"}</td>
                       <td style={{padding:"9px 12px",textAlign:"right",color:totChg===null?C.inkLt:totChg>0?C.good:C.bad}}>
                         {totChg===null?"-":totChg>0?`+${totChg}%`:`${totChg}%`}
                       </td>
