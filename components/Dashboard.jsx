@@ -2927,10 +2927,14 @@ function ErpSection() {
                     <td style={{padding:"9px 12px",textAlign:"right",fontWeight:700,color:C.inkMid}}>{Number(r.qty).toLocaleString()}</td>
                     <td style={{padding:"9px 12px",textAlign:"right",fontWeight:700,color:C.rose}}>
                       {fmtW(r.revenue)}
-                      {summaryTotal>0&&<div style={{fontSize:9,color:C.inkLt,fontWeight:400,marginTop:1}}>{(Number(r.revenue)/summaryTotal*100).toFixed(1)}%</div>}
+                      <div style={{fontSize:9,color:C.inkLt,fontWeight:400,marginTop:1}}>₩{Math.round(Number(r.revenue)).toLocaleString()}</div>
+                      {summaryTotal>0&&<div style={{fontSize:9,color:C.inkLt,fontWeight:400}}>{(Number(r.revenue)/summaryTotal*100).toFixed(1)}%</div>}
                     </td>
                     <td style={{padding:"9px 12px",textAlign:"right",fontWeight:700,
-                      color:Number(r.profit)>0?C.good:C.bad}}>{fmtW(r.profit)}</td>
+                      color:Number(r.profit)>0?C.good:C.bad}}>
+                      {fmtW(r.profit)}
+                      <div style={{fontSize:9,color:C.inkLt,fontWeight:400,marginTop:1}}>₩{Math.round(Number(r.profit)).toLocaleString()}</div>
+                    </td>
                     <td style={{padding:"9px 12px",textAlign:"right",fontWeight:700,
                       color:r.marginPct===null?C.inkLt:r.marginPct>=50?C.good:r.marginPct>=30?C.warn:C.bad}}>
                       {r.marginPct===null?"-":`${r.marginPct}%`}
@@ -2968,8 +2972,14 @@ function ErpSection() {
                     <tr style={{background:"#F1F5F9",borderTop:`2px solid ${C.border}`,fontWeight:800}}>
                       <td style={{padding:"9px 12px",fontSize:11,color:C.ink}}>합계 ({summaryData.length}개)</td>
                       <td style={{padding:"9px 12px",textAlign:"right",color:C.inkMid}}>{Number(tot.qty).toLocaleString()}</td>
-                      <td style={{padding:"9px 12px",textAlign:"right",color:C.rose}}>{fmtW(tot.revenue)}</td>
-                      <td style={{padding:"9px 12px",textAlign:"right",color:tot.profit>0?C.good:C.bad}}>{fmtW(tot.profit)}</td>
+                      <td style={{padding:"9px 12px",textAlign:"right",color:C.rose}}>
+                        {fmtW(tot.revenue)}
+                        <div style={{fontSize:9,color:C.inkLt,fontWeight:400,marginTop:1}}>₩{Math.round(tot.revenue).toLocaleString()}</div>
+                      </td>
+                      <td style={{padding:"9px 12px",textAlign:"right",color:tot.profit>0?C.good:C.bad}}>
+                        {fmtW(tot.profit)}
+                        <div style={{fontSize:9,color:C.inkLt,fontWeight:400,marginTop:1}}>₩{Math.round(tot.profit).toLocaleString()}</div>
+                      </td>
                       <td style={{padding:"9px 12px",textAlign:"right",color:C.inkMid}}>{tot.prevRevenue>0?fmtW(tot.prevRevenue):"-"}</td>
                       <td style={{padding:"9px 12px",textAlign:"right",color:totChg===null?C.inkLt:totChg>0?C.good:C.bad}}>
                         {totChg===null?"-":totChg>0?`+${totChg}%`:`${totChg}%`}
