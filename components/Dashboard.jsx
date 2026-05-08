@@ -2476,6 +2476,7 @@ function ErpSection() {
   useEffect(() => {
     getSetting("oa_erp_channels").then(v => { if(Array.isArray(v)) setSelChannelsRaw(v); }).catch(()=>{});
     getSetting("oa_erp_monthly_goal").then(v => { if(v) setMonthlyGoalState(Number(v)||0); }).catch(()=>{});
+    getSetting("oa_erp_blacklist").then(v => { if(Array.isArray(v)) setBlacklist(v); }).catch(()=>{});
   }, []);
 
   async function load(cId) {
@@ -2792,17 +2793,17 @@ function ErpSection() {
                 <span key={kw} style={{display:"flex",alignItems:"center",gap:4,padding:"3px 10px",
                   background:"#FEF2F2",border:`1px solid #FECACA`,borderRadius:20,fontSize:11,color:C.bad}}>
                   {kw}
-                  <button onClick={()=>setBlacklist(p=>p.filter(k=>k!==kw))}
+                  <button onClick={()=>{ const next=blacklist.filter(k=>k!==kw); setBlacklist(next); setSetting("oa_erp_blacklist",next).catch(()=>{}); }}
                     style={{background:"none",border:"none",cursor:"pointer",color:C.bad,fontSize:12,lineHeight:1,padding:0}}>✕</button>
                 </span>
               ))}
             </div>
             <div style={{display:"flex",gap:6}}>
               <input value={blInput} onChange={e=>setBlInput(e.target.value)}
-                onKeyDown={e=>{ if(e.key==="Enter"&&blInput.trim()){setBlacklist(p=>[...p,blInput.trim()]);setBlInput("");}}}
+                onKeyDown={e=>{ if(e.key==="Enter"&&blInput.trim()){ const next=[...blacklist,blInput.trim()]; setBlacklist(next); setSetting("oa_erp_blacklist",next).catch(()=>{}); setBlInput(""); }}}
                 placeholder="제외 키워드 입력 후 Enter"
                 style={{flex:1,padding:"5px 10px",borderRadius:7,fontSize:11,border:`1px solid ${C.border}`,outline:"none"}}/>
-              <button onClick={()=>{if(blInput.trim()){setBlacklist(p=>[...p,blInput.trim()]);setBlInput("");}}}
+              <button onClick={()=>{ if(blInput.trim()){ const next=[...blacklist,blInput.trim()]; setBlacklist(next); setSetting("oa_erp_blacklist",next).catch(()=>{}); setBlInput(""); }}}
                 style={{padding:"5px 12px",borderRadius:7,fontSize:11,fontWeight:700,cursor:"pointer",
                   background:C.rose,color:"#fff",border:"none"}}>추가</button>
             </div>
