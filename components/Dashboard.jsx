@@ -4587,7 +4587,6 @@ export default function OaDashboard(){
     {id:"erp",       icon:"storage",        label:"ERP"},
     {id:"naver",     icon:"ads_click",      label:"네이버광고"},
     {id:"meta",      icon:"campaign",       label:"메타광고"},
-    {id:"influencer",icon:"auto_awesome",   label:"인플루언서"},
     {id:"inf_archive",icon:"photo_library", label:"아카이브"},
     {id:"schedule",  icon:"calendar_month", label:"스케줄"},
     {id:"creative",  icon:"palette",        label:"소재"},
@@ -12172,7 +12171,6 @@ export default function OaDashboard(){
         <main className="oa-main">
           {sec==="home"        && <HomeSection/>}
           {sec==="meta"        && MetaSection}
-          {sec==="influencer"  && InfluencerSection}
           {sec==="inf_archive" && <InfluencerArchiveSection/>}
           {sec==="schedule"    && ScheduleSection}
           {sec==="erp"         && <ErpSection/>}

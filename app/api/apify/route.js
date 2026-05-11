@@ -158,7 +158,28 @@ export async function POST(request) {
       }), { status: 200, headers: { "Content-Type": "application/json" } });
     }
 
-    return new Response(JSON.stringify({ error: "mode는 keyword / followers 중 하나여야 해요" }), { status: 400 });
+    // ── 3. 프로필 URL → 단일 계정 조회 ───────────────────
+    if (mode === "profile_url") {
+      if (!username) return new Response(JSON.stringify({ error: "username 필요" }), { status: 400 });
+      const handle = username.replace(/^@/, "");
+
+      const items = await runActorAndWait(APIFY_TOKEN, "apify~instagram-profile-scraper", {
+        usernames: [handle],
+      }, 120);
+
+      const u = Array.isArray(items) ? items[0] : null;
+      if (!u) return new Response(JSON.stringify({ profile: null }), { status: 200 });
+
+      return new Response(JSON.stringify({
+        profile: {
+          username: getField(u, "username","userName"),
+          fullName: getField(u, "fullName","full_name","name") || "",
+          followers: Number(getField(u, "followersCount","follower_count","followers") || 0) || null,
+        }
+      }), { status: 200, headers: { "Content-Type": "application/json" } });
+    }
+
+    return new Response(JSON.stringify({ error: "mode는 keyword / followers / profile_url 중 하나여야 해요" }), { status: 400 });
 
   } catch (e) {
     return new Response(JSON.stringify({ error: e.message }), { status: 500 });
