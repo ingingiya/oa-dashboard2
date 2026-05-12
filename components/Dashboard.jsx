@@ -499,7 +499,7 @@ function InfluencerArchiveSection() {
   const [statusFilter, setStatusFilter] = useState("전체");
   const [search, setSearch] = useState("");
   const [modal, setModal] = useState(null); // null | {mode:"add"|"edit", item}
-  const [form, setForm] = useState({account:"",name:"",platform:"Instagram",profileUrl:"",followers:"",categories:[],status:"잠재",notes:""});
+  const [form, setForm] = useState({account:"",name:"",platform:"Instagram",profileUrl:"",followers:"",categories:[],status:"잠재",notes:"",dealFee:"",dealUsagePeriod:"",dealContent:""});
   const [fetching, setFetching] = useState(false);
   const [fetchError, setFetchError] = useState("");
   const [fetchUsage, setFetchUsage] = useState(null);
@@ -637,7 +637,19 @@ function InfluencerArchiveSection() {
                   {p.categories.map(c=><span key={c} style={{fontSize:10,background:"#eff6ff",color:"#2563eb",padding:"2px 8px",borderRadius:10,fontWeight:700}}>#{c}</span>)}
                 </div>
               )}
-              {p.notes && <div style={{fontSize:11,color:C.inkMid,borderTop:`1px solid ${C.border}`,paddingTop:6}}>{p.notes}</div>}
+              {(p.notes||p.dealFee||p.dealUsagePeriod||p.dealContent) && (
+                <div style={{fontSize:11,color:C.inkMid,borderTop:`1px solid ${C.border}`,paddingTop:6,display:"flex",flexDirection:"column",gap:4}}>
+                  {p.notes && <div>{p.notes}</div>}
+                  {(p.dealFee||p.dealUsagePeriod||p.dealContent) && (
+                    <div style={{background:"#f0fdf4",border:`1px solid #bbf7d0`,borderRadius:7,padding:"6px 10px",display:"flex",flexDirection:"column",gap:3}}>
+                      <div style={{fontSize:10,fontWeight:800,color:"#16a34a"}}>💬 협의</div>
+                      {p.dealFee && <div><span style={{color:C.inkLt}}>금액: </span>{p.dealFee}</div>}
+                      {p.dealUsagePeriod && <div><span style={{color:C.inkLt}}>2차활용: </span>{p.dealUsagePeriod}</div>}
+                      {p.dealContent && <div style={{whiteSpace:"pre-wrap"}}>{p.dealContent}</div>}
+                    </div>
+                  )}
+                </div>
+              )}
               <div style={{display:"flex",gap:6,marginTop:2}}>
                 <button onClick={()=>openEdit(p)} style={{flex:1,padding:"5px 0",borderRadius:7,border:`1px solid ${C.border}`,background:C.white,color:C.ink,fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>편집</button>
                 <button onClick={()=>deleteItem(p.id)} style={{padding:"5px 10px",borderRadius:7,border:"none",background:"#fee2e2",color:"#dc2626",fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>삭제</button>
@@ -710,8 +722,28 @@ function InfluencerArchiveSection() {
 
             <div>
               <div style={{fontSize:11,color:C.inkMid,marginBottom:4,fontWeight:700}}>메모</div>
-              <textarea value={form.notes} onChange={e=>setForm(f=>({...f,notes:e.target.value}))} placeholder="릴스 퀄리티 좋음, 뷰티 전문, 공동구매 의향 있음..." rows={3} style={{width:"100%",padding:"7px 10px",border:`1px solid ${C.border}`,borderRadius:7,fontSize:12,fontFamily:"inherit",resize:"vertical",boxSizing:"border-box"}}/>
+              <textarea value={form.notes} onChange={e=>setForm(f=>({...f,notes:e.target.value}))} placeholder="릴스 퀄리티 좋음, 뷰티 전문, 공동구매 의향 있음..." rows={2} style={{width:"100%",padding:"7px 10px",border:`1px solid ${C.border}`,borderRadius:7,fontSize:12,fontFamily:"inherit",resize:"vertical",boxSizing:"border-box"}}/>
             </div>
+
+            {form.status==="컨택중" && (
+              <div style={{background:"#f0fdf4",border:`1px solid #bbf7d0`,borderRadius:10,padding:"12px 14px",display:"flex",flexDirection:"column",gap:10}}>
+                <div style={{fontSize:11,fontWeight:800,color:"#16a34a"}}>💬 협의 내용</div>
+                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+                  <div>
+                    <div style={{fontSize:11,color:C.inkMid,marginBottom:4,fontWeight:700}}>협의 금액</div>
+                    <input value={form.dealFee} onChange={e=>setForm(f=>({...f,dealFee:e.target.value}))} placeholder="예) 30만원, 제품협찬" style={{width:"100%",padding:"7px 10px",border:`1px solid ${C.border}`,borderRadius:7,fontSize:12,fontFamily:"inherit",boxSizing:"border-box"}}/>
+                  </div>
+                  <div>
+                    <div style={{fontSize:11,color:C.inkMid,marginBottom:4,fontWeight:700}}>2차 활용 기간</div>
+                    <input value={form.dealUsagePeriod} onChange={e=>setForm(f=>({...f,dealUsagePeriod:e.target.value}))} placeholder="예) 6개월, 1년, 무제한" style={{width:"100%",padding:"7px 10px",border:`1px solid ${C.border}`,borderRadius:7,fontSize:12,fontFamily:"inherit",boxSizing:"border-box"}}/>
+                  </div>
+                </div>
+                <div>
+                  <div style={{fontSize:11,color:C.inkMid,marginBottom:4,fontWeight:700}}>협의 세부 내용</div>
+                  <textarea value={form.dealContent} onChange={e=>setForm(f=>({...f,dealContent:e.target.value}))} placeholder="게시물 형태, 업로드 일정, 요청사항 등..." rows={3} style={{width:"100%",padding:"7px 10px",border:`1px solid ${C.border}`,borderRadius:7,fontSize:12,fontFamily:"inherit",resize:"vertical",boxSizing:"border-box"}}/>
+                </div>
+              </div>
+            )}
 
             <div style={{display:"flex",gap:8}}>
               <button onClick={saveItem} disabled={!form.account.trim()&&!form.name.trim()} style={{flex:1,padding:"10px",borderRadius:9,border:"none",background:C.rose,color:"#fff",fontSize:13,fontWeight:800,cursor:"pointer",fontFamily:"inherit"}}>저장</button>
