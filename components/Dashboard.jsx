@@ -719,16 +719,18 @@ function InfluencerArchiveSection() {
       <div style={{display:"flex",flexDirection:"column",gap:6}}>
         <div style={{display:"flex",gap:8,flexWrap:"wrap",alignItems:"center"}}>
           <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="🔍 검색..." style={{padding:"6px 12px",borderRadius:8,border:`1px solid ${C.border}`,fontSize:12,fontFamily:"inherit",outline:"none",width:160}}/>
-          <div style={{display:"flex",gap:4,flexWrap:"wrap"}}>
-            {["전체",...INF_CATS].map(c=>(
-              <button key={c} onClick={()=>setCatFilter(c)} style={{padding:"4px 12px",borderRadius:20,border:"none",background:catFilter===c?C.rose:"#e5e7eb",color:catFilter===c?"#fff":C.inkMid,fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>{c}</button>
-            ))}
-          </div>
-          <div style={{display:"flex",gap:4,flexWrap:"wrap"}}>
-            {["전체",...INF_STATUSES].map(s=>(
-              <button key={s} onClick={()=>setStatusFilter(s)} style={{padding:"4px 12px",borderRadius:20,border:"none",background:statusFilter===s?"#374151":"#e5e7eb",color:statusFilter===s?"#fff":C.inkMid,fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>{s}</button>
-            ))}
-          </div>
+        </div>
+        <div style={{display:"flex",gap:4,flexWrap:"wrap",alignItems:"center"}}>
+          <span style={{fontSize:11,color:C.inkMid,fontWeight:700}}>카테고리:</span>
+          {["전체",...INF_CATS].map(c=>(
+            <button key={c} onClick={()=>setCatFilter(c)} style={{padding:"4px 12px",borderRadius:20,border:"none",background:catFilter===c?C.rose:"#e5e7eb",color:catFilter===c?"#fff":C.inkMid,fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>{c}</button>
+          ))}
+        </div>
+        <div style={{display:"flex",gap:4,flexWrap:"wrap",alignItems:"center"}}>
+          <span style={{fontSize:11,color:C.inkMid,fontWeight:700}}>상태:</span>
+          {["전체",...INF_STATUSES].map(s=>(
+            <button key={s} onClick={()=>setStatusFilter(s)} style={{padding:"4px 12px",borderRadius:20,border:"none",background:statusFilter===s?"#374151":"#e5e7eb",color:statusFilter===s?"#fff":C.inkMid,fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>{s}</button>
+          ))}
         </div>
         {assignees.length > 1 && (
           <div style={{display:"flex",gap:4,flexWrap:"wrap",alignItems:"center"}}>
