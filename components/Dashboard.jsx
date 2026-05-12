@@ -746,13 +746,7 @@ function InfluencerArchiveSection() {
       ) : (
         <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(280px,1fr))",gap:12}}>
           {filtered.map(p => (
-            <div key={p.id} style={{background:C.white,border:`2px solid ${seedSelected[p.id]?"#2563eb":C.border}`,borderRadius:12,padding:"14px 16px",display:"flex",flexDirection:"column",gap:8,position:"relative"}}>
-              {p.address && (
-                <label style={{position:"absolute",top:10,right:10,display:"flex",alignItems:"center",gap:4,cursor:"pointer",zIndex:1}}>
-                  <input type="checkbox" checked={!!seedSelected[p.id]} onChange={e=>setSeedSelected(s=>e.target.checked?{...s,[p.id]:true}:(({[p.id]:_,...rest})=>rest)(s))} style={{width:14,height:14,accentColor:"#2563eb"}}/>
-                  <span style={{fontSize:9,color:"#2563eb",fontWeight:700}}>시딩</span>
-                </label>
-              )}
+            <div key={p.id} style={{background:C.white,border:`2px solid ${seedSelected[p.id]?"#2563eb":C.border}`,borderRadius:12,padding:"14px 16px",display:"flex",flexDirection:"column",gap:8}}>
               <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",gap:8}}>
                 <div style={{display:"flex",alignItems:"center",gap:8,flex:1,minWidth:0}}>
                   {p.profilePicUrl
@@ -804,7 +798,13 @@ function InfluencerArchiveSection() {
                   {p.shippingDone && p.shippingDate && <span style={{fontSize:9,color:"#16a34a",flexShrink:0}}>{p.shippingDate}</span>}
                 </div>
               )}
-              <div style={{display:"flex",gap:6,marginTop:2}}>
+              <div style={{display:"flex",gap:6,marginTop:2,alignItems:"center"}}>
+                {p.address && (
+                  <label style={{display:"flex",alignItems:"center",gap:3,cursor:"pointer",padding:"5px 6px",borderRadius:7,border:`1px solid ${seedSelected[p.id]?"#2563eb":C.border}`,background:seedSelected[p.id]?"#eff6ff":"transparent",flexShrink:0}} title="시딩 엑셀에 포함">
+                    <input type="checkbox" checked={!!seedSelected[p.id]} onChange={e=>setSeedSelected(s=>e.target.checked?{...s,[p.id]:true}:(({[p.id]:_,...rest})=>rest)(s))} style={{width:12,height:12,accentColor:"#2563eb",margin:0}}/>
+                    <span style={{fontSize:9,color:"#2563eb",fontWeight:700}}>시딩</span>
+                  </label>
+                )}
                 <button onClick={()=>openEdit(p)} style={{flex:1,padding:"5px 0",borderRadius:7,border:`1px solid ${C.border}`,background:C.white,color:C.ink,fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>편집</button>
                 <button onClick={()=>openSettle(p)} style={{flex:1,padding:"5px 0",borderRadius:7,border:"none",background:"#eff6ff",color:"#2563eb",fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>정산·배송</button>
                 <button onClick={()=>{
