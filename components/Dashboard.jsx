@@ -588,6 +588,9 @@ function InfluencerArchiveSection() {
             name: data.profile.fullName || f.name,
             followers: data.profile.followers || f.followers,
             profilePicUrl: data.profile.profilePicUrl || f.profilePicUrl,
+            bio: data.profile.bio || f.bio || "",
+            avgLikes: data.profile.avgLikes != null ? data.profile.avgLikes : (f.avgLikes || ""),
+            avgComments: data.profile.avgComments != null ? data.profile.avgComments : (f.avgComments || ""),
           }));
         } else {
           setFetchError("프로필 조회 실패 — 비공개 계정이거나 존재하지 않아요");

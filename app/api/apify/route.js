@@ -155,20 +155,42 @@ export async function POST(request) {
       }), { status: 200, headers: { "Content-Type": "application/json" } });
     }
 
-    // ── 3. 프로필 URL → 단일 계정 조회 (apify~instagram-scraper 사용) ────
+    // ── 3. 프로필 URL → 단일 계정 조회 (details + posts 병렬 실행) ────
     if (mode === "profile_url") {
       if (!username) return new Response(JSON.stringify({ error: "username 필요" }), { status: 400 });
       const handle = username.replace(/^@/, "");
+      const profileUrl = `https://www.instagram.com/${handle}/`;
 
-      const { items: profItems, usageUsd: profUsage } = await runActorAndWait(APIFY_TOKEN, "apify~instagram-scraper", {
-        directUrls: [`https://www.instagram.com/${handle}/`],
-        resultsType: "details",
-        resultsLimit: 1,
-        maxRequestsPerCrawl: 10,
-      }, 120);
+      const [detailResult, postsResult] = await Promise.allSettled([
+        runActorAndWait(APIFY_TOKEN, "apify~instagram-scraper", {
+          directUrls: [profileUrl],
+          resultsType: "details",
+          resultsLimit: 1,
+          maxRequestsPerCrawl: 10,
+        }, 120),
+        runActorAndWait(APIFY_TOKEN, "apify~instagram-scraper", {
+          directUrls: [profileUrl],
+          resultsType: "posts",
+          resultsLimit: 20,
+          maxRequestsPerCrawl: 30,
+        }, 120),
+      ]);
+
+      const profItems = detailResult.status === "fulfilled" ? detailResult.value.items : [];
+      const postItems = postsResult.status === "fulfilled" ? postsResult.value.items : [];
+      const usageUsd = (detailResult.status === "fulfilled" ? detailResult.value.usageUsd || 0 : 0)
+                     + (postsResult.status === "fulfilled"  ? postsResult.value.usageUsd  || 0 : 0);
 
       const u = Array.isArray(profItems) ? profItems[0] : null;
-      if (!u) return new Response(JSON.stringify({ profile: null, usageUsd: profUsage }), { status: 200 });
+      if (!u) return new Response(JSON.stringify({ profile: null, usageUsd }), { status: 200 });
+
+      let avgLikes = null, avgComments = null;
+      if (Array.isArray(postItems) && postItems.length > 0) {
+        const likes = postItems.map(p => Number(getField(p,"likesCount","likes","likeCount")||0));
+        const comments = postItems.map(p => Number(getField(p,"commentsCount","comments","commentCount")||0));
+        avgLikes = Math.round(likes.reduce((s,v)=>s+v,0)/likes.length);
+        avgComments = Math.round(comments.reduce((s,v)=>s+v,0)/comments.length);
+      }
 
       return new Response(JSON.stringify({
         profile: {
@@ -176,8 +198,12 @@ export async function POST(request) {
           fullName: getField(u, "fullName","full_name","name") || "",
           followers: Number(getField(u, "followersCount","follower_count","followers") || 0) || null,
           profilePicUrl: getField(u, "profilePicUrl","profilePicUrlHD","profile_pic_url") || null,
+          bio: getField(u, "biography","bio","description") || "",
+          avgLikes,
+          avgComments,
+          recentPostCount: postItems.length,
         },
-        usageUsd: profUsage,
+        usageUsd,
       }), { status: 200, headers: { "Content-Type": "application/json" } });
     }
 
