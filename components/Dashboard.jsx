@@ -499,7 +499,7 @@ function InfluencerArchiveSection() {
   const [statusFilter, setStatusFilter] = useState("전체");
   const [search, setSearch] = useState("");
   const [modal, setModal] = useState(null); // null | {mode:"add"|"edit", item}
-  const [form, setForm] = useState({account:"",name:"",platform:"Instagram",profileUrl:"",followers:"",categories:[],status:"잠재",notes:"",dealFee:"",dealUsagePeriod:"",dealContent:""});
+  const [form, setForm] = useState({account:"",name:"",platform:"Instagram",profileUrl:"",followers:"",categories:[],status:"잠재",notes:"",dealFee:"",dealUsagePeriod:"",dealContent:"",assignee:""});
   const [fetching, setFetching] = useState(false);
   const [fetchError, setFetchError] = useState("");
   const [fetchUsage, setFetchUsage] = useState(null);
@@ -630,6 +630,7 @@ function InfluencerArchiveSection() {
               <div style={{display:"flex",alignItems:"center",gap:8,fontSize:11,color:C.inkMid}}>
                 <span style={{fontWeight:700,color:C.ink}}>{p.platform}</span>
                 {p.followers && <span>👥 {fmtFollowers(p.followers)}</span>}
+                {p.assignee && <span style={{background:"#f3f4f6",padding:"1px 7px",borderRadius:10,fontSize:10,fontWeight:700,color:C.ink}}>{p.assignee}</span>}
                 {p.profileUrl && <a href={p.profileUrl} target="_blank" rel="noreferrer" style={{color:C.rose,textDecoration:"none",marginLeft:"auto"}}><MI n="open_in_new" size={13}/></a>}
               </div>
               {(p.categories||[]).length > 0 && (
@@ -711,12 +712,22 @@ function InfluencerArchiveSection() {
               </div>
             </div>
 
-            <div>
-              <div style={{fontSize:11,color:C.inkMid,marginBottom:4,fontWeight:700}}>상태</div>
-              <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
-                {INF_STATUSES.map(s=>(
-                  <button key={s} onClick={()=>setForm(f=>({...f,status:s}))} style={{padding:"4px 12px",borderRadius:20,border:"none",background:form.status===s?(INF_STATUS_COLORS[s]||"#e5e7eb"):"#e5e7eb",color:form.status===s?(INF_STATUS_TEXT[s]||C.ink):C.inkMid,fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>{s}</button>
-                ))}
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+              <div>
+                <div style={{fontSize:11,color:C.inkMid,marginBottom:4,fontWeight:700}}>담당자</div>
+                <div style={{display:"flex",gap:4,flexWrap:"wrap"}}>
+                  {["소리","영서","경은","지수","행사"].map(a=>(
+                    <button key={a} onClick={()=>setForm(f=>({...f,assignee:f.assignee===a?"":a}))} style={{padding:"4px 10px",borderRadius:20,border:"none",background:form.assignee===a?"#374151":"#e5e7eb",color:form.assignee===a?"#fff":C.inkMid,fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>{a}</button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <div style={{fontSize:11,color:C.inkMid,marginBottom:4,fontWeight:700}}>상태</div>
+                <div style={{display:"flex",gap:4,flexWrap:"wrap"}}>
+                  {INF_STATUSES.map(s=>(
+                    <button key={s} onClick={()=>setForm(f=>({...f,status:s}))} style={{padding:"4px 10px",borderRadius:20,border:"none",background:form.status===s?(INF_STATUS_COLORS[s]||"#e5e7eb"):"#e5e7eb",color:form.status===s?(INF_STATUS_TEXT[s]||C.ink):C.inkMid,fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>{s}</button>
+                  ))}
+                </div>
               </div>
             </div>
 
