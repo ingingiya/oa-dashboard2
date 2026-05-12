@@ -3063,7 +3063,7 @@ function ErpSection() {
           </div>
           {stockLoading && <div style={{padding:"40px",textAlign:"center",color:C.inkLt,fontSize:12}}>⏳ 불러오는 중...</div>}
           {!stockLoading && stockData && (() => {
-            const EXCL = /(케이블|케이스|집게|흡입봉|커버|헤드팁|헤드|필터세트|필터|뚜껑|청소솔|실리콘|브러쉬|브러시|부속|파우치|고무마개|노즐|테이프|세트|패들|팁|리무버링|충전거치대|에어리스마트거치대|그루프롤|헤어롤|네일젤제거비트|블레이드|충전기|진동클렌저-거치대|면도망|배터리|갈바닉클렌저-거치대|갈바닉-거치대|거치대스티커|화이트거치대|에어리스마트-화이트-거치대)/i;
+            const EXCL = /(케이블|케이스|집게|흡입봉|커버|헤드팁|헤드|필터세트|필터|뚜껑|청소솔|실리콘|브러쉬|브러시|부속|부자재|파우치|고무마개|노즐|테이프|세트|패들|팁|리무버링|충전거치대|에어리스마트거치대|그루프롤|헤어롤|네일젤제거비트|블레이드|충전기|진동클렌저-거치대|면도망|배터리|갈바닉클렌저-거치대|갈바닉-거치대|거치대스티커|화이트거치대|에어리스마트-화이트-거치대)/i;
             const danger = stockData.filter(r=>!EXCL.test(r.name)&&!['ODRY-C00502'].includes(r.model)&&r.need_order);
             return danger.length>0?(
               <div style={{padding:"10px 16px",background:"#FEF2F2",borderBottom:`1px solid #FCA5A5`}}>
@@ -3094,7 +3094,7 @@ function ErpSection() {
                   </tr>
                 </thead>
                 <tbody>
-                  {(stockData||[]).filter(r=>!/(케이블|케이스|집게|흡입봉|커버|헤드팁|헤드|필터세트|필터|뚜껑|청소솔|실리콘|브러쉬|브러시|부속|파우치|고무마개|노즐|테이프|세트|패들|팁|리무버링|충전거치대|에어리스마트거치대|그루프롤|헤어롤|네일젤제거비트|블레이드|충전기|진동클렌저-거치대|면도망|배터리|갈바닉클렌저-거치대|갈바닉-거치대|거치대스티커|화이트거치대|에어리스마트-화이트-거치대)/i.test(r.name)&&!['ODRY-C00502'].includes(r.model)).filter(r=>showZeroStock||(Number(r.stock_qty)||0)>0).sort((a,b)=>{
+                  {(stockData||[]).filter(r=>!/(케이블|케이스|집게|흡입봉|커버|헤드팁|헤드|필터세트|필터|뚜껑|청소솔|실리콘|브러쉬|브러시|부속|부자재|파우치|고무마개|노즐|테이프|세트|패들|팁|리무버링|충전거치대|에어리스마트거치대|그루프롤|헤어롤|네일젤제거비트|블레이드|충전기|진동클렌저-거치대|면도망|배터리|갈바닉클렌저-거치대|갈바닉-거치대|거치대스티커|화이트거치대|에어리스마트-화이트-거치대)/i.test(r.name)&&!['ODRY-C00502'].includes(r.model)).filter(r=>showZeroStock||(Number(r.stock_qty)||0)>0).sort((a,b)=>{
                     const aq=Number(a.stock_qty)||0, bq=Number(b.stock_qty)||0;
                     if(stockSortCol){
                       const getVal=r=>stockSortCol==='stock'?Number(r.stock_qty)||0:stockSortCol==='cp_stock'?Number(r.coupang_stock)||0:stockSortCol==='erp_days'?(r.erp_days??9999):stockSortCol==='cp_days'?(r.cp_days??9999):stockSortCol==='total_days'?(r.total_days??9999):stockSortCol==='cost'?Number(r.cost)||0:0;
