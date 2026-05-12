@@ -614,7 +614,8 @@ function InfluencerArchiveSection() {
       if (prods.length === 0) continue;
       for (const prod of prods) {
         const qty = (inf.productQtys || {})[prod] || 1;
-        rows.push([prod, qty, inf.recipientName||inf.name||"", inf.phone||"", inf.postCode||"", inf.address||""]);
+        const fullAddr = [inf.address||"", inf.addressDetail||""].filter(Boolean).join(" ");
+        rows.push([prod, qty, inf.recipientName||inf.name||"", inf.phone||"", inf.postCode||"", fullAddr]);
       }
     }
     const ws = XLSX.utils.aoa_to_sheet(rows);
@@ -826,15 +827,37 @@ function InfluencerArchiveSection() {
                     <input value={settleForm.phone} onChange={e=>setSettleForm(f=>({...f,phone:e.target.value}))} placeholder="010-0000-0000" style={{width:"100%",padding:"7px 10px",border:`1px solid ${C.border}`,borderRadius:7,fontSize:12,fontFamily:"inherit",boxSizing:"border-box"}}/>
                   </div>
                 </div>
-                <div style={{display:"grid",gridTemplateColumns:"120px 1fr",gap:10}}>
-                  <div>
-                    <div style={{fontSize:11,color:C.inkMid,marginBottom:4,fontWeight:700}}>우편번호</div>
-                    <input value={settleForm.postCode} onChange={e=>setSettleForm(f=>({...f,postCode:e.target.value}))} placeholder="12345" style={{width:"100%",padding:"7px 10px",border:`1px solid ${C.border}`,borderRadius:7,fontSize:12,fontFamily:"inherit",boxSizing:"border-box"}}/>
+                <div>
+                  <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:4}}>
+                    <div style={{fontSize:11,color:C.inkMid,fontWeight:700}}>주소</div>
+                    <button onClick={()=>{
+                      const script = document.createElement("script");
+                      script.src = "https://t1.daumcdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js";
+                      script.onload = () => {
+                        new window.daum.Postcode({
+                          oncomplete(data) {
+                            setSettleForm(f=>({...f, postCode: data.zonecode, address: data.roadAddress || data.jibunAddress}));
+                          }
+                        }).open();
+                      };
+                      if (window.daum?.Postcode) {
+                        new window.daum.Postcode({
+                          oncomplete(data) {
+                            setSettleForm(f=>({...f, postCode: data.zonecode, address: data.roadAddress || data.jibunAddress}));
+                          }
+                        }).open();
+                      } else {
+                        document.head.appendChild(script);
+                      }
+                    }} style={{padding:"3px 10px",borderRadius:6,border:`1px solid ${C.rose}`,background:"#fff0f0",color:C.rose,fontSize:10,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
+                      🔍 주소 검색
+                    </button>
                   </div>
-                  <div>
-                    <div style={{fontSize:11,color:C.inkMid,marginBottom:4,fontWeight:700}}>주소</div>
-                    <input value={settleForm.address} onChange={e=>setSettleForm(f=>({...f,address:e.target.value}))} placeholder="서울시 강남구 ..." style={{width:"100%",padding:"7px 10px",border:`1px solid ${C.border}`,borderRadius:7,fontSize:12,fontFamily:"inherit",boxSizing:"border-box"}}/>
+                  <div style={{display:"flex",gap:6}}>
+                    <input value={settleForm.postCode} onChange={e=>setSettleForm(f=>({...f,postCode:e.target.value}))} placeholder="우편번호" style={{width:90,padding:"7px 10px",border:`1px solid ${C.border}`,borderRadius:7,fontSize:12,fontFamily:"inherit",flexShrink:0}}/>
+                    <input value={settleForm.address} onChange={e=>setSettleForm(f=>({...f,address:e.target.value}))} placeholder="도로명 주소" style={{flex:1,padding:"7px 10px",border:`1px solid ${C.border}`,borderRadius:7,fontSize:12,fontFamily:"inherit"}}/>
                   </div>
+                  <input value={settleForm.addressDetail||""} onChange={e=>setSettleForm(f=>({...f,addressDetail:e.target.value}))} placeholder="상세주소 (동/호수 등)" style={{width:"100%",padding:"7px 10px",border:`1px solid ${C.border}`,borderRadius:7,fontSize:12,fontFamily:"inherit",boxSizing:"border-box",marginTop:6}}/>
                 </div>
 
                 {/* 제품별 수량 */}
@@ -955,8 +978,41 @@ function InfluencerArchiveSection() {
                   )}
                 </div>
 
+                {/* 파일 첨부 */}
+                <div style={{borderTop:`1px solid ${C.border}`,paddingTop:12}}>
+                  <div style={{fontSize:11,fontWeight:800,color:C.ink,marginBottom:8}}>📎 서류 첨부</div>
+                  {[
+                    {key:"fileId",   label: settleForm.taxType==="개인"?"주민등록증":"사업자등록증"},
+                    {key:"fileBankbook", label:"통장사본"},
+                    {key:"fileEtc",  label:"기타"},
+                  ].map(({key,label})=>(
+                    <div key={key} style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
+                      <span style={{fontSize:11,color:C.inkMid,width:80,flexShrink:0}}>{label}</span>
+                      {settleForm[key] ? (
+                        <div style={{flex:1,display:"flex",alignItems:"center",gap:6}}>
+                          <img src={settleForm[key]} alt={label} style={{height:36,borderRadius:4,border:`1px solid ${C.border}`,cursor:"pointer"}} onClick={()=>window.open(settleForm[key],"_blank")}/>
+                          <span style={{fontSize:10,color:"#16a34a",fontWeight:700}}>✓ 첨부됨</span>
+                          <button onClick={()=>setSettleForm(f=>({...f,[key]:""}))} style={{border:"none",background:"none",color:"#dc2626",fontSize:11,cursor:"pointer",fontWeight:700}}>삭제</button>
+                        </div>
+                      ) : (
+                        <label style={{flex:1,padding:"5px 12px",borderRadius:7,border:`1px dashed ${C.border}`,background:"#f9fafb",fontSize:11,color:C.inkMid,cursor:"pointer",textAlign:"center"}}>
+                          + 파일 선택
+                          <input type="file" accept="image/*,.pdf" style={{display:"none"}} onChange={e=>{
+                            const file = e.target.files?.[0];
+                            if (!file) return;
+                            if (file.size > 5*1024*1024) { alert("5MB 이하 파일만 가능해요"); return; }
+                            const reader = new FileReader();
+                            reader.onload = ev => setSettleForm(f=>({...f,[key]:ev.target.result}));
+                            reader.readAsDataURL(file);
+                          }}/>
+                        </label>
+                      )}
+                    </div>
+                  ))}
+                </div>
+
                 <div style={{fontSize:10,color:"#9ca3af",background:"#f9fafb",borderRadius:7,padding:"8px 12px"}}>
-                  🔒 주민번호·계좌정보는 본인 Supabase DB에만 저장됩니다.
+                  🔒 주민번호·계좌정보·첨부파일은 본인 Supabase DB에만 저장됩니다.
                 </div>
               </div>
               );
