@@ -4745,11 +4745,13 @@ export default function OaDashboard(){
     {id:"inf_archive",icon:"photo_library", label:"아카이브"},
     {id:"schedule",  icon:"calendar_month", label:"스케줄"},
     {id:"creative",  icon:"palette",        label:"소재"},
+    {id:"insight",   icon:"edit_note",      label:"팀 노트"},
+  ];
+  const NAVS_WIP=[
     {id:"keyword",   icon:"search",         label:"키워드"},
     {id:"market",    icon:"storefront",     label:"시장조사"},
     {id:"review",    icon:"check_circle",   label:"콘텐츠리뷰"},
     {id:"naver_review", icon:"star_rate",   label:"리뷰분석"},
-    {id:"insight",   icon:"edit_note",      label:"팀 노트"},
   ];
 
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -12257,34 +12259,63 @@ export default function OaDashboard(){
         </div>
 
         {/* 사이드 네비 */}
-        <nav style={{flex:1,padding:"16px 12px"}}>
-          {NAVS.map(n=>{
-            const active = sec===n.id;
-            return(
-              <button key={n.id} onClick={()=>setSec(n.id)} style={{
-                width:"100%",display:"flex",alignItems:"center",gap:12,
-                padding:"11px 14px",borderRadius:11,border:"none",cursor:"pointer",
-                fontFamily:"inherit",fontWeight:700,fontSize:13,
-                marginBottom:4,transition:"all 0.18s",textAlign:"left",
-                background:active?C.rose:"transparent",
-                color:active?C.white:C.inkMid,
-                boxShadow:active?`0 4px 14px ${C.rose}44`:"none",
-                position:"relative",
-              }}
-              onMouseEnter={e=>{ if(!active){ e.currentTarget.style.background=C.cream; } }}
-              onMouseLeave={e=>{ if(!active){ e.currentTarget.style.background="transparent"; } }}>
-                <MI n={n.icon} size={18}/>
-                <span>{n.label}</span>
-                {n.id==="home"&&totalAlerts>0&&(
-                  <span style={{marginLeft:"auto",minWidth:20,height:20,borderRadius:10,
-                    background:active?C.white:C.bad,color:active?C.bad:C.white,
-                    fontSize:10,fontWeight:900,display:"flex",alignItems:"center",justifyContent:"center",padding:"0 5px"}}>
-                    {totalAlerts}
-                  </span>
-                )}
-              </button>
-            );
-          })}
+        <nav style={{flex:1,padding:"16px 12px",display:"flex",flexDirection:"column"}}>
+          <div style={{flex:1}}>
+            {NAVS.map(n=>{
+              const active = sec===n.id;
+              return(
+                <button key={n.id} onClick={()=>setSec(n.id)} style={{
+                  width:"100%",display:"flex",alignItems:"center",gap:12,
+                  padding:"11px 14px",borderRadius:11,border:"none",cursor:"pointer",
+                  fontFamily:"inherit",fontWeight:700,fontSize:13,
+                  marginBottom:4,transition:"all 0.18s",textAlign:"left",
+                  background:active?C.rose:"transparent",
+                  color:active?C.white:C.inkMid,
+                  boxShadow:active?`0 4px 14px ${C.rose}44`:"none",
+                  position:"relative",
+                }}
+                onMouseEnter={e=>{ if(!active){ e.currentTarget.style.background=C.cream; } }}
+                onMouseLeave={e=>{ if(!active){ e.currentTarget.style.background="transparent"; } }}>
+                  <MI n={n.icon} size={18}/>
+                  <span>{n.label}</span>
+                  {n.id==="home"&&totalAlerts>0&&(
+                    <span style={{marginLeft:"auto",minWidth:20,height:20,borderRadius:10,
+                      background:active?C.white:C.bad,color:active?C.bad:C.white,
+                      fontSize:10,fontWeight:900,display:"flex",alignItems:"center",justifyContent:"center",padding:"0 5px"}}>
+                      {totalAlerts}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+          {/* 수리중 탭 구분선 */}
+          <div style={{borderTop:`1px solid ${C.border}`,marginTop:8,paddingTop:8}}>
+            <div style={{fontSize:10,fontWeight:800,color:"#f59e0b",padding:"2px 14px 6px",letterSpacing:"0.05em",display:"flex",alignItems:"center",gap:4}}>
+              🚧 <span>수리중</span>
+            </div>
+            {NAVS_WIP.map(n=>{
+              const active = sec===n.id;
+              return(
+                <button key={n.id} onClick={()=>setSec(n.id)} style={{
+                  width:"100%",display:"flex",alignItems:"center",gap:12,
+                  padding:"11px 14px",borderRadius:11,border:"none",cursor:"pointer",
+                  fontFamily:"inherit",fontWeight:700,fontSize:13,
+                  marginBottom:4,transition:"all 0.18s",textAlign:"left",
+                  background:active?"#f59e0b":"transparent",
+                  color:active?C.white:"#9ca3af",
+                  boxShadow:active?"0 4px 14px #f59e0b44":"none",
+                  opacity:0.8,
+                }}
+                onMouseEnter={e=>{ if(!active){ e.currentTarget.style.background=C.cream; } }}
+                onMouseLeave={e=>{ if(!active){ e.currentTarget.style.background="transparent"; } }}>
+                  <MI n={n.icon} size={18}/>
+                  <span>{n.label}</span>
+                  <span style={{marginLeft:"auto",fontSize:9,fontWeight:800,color:"#f59e0b",background:"#fef3c7",borderRadius:4,padding:"1px 5px",border:"1px solid #fcd34d"}}>수리중</span>
+                </button>
+              );
+            })}
+          </div>
         </nav>
 
         {/* 사이드바 하단: 알림 요약 */}
