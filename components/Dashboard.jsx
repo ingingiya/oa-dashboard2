@@ -561,10 +561,17 @@ function InfluencerArchiveSection() {
     if (!url) return;
     setFetching(true); setFetchError(""); setFetchUsage(null);
     try {
-      // Instagram 프로필 URL에서 username 추출
-      const igMatch = url.match(/instagram\.com\/([^/?#]+)/);
-      if (igMatch) {
-        const username = igMatch[1].replace(/^@/,"");
+      // Instagram username 추출 (프로필URL, @username, 또는 username 직접 입력)
+      let username = null;
+      if (/instagram\.com\/(p|reel|tv|stories)\//.test(url)) {
+        setFetchError("릴스/포스트 URL은 안 돼요 — 프로필 URL이나 @계정명을 입력해주세요");
+        setFetching(false); return;
+      }
+      const igProfileMatch = url.match(/instagram\.com\/([A-Za-z0-9_.]+)/);
+      if (igProfileMatch) username = igProfileMatch[1];
+      else if (/^@?[A-Za-z0-9_.]+$/.test(url)) username = url.replace(/^@/,"");
+
+      if (username) {
         const res = await fetch("/api/apify", {
           method: "POST",
           headers: {"Content-Type":"application/json"},
@@ -572,19 +579,21 @@ function InfluencerArchiveSection() {
         });
         const data = await res.json();
         if (data.usageUsd != null) setFetchUsage(data.usageUsd);
-        if (data.profile) {
+        if (data.error) {
+          setFetchError("오류: " + data.error);
+        } else if (data.profile) {
           setForm(f => ({
             ...f,
-            account: "@" + (data.profile.username || username),
+            account: data.profile.username ? "@" + data.profile.username : (f.account || "@" + username),
             name: data.profile.fullName || f.name,
             followers: data.profile.followers || f.followers,
             profilePicUrl: data.profile.profilePicUrl || f.profilePicUrl,
           }));
         } else {
-          setFetchError("자동 조회 실패 — 직접 입력하세요");
+          setFetchError("프로필 조회 실패 — 비공개 계정이거나 존재하지 않아요");
         }
       } else {
-        setFetchError("Instagram URL만 자동 조회 가능");
+        setFetchError("Instagram URL 또는 @계정명을 입력해주세요");
       }
     } catch(e) { setFetchError(e.message); }
     setFetching(false);
