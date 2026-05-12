@@ -497,6 +497,7 @@ function InfluencerArchiveSection() {
   const [archive, setArchive] = useSupabaseState("oa_inf_archive_v1", []);
   const [catFilter, setCatFilter] = useState("전체");
   const [statusFilter, setStatusFilter] = useState("전체");
+  const [assigneeFilter, setAssigneeFilter] = useState("전체");
   const [search, setSearch] = useState("");
   const [modal, setModal] = useState(null); // null | {mode:"add"|"edit", item}
   const [form, setForm] = useState({account:"",name:"",platform:"Instagram",profileUrl:"",followers:"",categories:[],products:[],status:"잠재",notes:"",dealFee:"",dealUsagePeriod:"",dealContent:"",assignee:""});
@@ -515,9 +516,12 @@ function InfluencerArchiveSection() {
 
   const items = Array.isArray(archive) ? archive : [];
 
+  const assignees = ["전체", ...Array.from(new Set(items.map(x=>x.assignee).filter(Boolean)))];
+
   const filtered = items.filter(p => {
     if (catFilter !== "전체" && !(p.categories||[]).includes(catFilter)) return false;
     if (statusFilter !== "전체" && p.status !== statusFilter) return false;
+    if (assigneeFilter !== "전체" && (p.assignee||"") !== assigneeFilter) return false;
     if (search && !`${p.account}${p.name}${p.notes}`.toLowerCase().includes(search.toLowerCase())) return false;
     return true;
   });
@@ -710,6 +714,14 @@ function InfluencerArchiveSection() {
             <button key={s} onClick={()=>setStatusFilter(s)} style={{padding:"4px 12px",borderRadius:20,border:"none",background:statusFilter===s?"#374151":"#e5e7eb",color:statusFilter===s?"#fff":C.inkMid,fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>{s}</button>
           ))}
         </div>
+        {assignees.length > 1 && (
+          <div style={{display:"flex",gap:4,flexWrap:"wrap",alignItems:"center"}}>
+            <span style={{fontSize:11,color:C.inkMid,fontWeight:700}}>담당:</span>
+            {assignees.map(a=>(
+              <button key={a} onClick={()=>setAssigneeFilter(a)} style={{padding:"4px 12px",borderRadius:20,border:"none",background:assigneeFilter===a?"#7c3aed":"#e5e7eb",color:assigneeFilter===a?"#fff":C.inkMid,fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>{a}</button>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* 카드 그리드 */}
