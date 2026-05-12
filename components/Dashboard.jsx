@@ -503,6 +503,11 @@ function InfluencerArchiveSection() {
   const [fetching, setFetching] = useState(false);
   const [fetchError, setFetchError] = useState("");
   const [fetchUsage, setFetchUsage] = useState(null);
+  // 정산·배송 모달
+  const [settleModal, setSettleModal] = useState(null); // null | item
+  const [settleTab, setSettleTab] = useState("shipping"); // "tax" | "shipping"
+  const EMPTY_SETTLE = {taxType:"개인",idNumber:"",bankName:"",bankAccount:"",bankHolder:"",recipientName:"",phone:"",postCode:"",address:"",productQtys:{},settleFee:"",settleDate:"",settleDetail:"",settleUrl:""};
+  const [settleForm, setSettleForm] = useState(EMPTY_SETTLE);
 
   // 제품 검색
   const [productSearch, setProductSearch] = useState("");
@@ -551,6 +556,67 @@ function InfluencerArchiveSection() {
   function deleteItem(id) {
     if (!confirm("삭제할까요?")) return;
     setArchive(items.filter(x => x.id !== id));
+  }
+  function openSettle(item) {
+    setSettleTab("shipping");
+    setSettleForm({
+      taxType:      item.taxType      || "개인",
+      idNumber:     item.idNumber     || "",
+      bankName:     item.bankName     || "",
+      bankAccount:  item.bankAccount  || "",
+      bankHolder:   item.bankHolder   || "",
+      recipientName:item.recipientName|| item.name || "",
+      phone:        item.phone        || "",
+      postCode:     item.postCode     || "",
+      address:      item.address      || "",
+      productQtys:  item.productQtys  || {},
+    });
+    setSettleModal(item);
+  }
+  function saveSettle() {
+    const updated = items.map(x => x.id === settleModal.id ? {...x, ...settleForm} : x);
+    setArchive(updated);
+    setSettleModal(null);
+  }
+  function exportWithholdingXlsx(inf, sf) {
+    const XLSX = require("xlsx");
+    const fee = Number(String(sf.settleFee).replace(/,/g,"")) || 0;
+    const incomeTax = Math.max(0, Math.floor(fee * 0.03 / 10) * 10 <= 990 ? 0 : Math.floor(fee * 0.03 / 10) * 10);
+    const localTax  = Math.floor(incomeTax * 0.1 / 10) * 10;
+    const totalTax  = incomeTax + localTax;
+    const netPay    = fee - totalTax;
+    const dateStr   = sf.settleDate || "";
+    const month     = dateStr ? Number(dateStr.split("-")[1] || dateStr.split("/")[0]) : "";
+    const day       = dateStr ? Number(dateStr.split("-")[2] || dateStr.split("/")[1]) : "";
+    const name      = inf.name || (inf.account||"").replace(/^@/,"");
+    const rows = [
+      [null,null,null,null,null,"사업소득자 원천징수"],
+      [null,null,null,null,null,null,null,null,null,new Date().toLocaleDateString("ko-KR")],
+      [null,"구  분",null,"지  급  일",null,"지급총액","공  제  액(3.3%)",null,null,"차   인\n지급액"],
+      [null,"번호","소득자명","월","일",null,"소득세","주민세","계",null],
+      [null,1,name,month,day,fee,incomeTax,localTax,totalTax,netPay],
+    ];
+    const ws = XLSX.utils.aoa_to_sheet(rows);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "원천징수");
+    XLSX.writeFile(wb, `${name}_사업소득자원천징수_${dateStr}.xlsx`);
+  }
+  function exportSeedingXlsx(targetItems) {
+    const XLSX = require("xlsx");
+    const rows = [["주문제품","수량","수령인","연락처","우편번호","주소"]];
+    for (const inf of targetItems) {
+      if (!inf.address) continue;
+      const prods = inf.products || [];
+      if (prods.length === 0) continue;
+      for (const prod of prods) {
+        const qty = (inf.productQtys || {})[prod] || 1;
+        rows.push([prod, qty, inf.recipientName||inf.name||"", inf.phone||"", inf.postCode||"", inf.address||""]);
+      }
+    }
+    const ws = XLSX.utils.aoa_to_sheet(rows);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "시딩주문");
+    XLSX.writeFile(wb, `시딩주문_${new Date().toISOString().slice(0,10)}.xlsx`);
   }
   function toggleCat(cat) {
     setForm(f => ({...f, categories: f.categories.includes(cat) ? f.categories.filter(c=>c!==cat) : [...f.categories, cat]}));
@@ -625,9 +691,10 @@ function InfluencerArchiveSection() {
           <div style={{fontSize:20,fontWeight:900,color:C.ink}}>인플루언서 아카이브</div>
           <div style={{fontSize:12,color:C.inkMid,marginTop:2}}>공동구매·뷰티릴스·협업 후보 인플루언서를 분류·저장합니다</div>
         </div>
-        <button onClick={openAdd} style={{padding:"8px 18px",borderRadius:9,border:"none",background:C.rose,color:"#fff",fontSize:13,fontWeight:800,cursor:"pointer",fontFamily:"inherit"}}>
-          + 추가
-        </button>
+        <div style={{display:"flex",gap:8}}>
+          <button onClick={()=>exportSeedingXlsx(items.filter(x=>x.address))} style={{padding:"8px 14px",borderRadius:9,border:`1px solid ${C.border}`,background:C.white,color:C.ink,fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>📦 전체 시딩 엑셀</button>
+          <button onClick={openAdd} style={{padding:"8px 18px",borderRadius:9,border:"none",background:C.rose,color:"#fff",fontSize:13,fontWeight:800,cursor:"pointer",fontFamily:"inherit"}}>+ 추가</button>
+        </div>
       </div>
 
       {/* 필터 바 */}
@@ -696,12 +763,198 @@ function InfluencerArchiveSection() {
                   )}
                 </div>
               )}
+              {p.address && (
+                <div style={{fontSize:10,color:"#6b7280",background:"#f0fdf4",border:"1px solid #bbf7d0",borderRadius:6,padding:"3px 8px",display:"flex",gap:4,alignItems:"center"}}>
+                  <span>📮</span><span style={{overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.address}</span>
+                </div>
+              )}
               <div style={{display:"flex",gap:6,marginTop:2}}>
                 <button onClick={()=>openEdit(p)} style={{flex:1,padding:"5px 0",borderRadius:7,border:`1px solid ${C.border}`,background:C.white,color:C.ink,fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>편집</button>
+                <button onClick={()=>openSettle(p)} style={{flex:1,padding:"5px 0",borderRadius:7,border:"none",background:"#eff6ff",color:"#2563eb",fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>정산·배송</button>
                 <button onClick={()=>deleteItem(p.id)} style={{padding:"5px 10px",borderRadius:7,border:"none",background:"#fee2e2",color:"#dc2626",fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>삭제</button>
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* 정산·배송 모달 */}
+      {settleModal && (
+        <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.4)",zIndex:9000,display:"flex",alignItems:"center",justifyContent:"center",padding:16}} onClick={()=>setSettleModal(null)}>
+          <div style={{background:C.white,borderRadius:16,padding:24,width:"100%",maxWidth:480,display:"flex",flexDirection:"column",gap:16,maxHeight:"90vh",overflowY:"auto"}} onClick={e=>e.stopPropagation()}>
+            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+              <div>
+                <div style={{fontSize:16,fontWeight:900,color:C.ink}}>정산·배송 정보</div>
+                <div style={{fontSize:11,color:C.inkMid,marginTop:2}}>{settleModal.account||settleModal.name}</div>
+              </div>
+              <button onClick={()=>setSettleModal(null)} style={{border:"none",background:"none",fontSize:18,cursor:"pointer",color:C.inkMid}}>✕</button>
+            </div>
+
+            {/* 탭 */}
+            <div style={{display:"flex",gap:4,borderBottom:`2px solid ${C.border}`,paddingBottom:0}}>
+              {[{id:"shipping",label:"📮 배송·시딩"},{id:"tax",label:"💳 정산정보"}].map(t=>(
+                <button key={t.id} onClick={()=>setSettleTab(t.id)} style={{padding:"8px 16px",border:"none",background:"none",fontFamily:"inherit",fontSize:12,fontWeight:700,cursor:"pointer",
+                  color:settleTab===t.id?C.rose:C.inkMid,
+                  borderBottom:settleTab===t.id?`2px solid ${C.rose}`:"2px solid transparent",
+                  marginBottom:-2,
+                }}>{t.label}</button>
+              ))}
+            </div>
+
+            {/* 배송·시딩 탭 */}
+            {settleTab==="shipping" && (
+              <div style={{display:"flex",flexDirection:"column",gap:12}}>
+                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+                  <div>
+                    <div style={{fontSize:11,color:C.inkMid,marginBottom:4,fontWeight:700}}>수령인</div>
+                    <input value={settleForm.recipientName} onChange={e=>setSettleForm(f=>({...f,recipientName:e.target.value}))} placeholder="홍길동" style={{width:"100%",padding:"7px 10px",border:`1px solid ${C.border}`,borderRadius:7,fontSize:12,fontFamily:"inherit",boxSizing:"border-box"}}/>
+                  </div>
+                  <div>
+                    <div style={{fontSize:11,color:C.inkMid,marginBottom:4,fontWeight:700}}>연락처</div>
+                    <input value={settleForm.phone} onChange={e=>setSettleForm(f=>({...f,phone:e.target.value}))} placeholder="010-0000-0000" style={{width:"100%",padding:"7px 10px",border:`1px solid ${C.border}`,borderRadius:7,fontSize:12,fontFamily:"inherit",boxSizing:"border-box"}}/>
+                  </div>
+                </div>
+                <div style={{display:"grid",gridTemplateColumns:"120px 1fr",gap:10}}>
+                  <div>
+                    <div style={{fontSize:11,color:C.inkMid,marginBottom:4,fontWeight:700}}>우편번호</div>
+                    <input value={settleForm.postCode} onChange={e=>setSettleForm(f=>({...f,postCode:e.target.value}))} placeholder="12345" style={{width:"100%",padding:"7px 10px",border:`1px solid ${C.border}`,borderRadius:7,fontSize:12,fontFamily:"inherit",boxSizing:"border-box"}}/>
+                  </div>
+                  <div>
+                    <div style={{fontSize:11,color:C.inkMid,marginBottom:4,fontWeight:700}}>주소</div>
+                    <input value={settleForm.address} onChange={e=>setSettleForm(f=>({...f,address:e.target.value}))} placeholder="서울시 강남구 ..." style={{width:"100%",padding:"7px 10px",border:`1px solid ${C.border}`,borderRadius:7,fontSize:12,fontFamily:"inherit",boxSizing:"border-box"}}/>
+                  </div>
+                </div>
+
+                {/* 제품별 수량 */}
+                {(settleModal.products||[]).length > 0 && (
+                  <div>
+                    <div style={{fontSize:11,color:C.inkMid,marginBottom:6,fontWeight:700}}>📦 제품별 수량</div>
+                    <div style={{display:"flex",flexDirection:"column",gap:6}}>
+                      {(settleModal.products||[]).map((prod,i)=>(
+                        <div key={i} style={{display:"flex",alignItems:"center",gap:8,background:"#f9fafb",borderRadius:7,padding:"6px 10px"}}>
+                          <span style={{flex:1,fontSize:12,color:C.ink,fontWeight:600}}>{prod}</span>
+                          <input
+                            type="number" min={0}
+                            value={(settleForm.productQtys||{})[prod] ?? 1}
+                            onChange={e=>setSettleForm(f=>({...f,productQtys:{...(f.productQtys||{}),[prod]:Number(e.target.value)||0}}))}
+                            style={{width:64,padding:"4px 8px",border:`1px solid ${C.border}`,borderRadius:6,fontSize:12,fontFamily:"inherit",textAlign:"center"}}
+                          />
+                          <span style={{fontSize:11,color:C.inkMid}}>개</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {(settleModal.products||[]).length === 0 && (
+                  <div style={{fontSize:12,color:"#f59e0b",background:"#fef9c3",borderRadius:7,padding:"8px 12px"}}>⚠️ 편집에서 제품을 먼저 등록해주세요</div>
+                )}
+
+                {/* 개별 시딩 엑셀 */}
+                <button
+                  onClick={()=>exportSeedingXlsx([{...settleModal,...settleForm}])}
+                  disabled={!settleForm.address}
+                  style={{padding:"9px",borderRadius:8,border:"none",background:settleForm.address?"#16a34a":"#e5e7eb",color:settleForm.address?"#fff":"#9ca3af",fontSize:12,fontWeight:800,cursor:settleForm.address?"pointer":"not-allowed",fontFamily:"inherit"}}
+                >
+                  📥 이 인플루언서 시딩 엑셀 다운로드
+                </button>
+              </div>
+            )}
+
+            {/* 정산정보 탭 */}
+            {settleTab==="tax" && (()=>{
+              const fee = Number(String(settleForm.settleFee||"0").replace(/,/g,"")) || 0;
+              const incomeTax = fee > 0 ? (Math.floor(fee*0.03/10)*10 <= 990 ? 0 : Math.floor(fee*0.03/10)*10) : 0;
+              const localTax  = Math.floor(incomeTax*0.1/10)*10;
+              const netPay    = fee - incomeTax - localTax;
+              const name      = settleModal.name || (settleModal.account||"").replace(/^@/,"");
+              const idShort   = (settleForm.idNumber||"").replace(/-/g,"").slice(0,6);
+              const erpName   = name + (idShort ? idShort + "-" + (settleForm.idNumber||"").replace(/-/g,"").slice(6) : "");
+              return (
+              <div style={{display:"flex",flexDirection:"column",gap:12}}>
+                <div>
+                  <div style={{fontSize:11,color:C.inkMid,marginBottom:6,fontWeight:700}}>사업자 유형</div>
+                  <div style={{display:"flex",gap:8}}>
+                    {["개인","사업자"].map(t=>(
+                      <button key={t} onClick={()=>setSettleForm(f=>({...f,taxType:t}))} style={{padding:"6px 20px",borderRadius:8,border:`1px solid ${settleForm.taxType===t?C.rose:C.border}`,background:settleForm.taxType===t?"#fff0f0":C.white,color:settleForm.taxType===t?C.rose:C.ink,fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>{t}</button>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <div style={{fontSize:11,color:C.inkMid,marginBottom:4,fontWeight:700}}>{settleForm.taxType==="개인"?"주민등록번호":"사업자등록번호"}</div>
+                  <input value={settleForm.idNumber} onChange={e=>setSettleForm(f=>({...f,idNumber:e.target.value}))}
+                    placeholder={settleForm.taxType==="개인"?"000000-0000000":"000-00-00000"}
+                    style={{width:"100%",padding:"7px 10px",border:`1px solid ${C.border}`,borderRadius:7,fontSize:12,fontFamily:"inherit",boxSizing:"border-box"}}/>
+                </div>
+                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+                  <div>
+                    <div style={{fontSize:11,color:C.inkMid,marginBottom:4,fontWeight:700}}>은행명</div>
+                    <input value={settleForm.bankName} onChange={e=>setSettleForm(f=>({...f,bankName:e.target.value}))} placeholder="국민은행" style={{width:"100%",padding:"7px 10px",border:`1px solid ${C.border}`,borderRadius:7,fontSize:12,fontFamily:"inherit",boxSizing:"border-box"}}/>
+                  </div>
+                  <div>
+                    <div style={{fontSize:11,color:C.inkMid,marginBottom:4,fontWeight:700}}>예금주</div>
+                    <input value={settleForm.bankHolder} onChange={e=>setSettleForm(f=>({...f,bankHolder:e.target.value}))} placeholder="홍길동" style={{width:"100%",padding:"7px 10px",border:`1px solid ${C.border}`,borderRadius:7,fontSize:12,fontFamily:"inherit",boxSizing:"border-box"}}/>
+                  </div>
+                </div>
+                <div>
+                  <div style={{fontSize:11,color:C.inkMid,marginBottom:4,fontWeight:700}}>계좌번호</div>
+                  <input value={settleForm.bankAccount} onChange={e=>setSettleForm(f=>({...f,bankAccount:e.target.value}))} placeholder="123-456-789012" style={{width:"100%",padding:"7px 10px",border:`1px solid ${C.border}`,borderRadius:7,fontSize:12,fontFamily:"inherit",boxSizing:"border-box"}}/>
+                </div>
+
+                <div style={{borderTop:`1px solid ${C.border}`,paddingTop:12,display:"flex",flexDirection:"column",gap:10}}>
+                  <div style={{fontSize:11,fontWeight:800,color:C.ink}}>💸 이번 정산</div>
+                  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+                    <div>
+                      <div style={{fontSize:11,color:C.inkMid,marginBottom:4,fontWeight:700}}>정산금액 (원)</div>
+                      <input value={settleForm.settleFee} onChange={e=>setSettleForm(f=>({...f,settleFee:e.target.value}))} placeholder="200000" style={{width:"100%",padding:"7px 10px",border:`1px solid ${C.border}`,borderRadius:7,fontSize:12,fontFamily:"inherit",boxSizing:"border-box"}}/>
+                    </div>
+                    <div>
+                      <div style={{fontSize:11,color:C.inkMid,marginBottom:4,fontWeight:700}}>발생일자</div>
+                      <input type="date" value={settleForm.settleDate} onChange={e=>setSettleForm(f=>({...f,settleDate:e.target.value}))} style={{width:"100%",padding:"7px 10px",border:`1px solid ${C.border}`,borderRadius:7,fontSize:12,fontFamily:"inherit",boxSizing:"border-box"}}/>
+                    </div>
+                  </div>
+                  <div>
+                    <div style={{fontSize:11,color:C.inkMid,marginBottom:4,fontWeight:700}}>사유 및 상세내역</div>
+                    <input value={settleForm.settleDetail} onChange={e=>setSettleForm(f=>({...f,settleDetail:e.target.value}))} placeholder="에어리소닉 인스타그램 광고비 지급" style={{width:"100%",padding:"7px 10px",border:`1px solid ${C.border}`,borderRadius:7,fontSize:12,fontFamily:"inherit",boxSizing:"border-box"}}/>
+                  </div>
+                  <div>
+                    <div style={{fontSize:11,color:C.inkMid,marginBottom:4,fontWeight:700}}>콘텐츠 URL</div>
+                    <input value={settleForm.settleUrl} onChange={e=>setSettleForm(f=>({...f,settleUrl:e.target.value}))} placeholder="https://www.instagram.com/reel/..." style={{width:"100%",padding:"7px 10px",border:`1px solid ${C.border}`,borderRadius:7,fontSize:12,fontFamily:"inherit",boxSizing:"border-box"}}/>
+                  </div>
+
+                  {/* ERP 입력 요약 */}
+                  {fee > 0 && settleForm.idNumber && (
+                    <div style={{background:"#f0f9ff",border:"1px solid #bae6fd",borderRadius:8,padding:"10px 12px",fontSize:11,display:"flex",flexDirection:"column",gap:4}}>
+                      <div style={{fontWeight:800,color:"#0369a1",marginBottom:2}}>📋 ERP 입력 정보</div>
+                      <div><span style={{color:"#64748b"}}>거래처명/업체명: </span><b>{erpName}</b></div>
+                      <div><span style={{color:"#64748b"}}>증빙구분: </span>{settleForm.taxType==="개인"?"지출증빙":"세금계산서"}</div>
+                      <div><span style={{color:"#64748b"}}>합계금액: </span><b>{fee.toLocaleString()}원</b> ({settleForm.taxType==="개인"?`3.3% 제외 ${netPay.toLocaleString()}원`:"부가세 별도"})</div>
+                      {settleForm.settleDate && <div><span style={{color:"#64748b"}}>발생일자: </span>{settleForm.settleDate.replace(/-/g,"/").slice(5)}</div>}
+                      {settleForm.settleDetail && <div><span style={{color:"#64748b"}}>사유: </span>{settleForm.settleDetail}</div>}
+                      {settleForm.settleUrl && <div style={{overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}><span style={{color:"#64748b"}}>URL: </span><a href={settleForm.settleUrl} target="_blank" rel="noreferrer" style={{color:C.rose}}>{settleForm.settleUrl}</a></div>}
+                    </div>
+                  )}
+
+                  {/* 원천징수 엑셀 — 개인만 */}
+                  {settleForm.taxType==="개인" && fee > 0 && (
+                    <button onClick={()=>exportWithholdingXlsx(settleModal,settleForm)}
+                      style={{padding:"9px",borderRadius:8,border:"none",background:"#7c3aed",color:"#fff",fontSize:12,fontWeight:800,cursor:"pointer",fontFamily:"inherit"}}>
+                      📥 사업소득자 원천징수 엑셀 다운로드 ({netPay.toLocaleString()}원 지급)
+                    </button>
+                  )}
+                </div>
+
+                <div style={{fontSize:10,color:"#9ca3af",background:"#f9fafb",borderRadius:7,padding:"8px 12px"}}>
+                  🔒 주민번호·계좌정보는 본인 Supabase DB에만 저장됩니다.
+                </div>
+              </div>
+              );
+            })()}
+
+            <div style={{display:"flex",gap:8,marginTop:4}}>
+              <button onClick={saveSettle} style={{flex:1,padding:"10px",borderRadius:9,border:"none",background:C.rose,color:"#fff",fontSize:13,fontWeight:800,cursor:"pointer",fontFamily:"inherit"}}>저장</button>
+              <button onClick={()=>setSettleModal(null)} style={{flex:1,padding:"10px",borderRadius:9,border:`1px solid ${C.border}`,background:C.white,color:C.ink,fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>닫기</button>
+            </div>
+          </div>
         </div>
       )}
 
