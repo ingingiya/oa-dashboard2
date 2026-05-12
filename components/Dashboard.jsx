@@ -499,10 +499,14 @@ function InfluencerArchiveSection() {
   const [statusFilter, setStatusFilter] = useState("전체");
   const [search, setSearch] = useState("");
   const [modal, setModal] = useState(null); // null | {mode:"add"|"edit", item}
-  const [form, setForm] = useState({account:"",name:"",platform:"Instagram",profileUrl:"",followers:"",categories:[],status:"잠재",notes:"",dealFee:"",dealUsagePeriod:"",dealContent:"",assignee:""});
+  const [form, setForm] = useState({account:"",name:"",platform:"Instagram",profileUrl:"",followers:"",categories:[],products:[],status:"잠재",notes:"",dealFee:"",dealUsagePeriod:"",dealContent:"",assignee:""});
   const [fetching, setFetching] = useState(false);
   const [fetchError, setFetchError] = useState("");
   const [fetchUsage, setFetchUsage] = useState(null);
+
+  // 제품 검색
+  const [productSearch, setProductSearch] = useState("");
+  const [productResults, setProductResults] = useState([]);
 
   const items = Array.isArray(archive) ? archive : [];
 
@@ -514,7 +518,7 @@ function InfluencerArchiveSection() {
   });
 
   function openAdd() {
-    setForm({account:"",name:"",platform:"Instagram",profileUrl:"",followers:"",categories:[],status:"잠재",notes:""});
+    setForm({account:"",name:"",platform:"Instagram",profileUrl:"",followers:"",categories:[],products:[],status:"잠재",notes:"",dealFee:"",dealUsagePeriod:"",dealContent:"",assignee:""});
     setFetchError("");
     setModal({mode:"add"});
   }
@@ -574,6 +578,20 @@ function InfluencerArchiveSection() {
       }
     } catch(e) { setFetchError(e.message); }
     setFetching(false);
+  }
+
+  async function searchProducts(q) {
+    if (!q || q.length < 2) { setProductResults([]); return; }
+    try {
+      const SURL = process.env.NEXT_PUBLIC_SUPABASE_URL;
+      const SKEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+      const res = await fetch(
+        `${SURL}/rest/v1/beauty_stock?select=name&name=ilike.*${encodeURIComponent(q)}*&limit=10`,
+        { headers: { apikey: SKEY, Authorization: `Bearer ${SKEY}` } }
+      );
+      const data = await res.json();
+      setProductResults(Array.isArray(data) ? data : []);
+    } catch(e) { setProductResults([]); }
   }
 
   const fmtFollowers = n => n == null ? "" : n >= 1000000 ? (n/1000000).toFixed(1)+"M" : n >= 1000 ? (n/1000).toFixed(0)+"K" : String(n);
@@ -636,6 +654,11 @@ function InfluencerArchiveSection() {
               {(p.categories||[]).length > 0 && (
                 <div style={{display:"flex",gap:4,flexWrap:"wrap"}}>
                   {p.categories.map(c=><span key={c} style={{fontSize:10,background:"#eff6ff",color:"#2563eb",padding:"2px 8px",borderRadius:10,fontWeight:700}}>#{c}</span>)}
+                </div>
+              )}
+              {(p.products||[]).length > 0 && (
+                <div style={{display:"flex",gap:4,flexWrap:"wrap"}}>
+                  {(p.products||[]).map((prod,i)=><span key={i} style={{fontSize:10,background:"#f0fdf4",color:"#16a34a",padding:"2px 8px",borderRadius:10,fontWeight:700}}>📦 {prod}</span>)}
                 </div>
               )}
               {(p.notes||p.dealFee||p.dealUsagePeriod||p.dealContent) && (
@@ -734,6 +757,31 @@ function InfluencerArchiveSection() {
             <div>
               <div style={{fontSize:11,color:C.inkMid,marginBottom:4,fontWeight:700}}>메모</div>
               <textarea value={form.notes} onChange={e=>setForm(f=>({...f,notes:e.target.value}))} placeholder="릴스 퀄리티 좋음, 뷰티 전문, 공동구매 의향 있음..." rows={2} style={{width:"100%",padding:"7px 10px",border:`1px solid ${C.border}`,borderRadius:7,fontSize:12,fontFamily:"inherit",resize:"vertical",boxSizing:"border-box"}}/>
+            </div>
+
+            <div>
+              <div style={{fontSize:11,color:C.inkMid,marginBottom:4,fontWeight:700}}>연결 제품 <span style={{color:C.inkLt}}>(ERP 재고 검색)</span></div>
+              <div style={{position:"relative"}}>
+                <input value={productSearch} onChange={e=>{setProductSearch(e.target.value);searchProducts(e.target.value);}} placeholder="제품명 검색..." style={{width:"100%",padding:"7px 10px",border:`1px solid ${C.border}`,borderRadius:7,fontSize:12,fontFamily:"inherit",boxSizing:"border-box"}}/>
+                {productResults.length>0 && (
+                  <div style={{position:"absolute",top:"100%",left:0,right:0,background:"#fff",border:`1px solid ${C.border}`,borderRadius:7,zIndex:1000,maxHeight:160,overflowY:"auto",boxShadow:"0 4px 12px rgba(0,0,0,0.1)"}}>
+                    {productResults.map((p,i)=>(
+                      <div key={i} onClick={()=>{if(!(form.products||[]).includes(p.name))setForm(f=>({...f,products:[...(f.products||[]),p.name]}));setProductSearch("");setProductResults([]);}} style={{padding:"7px 12px",cursor:"pointer",fontSize:11,borderBottom:`1px solid ${C.border}`,color:C.ink}} onMouseEnter={e=>e.currentTarget.style.background="#f9fafb"} onMouseLeave={e=>e.currentTarget.style.background="#fff"}>
+                        {p.name}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+              {(form.products||[]).length>0 && (
+                <div style={{display:"flex",gap:4,flexWrap:"wrap",marginTop:6}}>
+                  {(form.products||[]).map((p,i)=>(
+                    <span key={i} onClick={()=>setForm(f=>({...f,products:(f.products||[]).filter((_,j)=>j!==i)}))} style={{fontSize:10,background:"#f0fdf4",color:"#16a34a",padding:"2px 8px",borderRadius:10,fontWeight:700,cursor:"pointer"}}>
+                      📦 {p} ✕
+                    </span>
+                  ))}
+                </div>
+              )}
             </div>
 
             {form.status==="컨택중" && (
