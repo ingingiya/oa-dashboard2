@@ -162,7 +162,7 @@ export async function POST(request) {
 
       const { items: profItems, usageUsd: profUsage } = await runActorAndWait(APIFY_TOKEN, "apify~instagram-scraper", {
         directUrls: [`https://www.instagram.com/${handle}/`],
-        resultsType: "profiles",
+        resultsType: "details",
         resultsLimit: 1,
         maxRequestsPerCrawl: 10,
       }, 120);
