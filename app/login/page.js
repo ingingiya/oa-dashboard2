@@ -4,11 +4,11 @@ import { useSearchParams } from 'next/navigation'
 import { Suspense } from 'react'
 
 function LoginContent() {
-  const supabase = createClient()
   const searchParams = useSearchParams()
   const error = searchParams.get('error')
 
   async function signInWithGoogle() {
+    const supabase = createClient()
     await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
