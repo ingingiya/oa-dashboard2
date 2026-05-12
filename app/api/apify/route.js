@@ -3,7 +3,7 @@ export const maxDuration = 300; // Vercel Pro: 최대 300초
 
 const APIFY_BASE = "https://api.apify.com/v2";
 
-// 액터 비동기 실행 → 완료될 때까지 폴링 → 결과 반환
+// 액터 비동기 실행 → 완료될 때까지 폴링 → { items, usageUsd } 반환
 async function runActorAndWait(token, actorId, input, timeoutSec = 240) {
   // 1. 실행 시작
   const startRes = await fetch(
@@ -19,11 +19,13 @@ async function runActorAndWait(token, actorId, input, timeoutSec = 240) {
   const datasetId = run.defaultDatasetId;
 
   // 2. 완료 폴링 (2초 간격)
+  let lastRunData = null;
   const deadline = Date.now() + timeoutSec * 1000;
   while (Date.now() < deadline) {
     await new Promise(r => setTimeout(r, 2000));
     const statusRes = await fetch(`${APIFY_BASE}/actor-runs/${runId}?token=${token}`);
     const { data: runData } = await statusRes.json();
+    lastRunData = runData;
     if (runData.status === "SUCCEEDED") break;
     if (["FAILED","ABORTED","TIMED-OUT"].includes(runData.status)) {
       throw new Error(`Apify 실행 실패: ${runData.status}`);
@@ -36,7 +38,9 @@ async function runActorAndWait(token, actorId, input, timeoutSec = 240) {
     { headers: { "Accept": "application/json" } }
   );
   if (!itemsRes.ok) throw new Error(`결과 조회 실패: ${itemsRes.status}`);
-  return itemsRes.json();
+  const items = await itemsRes.json();
+  const usageUsd = lastRunData?.usageTotalUsd ?? null;
+  return { items, usageUsd };
 }
 
 // POST /api/apify
@@ -69,7 +73,7 @@ export async function POST(request) {
       if (!keyword) return new Response(JSON.stringify({ error: "keyword 필요" }), { status: 400 });
       const tag = keyword.trim().replace(/^#/, "").replace(/\s+/g, "");
 
-      const posts = await runActorAndWait(APIFY_TOKEN, "apify~instagram-hashtag-scraper", {
+      const { items: posts, usageUsd: kwUsage } = await runActorAndWait(APIFY_TOKEN, "apify~instagram-hashtag-scraper", {
         hashtags: [tag],
         resultsLimit: Math.min(maxResults * 5, 500),
         addParentData: false,
@@ -77,7 +81,7 @@ export async function POST(request) {
 
       if (!Array.isArray(posts) || posts.length === 0) {
         return new Response(JSON.stringify({
-          influencers: [], mode, totalPosts: 0,
+          influencers: [], mode, totalPosts: 0, usageUsd: kwUsage,
           _debug: { raw: posts }
         }), { status: 200, headers: { "Content-Type": "application/json" } });
       }
@@ -119,7 +123,7 @@ export async function POST(request) {
         .slice(0, maxResults);
 
       return new Response(JSON.stringify({
-        influencers, mode, totalPosts: posts.length,
+        influencers, mode, totalPosts: posts.length, usageUsd: kwUsage,
         _debug: { sampleKeys, firstItem: posts[0] }
       }), { status: 200, headers: { "Content-Type": "application/json" } });
     }
@@ -129,7 +133,7 @@ export async function POST(request) {
       if (!username) return new Response(JSON.stringify({ error: "username 필요" }), { status: 400 });
       const handle = username.replace(/^@/, "");
 
-      const items = await runActorAndWait(APIFY_TOKEN, "jaroslavhejlek~instagram-followers", {
+      const { items, usageUsd: flUsage } = await runActorAndWait(APIFY_TOKEN, "jaroslavhejlek~instagram-followers", {
         username: handle,
         resultsLimit: Math.min(maxResults, 500),
       });
@@ -153,7 +157,7 @@ export async function POST(request) {
         .slice(0, maxResults);
 
       return new Response(JSON.stringify({
-        influencers, mode,
+        influencers, mode, usageUsd: flUsage,
         _debug: { sampleKeys, firstItem: items[0] }
       }), { status: 200, headers: { "Content-Type": "application/json" } });
     }
@@ -163,19 +167,21 @@ export async function POST(request) {
       if (!username) return new Response(JSON.stringify({ error: "username 필요" }), { status: 400 });
       const handle = username.replace(/^@/, "");
 
-      const items = await runActorAndWait(APIFY_TOKEN, "apify~instagram-profile-scraper", {
+      const { items: profItems, usageUsd: profUsage } = await runActorAndWait(APIFY_TOKEN, "apify~instagram-profile-scraper", {
         usernames: [handle],
       }, 120);
 
-      const u = Array.isArray(items) ? items[0] : null;
-      if (!u) return new Response(JSON.stringify({ profile: null }), { status: 200 });
+      const u = Array.isArray(profItems) ? profItems[0] : null;
+      if (!u) return new Response(JSON.stringify({ profile: null, usageUsd: profUsage }), { status: 200 });
 
       return new Response(JSON.stringify({
         profile: {
           username: getField(u, "username","userName"),
           fullName: getField(u, "fullName","full_name","name") || "",
           followers: Number(getField(u, "followersCount","follower_count","followers") || 0) || null,
-        }
+          profilePicUrl: getField(u, "profilePicUrl","profilePicUrlHD","profile_pic_url") || null,
+        },
+        usageUsd: profUsage,
       }), { status: 200, headers: { "Content-Type": "application/json" } });
     }
 

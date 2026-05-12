@@ -502,6 +502,7 @@ function InfluencerArchiveSection() {
   const [form, setForm] = useState({account:"",name:"",platform:"Instagram",profileUrl:"",followers:"",categories:[],status:"잠재",notes:""});
   const [fetching, setFetching] = useState(false);
   const [fetchError, setFetchError] = useState("");
+  const [fetchUsage, setFetchUsage] = useState(null);
 
   const items = Array.isArray(archive) ? archive : [];
 
@@ -544,7 +545,7 @@ function InfluencerArchiveSection() {
   async function fetchFromUrl() {
     const url = form.profileUrl.trim();
     if (!url) return;
-    setFetching(true); setFetchError("");
+    setFetching(true); setFetchError(""); setFetchUsage(null);
     try {
       // Instagram 프로필 URL에서 username 추출
       const igMatch = url.match(/instagram\.com\/([^/?#]+)/);
@@ -556,12 +557,14 @@ function InfluencerArchiveSection() {
           body: JSON.stringify({mode:"profile_url", username}),
         });
         const data = await res.json();
+        if (data.usageUsd != null) setFetchUsage(data.usageUsd);
         if (data.profile) {
           setForm(f => ({
             ...f,
             account: "@" + (data.profile.username || username),
             name: data.profile.fullName || f.name,
             followers: data.profile.followers || f.followers,
+            profilePicUrl: data.profile.profilePicUrl || f.profilePicUrl,
           }));
         } else {
           setFetchError("자동 조회 실패 — 직접 입력하세요");
@@ -612,9 +615,15 @@ function InfluencerArchiveSection() {
           {filtered.map(p => (
             <div key={p.id} style={{background:C.white,border:`1px solid ${C.border}`,borderRadius:12,padding:"14px 16px",display:"flex",flexDirection:"column",gap:8}}>
               <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",gap:8}}>
-                <div style={{flex:1,minWidth:0}}>
-                  <div style={{fontSize:14,fontWeight:800,color:C.ink,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.account||p.name||"(이름없음)"}</div>
-                  {p.name && p.account && <div style={{fontSize:11,color:C.inkMid}}>{p.name}</div>}
+                <div style={{display:"flex",alignItems:"center",gap:8,flex:1,minWidth:0}}>
+                  {p.profilePicUrl
+                    ? <img src={p.profilePicUrl} alt="" style={{width:36,height:36,borderRadius:"50%",objectFit:"cover",flexShrink:0}}/>
+                    : <div style={{width:36,height:36,borderRadius:"50%",background:"#e5e7eb",flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16}}>👤</div>
+                  }
+                  <div style={{flex:1,minWidth:0}}>
+                    <div style={{fontSize:14,fontWeight:800,color:C.ink,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.account||p.name||"(이름없음)"}</div>
+                    {p.name && p.account && <div style={{fontSize:11,color:C.inkMid}}>{p.name}</div>}
+                  </div>
                 </div>
                 <span style={{fontSize:10,background:INF_STATUS_COLORS[p.status]||"#f3f4f6",color:INF_STATUS_TEXT[p.status]||C.inkMid,padding:"2px 8px",borderRadius:10,fontWeight:700,whiteSpace:"nowrap"}}>{p.status}</span>
               </div>
@@ -654,6 +663,7 @@ function InfluencerArchiveSection() {
                 </button>
               </div>
               {fetchError && <div style={{fontSize:11,color:C.warn,marginTop:4}}>{fetchError}</div>}
+              {fetchUsage != null && <div style={{fontSize:11,color:C.inkLt,marginTop:4}}>💰 이번 조회 비용: <b>${fetchUsage.toFixed(4)}</b></div>}
             </div>
 
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
