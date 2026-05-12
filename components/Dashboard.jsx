@@ -499,6 +499,7 @@ function InfluencerArchiveSection() {
   const [statusFilter, setStatusFilter] = useState("전체");
   const [assigneeFilter, setAssigneeFilter] = useState("전체");
   const [search, setSearch] = useState("");
+  const [seedSelected, setSeedSelected] = useState({}); // { [id]: true }
   const [modal, setModal] = useState(null); // null | {mode:"add"|"edit", item}
   const [form, setForm] = useState({account:"",name:"",platform:"Instagram",profileUrl:"",followers:"",categories:[],products:[],status:"잠재",notes:"",dealFee:"",dealUsagePeriod:"",dealContent:"",assignee:""});
   const [fetching, setFetching] = useState(false);
@@ -696,8 +697,20 @@ function InfluencerArchiveSection() {
           <div style={{fontSize:20,fontWeight:900,color:C.ink}}>인플루언서 아카이브</div>
           <div style={{fontSize:12,color:C.inkMid,marginTop:2}}>공동구매·뷰티릴스·협업 후보 인플루언서를 분류·저장합니다</div>
         </div>
-        <div style={{display:"flex",gap:8}}>
-          <button onClick={()=>exportSeedingXlsx(items.filter(x=>x.address))} style={{padding:"8px 14px",borderRadius:9,border:`1px solid ${C.border}`,background:C.white,color:C.ink,fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>📦 전체 시딩 엑셀</button>
+        <div style={{display:"flex",gap:8,alignItems:"center"}}>
+          {Object.keys(seedSelected).length > 0 && (
+            <span style={{fontSize:11,color:C.inkMid}}>{Object.keys(seedSelected).length}명 선택</span>
+          )}
+          <button onClick={()=>{
+            const sel = Object.keys(seedSelected);
+            const targets = sel.length > 0
+              ? items.filter(x => seedSelected[x.id] && x.address)
+              : items.filter(x => x.address);
+            if (targets.length === 0) { alert("주소가 입력된 인플루언서가 없어요"); return; }
+            exportSeedingXlsx(targets);
+          }} style={{padding:"8px 14px",borderRadius:9,border:`1px solid ${C.border}`,background:C.white,color:C.ink,fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
+            📦 {Object.keys(seedSelected).length > 0 ? `선택(${Object.keys(seedSelected).length}) 시딩 엑셀` : "전체 시딩 엑셀"}
+          </button>
           <button onClick={openAdd} style={{padding:"8px 18px",borderRadius:9,border:"none",background:C.rose,color:"#fff",fontSize:13,fontWeight:800,cursor:"pointer",fontFamily:"inherit"}}>+ 추가</button>
         </div>
       </div>
@@ -733,7 +746,13 @@ function InfluencerArchiveSection() {
       ) : (
         <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(280px,1fr))",gap:12}}>
           {filtered.map(p => (
-            <div key={p.id} style={{background:C.white,border:`1px solid ${C.border}`,borderRadius:12,padding:"14px 16px",display:"flex",flexDirection:"column",gap:8}}>
+            <div key={p.id} style={{background:C.white,border:`2px solid ${seedSelected[p.id]?"#2563eb":C.border}`,borderRadius:12,padding:"14px 16px",display:"flex",flexDirection:"column",gap:8,position:"relative"}}>
+              {p.address && (
+                <label style={{position:"absolute",top:10,right:10,display:"flex",alignItems:"center",gap:4,cursor:"pointer",zIndex:1}}>
+                  <input type="checkbox" checked={!!seedSelected[p.id]} onChange={e=>setSeedSelected(s=>e.target.checked?{...s,[p.id]:true}:(({[p.id]:_,...rest})=>rest)(s))} style={{width:14,height:14,accentColor:"#2563eb"}}/>
+                  <span style={{fontSize:9,color:"#2563eb",fontWeight:700}}>시딩</span>
+                </label>
+              )}
               <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",gap:8}}>
                 <div style={{display:"flex",alignItems:"center",gap:8,flex:1,minWidth:0}}>
                   {p.profilePicUrl
