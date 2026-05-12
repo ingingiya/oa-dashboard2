@@ -796,13 +796,24 @@ function InfluencerArchiveSection() {
                 </div>
               )}
               {p.address && (
-                <div style={{fontSize:10,color:"#6b7280",background:"#f0fdf4",border:"1px solid #bbf7d0",borderRadius:6,padding:"3px 8px",display:"flex",gap:4,alignItems:"center"}}>
-                  <span>📮</span><span style={{overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.address}</span>
+                <div style={{fontSize:10,color:"#6b7280",background:p.shippingDone?"#f0fdf4":"#f9fafb",border:`1px solid ${p.shippingDone?"#bbf7d0":C.border}`,borderRadius:6,padding:"3px 8px",display:"flex",gap:4,alignItems:"center",justifyContent:"space-between"}}>
+                  <div style={{display:"flex",gap:4,alignItems:"center",minWidth:0}}>
+                    <span>{p.shippingDone?"✅":"📮"}</span>
+                    <span style={{overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.address}</span>
+                  </div>
+                  {p.shippingDone && p.shippingDate && <span style={{fontSize:9,color:"#16a34a",flexShrink:0}}>{p.shippingDate}</span>}
                 </div>
               )}
               <div style={{display:"flex",gap:6,marginTop:2}}>
                 <button onClick={()=>openEdit(p)} style={{flex:1,padding:"5px 0",borderRadius:7,border:`1px solid ${C.border}`,background:C.white,color:C.ink,fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>편집</button>
                 <button onClick={()=>openSettle(p)} style={{flex:1,padding:"5px 0",borderRadius:7,border:"none",background:"#eff6ff",color:"#2563eb",fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>정산·배송</button>
+                <button onClick={()=>{
+                  const done = !p.shippingDone;
+                  const updated = items.map(x => x.id===p.id ? {...x, shippingDone:done, shippingDate: done ? new Date().toISOString().slice(0,10) : ""} : x);
+                  setArchive(updated);
+                }} style={{padding:"5px 8px",borderRadius:7,border:"none",background:p.shippingDone?"#dcfce7":"#f3f4f6",color:p.shippingDone?"#16a34a":C.inkMid,fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit",whiteSpace:"nowrap"}}>
+                  {p.shippingDone?"✅발송":"배송완료"}
+                </button>
                 <button onClick={()=>deleteItem(p.id)} style={{padding:"5px 10px",borderRadius:7,border:"none",background:"#fee2e2",color:"#dc2626",fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>삭제</button>
               </div>
             </div>
