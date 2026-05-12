@@ -2669,7 +2669,10 @@ function ErpSection() {
         method: 'POST', headers: { apikey: SKEY, Authorization: `Bearer ${SKEY}`, 'Content-Type': 'application/json' },
         body: '{}'
       }).then(r => r.json()),
-    ]).then(([stock, coupang, sales]) => {
+      fetch(`${SURL}/rest/v1/beauty_incoming?select=name,arrival_date,qty&order=arrival_date.asc`, {
+        headers: { apikey: SKEY, Authorization: `Bearer ${SKEY}` }
+      }).then(r => r.json()).catch(()=>[]),
+    ]).then(([stock, coupang, sales, incoming]) => {
       // 쿠팡 map
       const coupangMap = {};
       (Array.isArray(coupang) ? coupang : []).forEach(c => {
@@ -2681,6 +2684,15 @@ function ErpSection() {
         const k = (s.name||'').replace(/\s/g,'');
         salesMap[k] = Number(s.total_qty)||0;
       });
+      // 입고 예정일 map: 제품명 → 가장 빠른 입고일 & 수량
+      const incomingMap = {};
+      (Array.isArray(incoming) ? incoming : []).forEach(inc => {
+        const k = (inc.name||'').replace(/\s/g,'').toLowerCase();
+        if (!incomingMap[k] || inc.arrival_date < incomingMap[k].arrival_date) {
+          incomingMap[k] = { arrival_date: inc.arrival_date, qty: inc.qty };
+        }
+      });
+
       const merged = (Array.isArray(stock) ? stock : []).map(r => {
         const key = r.name.replace(/\s/g,'');
         const erpAvg7 = (salesMap[key]||0) / 7;
@@ -2691,9 +2703,13 @@ function ErpSection() {
         const lead = Number(r.lead_days) || 0;
         const totalStock = Number(r.stock_qty||0) + Number(r.production_qty||0) + Number(r.order_pending||0) + Number(r.transport_qty||0) + Number(r.ship_qty||0);
         const totalDays = totalAvg7 > 0 ? Math.floor(totalStock / totalAvg7) : null;
+        const incKey = r.name.replace(/\s/g,'').toLowerCase();
+        // fuzzy match: 제품명 앞부분으로 매칭
+        const incData = incomingMap[incKey] || Object.entries(incomingMap).find(([k])=>incKey.startsWith(k)||k.startsWith(incKey))?.[1] || null;
         return { ...r, erp_avg7: erpAvg7, total_avg7: totalAvg7, cp_avg7: cpData.avg7||0, coupang_stock: cpData.cStock,
           erp_days: erpDays, cp_days: cpDays, total_days: totalDays, total_stock: totalStock,
-          need_order: (erpDays!==null && lead>0 && erpDays<=lead) || (cpDays!==null && lead>0 && cpDays<=lead) };
+          need_order: (erpDays!==null && lead>0 && erpDays<=lead) || (cpDays!==null && lead>0 && cpDays<=lead),
+          incoming_date: incData?.arrival_date || null, incoming_qty: incData?.qty || null };
       });
       setStockData(merged);
     }).catch(() => setStockData([]))
@@ -3194,7 +3210,7 @@ function ErpSection() {
               <table style={{width:"100%",borderCollapse:"collapse",fontSize:11,minWidth:540}}>
                 <thead>
                   <tr style={{background:C.bg}}>
-                    {[["제품명",null],["현재고","stock"],["쿠팡재고","cp_stock"],["생산중",null],["운송중",null],["발주잔량",null],["출하예정",null],["생산소요일","lead"],["소진(일반)","erp_days"],["소진(쿠팡)","cp_days"],["소진(전체재고)","total_days"],["원가","cost"]].map(([h,col])=>(
+                    {[["제품명",null],["현재고","stock"],["쿠팡재고","cp_stock"],["생산중",null],["운송중",null],["발주잔량",null],["출하예정",null],["입고예정","incoming"],["생산소요일","lead"],["소진(일반)","erp_days"],["소진(쿠팡)","cp_days"],["소진(전체재고)","total_days"],["원가","cost"]].map(([h,col])=>(
                       <th key={h} onClick={col?()=>{if(stockSortCol===col)setStockSortDir(d=>d==='asc'?'desc':'asc');else{setStockSortCol(col);setStockSortDir('asc');}}:null}
                         style={{padding:"8px 12px",textAlign:h==="제품명"?"left":"right",fontWeight:700,
                           color:stockSortCol===col?C.rose:C.inkMid,borderBottom:`1px solid ${C.border}`,
@@ -3208,7 +3224,7 @@ function ErpSection() {
                   {(stockData||[]).filter(r=>!(/(케이블|케이스|집게|흡입봉|커버|헤드팁|헤드|필터세트|필터|뚜껑|청소솔|실리콘|브러쉬|브러시|부속|부자재|파우치|고무마개|노즐|테이프|세트|패들|팁|리무버링|충전거치대|에어리스마트거치대|그루프롤|헤어롤|네일젤제거비트|블레이드|충전기|진동클렌저-거치대|면도망|배터리|갈바닉클렌저-거치대|갈바닉-거치대|거치대스티커|화이트거치대|에어리스마트-화이트-거치대|제품박스|택배박스|사용설명서|블리스터|속지|띠지|빗살캡|고정틀|윤활유|충전케이블|헤드캡|마사지롤러|각질제거|쉐이빙헤드|제모헤드|클리퍼헤드|코털제거|교체헤드|보관케이스|나사고무|스펀지필터|거치대스탠드|스탠딩거치대|면도날|칼날|용액통|구성품박스|종이지지대|스티로폼|완충종이|EPE포장재|포장비닐|완충제|보호필름|종이덮개|스포이드|AS부품|접착제|세척솔|열보호장갑|RRP박스|융)/i.test(r.name)||/-[PCR]\d/.test(r.model||''))).filter(r=>showZeroStock||(Number(r.stock_qty)||0)>0).sort((a,b)=>{
                     const aq=Number(a.stock_qty)||0, bq=Number(b.stock_qty)||0;
                     if(stockSortCol){
-                      const getVal=r=>stockSortCol==='stock'?Number(r.stock_qty)||0:stockSortCol==='cp_stock'?Number(r.coupang_stock)||0:stockSortCol==='erp_days'?(r.erp_days??9999):stockSortCol==='cp_days'?(r.cp_days??9999):stockSortCol==='total_days'?(r.total_days??9999):stockSortCol==='cost'?Number(r.cost)||0:0;
+                      const getVal=r=>stockSortCol==='stock'?Number(r.stock_qty)||0:stockSortCol==='cp_stock'?Number(r.coupang_stock)||0:stockSortCol==='erp_days'?(r.erp_days??9999):stockSortCol==='cp_days'?(r.cp_days??9999):stockSortCol==='total_days'?(r.total_days??9999):stockSortCol==='cost'?Number(r.cost)||0:stockSortCol==='incoming'?(r.incoming_date?new Date(r.incoming_date).getTime():9999999999):0;
                       const diff=getVal(a)-getVal(b);
                       return stockSortDir==='asc'?diff:-diff;
                     }
@@ -3237,6 +3253,14 @@ function ErpSection() {
                         <td style={{padding:"9px 12px",textAlign:"right",color:C.inkMid}}>{Number(r.transport_qty||0)>0?<span style={{border:`1px solid #8B5CF6`,borderRadius:4,padding:"1px 5px",color:"#8B5CF6",fontWeight:700}}>{Number(r.transport_qty||0).toLocaleString()}</span>:"—"}</td>
                         <td style={{padding:"9px 12px",textAlign:"right",color:C.inkMid}}>{Number(r.order_pending||0).toLocaleString()}</td>
                         <td style={{padding:"9px 12px",textAlign:"right",color:C.inkMid}}>{Number(r.ship_qty||0)>0?<span style={{border:`1px solid #3B82F6`,borderRadius:4,padding:"1px 5px",color:"#3B82F6",fontWeight:700}}>{Number(r.ship_qty||0).toLocaleString()}</span>:"—"}</td>
+                        <td style={{padding:"9px 12px",textAlign:"right"}}>
+                          {r.incoming_date
+                            ? <span style={{border:`1px solid #10b981`,borderRadius:4,padding:"1px 6px",color:"#10b981",fontWeight:700,fontSize:10}}>
+                                {r.incoming_date.slice(5).replace('-','/')}
+                                {r.incoming_qty?<span style={{fontSize:9,color:"#6ee7b7",marginLeft:3}}>{Number(r.incoming_qty).toLocaleString()}개</span>:null}
+                              </span>
+                            : <span style={{color:C.inkLt}}>—</span>}
+                        </td>
                         <td style={{padding:"9px 12px",textAlign:"right",color:C.inkMid}}>{Number(r.lead_days||0)>0?`${r.lead_days}일`:"—"}</td>
                         <td style={{padding:"9px 12px",textAlign:"right"}}
                           title={r.erp_days!==null?`ERP재고 ${Number(r.stock_qty).toLocaleString()}개 ÷ 전체 7일평균 ${r.total_avg7?.toFixed(1)}개(일반${r.erp_avg7?.toFixed(1)}+쿠팡${r.cp_avg7?.toFixed(1)}) = ${r.erp_days}일`:''}>
