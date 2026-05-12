@@ -5,7 +5,6 @@ const APIFY_BASE = "https://api.apify.com/v2";
 
 // 액터 비동기 실행 → 완료될 때까지 폴링 → { items, usageUsd } 반환
 async function runActorAndWait(token, actorId, input, timeoutSec = 240) {
-  // 1. 실행 시작
   const startRes = await fetch(
     `${APIFY_BASE}/acts/${actorId}/runs?token=${token}`,
     { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(input) }
@@ -18,7 +17,6 @@ async function runActorAndWait(token, actorId, input, timeoutSec = 240) {
   const runId = run.id;
   const datasetId = run.defaultDatasetId;
 
-  // 2. 완료 폴링 (2초 간격)
   let lastRunData = null;
   const deadline = Date.now() + timeoutSec * 1000;
   while (Date.now() < deadline) {
@@ -32,7 +30,6 @@ async function runActorAndWait(token, actorId, input, timeoutSec = 240) {
     }
   }
 
-  // 3. 결과 조회
   const itemsRes = await fetch(
     `${APIFY_BASE}/datasets/${datasetId}/items?token=${token}&clean=true&format=json`,
     { headers: { "Accept": "application/json" } }
@@ -58,7 +55,6 @@ export async function POST(request) {
   const maxF = maxFollowers ? Number(maxFollowers) : Infinity;
   const passF = (f) => f == null || (f >= minF && f <= maxF);
 
-  // 필드명 다양하게 시도
   const getField = (obj, ...keys) => {
     for (const k of keys) {
       const val = k.includes(".") ? k.split(".").reduce((o, p) => o?.[p], obj) : obj[k];
@@ -86,9 +82,7 @@ export async function POST(request) {
         }), { status: 200, headers: { "Content-Type": "application/json" } });
       }
 
-      // 첫 아이템 키 확인
       const sampleKeys = Object.keys(posts[0]);
-
       const byUser = {};
       for (const post of posts) {
         const uname = getField(post, "ownerUsername","username","owner.username","authorUsername","author.username");
@@ -139,7 +133,6 @@ export async function POST(request) {
       });
 
       const sampleKeys = items[0] ? Object.keys(items[0]) : [];
-
       const influencers = (Array.isArray(items) ? items : [])
         .filter(u => getField(u, "username"))
         .map(u => ({
@@ -162,13 +155,16 @@ export async function POST(request) {
       }), { status: 200, headers: { "Content-Type": "application/json" } });
     }
 
-    // ── 3. 프로필 URL → 단일 계정 조회 ───────────────────
+    // ── 3. 프로필 URL → 단일 계정 조회 (apify~instagram-scraper 사용) ────
     if (mode === "profile_url") {
       if (!username) return new Response(JSON.stringify({ error: "username 필요" }), { status: 400 });
       const handle = username.replace(/^@/, "");
 
-      const { items: profItems, usageUsd: profUsage } = await runActorAndWait(APIFY_TOKEN, "apify~instagram-profile-scraper", {
-        usernames: [handle],
+      const { items: profItems, usageUsd: profUsage } = await runActorAndWait(APIFY_TOKEN, "apify~instagram-scraper", {
+        directUrls: [`https://www.instagram.com/${handle}/`],
+        resultsType: "profiles",
+        resultsLimit: 1,
+        maxRequestsPerCrawl: 10,
       }, 120);
 
       const u = Array.isArray(profItems) ? profItems[0] : null;

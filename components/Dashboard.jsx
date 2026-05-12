@@ -654,9 +654,9 @@ function InfluencerArchiveSection() {
               <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",gap:8}}>
                 <div style={{display:"flex",alignItems:"center",gap:8,flex:1,minWidth:0}}>
                   {p.profilePicUrl
-                    ? <img src={p.profilePicUrl} alt="" style={{width:36,height:36,borderRadius:"50%",objectFit:"cover",flexShrink:0}}/>
-                    : <div style={{width:36,height:36,borderRadius:"50%",background:"#e5e7eb",flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16}}>👤</div>
-                  }
+                    ? <img src={`/api/proxy-image?url=${encodeURIComponent(p.profilePicUrl)}`} alt="" style={{width:36,height:36,borderRadius:"50%",objectFit:"cover",flexShrink:0}} onError={e=>{e.currentTarget.style.display="none";e.currentTarget.nextSibling.style.display="flex";}} />
+                    : null}
+                  <div style={{width:36,height:36,borderRadius:"50%",background:"#e5e7eb",flexShrink:0,display:p.profilePicUrl?"none":"flex",alignItems:"center",justifyContent:"center",fontSize:16}}>👤</div>
                   <div style={{flex:1,minWidth:0}}>
                     <div style={{fontSize:14,fontWeight:800,color:C.ink,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.account||p.name||"(이름없음)"}</div>
                     {p.name && p.account && <div style={{fontSize:11,color:C.inkMid}}>{p.name}</div>}
