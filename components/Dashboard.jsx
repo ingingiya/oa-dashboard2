@@ -2685,8 +2685,9 @@ function ErpSection() {
         salesMap[k] = Number(s.total_qty)||0;
       });
       // 입고 예정일 map: 제품명 → 가장 빠른 입고일 & 수량
+      const todayStr = new Date().toISOString().split('T')[0];
       const incomingMap = {};
-      (Array.isArray(incoming) ? incoming : []).forEach(inc => {
+      (Array.isArray(incoming) ? incoming : []).filter(inc => inc.arrival_date >= todayStr).forEach(inc => {
         const k = (inc.name||'').replace(/\s/g,'').toLowerCase();
         if (!incomingMap[k] || inc.arrival_date < incomingMap[k].arrival_date) {
           incomingMap[k] = { arrival_date: inc.arrival_date, qty: inc.qty };
@@ -3255,10 +3256,16 @@ function ErpSection() {
                         <td style={{padding:"9px 12px",textAlign:"right",color:C.inkMid}}>{Number(r.ship_qty||0)>0?<span style={{border:`1px solid #3B82F6`,borderRadius:4,padding:"1px 5px",color:"#3B82F6",fontWeight:700}}>{Number(r.ship_qty||0).toLocaleString()}</span>:"—"}</td>
                         <td style={{padding:"9px 12px",textAlign:"right"}}>
                           {r.incoming_date
-                            ? <span style={{border:`1px solid #10b981`,borderRadius:4,padding:"1px 6px",color:"#10b981",fontWeight:700,fontSize:10}}>
-                                {r.incoming_date.slice(5).replace('-','/')}
-                                {r.incoming_qty?<span style={{fontSize:9,color:"#6ee7b7",marginLeft:3}}>{Number(r.incoming_qty).toLocaleString()}개</span>:null}
-                              </span>
+                            ? <div style={{display:"flex",flexDirection:"column",alignItems:"flex-end",gap:1}}>
+                                <span style={{border:`1px solid #10b981`,borderRadius:4,padding:"1px 6px",color:"#10b981",fontWeight:800,fontSize:10}}>
+                                  📦 {r.incoming_date.slice(5).replace('-','/')}
+                                </span>
+                                {r.incoming_qty
+                                  ? <span style={{fontSize:9,color:"#6b7280"}} title="엑셀 입고리스트 기준 해당 모델 총 입고 수량">
+                                      총 {Number(r.incoming_qty).toLocaleString()}개
+                                    </span>
+                                  : null}
+                              </div>
                             : <span style={{color:C.inkLt}}>—</span>}
                         </td>
                         <td style={{padding:"9px 12px",textAlign:"right",color:C.inkMid}}>{Number(r.lead_days||0)>0?`${r.lead_days}일`:"—"}</td>
