@@ -534,8 +534,18 @@ function InfluencerArchiveSection() {
       addedAt: modal.item?.addedAt || new Date().toISOString().slice(0,10),
       id: modal.item?.id || Date.now().toString(),
     };
-    if (modal.mode === "add") setArchive([...items, entry]);
-    else setArchive(items.map(x => x.id === entry.id ? entry : x));
+    if (modal.mode === "add") {
+      const acct = (form.account||"").trim().toLowerCase();
+      const url  = (form.profileUrl||"").trim().toLowerCase();
+      const dup = items.find(x =>
+        (acct && (x.account||"").trim().toLowerCase() === acct) ||
+        (url  && (x.profileUrl||"").trim().toLowerCase() === url)
+      );
+      if (dup && !window.confirm(`"${dup.account||dup.name}" 이(가) 이미 저장돼 있어요.\n그래도 추가할까요?`)) return;
+      setArchive([...items, entry]);
+    } else {
+      setArchive(items.map(x => x.id === entry.id ? entry : x));
+    }
     setModal(null);
   }
   function deleteItem(id) {
