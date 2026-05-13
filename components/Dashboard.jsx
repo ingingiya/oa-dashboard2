@@ -3312,11 +3312,11 @@ function ErpSection() {
         {/* 거래처 다중 선택 (검색 가능) */}
         <div style={{display:"flex",alignItems:"center",gap:6,flexWrap:"wrap"}}>
           <span style={{fontSize:11,color:C.inkMid,fontWeight:700,whiteSpace:"nowrap"}}>채널</span>
-          {[{label:"무신사",kw:"무신사"},{label:"지그재그",kw:"지그재그"},{label:"에이블리",kw:"에이블리"},
-            {label:"카카오",kw:"카카오"},{label:"네이버",kw:"네이버"},{label:"11번가",kw:"11번가"},
-            {label:"이베이",kw:"이베이"},{label:"쿠팡",kw:"쿠팡"}].map(p=>{
-            const active=chanPresets.includes(p.kw);
-            return <button key={p.kw} onClick={()=>setChanPresets(prev=>active?prev.filter(k=>k!==p.kw):[...prev,p.kw])}
+          {[{label:"무신사",kws:["무신사"]},{label:"지그재그",kws:["지그재그"]},{label:"에이블리",kws:["에이블리"]},
+            {label:"카카오",kws:["카카오"]},{label:"네이버",kws:["네이버","스마트스토어"]},{label:"11번가",kws:["11번가"]},
+            {label:"이베이",kws:["이베이"]},{label:"쿠팡",kws:["쿠팡"]},{label:"아르고",kws:["아르고"]}].map(p=>{
+            const active=p.kws.some(k=>chanPresets.includes(k));
+            return <button key={p.label} onClick={()=>setChanPresets(prev=>active?prev.filter(k=>!p.kws.includes(k)):[...prev,...p.kws.filter(k=>!prev.includes(k))])}
               style={{padding:"4px 10px",borderRadius:20,fontSize:11,fontWeight:700,cursor:"pointer",
                 border:`1px solid ${active?C.rose:C.border}`,background:active?C.blush:C.white,
                 color:active?C.rose:C.inkMid}}>{p.label}</button>;
