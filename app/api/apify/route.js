@@ -3,41 +3,18 @@ export const maxDuration = 300; // Vercel Pro: 최대 300초
 
 const APIFY_BASE = "https://api.apify.com/v2";
 
-// 액터 비동기 실행 → 완료될 때까지 폴링 → { items, usageUsd } 반환
-async function runActorAndWait(token, actorId, input, timeoutSec = 240) {
-  const startRes = await fetch(
-    `${APIFY_BASE}/acts/${actorId}/runs?token=${token}`,
+// 액터 동기 실행 → 결과 바로 반환 (폴링 없음)
+async function runActorSync(token, actorId, input, timeoutSec = 120) {
+  const res = await fetch(
+    `${APIFY_BASE}/acts/${actorId}/run-sync-get-dataset-items?token=${token}&timeout=${timeoutSec}&clean=true&format=json`,
     { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(input) }
   );
-  if (!startRes.ok) {
-    const txt = await startRes.text();
-    throw new Error(`Apify 시작 실패 ${startRes.status}: ${txt.slice(0, 300)}`);
+  if (!res.ok) {
+    const txt = await res.text();
+    throw new Error(`Apify 실패 ${res.status}: ${txt.slice(0, 300)}`);
   }
-  const { data: run } = await startRes.json();
-  const runId = run.id;
-  const datasetId = run.defaultDatasetId;
-
-  let lastRunData = null;
-  const deadline = Date.now() + timeoutSec * 1000;
-  while (Date.now() < deadline) {
-    await new Promise(r => setTimeout(r, 2000));
-    const statusRes = await fetch(`${APIFY_BASE}/actor-runs/${runId}?token=${token}`);
-    const { data: runData } = await statusRes.json();
-    lastRunData = runData;
-    if (runData.status === "SUCCEEDED") break;
-    if (["FAILED","ABORTED","TIMED-OUT"].includes(runData.status)) {
-      throw new Error(`Apify 실행 실패: ${runData.status}`);
-    }
-  }
-
-  const itemsRes = await fetch(
-    `${APIFY_BASE}/datasets/${datasetId}/items?token=${token}&clean=true&format=json`,
-    { headers: { "Accept": "application/json" } }
-  );
-  if (!itemsRes.ok) throw new Error(`결과 조회 실패: ${itemsRes.status}`);
-  const items = await itemsRes.json();
-  const usageUsd = lastRunData?.usageTotalUsd ?? null;
-  return { items, usageUsd };
+  const items = await res.json();
+  return { items };
 }
 
 // POST /api/apify
@@ -155,42 +132,21 @@ export async function POST(request) {
       }), { status: 200, headers: { "Content-Type": "application/json" } });
     }
 
-    // ── 3. 프로필 URL → 단일 계정 조회 (details + posts 병렬 실행) ────
+    // ── 3. 프로필 URL → 단일 계정 조회 ────
     if (mode === "profile_url") {
       if (!username) return new Response(JSON.stringify({ error: "username 필요" }), { status: 400 });
       const handle = username.replace(/^@/, "");
       const profileUrl = `https://www.instagram.com/${handle}/`;
 
-      const [detailResult, postsResult] = await Promise.allSettled([
-        runActorAndWait(APIFY_TOKEN, "apify~instagram-scraper", {
-          directUrls: [profileUrl],
-          resultsType: "details",
-          resultsLimit: 1,
-          maxRequestsPerCrawl: 10,
-        }, 120),
-        runActorAndWait(APIFY_TOKEN, "apify~instagram-scraper", {
-          directUrls: [profileUrl],
-          resultsType: "posts",
-          resultsLimit: 20,
-          maxRequestsPerCrawl: 30,
-        }, 120),
-      ]);
-
-      const profItems = detailResult.status === "fulfilled" ? detailResult.value.items : [];
-      const postItems = postsResult.status === "fulfilled" ? postsResult.value.items : [];
-      const usageUsd = (detailResult.status === "fulfilled" ? detailResult.value.usageUsd || 0 : 0)
-                     + (postsResult.status === "fulfilled"  ? postsResult.value.usageUsd  || 0 : 0);
+      const { items: profItems } = await runActorSync(APIFY_TOKEN, "apify~instagram-scraper", {
+        directUrls: [profileUrl],
+        resultsType: "details",
+        resultsLimit: 1,
+        maxRequestsPerCrawl: 10,
+      });
 
       const u = Array.isArray(profItems) ? profItems[0] : null;
-      if (!u) return new Response(JSON.stringify({ profile: null, usageUsd }), { status: 200 });
-
-      let avgLikes = null, avgComments = null;
-      if (Array.isArray(postItems) && postItems.length > 0) {
-        const likes = postItems.map(p => Number(getField(p,"likesCount","likes","likeCount")||0));
-        const comments = postItems.map(p => Number(getField(p,"commentsCount","comments","commentCount")||0));
-        avgLikes = Math.round(likes.reduce((s,v)=>s+v,0)/likes.length);
-        avgComments = Math.round(comments.reduce((s,v)=>s+v,0)/comments.length);
-      }
+      if (!u) return new Response(JSON.stringify({ profile: null }), { status: 200 });
 
       return new Response(JSON.stringify({
         profile: {
@@ -199,11 +155,7 @@ export async function POST(request) {
           followers: Number(getField(u, "followersCount","follower_count","followers") || 0) || null,
           profilePicUrl: getField(u, "profilePicUrl","profilePicUrlHD","profile_pic_url") || null,
           bio: getField(u, "biography","bio","description") || "",
-          avgLikes,
-          avgComments,
-          recentPostCount: postItems.length,
         },
-        usageUsd,
       }), { status: 200, headers: { "Content-Type": "application/json" } });
     }
 

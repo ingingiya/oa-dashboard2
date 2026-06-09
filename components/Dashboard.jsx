@@ -504,7 +504,6 @@ function InfluencerArchiveSection() {
   const [form, setForm] = useState({account:"",name:"",platform:"Instagram",profileUrl:"",followers:"",categories:[],products:[],status:"잠재",notes:"",dealFee:"",dealUsagePeriod:"",dealContent:"",uploadDate:"",assignee:""});
   const [fetching, setFetching] = useState(false);
   const [fetchError, setFetchError] = useState("");
-  const [fetchUsage, setFetchUsage] = useState(null);
   // 정산·배송 모달
   const [settleModal, setSettleModal] = useState(null); // null | item
   const [settleTab, setSettleTab] = useState("shipping"); // "tax" | "shipping"
@@ -631,7 +630,7 @@ function InfluencerArchiveSection() {
   async function fetchFromUrl() {
     const url = form.profileUrl.trim();
     if (!url) return;
-    setFetching(true); setFetchError(""); setFetchUsage(null);
+    setFetching(true); setFetchError("");
     try {
       // Instagram username 추출 (프로필URL, @username, 또는 username 직접 입력)
       let username = null;
@@ -650,7 +649,6 @@ function InfluencerArchiveSection() {
           body: JSON.stringify({mode:"profile_url", username}),
         });
         const data = await res.json();
-        if (data.usageUsd != null) setFetchUsage(data.usageUsd);
         if (data.error) {
           setFetchError("오류: " + data.error);
         } else if (data.profile) {
@@ -1078,7 +1076,6 @@ function InfluencerArchiveSection() {
                 </button>
               </div>
               {fetchError && <div style={{fontSize:11,color:C.warn,marginTop:4}}>{fetchError}</div>}
-              {fetchUsage != null && <div style={{fontSize:11,color:C.inkLt,marginTop:4}}>💰 이번 조회 비용: <b>${fetchUsage.toFixed(4)}</b></div>}
             </div>
 
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
