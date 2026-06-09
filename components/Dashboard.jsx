@@ -501,7 +501,7 @@ function InfluencerArchiveSection() {
   const [search, setSearch] = useState("");
   const [seedSelected, setSeedSelected] = useState({}); // { [id]: true }
   const [modal, setModal] = useState(null); // null | {mode:"add"|"edit", item}
-  const [form, setForm] = useState({account:"",name:"",platform:"Instagram",profileUrl:"",followers:"",categories:[],products:[],status:"잠재",notes:"",dealFee:"",dealUsagePeriod:"",dealContent:"",assignee:""});
+  const [form, setForm] = useState({account:"",name:"",platform:"Instagram",profileUrl:"",followers:"",categories:[],products:[],status:"잠재",notes:"",dealFee:"",dealUsagePeriod:"",dealContent:"",uploadDate:"",assignee:""});
   const [fetching, setFetching] = useState(false);
   const [fetchError, setFetchError] = useState("");
   const [fetchUsage, setFetchUsage] = useState(null);
@@ -528,7 +528,7 @@ function InfluencerArchiveSection() {
   });
 
   function openAdd() {
-    setForm({account:"",name:"",platform:"Instagram",profileUrl:"",followers:"",categories:[],products:[],status:"잠재",notes:"",dealFee:"",dealUsagePeriod:"",dealContent:"",assignee:""});
+    setForm({account:"",name:"",platform:"Instagram",profileUrl:"",followers:"",categories:[],products:[],status:"잠재",notes:"",dealFee:"",dealUsagePeriod:"",dealContent:"",uploadDate:"",assignee:""});
     setFetchError("");
     setModal({mode:"add"});
   }
@@ -788,6 +788,7 @@ function InfluencerArchiveSection() {
                       <div style={{fontSize:10,fontWeight:800,color:"#16a34a"}}>💬 협의</div>
                       {p.dealFee && <div><span style={{color:C.inkLt}}>금액: </span>{p.dealFee}</div>}
                       {p.dealUsagePeriod && <div><span style={{color:C.inkLt}}>2차활용: </span>{p.dealUsagePeriod}</div>}
+                      {p.uploadDate && <div><span style={{color:C.inkLt}}>업로드일: </span>{p.uploadDate}</div>}
                       {p.dealContent && <div style={{whiteSpace:"pre-wrap"}}>{p.dealContent}</div>}
                     </div>
                   )}
@@ -1165,7 +1166,7 @@ function InfluencerArchiveSection() {
             {form.status==="컨택중" && (
               <div style={{background:"#f0fdf4",border:`1px solid #bbf7d0`,borderRadius:10,padding:"12px 14px",display:"flex",flexDirection:"column",gap:10}}>
                 <div style={{fontSize:11,fontWeight:800,color:"#16a34a"}}>💬 협의 내용</div>
-                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:10}}>
                   <div>
                     <div style={{fontSize:11,color:C.inkMid,marginBottom:4,fontWeight:700}}>협의 금액</div>
                     <input value={form.dealFee} onChange={e=>setForm(f=>({...f,dealFee:e.target.value}))} placeholder="예) 30만원, 제품협찬" style={{width:"100%",padding:"7px 10px",border:`1px solid ${C.border}`,borderRadius:7,fontSize:12,fontFamily:"inherit",boxSizing:"border-box"}}/>
@@ -1173,6 +1174,10 @@ function InfluencerArchiveSection() {
                   <div>
                     <div style={{fontSize:11,color:C.inkMid,marginBottom:4,fontWeight:700}}>2차 활용 기간</div>
                     <input value={form.dealUsagePeriod} onChange={e=>setForm(f=>({...f,dealUsagePeriod:e.target.value}))} placeholder="예) 6개월, 1년, 무제한" style={{width:"100%",padding:"7px 10px",border:`1px solid ${C.border}`,borderRadius:7,fontSize:12,fontFamily:"inherit",boxSizing:"border-box"}}/>
+                  </div>
+                  <div>
+                    <div style={{fontSize:11,color:C.inkMid,marginBottom:4,fontWeight:700}}>업로드일</div>
+                    <input type="date" value={form.uploadDate||""} onChange={e=>setForm(f=>({...f,uploadDate:e.target.value}))} style={{width:"100%",padding:"7px 10px",border:`1px solid ${C.border}`,borderRadius:7,fontSize:12,fontFamily:"inherit",boxSizing:"border-box"}}/>
                   </div>
                 </div>
                 <div>
