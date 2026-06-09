@@ -487,7 +487,7 @@ function detectPlatformClient(url) {
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // 📂 인플루언서 아카이브
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-const INF_CATS = ["공동구매", "뷰티릴스", "제품리뷰", "언박싱", "브이로그", "기타"];
+const INF_CATS = ["공동구매", "뷰티릴스", "제품리뷰", "언박싱", "브이로그", "행사용", "기타"];
 const INF_PLATFORMS = ["Instagram", "YouTube", "TikTok", "블로그", "기타"];
 const INF_STATUSES = ["잠재", "컨택예정", "컨택중", "협업완료", "보류"];
 const INF_STATUS_COLORS = { "잠재":"#e0f2fe", "컨택예정":"#fef9c3", "컨택중":"#dcfce7", "협업완료":"#ede9fe", "보류":"#fee2e2" };
