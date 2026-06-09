@@ -517,7 +517,7 @@ function InfluencerArchiveSection() {
 
   const items = Array.isArray(archive) ? archive : [];
 
-  const assignees = ["전체", ...Array.from(new Set(items.map(x=>x.assignee).filter(Boolean)))];
+  const assignees = ["전체","지원","경은","소리","지수","영서"];
 
   const filtered = items.filter(p => {
     if (catFilter !== "전체" && !(p.categories||[]).includes(catFilter)) return false;
