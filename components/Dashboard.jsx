@@ -797,7 +797,7 @@ function InfluencerArchiveSection() {
                 <div style={{fontSize:10,color:"#6b7280",background:p.shippingDone?"#f0fdf4":"#f9fafb",border:`1px solid ${p.shippingDone?"#bbf7d0":C.border}`,borderRadius:6,padding:"3px 8px",display:"flex",gap:4,alignItems:"center",justifyContent:"space-between"}}>
                   <div style={{display:"flex",gap:4,alignItems:"center",minWidth:0}}>
                     <span>{p.shippingDone?"✅":"📮"}</span>
-                    <span style={{overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.address}</span>
+                    <span style={{overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.address}{p.addressDetail ? ` ${p.addressDetail}` : ""}</span>
                   </div>
                   {p.shippingDone && p.shippingDate && <span style={{fontSize:9,color:"#16a34a",flexShrink:0}}>{p.shippingDate}</span>}
                 </div>
@@ -1117,7 +1117,7 @@ function InfluencerArchiveSection() {
               <div>
                 <div style={{fontSize:11,color:C.inkMid,marginBottom:4,fontWeight:700}}>담당자</div>
                 <div style={{display:"flex",gap:4,flexWrap:"wrap"}}>
-                  {["소리","영서","경은","지수","행사"].map(a=>(
+                  {["지원","경은","소리","지수","영서","행사"].map(a=>(
                     <button key={a} onClick={()=>setForm(f=>({...f,assignee:f.assignee===a?"":a}))} style={{padding:"4px 10px",borderRadius:20,border:"none",background:form.assignee===a?"#374151":"#e5e7eb",color:form.assignee===a?"#fff":C.inkMid,fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>{a}</button>
                   ))}
                 </div>
@@ -2180,7 +2180,7 @@ function SchModalComp({mode, initial, onSave, onClose}){
         <FR label="시작일 *"><Inp type="date" value={f.date} onChange={v=>set("date",v)}/></FR>
         <FR label="종료일"><Inp type="date" value={f.endDate} onChange={v=>set("endDate",v)}/></FR>
       </div>
-      <FR label="담당자"><Sel value={f.assignee||""} onChange={v=>set("assignee",v)} options={["","소리","영서","경은","지수","행사"]}/></FR>
+      <FR label="담당자"><Sel value={f.assignee||""} onChange={v=>set("assignee",v)} options={["","지원","경은","소리","지수","영서","행사"]}/></FR>
       <FR label="메모">
         <textarea value={f.note||""} onChange={e=>set("note",e.target.value)} placeholder="한도 수량, 할인율, 주의사항 등 자유롭게 입력"
           style={{width:"100%",padding:"9px 12px",border:`1px solid ${C.border}`,borderRadius:9,
@@ -3781,7 +3781,7 @@ export default function OaDashboard(){
     fetchNotionSch({ from: fromD.toISOString().slice(0,10), to: toD.toISOString().slice(0,10) });
   }, [fetchNotionSch]);
 
-  const NOTION_ASSIGNEE_COLORS = {"소리":"#f472b6","영서":"#60a5fa","경은":"#34d399","지수":"#a78bfa","행사":"#f97316"};
+  const NOTION_ASSIGNEE_COLORS = {"지원":"#fb923c","경은":"#34d399","소리":"#f472b6","지수":"#a78bfa","영서":"#60a5fa","행사":"#f97316"};
 
   // ── Notion CSV 내보내기 파일 파싱 ──────────────────────────────
   function parseNotionCSV(text) {
@@ -3834,7 +3834,7 @@ export default function OaDashboard(){
       const assigneeMatch = rawName.match(/^\(([^)]+)\)\s*/);
       if (assigneeMatch) {
         const candidate = assigneeMatch[1];
-        if (["소리","영서","경은","지수"].includes(candidate)) {
+        if (["지원","경은","소리","지수","영서"].includes(candidate)) {
           assignee = candidate;
           title = rawName.slice(assigneeMatch[0].length);
         }
