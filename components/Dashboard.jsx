@@ -10,19 +10,16 @@ function useSupabaseState(key, def) {
   const [data, setData] = useState(def);
   const [loaded, setLoaded] = useState(false);
   const loadedRef = useRef(false);
-  const pendingSave = useRef(null); // 로드 전 save 요청 보관
+  const serverRef = useRef(null); // 서버에서 로드된 원본 보관
 
   useEffect(() => {
     getSetting(key).then(v => {
-      // Supabase에 값 있으면 적용, 없으면 def 유지 (절대 덮어쓰기 안 함)
-      if(v !== null && v !== undefined) setData(v);
+      if(v !== null && v !== undefined) {
+        setData(v);
+        serverRef.current = v;
+      }
       loadedRef.current = true;
       setLoaded(true);
-      // 로드 전에 save 요청 있었으면 이제 실행
-      if(pendingSave.current !== null){
-        setSetting(key, pendingSave.current);
-        pendingSave.current = null;
-      }
     }).catch(() => {
       loadedRef.current = true;
       setLoaded(true);
@@ -31,12 +28,14 @@ function useSupabaseState(key, def) {
   }, [key]);
 
   const save = useCallback(async (v) => {
-    setData(v); // UI는 즉시 반영
-    if(!loadedRef.current){
-      // 아직 로드 중이면 pending에 보관 (나중에 저장)
-      pendingSave.current = v;
-      return;
+    // 로드 완료 전에는 저장 차단 (빈 기본값으로 덮어쓰기 방지)
+    if(!loadedRef.current) return;
+    // 서버에 데이터가 있었는데 빈 배열로 덮어쓰려는 경우 확인
+    if(Array.isArray(v) && v.length === 0 && Array.isArray(serverRef.current) && serverRef.current.length > 0) {
+      if(!window.confirm("모든 데이터를 삭제하시겠습니까?")) return;
     }
+    setData(v);
+    serverRef.current = v;
     await setSetting(key, v);
   }, [key]);
 
@@ -573,7 +572,12 @@ function InfluencerArchiveSection() {
       phone:        item.phone        || "",
       postCode:     item.postCode     || "",
       address:      item.address      || "",
+      addressDetail:item.addressDetail|| "",
       productQtys:  item.productQtys  || {},
+      settleFee:    item.settleFee    || "",
+      settleDate:   item.settleDate   || "",
+      settleDetail: item.settleDetail || "",
+      settleUrl:    item.settleUrl    || "",
     });
     setSettleModal(item);
   }
