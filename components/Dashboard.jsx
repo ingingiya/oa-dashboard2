@@ -35,8 +35,15 @@ function useSupabaseState(key, def) {
       if(!window.confirm("모든 데이터를 삭제하시겠습니까?")) return;
     }
     setData(v);
-    serverRef.current = v;
-    await setSetting(key, v);
+    try {
+      await setSetting(key, v);
+      serverRef.current = v;
+    } catch(e) {
+      console.error("저장 실패:", e);
+      alert("⚠️ 저장 실패! 다시 시도해주세요.\n" + e.message);
+      // 저장 실패 시 서버 데이터로 롤백
+      setData(serverRef.current ?? v);
+    }
   }, [key]);
 
   return [data, save, loaded];
