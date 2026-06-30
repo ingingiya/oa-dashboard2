@@ -1043,7 +1043,7 @@ function InfluencerArchiveSection() {
                             <img src={settleForm[key]} alt={label} style={{height:36,borderRadius:4,border:`1px solid ${C.border}`,cursor:"pointer"}} onClick={()=>window.open(settleForm[key],"_blank")} onError={e=>{e.target.style.display="none"}}/>
                           )}
                           <span style={{fontSize:10,color:"#16a34a",fontWeight:700}}>✓ 첨부됨</span>
-                          <a href={settleForm[key]+(settleForm[key].includes('?')?'&':'?')+'download='+encodeURIComponent((settleModal.account||settleModal.name||"inf")+"_"+label)} style={{fontSize:10,color:"#2563eb",fontWeight:700,textDecoration:"none",padding:"2px 7px",border:"1px solid #2563eb",borderRadius:5}}>다운로드</a>
+                          <a href={settleForm[key]+(settleForm[key].includes('?')?'&':'?')+'download='+encodeURIComponent((settleModal.account||settleModal.name||"inf")+"_"+label+"."+(settleForm[key].split('.').pop().split('?')[0]||"jpg"))} style={{fontSize:10,color:"#2563eb",fontWeight:700,textDecoration:"none",padding:"2px 7px",border:"1px solid #2563eb",borderRadius:5}}>다운로드</a>
                           <button onClick={()=>setSettleForm(f=>({...f,[key]:""}))} style={{border:"none",background:"none",color:"#dc2626",fontSize:11,cursor:"pointer",fontWeight:700}}>삭제</button>
                         </div>
                       ) : (
