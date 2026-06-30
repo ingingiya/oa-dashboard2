@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback, useRef } from "react";
-import { getSetting, setSetting, getAdImages, saveAdImagesMeta, uploadAdImage } from "../lib/useSupabase";
+import { getSetting, setSetting, getAdImages, saveAdImagesMeta, uploadAdImage, uploadSettleFile } from "../lib/useSupabase";
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // Supabase 동기화 훅 — 팀 전체 공유 (localStorage 대체)
@@ -1038,13 +1038,14 @@ function InfluencerArchiveSection() {
                       ) : (
                         <label style={{flex:1,padding:"5px 12px",borderRadius:7,border:`1px dashed ${C.border}`,background:"#f9fafb",fontSize:11,color:C.inkMid,cursor:"pointer",textAlign:"center"}}>
                           + 파일 선택
-                          <input type="file" accept="image/*,.pdf" style={{display:"none"}} onChange={e=>{
+                          <input type="file" accept="image/*,.pdf" style={{display:"none"}} onChange={async e=>{
                             const file = e.target.files?.[0];
                             if (!file) return;
                             if (file.size > 5*1024*1024) { alert("5MB 이하 파일만 가능해요"); return; }
-                            const reader = new FileReader();
-                            reader.onload = ev => setSettleForm(f=>({...f,[key]:ev.target.result}));
-                            reader.readAsDataURL(file);
+                            try {
+                              const url = await uploadSettleFile(file, settleModal.account || settleModal.name, key);
+                              setSettleForm(f=>({...f,[key]:url}));
+                            } catch(err) { alert("업로드 실패: " + err.message); }
                           }}/>
                         </label>
                       )}
