@@ -54,5 +54,5 @@ export async function middleware(request) {
 }
 
 export const config = {
-  matcher: ['/((?!_next/static|_next/image|favicon.ico|oa-claude-code-guide|screenshot-|.*\.png$|.*\.jpg$|.*\.webp$).*)'],
+  matcher: ['/((?!_next/static|_next/image|favicon.ico|oa-claude-code-guide|screenshot-|event|.*\.png$|.*\.jpg$|.*\.webp$|.*\.html$).*)'],
 }
