@@ -2902,11 +2902,21 @@ function ProjectSection() {
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editId, setEditId] = useState(null);
-  const [form, setForm] = useState({name:"",status:"planning",start_date:"",end_date:"",progress:0,description:"",tasks:[]});
+  const emptyForm = {name:"",status:"planning",start_date:"",end_date:"",progress:0,description:"",tasks:[],assignee:"",priority:"normal",tags:[],comments:[]};
+  const [form, setForm] = useState(emptyForm);
   const [expandId, setExpandId] = useState(null);
   const [newTask, setNewTask] = useState("");
+  const [newComment, setNewComment] = useState("");
+  const [newTag, setNewTag] = useState("");
+  const [viewMode, setViewMode] = useState("list"); // list | gantt
+  const [filterStatus, setFilterStatus] = useState("all");
+  const [filterPriority, setFilterPriority] = useState("all");
+  const [filterAssignee, setFilterAssignee] = useState("all");
 
   const STATUS_MAP = {planning:{label:"기획중",color:"#6366f1",bg:"#eef2ff"},in_progress:{label:"진행중",color:"#2563eb",bg:"#eff6ff"},done:{label:"완료",color:"#16a34a",bg:"#f0fdf4"},paused:{label:"보류",color:"#a1a1aa",bg:"#f4f4f5"}};
+  const PRIORITY_MAP = {urgent:{label:"긴급",color:"#dc2626",bg:"#fef2f2",icon:"priority_high"},high:{label:"높음",color:"#ea580c",bg:"#fff7ed",icon:"arrow_upward"},normal:{label:"보통",color:"#2563eb",bg:"#eff6ff",icon:"remove"},low:{label:"낮음",color:"#a1a1aa",bg:"#f4f4f5",icon:"arrow_downward"}};
+  const TAG_COLORS = ["#2563eb","#6366f1","#16a34a","#ea580c","#dc2626","#0891b2","#7c3aed","#c026d3"];
+  const ASSIGNEES = ["대표","마케팅","디자인","개발","MD","CS","물류"];
 
   const load = () => {
     setLoading(true);
@@ -2924,7 +2934,7 @@ function ProjectSection() {
     } else {
       await fetch(`${SURL}/rest/v1/projects`,{method:"POST",headers:{...sH,Prefer:"return=minimal"},body:JSON.stringify(body)});
     }
-    setShowForm(false); setEditId(null); setForm({name:"",status:"planning",start_date:"",end_date:"",progress:0,description:"",tasks:[]}); load();
+    setShowForm(false); setEditId(null); setForm(emptyForm); load();
   };
 
   const del = async (id) => {
@@ -2934,8 +2944,13 @@ function ProjectSection() {
   };
 
   const edit = (p) => {
-    setForm({name:p.name,status:p.status,start_date:p.start_date||"",end_date:p.end_date||"",progress:p.progress||0,description:p.description||"",tasks:p.tasks||[]});
+    setForm({name:p.name,status:p.status,start_date:p.start_date||"",end_date:p.end_date||"",progress:p.progress||0,description:p.description||"",tasks:p.tasks||[],assignee:p.assignee||"",priority:p.priority||"normal",tags:p.tags||[],comments:p.comments||[]});
     setEditId(p.id); setShowForm(true);
+  };
+
+  const patchProject = async (proj, patch) => {
+    await fetch(`${SURL}/rest/v1/projects?id=eq.${proj.id}`,{method:"PATCH",headers:{...sH,Prefer:"return=minimal"},body:JSON.stringify({...patch,updated_at:new Date().toISOString()})});
+    load();
   };
 
   const toggleTask = async (proj, idx) => {
@@ -2943,61 +2958,157 @@ function ProjectSection() {
     tasks[idx] = {...tasks[idx], done:!tasks[idx].done};
     const doneCount = tasks.filter(t=>t.done).length;
     const progress = tasks.length ? Math.round(doneCount/tasks.length*100) : 0;
-    await fetch(`${SURL}/rest/v1/projects?id=eq.${proj.id}`,{method:"PATCH",headers:{...sH,Prefer:"return=minimal"},body:JSON.stringify({tasks,progress,updated_at:new Date().toISOString()})});
-    load();
+    patchProject(proj, {tasks, progress});
   };
 
   const addTask = async (proj) => {
     if(!newTask.trim()) return;
     const tasks = [...(proj.tasks||[]), {text:newTask.trim(),done:false}];
     const progress = tasks.length ? Math.round(tasks.filter(t=>t.done).length/tasks.length*100) : 0;
-    await fetch(`${SURL}/rest/v1/projects?id=eq.${proj.id}`,{method:"PATCH",headers:{...sH,Prefer:"return=minimal"},body:JSON.stringify({tasks,progress,updated_at:new Date().toISOString()})});
-    setNewTask(""); load();
+    patchProject(proj, {tasks, progress});
+    setNewTask("");
   };
 
   const removeTask = async (proj, idx) => {
     const tasks = (proj.tasks||[]).filter((_,i)=>i!==idx);
     const progress = tasks.length ? Math.round(tasks.filter(t=>t.done).length/tasks.length*100) : 0;
-    await fetch(`${SURL}/rest/v1/projects?id=eq.${proj.id}`,{method:"PATCH",headers:{...sH,Prefer:"return=minimal"},body:JSON.stringify({tasks,progress,updated_at:new Date().toISOString()})});
-    load();
+    patchProject(proj, {tasks, progress});
+  };
+
+  const addComment = async (proj) => {
+    if(!newComment.trim()) return;
+    const comments = [...(proj.comments||[]), {text:newComment.trim(),date:new Date().toISOString().slice(0,16).replace("T"," "),by:proj.assignee||""}];
+    patchProject(proj, {comments});
+    setNewComment("");
+  };
+
+  const removeComment = async (proj, idx) => {
+    const comments = (proj.comments||[]).filter((_,i)=>i!==idx);
+    patchProject(proj, {comments});
   };
 
   const daysLeft = (end) => {
     if(!end) return null;
-    const d = Math.ceil((new Date(end)-new Date())/(1000*60*60*24));
-    return d;
+    return Math.ceil((new Date(end)-new Date())/(1000*60*60*24));
   };
 
+  // 필터링
+  let filtered = projects;
+  if(filterStatus!=="all") filtered = filtered.filter(p=>p.status===filterStatus);
+  if(filterPriority!=="all") filtered = filtered.filter(p=>(p.priority||"normal")===filterPriority);
+  if(filterAssignee!=="all") filtered = filtered.filter(p=>(p.assignee||"")===(filterAssignee==="미지정"?"":filterAssignee));
+
+  // 우선순위 정렬
+  const prioOrder = {urgent:0,high:1,normal:2,low:3};
+  filtered.sort((a,b)=>((prioOrder[a.priority]??2)-(prioOrder[b.priority]??2)));
+
   const grouped = {in_progress:[], planning:[], paused:[], done:[]};
-  projects.forEach(p => { if(grouped[p.status]) grouped[p.status].push(p); else grouped.in_progress.push(p); });
+  filtered.forEach(p => { if(grouped[p.status]) grouped[p.status].push(p); else grouped.in_progress.push(p); });
+
+  // 간트차트 관련
+  const ganttProjects = filtered.filter(p=>p.start_date);
+  const ganttMin = ganttProjects.length ? ganttProjects.reduce((m,p)=>p.start_date<m?p.start_date:m, ganttProjects[0].start_date) : "";
+  const ganttMax = ganttProjects.length ? ganttProjects.reduce((m,p)=>(p.end_date||p.start_date)>m?(p.end_date||p.start_date):m, ganttProjects[0].end_date||ganttProjects[0].start_date) : "";
+  const ganttDays = ganttMin&&ganttMax ? Math.max(1,Math.ceil((new Date(ganttMax)-new Date(ganttMin))/(1000*60*60*24))+14) : 30;
+  const ganttStart = ganttMin ? new Date(new Date(ganttMin).getTime()-7*86400000) : new Date();
+
+  const allAssignees = [...new Set(projects.map(p=>p.assignee||"미지정"))];
+
+  const inputStyle = {width:"100%",padding:"8px 10px",border:`1px solid ${C.border}`,borderRadius:8,fontSize:13,fontFamily:"inherit",marginTop:4,outline:"none",boxSizing:"border-box"};
 
   return (
     <div style={{padding:"24px 0"}}>
-      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:20}}>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:20,flexWrap:"wrap",gap:12}}>
         <div>
           <div style={{fontSize:20,fontWeight:900,color:C.ink}}>프로젝트 관리</div>
           <div style={{fontSize:12,color:C.inkMid,marginTop:2}}>진행중인 프로젝트와 할일을 한눈에</div>
         </div>
-        <button onClick={()=>{setShowForm(true);setEditId(null);setForm({name:"",status:"planning",start_date:"",end_date:"",progress:0,description:"",tasks:[]});}}
-          style={{padding:"8px 16px",background:C.rose,color:"#fff",border:"none",borderRadius:8,fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit",display:"flex",alignItems:"center",gap:4}}>
-          <MI n="add" size={16}/> 새 프로젝트
-        </button>
+        <div style={{display:"flex",gap:8,alignItems:"center"}}>
+          <div style={{display:"flex",background:C.cream,borderRadius:8,overflow:"hidden"}}>
+            {[{id:"list",icon:"view_list"},{id:"gantt",icon:"view_timeline"}].map(v=>(
+              <button key={v.id} onClick={()=>setViewMode(v.id)} style={{padding:"6px 10px",border:"none",background:viewMode===v.id?C.rose:"transparent",color:viewMode===v.id?"#fff":C.inkMid,cursor:"pointer",display:"flex",alignItems:"center"}}><MI n={v.icon} size={16}/></button>
+            ))}
+          </div>
+          <button onClick={()=>{setShowForm(true);setEditId(null);setForm(emptyForm);}}
+            style={{padding:"8px 16px",background:C.rose,color:"#fff",border:"none",borderRadius:8,fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit",display:"flex",alignItems:"center",gap:4}}>
+            <MI n="add" size={16}/> 새 프로젝트
+          </button>
+        </div>
       </div>
 
       {/* 요약 카드 */}
-      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(140px,1fr))",gap:12,marginBottom:24}}>
-        {[{label:"전체",count:projects.length,color:C.ink},{label:"진행중",count:grouped.in_progress.length,color:"#2563eb"},{label:"기획중",count:grouped.planning.length,color:"#6366f1"},{label:"완료",count:grouped.done.length,color:"#16a34a"}].map(s=>(
-          <div key={s.label} style={{background:C.white,borderRadius:12,padding:"16px",border:`1px solid ${C.border}`}}>
-            <div style={{fontSize:11,color:C.inkMid,fontWeight:600}}>{s.label}</div>
-            <div style={{fontSize:24,fontWeight:900,color:s.color,marginTop:4}}>{s.count}</div>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(120px,1fr))",gap:10,marginBottom:20}}>
+        {[{label:"전체",count:projects.length,color:C.ink},{label:"진행중",count:projects.filter(p=>p.status==="in_progress").length,color:"#2563eb"},{label:"기획중",count:projects.filter(p=>p.status==="planning").length,color:"#6366f1"},{label:"완료",count:projects.filter(p=>p.status==="done").length,color:"#16a34a"},{label:"긴급",count:projects.filter(p=>p.priority==="urgent").length,color:"#dc2626"}].map(s=>(
+          <div key={s.label} style={{background:C.white,borderRadius:12,padding:"14px",border:`1px solid ${C.border}`}}>
+            <div style={{fontSize:10,color:C.inkMid,fontWeight:600}}>{s.label}</div>
+            <div style={{fontSize:22,fontWeight:900,color:s.color,marginTop:2}}>{s.count}</div>
           </div>
         ))}
       </div>
 
+      {/* 필터 */}
+      <div style={{display:"flex",gap:8,marginBottom:16,flexWrap:"wrap",alignItems:"center"}}>
+        <span style={{fontSize:11,fontWeight:700,color:C.inkMid}}><MI n="filter_list" size={14}/></span>
+        <select value={filterStatus} onChange={e=>setFilterStatus(e.target.value)} style={{padding:"4px 8px",border:`1px solid ${C.border}`,borderRadius:6,fontSize:11,fontFamily:"inherit"}}>
+          <option value="all">전체 상태</option>
+          {Object.entries(STATUS_MAP).map(([k,v])=><option key={k} value={k}>{v.label}</option>)}
+        </select>
+        <select value={filterPriority} onChange={e=>setFilterPriority(e.target.value)} style={{padding:"4px 8px",border:`1px solid ${C.border}`,borderRadius:6,fontSize:11,fontFamily:"inherit"}}>
+          <option value="all">전체 우선순위</option>
+          {Object.entries(PRIORITY_MAP).map(([k,v])=><option key={k} value={k}>{v.label}</option>)}
+        </select>
+        <select value={filterAssignee} onChange={e=>setFilterAssignee(e.target.value)} style={{padding:"4px 8px",border:`1px solid ${C.border}`,borderRadius:6,fontSize:11,fontFamily:"inherit"}}>
+          <option value="all">전체 담당</option>
+          {allAssignees.map(a=><option key={a} value={a}>{a}</option>)}
+        </select>
+        {(filterStatus!=="all"||filterPriority!=="all"||filterAssignee!=="all")&&(
+          <button onClick={()=>{setFilterStatus("all");setFilterPriority("all");setFilterAssignee("all");}} style={{padding:"4px 8px",border:"none",background:C.cream,borderRadius:6,fontSize:10,fontWeight:700,color:C.inkMid,cursor:"pointer",fontFamily:"inherit"}}>초기화</button>
+        )}
+      </div>
+
       {loading && <div style={{textAlign:"center",padding:40,color:C.inkMid}}>로딩중...</div>}
 
-      {/* 프로젝트 리스트 */}
-      {["in_progress","planning","paused","done"].map(status => {
+      {/* ── 간트 차트 뷰 ── */}
+      {viewMode==="gantt" && !loading && (
+        <div style={{background:C.white,borderRadius:12,border:`1px solid ${C.border}`,overflow:"auto",marginBottom:24}}>
+          <div style={{minWidth:800,padding:16}}>
+            {/* 월 헤더 */}
+            <div style={{display:"flex",marginLeft:180}}>
+              {Array.from({length:Math.ceil(ganttDays/30)+1}).map((_,i)=>{
+                const d = new Date(ganttStart.getTime()+i*30*86400000);
+                return <div key={i} style={{flex:`0 0 ${100/ganttDays*30}%`,fontSize:10,fontWeight:700,color:C.inkMid,borderLeft:`1px solid ${C.cream}`,paddingLeft:4}}>{d.getFullYear()}.{String(d.getMonth()+1).padStart(2,"0")}</div>;
+              })}
+            </div>
+            {ganttProjects.map(p=>{
+              const st = STATUS_MAP[p.status]||STATUS_MAP.planning;
+              const pri = PRIORITY_MAP[p.priority||"normal"];
+              const startOff = Math.max(0,(new Date(p.start_date)-ganttStart)/(86400000));
+              const dur = p.end_date ? Math.max(1,(new Date(p.end_date)-new Date(p.start_date))/(86400000)) : 14;
+              const leftPct = (startOff/ganttDays)*100;
+              const widthPct = (dur/ganttDays)*100;
+              return (
+                <div key={p.id} style={{display:"flex",alignItems:"center",height:36,borderBottom:`1px solid ${C.cream}`}}>
+                  <div style={{width:180,flexShrink:0,paddingRight:8,display:"flex",alignItems:"center",gap:6,overflow:"hidden"}}>
+                    <MI n={pri.icon} size={12} style={{color:pri.color,flexShrink:0}}/>
+                    <span style={{fontSize:11,fontWeight:700,color:C.ink,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{p.name}</span>
+                    {p.assignee && <span style={{fontSize:9,color:C.inkLt,flexShrink:0}}>{p.assignee}</span>}
+                  </div>
+                  <div style={{flex:1,position:"relative",height:"100%"}}>
+                    <div style={{position:"absolute",left:`${leftPct}%`,width:`${widthPct}%`,top:10,height:16,borderRadius:8,background:st.color,opacity:0.85,display:"flex",alignItems:"center",justifyContent:"center",minWidth:20,cursor:"pointer"}}
+                      onClick={()=>setExpandId(expandId===p.id?null:p.id)}>
+                      <span style={{fontSize:8,color:"#fff",fontWeight:700}}>{p.progress||0}%</span>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+            {!ganttProjects.length && <div style={{padding:20,textAlign:"center",color:C.inkMid,fontSize:12}}>날짜가 설정된 프로젝트가 없어요</div>}
+          </div>
+        </div>
+      )}
+
+      {/* ── 리스트 뷰 ── */}
+      {viewMode==="list" && !loading && ["in_progress","planning","paused","done"].map(status => {
         const list = grouped[status];
         if(!list.length) return null;
         const st = STATUS_MAP[status];
@@ -3010,20 +3121,28 @@ function ProjectSection() {
               const expanded = expandId===p.id;
               const dl = daysLeft(p.end_date);
               const tasks = p.tasks||[];
+              const comments = p.comments||[];
+              const tags = p.tags||[];
+              const pri = PRIORITY_MAP[p.priority||"normal"];
               return (
-                <div key={p.id} style={{background:C.white,borderRadius:12,border:`1px solid ${C.border}`,marginBottom:10,overflow:"hidden"}}>
+                <div key={p.id} style={{background:C.white,borderRadius:12,border:`1px solid ${C.border}`,marginBottom:10,overflow:"hidden",borderLeft:`3px solid ${pri.color}`}}>
                   {/* 헤더 */}
                   <div onClick={()=>setExpandId(expanded?null:p.id)} style={{padding:"14px 16px",cursor:"pointer",display:"flex",alignItems:"center",gap:12}}>
                     <MI n={expanded?"expand_more":"chevron_right"} size={18} style={{color:C.inkLt}}/>
                     <div style={{flex:1,minWidth:0}}>
-                      <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
+                      <div style={{display:"flex",alignItems:"center",gap:6,flexWrap:"wrap"}}>
+                        <MI n={pri.icon} size={14} style={{color:pri.color}}/>
                         <span style={{fontSize:14,fontWeight:800,color:C.ink}}>{p.name}</span>
                         <span style={{fontSize:9,fontWeight:700,color:st.color,background:st.bg,padding:"2px 8px",borderRadius:10}}>{st.label}</span>
+                        {p.assignee && <span style={{fontSize:9,fontWeight:700,color:"#374151",background:"#e5e7eb",padding:"2px 8px",borderRadius:10}}>{p.assignee}</span>}
                         {dl!==null && status!=="done" && (
                           <span style={{fontSize:9,fontWeight:700,color:dl<0?"#dc2626":dl<=3?"#ea580c":"#16a34a",background:dl<0?"#fef2f2":dl<=3?"#fff7ed":"#f0fdf4",padding:"2px 8px",borderRadius:10}}>
                             {dl<0?`${Math.abs(dl)}일 초과`:`D-${dl}`}
                           </span>
                         )}
+                        {tags.map((t,i)=>(
+                          <span key={i} style={{fontSize:9,fontWeight:700,color:TAG_COLORS[i%TAG_COLORS.length],background:TAG_COLORS[i%TAG_COLORS.length]+"18",padding:"2px 8px",borderRadius:10}}>{t}</span>
+                        ))}
                       </div>
                       <div style={{display:"flex",alignItems:"center",gap:8,marginTop:6}}>
                         {p.start_date && <span style={{fontSize:10,color:C.inkLt}}>{p.start_date} ~ {p.end_date||"미정"}</span>}
@@ -3031,6 +3150,8 @@ function ProjectSection() {
                           <div style={{width:`${p.progress||0}%`,height:"100%",background:p.progress>=100?"#16a34a":C.rose,borderRadius:3,transition:"width 0.3s"}}/>
                         </div>
                         <span style={{fontSize:10,fontWeight:700,color:C.inkMid}}>{p.progress||0}%</span>
+                        {tasks.length>0 && <span style={{fontSize:9,color:C.inkLt}}><MI n="check_circle" size={10}/> {tasks.filter(t=>t.done).length}/{tasks.length}</span>}
+                        {comments.length>0 && <span style={{fontSize:9,color:C.inkLt}}><MI n="chat" size={10}/> {comments.length}</span>}
                       </div>
                     </div>
                     <div style={{display:"flex",gap:4}}>
@@ -3042,8 +3163,10 @@ function ProjectSection() {
                   {/* 확장 영역 */}
                   {expanded && (
                     <div style={{padding:"0 16px 16px",borderTop:`1px solid ${C.cream}`}}>
-                      {p.description && <div style={{fontSize:12,color:C.inkMid,padding:"12px 0",lineHeight:1.6}}>{p.description}</div>}
-                      <div style={{fontSize:11,fontWeight:800,color:C.ink,marginTop:8,marginBottom:8}}>할일 ({tasks.filter(t=>t.done).length}/{tasks.length})</div>
+                      {p.description && <div style={{fontSize:12,color:C.inkMid,padding:"12px 0",lineHeight:1.6,whiteSpace:"pre-wrap"}}>{p.description}</div>}
+
+                      {/* 할일 */}
+                      <div style={{fontSize:11,fontWeight:800,color:C.ink,marginTop:8,marginBottom:8,display:"flex",alignItems:"center",gap:4}}><MI n="checklist" size={14}/> 할일 ({tasks.filter(t=>t.done).length}/{tasks.length})</div>
                       {tasks.map((t,i)=>(
                         <div key={i} style={{display:"flex",alignItems:"center",gap:8,padding:"6px 0",borderBottom:`1px solid ${C.cream}`}}>
                           <input type="checkbox" checked={t.done} onChange={()=>toggleTask(p,i)} style={{accentColor:C.rose}}/>
@@ -3056,6 +3179,23 @@ function ProjectSection() {
                           placeholder="할일 추가..." style={{flex:1,padding:"6px 10px",border:`1px solid ${C.border}`,borderRadius:6,fontSize:12,fontFamily:"inherit",outline:"none"}}/>
                         <button onClick={()=>addTask(p)} style={{padding:"6px 12px",background:C.blush,color:C.rose,border:"none",borderRadius:6,fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>추가</button>
                       </div>
+
+                      {/* 코멘트 */}
+                      <div style={{fontSize:11,fontWeight:800,color:C.ink,marginTop:16,marginBottom:8,display:"flex",alignItems:"center",gap:4}}><MI n="chat" size={14}/> 메모 ({comments.length})</div>
+                      {comments.map((c,i)=>(
+                        <div key={i} style={{padding:"8px 10px",background:C.cream,borderRadius:8,marginBottom:6,position:"relative"}}>
+                          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4}}>
+                            <span style={{fontSize:10,fontWeight:700,color:C.inkMid}}>{c.by||"익명"} · {c.date}</span>
+                            <button onClick={()=>removeComment(p,i)} style={{background:"none",border:"none",cursor:"pointer",padding:0}}><MI n="close" size={12} style={{color:C.inkLt}}/></button>
+                          </div>
+                          <div style={{fontSize:12,color:C.ink,lineHeight:1.5,whiteSpace:"pre-wrap"}}>{c.text}</div>
+                        </div>
+                      ))}
+                      <div style={{display:"flex",gap:8,marginTop:4}}>
+                        <input value={newComment} onChange={e=>setNewComment(e.target.value)} onKeyDown={e=>e.key==="Enter"&&addComment(p)}
+                          placeholder="메모 추가..." style={{flex:1,padding:"6px 10px",border:`1px solid ${C.border}`,borderRadius:6,fontSize:12,fontFamily:"inherit",outline:"none"}}/>
+                        <button onClick={()=>addComment(p)} style={{padding:"6px 12px",background:C.blush,color:C.rose,border:"none",borderRadius:6,fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>메모</button>
+                      </div>
                     </div>
                   )}
                 </div>
@@ -3065,7 +3205,7 @@ function ProjectSection() {
         );
       })}
 
-      {!loading && !projects.length && (
+      {!loading && !filtered.length && (
         <div style={{textAlign:"center",padding:60,color:C.inkMid}}>
           <MI n="folder_open" size={48} style={{color:C.border}}/>
           <div style={{marginTop:12,fontSize:14,fontWeight:600}}>아직 프로젝트가 없어요</div>
@@ -3076,37 +3216,62 @@ function ProjectSection() {
       {/* 폼 모달 */}
       {showForm && (
         <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.4)",zIndex:1000,display:"flex",alignItems:"center",justifyContent:"center",padding:20}} onClick={()=>setShowForm(false)}>
-          <div onClick={e=>e.stopPropagation()} style={{background:C.white,borderRadius:16,padding:24,width:"100%",maxWidth:480,maxHeight:"80vh",overflow:"auto"}}>
+          <div onClick={e=>e.stopPropagation()} style={{background:C.white,borderRadius:16,padding:24,width:"100%",maxWidth:520,maxHeight:"85vh",overflow:"auto"}}>
             <div style={{fontSize:16,fontWeight:900,color:C.ink,marginBottom:16}}>{editId?"프로젝트 수정":"새 프로젝트"}</div>
             <div style={{display:"flex",flexDirection:"column",gap:12}}>
               <div>
                 <label style={{fontSize:11,fontWeight:700,color:C.inkMid}}>프로젝트명 *</label>
-                <input value={form.name} onChange={e=>setForm({...form,name:e.target.value})}
-                  style={{width:"100%",padding:"8px 10px",border:`1px solid ${C.border}`,borderRadius:8,fontSize:13,fontFamily:"inherit",marginTop:4,outline:"none",boxSizing:"border-box"}}/>
+                <input value={form.name} onChange={e=>setForm({...form,name:e.target.value})} style={inputStyle}/>
+              </div>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
+                <div>
+                  <label style={{fontSize:11,fontWeight:700,color:C.inkMid}}>상태</label>
+                  <select value={form.status} onChange={e=>setForm({...form,status:e.target.value})} style={inputStyle}>
+                    {Object.entries(STATUS_MAP).map(([k,v])=><option key={k} value={k}>{v.label}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label style={{fontSize:11,fontWeight:700,color:C.inkMid}}>우선순위</label>
+                  <select value={form.priority} onChange={e=>setForm({...form,priority:e.target.value})} style={inputStyle}>
+                    {Object.entries(PRIORITY_MAP).map(([k,v])=><option key={k} value={k}>{v.label}</option>)}
+                  </select>
+                </div>
               </div>
               <div>
-                <label style={{fontSize:11,fontWeight:700,color:C.inkMid}}>상태</label>
-                <select value={form.status} onChange={e=>setForm({...form,status:e.target.value})}
-                  style={{width:"100%",padding:"8px 10px",border:`1px solid ${C.border}`,borderRadius:8,fontSize:13,fontFamily:"inherit",marginTop:4,outline:"none",boxSizing:"border-box"}}>
-                  {Object.entries(STATUS_MAP).map(([k,v])=><option key={k} value={k}>{v.label}</option>)}
-                </select>
+                <label style={{fontSize:11,fontWeight:700,color:C.inkMid}}>담당자</label>
+                <div style={{display:"flex",gap:6,flexWrap:"wrap",marginTop:6}}>
+                  {ASSIGNEES.map(a=>(
+                    <button key={a} onClick={()=>setForm({...form,assignee:form.assignee===a?"":a})}
+                      style={{padding:"4px 12px",borderRadius:20,border:"none",background:form.assignee===a?"#374151":"#e5e7eb",color:form.assignee===a?"#fff":C.inkMid,fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>{a}</button>
+                  ))}
+                </div>
               </div>
               <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
                 <div>
                   <label style={{fontSize:11,fontWeight:700,color:C.inkMid}}>시작일</label>
-                  <input type="date" value={form.start_date} onChange={e=>setForm({...form,start_date:e.target.value})}
-                    style={{width:"100%",padding:"8px 10px",border:`1px solid ${C.border}`,borderRadius:8,fontSize:13,fontFamily:"inherit",marginTop:4,outline:"none",boxSizing:"border-box"}}/>
+                  <input type="date" value={form.start_date} onChange={e=>setForm({...form,start_date:e.target.value})} style={inputStyle}/>
                 </div>
                 <div>
                   <label style={{fontSize:11,fontWeight:700,color:C.inkMid}}>종료일</label>
-                  <input type="date" value={form.end_date} onChange={e=>setForm({...form,end_date:e.target.value})}
-                    style={{width:"100%",padding:"8px 10px",border:`1px solid ${C.border}`,borderRadius:8,fontSize:13,fontFamily:"inherit",marginTop:4,outline:"none",boxSizing:"border-box"}}/>
+                  <input type="date" value={form.end_date} onChange={e=>setForm({...form,end_date:e.target.value})} style={inputStyle}/>
+                </div>
+              </div>
+              <div>
+                <label style={{fontSize:11,fontWeight:700,color:C.inkMid}}>태그</label>
+                <div style={{display:"flex",gap:6,flexWrap:"wrap",marginTop:6,alignItems:"center"}}>
+                  {(form.tags||[]).map((t,i)=>(
+                    <span key={i} onClick={()=>setForm({...form,tags:form.tags.filter((_,j)=>j!==i)})}
+                      style={{fontSize:10,fontWeight:700,color:TAG_COLORS[i%TAG_COLORS.length],background:TAG_COLORS[i%TAG_COLORS.length]+"18",padding:"3px 10px",borderRadius:12,cursor:"pointer"}}>{t} x</span>
+                  ))}
+                  <input value={newTag} onChange={e=>setNewTag(e.target.value)}
+                    onKeyDown={e=>{if(e.key==="Enter"&&newTag.trim()){setForm({...form,tags:[...(form.tags||[]),newTag.trim()]});setNewTag("");}}}
+                    placeholder="태그 입력 후 Enter" style={{padding:"4px 8px",border:`1px solid ${C.border}`,borderRadius:6,fontSize:11,fontFamily:"inherit",outline:"none",width:120}}/>
                 </div>
               </div>
               <div>
                 <label style={{fontSize:11,fontWeight:700,color:C.inkMid}}>설명</label>
                 <textarea value={form.description} onChange={e=>setForm({...form,description:e.target.value})} rows={3}
-                  style={{width:"100%",padding:"8px 10px",border:`1px solid ${C.border}`,borderRadius:8,fontSize:13,fontFamily:"inherit",marginTop:4,outline:"none",resize:"vertical",boxSizing:"border-box"}}/>
+                  style={{...inputStyle,resize:"vertical"}}/>
               </div>
             </div>
             <div style={{display:"flex",gap:8,marginTop:20,justifyContent:"flex-end"}}>
