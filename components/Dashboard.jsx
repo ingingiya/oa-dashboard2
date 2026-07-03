@@ -3393,6 +3393,18 @@ function ProjectSection() {
                         <button onClick={()=>addTask(p)} style={{padding:"6px 12px",background:C.blush,color:C.rose,border:"none",borderRadius:6,fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>추가</button>
                       </div>
 
+                      {/* 기간 선택 */}
+                      {(p.products||[]).length>0 && (
+                        <div style={{display:"flex",gap:6,alignItems:"center",marginTop:12,marginBottom:8}}>
+                          <MI n="date_range" size={14} style={{color:C.inkMid}}/>
+                          <span style={{fontSize:10,fontWeight:700,color:C.inkMid}}>기간</span>
+                          {[{v:7,l:"7일"},{v:14,l:"14일"},{v:30,l:"30일"},{v:60,l:"60일"},{v:90,l:"90일"},{v:9999,l:"전체"}].map(d=>(
+                            <button key={d.v} onClick={()=>{setProdDataDays(d.v);setSingleProdData({});setSelectedProdId(null);setProjDailyChart(prev=>{const n={...prev};delete n[p.id];return n;});setProjAdData(prev=>{const n={...prev};delete n[p.id];return n;});}}
+                              style={{padding:"3px 10px",border:"none",borderRadius:6,background:prodDataDays===d.v?C.rose:"#fff",color:prodDataDays===d.v?"#fff":C.inkMid,fontSize:10,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>{d.l}</button>
+                          ))}
+                        </div>
+                      )}
+
                       {/* 일별 추이 차트 */}
                       {(p.products||[]).length>0 && (()=>{
                         const chart = projDailyChart[p.id];
@@ -3562,15 +3574,7 @@ function ProjectSection() {
                         </div>
                       )}
 
-                      {/* 기간 선택 */}
-                      {(p.products||[]).length>0 && (
-                        <div style={{display:"flex",gap:4,alignItems:"center",marginTop:12,marginBottom:8}}>
-                          <span style={{fontSize:10,color:C.inkMid}}>기간</span>
-                          <select value={prodDataDays} onChange={e=>{setProdDataDays(Number(e.target.value));setSingleProdData({});setSelectedProdId(null);setProjDailyChart(prev=>{const n={...prev};delete n[expandId];return n;});}} style={{padding:"3px 6px",border:`1px solid ${C.border}`,borderRadius:4,fontSize:10,fontFamily:"inherit"}}>
-                            {[7,14,30,60,90].map(d=><option key={d} value={d}>{d}일</option>)}
-                          </select>
-                        </div>
-                      )}
+                      {/* 기간 선택은 위로 이동됨 */}
 
                       {/* 코멘트 */}
                       <div style={{fontSize:11,fontWeight:800,color:C.ink,marginTop:16,marginBottom:8,display:"flex",alignItems:"center",gap:4}}><MI n="chat" size={14}/> 메모 ({comments.length})</div>
