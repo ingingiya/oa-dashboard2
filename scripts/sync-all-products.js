@@ -23,19 +23,20 @@ async function main() {
   });
 
   try {
-    console.log(`매출 데이터 조회 중 (${SYNC_DAYS}일)...`);
+    console.log(`매출 데이터 조회 중 (${SYNC_DAYS}일, 매출처별)...`);
     const [salesRows] = await pool.query(`
       SELECT
         제품번호 as product_id,
         제품명 as product_name,
         브랜드명 as brand,
+        매출처명 as channel,
         DATE(판매날짜) as date,
         SUM(판매수량) as qty,
         SUM(총매출액) as revenue,
         SUM(총매출이익) as profit
       FROM v_daily_sales_detail
       WHERE 판매날짜 >= DATE_SUB(CURDATE(), INTERVAL ${SYNC_DAYS} DAY)
-      GROUP BY 제품번호, 제품명, 브랜드명, DATE(판매날짜)
+      GROUP BY 제품번호, 제품명, 브랜드명, 매출처명, DATE(판매날짜)
       ORDER BY date DESC
     `);
     console.log(`  -> ${salesRows.length}건`);
@@ -44,6 +45,7 @@ async function main() {
       product_id: r.product_id,
       product_name: r.product_name,
       brand: r.brand,
+      channel: r.channel || '',
       date: r.date instanceof Date ? r.date.toISOString().split('T')[0] : String(r.date),
       qty: Number(r.qty) || 0,
       revenue: Number(r.revenue) || 0,
@@ -56,7 +58,7 @@ async function main() {
     let total = 0;
     for (let i = 0; i < rows.length; i += BATCH) {
       const batch = rows.slice(i, i + BATCH);
-      const res = await fetch(`${SUPA_URL}/rest/v1/project_product_data?on_conflict=product_id,date`, {
+      const res = await fetch(`${SUPA_URL}/rest/v1/project_product_data?on_conflict=product_id,date,channel`, {
         method: 'POST',
         headers: { ...sH, Prefer: 'resolution=merge-duplicates' },
         body: JSON.stringify(batch),

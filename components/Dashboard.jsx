@@ -3093,6 +3093,7 @@ function ProjectSection() {
   const loadProjectImpact = async (proj) => {
     if(!proj.start_date || !(proj.products||[]).length) return;
     const ids = (proj.products||[]).map(p=>p.id);
+    const brands = [...new Set((proj.products||[]).map(p=>p.brand).filter(Boolean))];
     const startDate = proj.start_date;
     const now = new Date().toISOString().split('T')[0];
     const daysSinceStart = Math.ceil((new Date(now)-new Date(startDate))/86400000);
@@ -3100,18 +3101,55 @@ function ProjectSection() {
 
     try {
       const [beforeRows, afterRows] = await Promise.all([
-        Promise.all(ids.map(id=>fetch(`${SURL}/rest/v1/project_product_data?product_id=eq.${id}&date=gte.${beforeStart}&date=lt.${startDate}&select=date,qty,revenue`,{headers:sH}).then(r=>r.json()))),
-        Promise.all(ids.map(id=>fetch(`${SURL}/rest/v1/project_product_data?product_id=eq.${id}&date=gte.${startDate}&date=lte.${now}&select=date,qty,revenue`,{headers:sH}).then(r=>r.json()))),
+        Promise.all(ids.map(id=>fetch(`${SURL}/rest/v1/project_product_data?product_id=eq.${id}&date=gte.${beforeStart}&date=lt.${startDate}&select=date,qty,revenue,channel`,{headers:sH}).then(r=>r.json()))),
+        Promise.all(ids.map(id=>fetch(`${SURL}/rest/v1/project_product_data?product_id=eq.${id}&date=gte.${startDate}&date=lte.${now}&select=date,qty,revenue,channel`,{headers:sH}).then(r=>r.json()))),
       ]);
       const sum = (rows) => {
-        const t={qty:0,revenue:0,days:new Set()};
-        rows.flat().forEach(r=>{t.qty+=(r.qty||0);t.revenue+=Number(r.revenue||0);t.days.add(r.date);});
+        const t={qty:0,revenue:0,days:new Set(),byChannel:{}};
+        rows.flat().forEach(r=>{
+          t.qty+=(r.qty||0);t.revenue+=Number(r.revenue||0);t.days.add(r.date);
+          const ch=r.channel||"기타";
+          if(!t.byChannel[ch]) t.byChannel[ch]={qty:0,revenue:0};
+          t.byChannel[ch].qty+=(r.qty||0);t.byChannel[ch].revenue+=Number(r.revenue||0);
+        });
         t.dayCount=t.days.size; delete t.days;
         t.avgQty=t.dayCount?Math.round(t.qty/t.dayCount):0;
         t.avgRevenue=t.dayCount?Math.round(t.revenue/t.dayCount):0;
         return t;
       };
-      setProjImpact(prev=>({...prev,[proj.id]:{before:sum(beforeRows),after:sum(afterRows),startDate}}));
+      const before = sum(beforeRows), after = sum(afterRows);
+
+      // 매출처별 변동 계산
+      const allChannels = [...new Set([...Object.keys(before.byChannel),...Object.keys(after.byChannel)])];
+      const channelChanges = allChannels.map(ch=>{
+        const b = before.byChannel[ch]||{qty:0,revenue:0};
+        const a = after.byChannel[ch]||{qty:0,revenue:0};
+        const revDiff = b.revenue>0?Math.round((a.revenue-b.revenue)/b.revenue*100):(a.revenue>0?999:0);
+        return {channel:ch,beforeRev:b.revenue,afterRev:a.revenue,beforeQty:b.qty,afterQty:a.qty,revDiff};
+      }).filter(c=>c.afterRev>0||c.beforeRev>0).sort((a,b)=>b.afterRev-a.afterRev);
+
+      // 급등/급락 매출처
+      const topGainers = channelChanges.filter(c=>c.revDiff>20&&c.revDiff!==999).sort((a,b)=>b.revDiff-a.revDiff).slice(0,3);
+      const topLosers = channelChanges.filter(c=>c.revDiff<-20).sort((a,b)=>a.revDiff-b.revDiff).slice(0,3);
+
+      // 검색순위 전/후
+      let rankBefore=null, rankAfter=null;
+      if(brands.length) {
+        const brandFilter = brands.map(b=>`brand.eq.${encodeURIComponent(b)}`).join(',');
+        const [rb,ra] = await Promise.all([
+          fetch(`${SURL}/rest/v1/search_rankings?or=(${brandFilter})&date=gte.${beforeStart}&date=lt.${startDate}&select=keyword,rank_pos&order=rank_pos.asc`,{headers:sH}).then(r=>r.json()),
+          fetch(`${SURL}/rest/v1/search_rankings?or=(${brandFilter})&date=gte.${startDate}&date=lte.${now}&select=keyword,rank_pos&order=rank_pos.asc`,{headers:sH}).then(r=>r.json()),
+        ]);
+        const avgRank = (rows) => {
+          if(!Array.isArray(rows)||!rows.length) return null;
+          const byKw={};
+          rows.forEach(r=>{if(!byKw[r.keyword])byKw[r.keyword]=[];byKw[r.keyword].push(r.rank_pos);});
+          return Object.entries(byKw).map(([kw,ranks])=>({keyword:kw,avgRank:Math.round(ranks.reduce((s,v)=>s+v,0)/ranks.length)}));
+        };
+        rankBefore=avgRank(rb); rankAfter=avgRank(ra);
+      }
+
+      setProjImpact(prev=>({...prev,[proj.id]:{before,after,startDate,channelChanges,topGainers,topLosers,rankBefore,rankAfter}}));
     } catch(e){console.error(e);}
   };
 
@@ -3679,19 +3717,17 @@ function ProjectSection() {
                               <MI n="trending_up" size={14}/> {impact?"시작 전/후 비교":"시작 전/후 효과 분석"}
                             </button>
                             {impact && (()=>{
-                              const {before,after} = impact;
+                              const {before,after,topGainers,topLosers,rankBefore,rankAfter} = impact;
                               const fmtRev = v=>v>=100000000?(v/100000000).toFixed(1)+"억":v>=10000?(v/10000).toFixed(0)+"만":v.toLocaleString();
                               const revChange = before.avgRevenue>0?Math.round((after.avgRevenue-before.avgRevenue)/before.avgRevenue*100):0;
                               const qtyChange = before.avgQty>0?Math.round((after.avgQty-before.avgQty)/before.avgQty*100):0;
                               return (
                                 <div style={{background:"#ecfeff",borderRadius:8,padding:10,marginTop:6}}>
                                   <div style={{fontSize:10,color:"#0891b2",fontWeight:700,marginBottom:6}}>시작일: {p.start_date} 기준 (전 {before.dayCount}일 vs 후 {after.dayCount}일)</div>
-                                  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:6,fontSize:11}}>
+                                  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:6,fontSize:11,marginBottom:8}}>
                                     <div style={{background:C.white,borderRadius:6,padding:"6px 8px"}}>
                                       <div style={{fontSize:9,color:C.inkMid}}>일평균 매출</div>
-                                      <div style={{display:"flex",gap:4,alignItems:"baseline"}}>
-                                        <span style={{fontWeight:800,color:"#0891b2"}}>{fmtRev(after.avgRevenue)}원</span>
-                                      </div>
+                                      <div style={{fontWeight:800,color:"#0891b2"}}>{fmtRev(after.avgRevenue)}원</div>
                                       <div style={{fontSize:9,color:C.inkLt}}>이전: {fmtRev(before.avgRevenue)}원</div>
                                     </div>
                                     <div style={{background:C.white,borderRadius:6,padding:"6px 8px"}}>
@@ -3705,6 +3741,48 @@ function ProjectSection() {
                                       <div style={{fontWeight:900,color:qtyChange>=0?"#16a34a":"#dc2626",fontSize:10}}>수량 {qtyChange>0?"+":""}{qtyChange}%</div>
                                     </div>
                                   </div>
+                                  {/* 매출처 급등/급락 */}
+                                  {(topGainers?.length>0||topLosers?.length>0) && (
+                                    <div style={{marginBottom:8}}>
+                                      <div style={{fontSize:10,fontWeight:800,color:C.ink,marginBottom:4}}>매출처 변동</div>
+                                      <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+                                        {(topGainers||[]).map((c,i)=>(
+                                          <div key={"g"+i} style={{background:"#f0fdf4",border:"1px solid #bbf7d0",borderRadius:6,padding:"4px 8px",fontSize:10}}>
+                                            <div style={{fontWeight:700,color:C.ink}}>{c.channel}</div>
+                                            <div style={{fontWeight:800,color:"#16a34a"}}>+{c.revDiff}% <span style={{fontWeight:500,color:C.inkMid}}>{fmtRev(c.beforeRev)}→{fmtRev(c.afterRev)}</span></div>
+                                          </div>
+                                        ))}
+                                        {(topLosers||[]).map((c,i)=>(
+                                          <div key={"l"+i} style={{background:"#fef2f2",border:"1px solid #fecaca",borderRadius:6,padding:"4px 8px",fontSize:10}}>
+                                            <div style={{fontWeight:700,color:C.ink}}>{c.channel}</div>
+                                            <div style={{fontWeight:800,color:"#dc2626"}}>{c.revDiff}% <span style={{fontWeight:500,color:C.inkMid}}>{fmtRev(c.beforeRev)}→{fmtRev(c.afterRev)}</span></div>
+                                          </div>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  )}
+                                  {/* 검색순위 변동 */}
+                                  {rankBefore && rankAfter && (
+                                    <div>
+                                      <div style={{fontSize:10,fontWeight:800,color:C.ink,marginBottom:4}}>검색순위 변동</div>
+                                      <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+                                        {rankAfter.slice(0,6).map((kw,i)=>{
+                                          const bk = (rankBefore||[]).find(b=>b.keyword===kw.keyword);
+                                          const diff = bk ? bk.avgRank - kw.avgRank : 0;
+                                          return (
+                                            <div key={i} style={{background:C.white,borderRadius:6,padding:"4px 8px",fontSize:10,border:`1px solid ${diff>0?"#bbf7d0":diff<0?"#fecaca":C.border}`}}>
+                                              <div style={{fontWeight:700,color:C.ink}}>{kw.keyword}</div>
+                                              <div style={{display:"flex",gap:4,alignItems:"center"}}>
+                                                <span style={{fontWeight:800,color:"#0891b2"}}>{kw.avgRank}위</span>
+                                                {bk && <span style={{fontSize:9,color:C.inkLt}}>← {bk.avgRank}위</span>}
+                                                {diff!==0 && <span style={{fontWeight:800,color:diff>0?"#16a34a":"#dc2626",fontSize:9}}>{diff>0?`▲${diff}`:`▼${Math.abs(diff)}`}</span>}
+                                              </div>
+                                            </div>
+                                          );
+                                        })}
+                                      </div>
+                                    </div>
+                                  )}
                                 </div>
                               );
                             })()}
