@@ -29,7 +29,7 @@ export async function GET(request) {
     // 제품 검색
     if (action === 'search') {
       const [rows] = await pool.query(`
-        SELECT DISTINCT p.제품ID as id, p.제품명 as name, p.브랜드명 as brand, p.카테고리 as category
+        SELECT DISTINCT p.제품번호 as id, p.제품명 as name, p.브랜드명 as brand, p.카테고리 as category
         FROM v_daily_sales_detail p
         WHERE p.제품명 LIKE ? OR p.브랜드명 LIKE ?
         ORDER BY p.브랜드명, p.제품명
