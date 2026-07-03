@@ -3413,13 +3413,20 @@ function ProjectSection() {
           });
           const kwList = Object.values(byKw).sort((a,b)=>(a.latestRank||999)-(b.latestRank||999));
           setProjRankData(prev=>({...prev,[expandId]:kwList}));
-          // 검색량도 조회 (순위에서 나온 키워드로)
+          // 검색량도 조회 (순위에서 나온 실제 키워드로)
           if(kwList.length && !projKeywordVol[expandId]) {
-            const kws = kwList.slice(0,10).map(k=>k.keyword).join(',');
-            fetch(`/api/keyword-volume?keywords=${encodeURIComponent(kws)}`)
+            const uniqueKws = kwList.slice(0,10).map(k=>k.keyword);
+            fetch(`/api/keyword-volume?keywords=${encodeURIComponent(uniqueKws.join(','))}`)
               .then(r=>r.json()).then(d=>{
                 const volMap = {};
                 (d.keywords||[]).forEach(k=>{volMap[k.keyword]={total:k.total_monthly,pc:k.pc_monthly,mobile:k.mobile_monthly,competition:k.competition};});
+                // 검색순위 키워드와 검색량 키워드 매칭 (부분 일치)
+                uniqueKws.forEach(kw=>{
+                  if(!volMap[kw]) {
+                    const match = (d.keywords||[]).find(k=>k.keyword.includes(kw)||kw.includes(k.keyword));
+                    if(match) volMap[kw]={total:match.total_monthly,pc:match.pc_monthly,mobile:match.mobile_monthly,competition:match.competition};
+                  }
+                });
                 setProjKeywordVol(prev=>({...prev,[expandId]:volMap}));
               }).catch(()=>{});
           }
