@@ -2902,7 +2902,7 @@ function ProjectSection() {
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editId, setEditId] = useState(null);
-  const emptyForm = {name:"",status:"planning",start_date:"",end_date:"",progress:0,description:"",tasks:[],assignee:"",priority:"normal",tags:[],comments:[],products:[],target_revenue:0};
+  const emptyForm = {name:"",status:"planning",start_date:"",end_date:"",progress:0,description:"",tasks:[],assignee:"",priority:"normal",tags:[],comments:[],products:[],target_revenue:0,keywords:[]};
   const [form, setForm] = useState(emptyForm);
   const [expandId, setExpandId] = useState(null);
   const [newTask, setNewTask] = useState("");
@@ -3003,7 +3003,7 @@ function ProjectSection() {
   };
 
   const edit = (p) => {
-    setForm({name:p.name,status:p.status,start_date:p.start_date||"",end_date:p.end_date||"",progress:p.progress||0,description:p.description||"",tasks:p.tasks||[],assignee:p.assignee||"",priority:p.priority||"normal",tags:p.tags||[],comments:p.comments||[],products:p.products||[],target_revenue:p.target_revenue||0});
+    setForm({name:p.name,status:p.status,start_date:p.start_date||"",end_date:p.end_date||"",progress:p.progress||0,description:p.description||"",tasks:p.tasks||[],assignee:p.assignee||"",priority:p.priority||"normal",tags:p.tags||[],comments:p.comments||[],products:p.products||[],target_revenue:p.target_revenue||0,keywords:p.keywords||[]});
     setEditId(p.id); setShowForm(true);
   };
 
@@ -3341,12 +3341,17 @@ function ProjectSection() {
         }).catch(()=>{});
     }
 
-    // 검색순위 자동 로드 (연동 제품명으로 필터, 전날 기준)
+    // 검색순위 자동 로드 (연동 제품명 + 추적 키워드)
     const projProdNames = (proj.products||[]).map(p=>p.name).filter(Boolean);
-    if(projProdNames.length && !projRankData[expandId]) {
+    const projKeywords = proj.keywords||[];
+    if((projProdNames.length||projKeywords.length) && !projRankData[expandId]) {
       const kwParts = [...new Set(projProdNames.map(n=>n.replace(/^(오아|보아르|삼대오백|뉴트리커먼)/,'').replace(/[-_](화이트|블랙|베이지|그레이|핑크|실버|크림|노즐|파우치|공용).*$/,'').trim()).filter(k=>k.length>=2))];
-      const prodFilter = kwParts.map(k=>`product_name.ilike.*${encodeURIComponent(k)}*`).join(',');
-      // 최근 데이터 + 추이용 과거 데이터
+      // 제품명 필터 + 키워드 필터 합치기
+      const filters = [
+        ...kwParts.map(k=>`product_name.ilike.*${encodeURIComponent(k)}*`),
+        ...projKeywords.map(k=>`keyword.ilike.*${encodeURIComponent(k)}*`),
+      ];
+      const prodFilter = filters.join(',');
       fetch(`${SURL}/rest/v1/search_rankings?or=(${prodFilter})&date=gte.${cutoff}&order=date.desc&limit=2000`,{headers:sH})
         .then(r=>r.json()).then(rows=>{
           if(!Array.isArray(rows)) return;
@@ -4179,6 +4184,17 @@ function ProjectSection() {
               <div>
                 <label style={{fontSize:11,fontWeight:700,color:C.inkMid}}>목표 매출 (원)</label>
                 <input type="number" value={form.target_revenue||""} onChange={e=>setForm({...form,target_revenue:Number(e.target.value)||0})} placeholder="예: 50000000 (5천만원)" style={inputStyle}/>
+              </div>
+              <div>
+                <label style={{fontSize:11,fontWeight:700,color:C.inkMid}}>추적 키워드</label>
+                <div style={{display:"flex",gap:6,flexWrap:"wrap",marginTop:6,marginBottom:6}}>
+                  {(form.keywords||[]).map((kw,i)=>(
+                    <span key={i} onClick={()=>setForm({...form,keywords:form.keywords.filter((_,j)=>j!==i)})}
+                      style={{fontSize:10,fontWeight:700,color:"#0369a1",background:"#e0f2fe",padding:"3px 10px",borderRadius:12,cursor:"pointer"}}>{kw} x</span>
+                  ))}
+                </div>
+                <input placeholder="키워드 입력 후 Enter (예: 오아드라이기)" style={inputStyle}
+                  onKeyDown={e=>{if(e.key==="Enter"&&e.target.value.trim()){setForm({...form,keywords:[...(form.keywords||[]),e.target.value.trim()]});e.target.value="";}}}/>
               </div>
               <div>
                 <label style={{fontSize:11,fontWeight:700,color:C.inkMid}}>연동 제품</label>
