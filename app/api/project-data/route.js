@@ -94,6 +94,23 @@ export async function GET(request) {
       return Response.json({ rows });
     }
 
+    // 검색 순위
+    if (action === 'ranking') {
+      const brands = (searchParams.get('brands') || '').split(',').filter(Boolean);
+      if (!brands.length) return Response.json({ rows: [] });
+      const bph = brands.map(() => '?').join(',');
+      const [rows] = await pool.query(`
+        SELECT 검색어 as keyword, 채널명 as channel, 채널상품명 as product_name,
+          순위 as rank_pos, 페이지 as page, 상품타입 as product_type,
+          DATE(랭킹등록일시) as date
+        FROM v_analyze_search_ranking
+        WHERE 검색브랜드 IN (${bph})
+          AND 랭킹등록일시 >= DATE_SUB(NOW(), INTERVAL ? DAY)
+        ORDER BY 랭킹등록일시 DESC, 순위 ASC
+      `, [...brands, days]);
+      return Response.json({ rows });
+    }
+
     // 광고비
     if (action === 'ads') {
       const [rows] = await pool.query(`

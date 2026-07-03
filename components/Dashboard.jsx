@@ -3004,13 +3004,15 @@ function ProjectSection() {
     const d = overrideDays || prodDataDays;
     setProdDataLoading(prev=>({...prev,[proj.id]:true}));
     try {
-      const [salesR, ordersR, deliveryR, stockR] = await Promise.all([
+      const brands = [...new Set((prods).map(p=>p.brand).filter(Boolean))].join(",");
+      const [salesR, ordersR, deliveryR, stockR, rankingR] = await Promise.all([
         fetch(`/api/project-data?action=sales&product_ids=${ids}&days=${d}`).then(r=>r.json()),
         fetch(`/api/project-data?action=orders&product_ids=${ids}&days=${d}`).then(r=>r.json()),
         fetch(`/api/project-data?action=delivery&product_ids=${ids}&days=${d}`).then(r=>r.json()),
         fetch(`/api/project-data?action=stock&product_ids=${ids}`).then(r=>r.json()),
+        brands ? fetch(`/api/project-data?action=ranking&brands=${encodeURIComponent(brands)}&days=${d}`).then(r=>r.json()) : {rows:[]},
       ]);
-      setProductData(prev=>({...prev,[proj.id]:{sales:salesR.rows||[],orders:ordersR.rows||[],delivery:deliveryR.rows||[],stock:stockR.rows||[]}}));
+      setProductData(prev=>({...prev,[proj.id]:{sales:salesR.rows||[],orders:ordersR.rows||[],delivery:deliveryR.rows||[],stock:stockR.rows||[],ranking:rankingR.rows||[]}}));
     } catch(e) { console.error(e); }
     setProdDataLoading(prev=>({...prev,[proj.id]:false}));
   };
@@ -3306,7 +3308,7 @@ function ProjectSection() {
                           <div style={{background:C.cream,borderRadius:10,padding:12,marginBottom:12}}>
                             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10,flexWrap:"wrap",gap:6}}>
                               <div style={{display:"flex",gap:4}}>
-                                {[{id:"sales",label:"매출 추이"},{id:"orders",label:"주문"},{id:"delivery",label:"배송"},{id:"stock",label:"재고"}].map(t=>(
+                                {[{id:"sales",label:"매출 추이"},{id:"ranking",label:"검색순위"},{id:"orders",label:"주문"},{id:"delivery",label:"배송"},{id:"stock",label:"재고"}].map(t=>(
                                   <button key={t.id} onClick={()=>setProdDataTab(t.id)} style={{padding:"4px 10px",border:"none",borderRadius:6,background:prodDataTab===t.id?C.rose:"#fff",color:prodDataTab===t.id?"#fff":C.inkMid,fontSize:10,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>{t.label}</button>
                                 ))}
                               </div>
@@ -3381,6 +3383,88 @@ function ProjectSection() {
                                         ))}
                                       </tbody>
                                     </table>
+                                  );
+                                })()}
+                              </div>
+                            )}
+                            {pd && !isLoading && prodDataTab==="ranking" && (
+                              <div>
+                                {(()=>{
+                                  const rankings = pd.ranking||[];
+                                  if(!rankings.length) return <div style={{textAlign:"center",padding:16,color:C.inkMid,fontSize:11}}>검색순위 데이터가 없습니다</div>;
+
+                                  // 키워드별 최신 순위 + 추이
+                                  const byKeyword = {};
+                                  rankings.forEach(r=>{
+                                    const k = `${r.keyword}|${r.channel}`;
+                                    if(!byKeyword[k]) byKeyword[k]={keyword:r.keyword,channel:r.channel,history:[],products:[]};
+                                    byKeyword[k].history.push({date:r.date,rank:r.rank_pos,product:r.product_name,type:r.product_type});
+                                  });
+
+                                  // 키워드별 최신/최고 순위
+                                  const kwList = Object.values(byKeyword).map(kw=>{
+                                    const sorted = [...kw.history].sort((a,b)=>a.date>b.date?-1:1);
+                                    const latest = sorted[0];
+                                    const best = kw.history.reduce((m,h)=>h.rank<m.rank?h:m, kw.history[0]);
+                                    // 순위 변동 (최신 vs 이전)
+                                    const prev = sorted.find(h=>h.date!==latest.date);
+                                    const diff = prev ? prev.rank - latest.rank : 0;
+                                    return {...kw, latest, best, diff, uniqueProducts: [...new Set(kw.history.map(h=>h.product))]};
+                                  });
+                                  kwList.sort((a,b)=>a.latest.rank-b.latest.rank);
+
+                                  // 순위 추이 차트 데이터 (키워드별 일별 최고 순위)
+                                  const chartKws = kwList.slice(0,5);
+                                  const allDates = [...new Set(rankings.map(r=>r.date))].sort();
+                                  const rankChart = allDates.map(date=>{
+                                    const point = {date};
+                                    chartKws.forEach(kw=>{
+                                      const dayRanks = kw.history.filter(h=>h.date===date);
+                                      if(dayRanks.length) point[kw.keyword] = Math.min(...dayRanks.map(h=>h.rank));
+                                    });
+                                    return point;
+                                  });
+                                  const RANK_COLORS = ["#2563eb","#16a34a","#ea580c","#6366f1","#dc2626"];
+
+                                  return (
+                                    <div>
+                                      {rankChart.length>1 && (
+                                        <div style={{marginBottom:12}}>
+                                          <div style={{fontSize:10,fontWeight:700,color:C.inkMid,marginBottom:4}}>순위 추이 (낮을수록 좋음)</div>
+                                          <ResponsiveContainer width="100%" height={160}>
+                                            <LineChart data={rankChart}>
+                                              <CartesianGrid strokeDasharray="3 3" stroke={C.border}/>
+                                              <XAxis dataKey="date" tick={{fontSize:9}} tickFormatter={v=>v.slice(5)}/>
+                                              <YAxis reversed tick={{fontSize:9}} domain={[1,'auto']}/>
+                                              <Tooltip/>
+                                              <Legend wrapperStyle={{fontSize:10}}/>
+                                              {chartKws.map((kw,i)=>(
+                                                <Line key={kw.keyword} type="monotone" dataKey={kw.keyword} stroke={RANK_COLORS[i%5]} strokeWidth={2} dot={{r:2}} name={kw.keyword} connectNulls/>
+                                              ))}
+                                            </LineChart>
+                                          </ResponsiveContainer>
+                                        </div>
+                                      )}
+                                      <table style={{width:"100%",borderCollapse:"collapse",fontSize:11}}>
+                                        <thead><tr style={{background:"#fff"}}>
+                                          {["키워드","채널","현재순위","변동","최고순위","상품수"].map(h=><th key={h} style={{padding:"6px 8px",textAlign:"left",fontWeight:700,color:C.inkMid,borderBottom:`1px solid ${C.border}`}}>{h}</th>)}
+                                        </tr></thead>
+                                        <tbody>
+                                          {kwList.map((kw,i)=>(
+                                            <tr key={i} style={{borderBottom:`1px solid ${C.cream}`}}>
+                                              <td style={{padding:"6px 8px",fontWeight:700}}>{kw.keyword}</td>
+                                              <td style={{padding:"6px 8px",fontSize:10,color:C.inkMid}}>{kw.channel}</td>
+                                              <td style={{padding:"6px 8px",fontWeight:800,color:kw.latest.rank<=3?"#16a34a":kw.latest.rank<=10?"#2563eb":C.ink}}>{kw.latest.rank}위</td>
+                                              <td style={{padding:"6px 8px",fontWeight:700,color:kw.diff>0?"#16a34a":kw.diff<0?"#dc2626":C.inkLt}}>
+                                                {kw.diff>0?`+${kw.diff}`:kw.diff<0?kw.diff:"-"}
+                                              </td>
+                                              <td style={{padding:"6px 8px",color:"#16a34a",fontWeight:600}}>{kw.best.rank}위</td>
+                                              <td style={{padding:"6px 8px",color:C.inkMid}}>{kw.uniqueProducts.length}</td>
+                                            </tr>
+                                          ))}
+                                        </tbody>
+                                      </table>
+                                    </div>
                                   );
                                 })()}
                               </div>
