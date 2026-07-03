@@ -29,10 +29,11 @@ export async function GET(request) {
     // 제품 검색
     if (action === 'search') {
       const [rows] = await pool.query(`
-        SELECT DISTINCT p.제품번호 as id, p.제품명 as name, p.브랜드명 as brand, p.카테고리 as category
-        FROM v_daily_sales_detail p
-        WHERE p.제품명 LIKE ? OR p.브랜드명 LIKE ?
-        ORDER BY p.브랜드명, p.제품명
+        SELECT 제품번호 as id, 제품명 as name, 브랜드명 as brand, 카테고리 as category
+        FROM v_daily_sales_detail
+        WHERE 제품명 COLLATE utf8mb4_unicode_ci LIKE ? OR 브랜드명 COLLATE utf8mb4_unicode_ci LIKE ?
+        GROUP BY 제품번호, 제품명, 브랜드명, 카테고리
+        ORDER BY 브랜드명, 제품명
         LIMIT 30
       `, [`%${keyword}%`, `%${keyword}%`]);
       return Response.json({ rows });
@@ -104,7 +105,7 @@ export async function GET(request) {
           순위 as rank_pos, 페이지 as page, 상품타입 as product_type,
           DATE(랭킹등록일시) as date
         FROM v_analyze_search_ranking
-        WHERE 검색브랜드 IN (${bph})
+        WHERE 검색브랜드 COLLATE utf8mb4_unicode_ci IN (${bph})
           AND 랭킹등록일시 >= DATE_SUB(NOW(), INTERVAL ? DAY)
         ORDER BY 랭킹등록일시 DESC, 순위 ASC
       `, [...brands, days]);
