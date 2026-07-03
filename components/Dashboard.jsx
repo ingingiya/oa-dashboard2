@@ -3080,8 +3080,33 @@ function ProjectSection() {
     setProdDataLoading(prev=>({...prev,[proj.id]:false}));
   };
 
-  // 펼칠 때 선택 초기화
-  useEffect(()=>{ setSelectedProdId(null); setSingleProdData({}); },[expandId]);
+  const [projDailyChart, setProjDailyChart] = useState({});
+  const [projDailyLoading, setProjDailyLoading] = useState({});
+
+  // 펼칠 때 선택 초기화 + 일별 추이 로드
+  useEffect(()=>{
+    setSelectedProdId(null); setSingleProdData({});
+    if(!expandId) return;
+    const proj = projects.find(p=>p.id===expandId);
+    if(!proj || !(proj.products||[]).length || projDailyChart[expandId]) return;
+    setProjDailyLoading(prev=>({...prev,[expandId]:true}));
+    const cutoff = new Date(Date.now()-prodDataDays*86400000).toISOString().split('T')[0];
+    const ids = (proj.products||[]).map(p=>p.id);
+    Promise.all(ids.map(id=>
+      fetch(`${SURL}/rest/v1/project_product_data?product_id=eq.${id}&date=gte.${cutoff}&select=date,qty,revenue,profit&order=date.asc`,{headers:sH}).then(r=>r.json())
+    )).then(results=>{
+      const byDate = {};
+      results.flat().forEach(r=>{
+        if(!r.date) return;
+        if(!byDate[r.date]) byDate[r.date]={date:r.date,qty:0,revenue:0,profit:0};
+        byDate[r.date].qty+=(r.qty||0);
+        byDate[r.date].revenue+=Number(r.revenue||0);
+        byDate[r.date].profit+=Number(r.profit||0);
+      });
+      setProjDailyChart(prev=>({...prev,[expandId]:Object.values(byDate).sort((a,b)=>a.date.localeCompare(b.date))}));
+      setProjDailyLoading(prev=>({...prev,[expandId]:false}));
+    }).catch(()=>setProjDailyLoading(prev=>({...prev,[expandId]:false})));
+  },[expandId, projects]);
 
   const addProductToProject = async (proj, product) => {
     const prods = [...(proj.products||[])];
@@ -3295,6 +3320,44 @@ function ProjectSection() {
                           placeholder="할일 추가..." style={{flex:1,padding:"6px 10px",border:`1px solid ${C.border}`,borderRadius:6,fontSize:12,fontFamily:"inherit",outline:"none"}}/>
                         <button onClick={()=>addTask(p)} style={{padding:"6px 12px",background:C.blush,color:C.rose,border:"none",borderRadius:6,fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>추가</button>
                       </div>
+
+                      {/* 일별 추이 차트 */}
+                      {(p.products||[]).length>0 && (()=>{
+                        const chart = projDailyChart[p.id];
+                        const isLoading = projDailyLoading[p.id];
+                        if(isLoading) return <div style={{padding:12,fontSize:11,color:C.inkMid}}>차트 로딩중...</div>;
+                        if(!chart || !chart.length) return null;
+                        const totalQty = chart.reduce((s,d)=>s+d.qty,0);
+                        const totalRev = chart.reduce((s,d)=>s+d.revenue,0);
+                        const totalProfit = chart.reduce((s,d)=>s+d.profit,0);
+                        return (
+                          <div style={{background:C.cream,borderRadius:10,padding:12,marginTop:12,marginBottom:4}}>
+                            <div style={{display:"flex",gap:12,marginBottom:10,flexWrap:"wrap"}}>
+                              <div><span style={{fontSize:10,color:C.inkMid}}>총 판매</span> <span style={{fontSize:16,fontWeight:900,color:C.ink}}>{totalQty.toLocaleString()}개</span></div>
+                              <div><span style={{fontSize:10,color:C.inkMid}}>매출</span> <span style={{fontSize:16,fontWeight:900,color:"#2563eb"}}>{totalRev>=10000?(totalRev/10000).toFixed(0)+"만":totalRev.toLocaleString()}원</span></div>
+                              <div><span style={{fontSize:10,color:C.inkMid}}>이익</span> <span style={{fontSize:16,fontWeight:900,color:totalProfit>0?"#16a34a":"#dc2626"}}>{totalProfit>=10000?(totalProfit/10000).toFixed(0)+"만":totalProfit.toLocaleString()}원</span></div>
+                            </div>
+                            <ResponsiveContainer width="100%" height={140}>
+                              <AreaChart data={chart}>
+                                <CartesianGrid strokeDasharray="3 3" stroke={C.border}/>
+                                <XAxis dataKey="date" tick={{fontSize:8}} tickFormatter={v=>v.slice(5)}/>
+                                <YAxis tick={{fontSize:8}} tickFormatter={v=>v>=10000?(v/10000).toFixed(0)+"만":v}/>
+                                <Tooltip formatter={v=>v.toLocaleString()}/>
+                                <Area type="monotone" dataKey="revenue" stroke={C.rose} fill={C.blush} name="매출"/>
+                              </AreaChart>
+                            </ResponsiveContainer>
+                            <ResponsiveContainer width="100%" height={100}>
+                              <BarChart data={chart}>
+                                <CartesianGrid strokeDasharray="3 3" stroke={C.border}/>
+                                <XAxis dataKey="date" tick={{fontSize:8}} tickFormatter={v=>v.slice(5)}/>
+                                <YAxis tick={{fontSize:8}}/>
+                                <Tooltip formatter={v=>v.toLocaleString()+"개"}/>
+                                <Bar dataKey="qty" fill={C.sage} name="판매수량" radius={[3,3,0,0]}/>
+                              </BarChart>
+                            </ResponsiveContainer>
+                          </div>
+                        );
+                      })()}
 
                       {/* 연동 제품 */}
                       <div style={{fontSize:11,fontWeight:800,color:C.ink,marginTop:16,marginBottom:8,display:"flex",alignItems:"center",gap:4}}><MI n="inventory_2" size={14}/> 연동 제품 ({(p.products||[]).length})</div>
