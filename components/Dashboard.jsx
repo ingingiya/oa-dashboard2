@@ -2956,6 +2956,50 @@ function ProjectSection() {
     load();
   };
 
+  const duplicate = async (p) => {
+    const body = {name:p.name+" (복사)",status:"planning",start_date:p.start_date||null,end_date:p.end_date||null,progress:0,description:p.description||"",tasks:(p.tasks||[]).map(t=>({...t,done:false})),assignee:p.assignee||"",priority:p.priority||"normal",tags:p.tags||[],comments:[],products:p.products||[],updated_at:new Date().toISOString()};
+    await fetch(`${SURL}/rest/v1/projects`,{method:"POST",headers:{...sH,Prefer:"return=minimal"},body:JSON.stringify(body)});
+    load();
+  };
+
+  const exportExcel = (p) => {
+    const pd = projDailyChart[p.id] || [];
+    const prods = p.products||[];
+    const tasks = p.tasks||[];
+    // CSV 생성
+    let csv = "\uFEFF"; // BOM for Excel
+    csv += "프로젝트: " + p.name + "\n";
+    csv += "상태: " + (STATUS_MAP[p.status]?.label||p.status) + "\n";
+    csv += "담당: " + (p.assignee||"미지정") + "\n";
+    csv += "기간: " + (p.start_date||"") + " ~ " + (p.end_date||"") + "\n";
+    csv += "진행률: " + (p.progress||0) + "%\n\n";
+    // 할일
+    if(tasks.length) {
+      csv += "== 할일 ==\n";
+      csv += "상태,내용\n";
+      tasks.forEach(t => csv += (t.done?"완료":"미완") + "," + t.text + "\n");
+      csv += "\n";
+    }
+    // 연동 제품
+    if(prods.length) {
+      csv += "== 연동 제품 ==\n";
+      csv += "브랜드,제품명\n";
+      prods.forEach(pr => csv += (pr.brand||"") + "," + pr.name + "\n");
+      csv += "\n";
+    }
+    // 일별 매출
+    if(pd.length) {
+      csv += "== 일별 매출 ==\n";
+      csv += "날짜,판매수량,매출액,이익\n";
+      pd.forEach(d => csv += d.date + "," + d.qty + "," + d.revenue + "," + d.profit + "\n");
+    }
+    const blob = new Blob([csv], {type:"text/csv;charset=utf-8;"});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = p.name.replace(/[^a-zA-Z0-9가-힣]/g,"_") + ".csv";
+    a.click(); URL.revokeObjectURL(url);
+  };
+
   const edit = (p) => {
     setForm({name:p.name,status:p.status,start_date:p.start_date||"",end_date:p.end_date||"",progress:p.progress||0,description:p.description||"",tasks:p.tasks||[],assignee:p.assignee||"",priority:p.priority||"normal",tags:p.tags||[],comments:p.comments||[],products:p.products||[]});
     setEditId(p.id); setShowForm(true);
@@ -3082,6 +3126,8 @@ function ProjectSection() {
 
   const [projDailyChart, setProjDailyChart] = useState({});
   const [projDailyLoading, setProjDailyLoading] = useState({});
+  const [projAdData, setProjAdData] = useState({});
+  const [projPromoData, setProjPromoData] = useState({});
 
   // 펼칠 때 선택 초기화 + 일별 추이 로드
   useEffect(()=>{
@@ -3106,6 +3152,30 @@ function ProjectSection() {
       setProjDailyChart(prev=>({...prev,[expandId]:Object.values(byDate).sort((a,b)=>a.date.localeCompare(b.date))}));
       setProjDailyLoading(prev=>({...prev,[expandId]:false}));
     }).catch(()=>setProjDailyLoading(prev=>({...prev,[expandId]:false})));
+
+    // 광고비 로드
+    if(!projAdData[expandId]) {
+      fetch(`${SURL}/rest/v1/ad_campaigns?date=gte.${cutoff}&select=spend,clicks,conversions,conv_amount`,{headers:sH})
+        .then(r=>r.json()).then(rows=>{
+          if(!Array.isArray(rows)) return;
+          setProjAdData(prev=>({...prev,[expandId]:{
+            spend:rows.reduce((s,r)=>s+Number(r.spend||0),0),
+            clicks:rows.reduce((s,r)=>s+(r.clicks||0),0),
+            conversions:rows.reduce((s,r)=>s+(r.conversions||0),0),
+            convAmt:rows.reduce((s,r)=>s+Number(r.conv_amount||0),0),
+          }}));
+        }).catch(()=>{});
+    }
+
+    // 프로모션 로드
+    const brands = [...new Set((proj.products||[]).map(p=>p.brand).filter(Boolean))];
+    if(brands.length && !projPromoData[expandId]) {
+      const brandFilter = brands.map(b=>`brand.eq.${encodeURIComponent(b)}`).join(',');
+      fetch(`${SURL}/rest/v1/promotions?or=(${brandFilter})&order=start_date.desc&limit=10`,{headers:sH})
+        .then(r=>r.json()).then(rows=>{
+          if(Array.isArray(rows)) setProjPromoData(prev=>({...prev,[expandId]:rows}));
+        }).catch(()=>{});
+    }
   },[expandId, projects]);
 
   const addProductToProject = async (proj, product) => {
@@ -3295,9 +3365,11 @@ function ProjectSection() {
                         {comments.length>0 && <span style={{fontSize:9,color:C.inkLt}}><MI n="chat" size={10}/> {comments.length}</span>}
                       </div>
                     </div>
-                    <div style={{display:"flex",gap:4}}>
-                      <button onClick={(e)=>{e.stopPropagation();edit(p);}} style={{background:"none",border:"none",cursor:"pointer",padding:4}}><MI n="edit" size={16} style={{color:C.inkLt}}/></button>
-                      <button onClick={(e)=>{e.stopPropagation();del(p.id);}} style={{background:"none",border:"none",cursor:"pointer",padding:4}}><MI n="delete" size={16} style={{color:C.inkLt}}/></button>
+                    <div style={{display:"flex",gap:2}}>
+                      <button onClick={(e)=>{e.stopPropagation();edit(p);}} title="수정" style={{background:"none",border:"none",cursor:"pointer",padding:4}}><MI n="edit" size={15} style={{color:C.inkLt}}/></button>
+                      <button onClick={(e)=>{e.stopPropagation();duplicate(p);}} title="복제" style={{background:"none",border:"none",cursor:"pointer",padding:4}}><MI n="content_copy" size={15} style={{color:C.inkLt}}/></button>
+                      <button onClick={(e)=>{e.stopPropagation();exportExcel(p);}} title="내보내기" style={{background:"none",border:"none",cursor:"pointer",padding:4}}><MI n="download" size={15} style={{color:C.inkLt}}/></button>
+                      <button onClick={(e)=>{e.stopPropagation();del(p.id);}} title="삭제" style={{background:"none",border:"none",cursor:"pointer",padding:4}}><MI n="delete" size={15} style={{color:C.inkLt}}/></button>
                     </div>
                   </div>
 
@@ -3448,11 +3520,53 @@ function ProjectSection() {
                         )}
                       </div>
 
+                      {/* 광고비 (ROAS) */}
+                      {(p.products||[]).length>0 && (()=>{
+                        const chart = projDailyChart[p.id]||[];
+                        const totalRev = chart.reduce((s,d)=>s+d.revenue,0);
+                        return projAdData[p.id] ? (
+                          <div style={{background:"#eff6ff",borderRadius:10,padding:12,marginTop:12}}>
+                            <div style={{fontSize:11,fontWeight:800,color:C.ink,marginBottom:8,display:"flex",alignItems:"center",gap:4}}><MI n="ads_click" size={14}/> 광고 성과</div>
+                            <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(80px,1fr))",gap:6,marginBottom:8}}>
+                              {(()=>{const ad=projAdData[p.id];return[
+                                {label:"광고비",value:ad.spend>=10000?(ad.spend/10000).toFixed(0)+"만":ad.spend.toLocaleString(),unit:"원"},
+                                {label:"클릭",value:ad.clicks.toLocaleString(),unit:""},
+                                {label:"전환",value:ad.conversions.toLocaleString(),unit:"건"},
+                                {label:"ROAS",value:ad.spend>0?((totalRev/ad.spend)*100).toFixed(0)+"%":"N/A",unit:""},
+                              ].map(s=>(
+                                <div key={s.label} style={{background:C.white,borderRadius:6,padding:"6px 8px"}}>
+                                  <div style={{fontSize:9,color:C.inkMid}}>{s.label}</div>
+                                  <div style={{fontSize:13,fontWeight:800,color:C.ink}}>{s.value}{s.unit}</div>
+                                </div>
+                              ))})()}
+                            </div>
+                          </div>
+                        ) : null;
+                      })()}
+
+                      {/* 프로모션 일정 */}
+                      {projPromoData[p.id] && projPromoData[p.id].length>0 && (
+                        <div style={{background:"#fff7ed",borderRadius:10,padding:12,marginTop:8}}>
+                          <div style={{fontSize:11,fontWeight:800,color:C.ink,marginBottom:8,display:"flex",alignItems:"center",gap:4}}><MI n="campaign" size={14}/> 프로모션 일정</div>
+                          {projPromoData[p.id].slice(0,5).map((pr,i)=>{
+                            const isActive = pr.start_date<=new Date().toISOString().split('T')[0] && pr.end_date>=new Date().toISOString().split('T')[0];
+                            return (
+                              <div key={i} style={{display:"flex",gap:8,alignItems:"center",padding:"5px 0",borderBottom:`1px solid #fed7aa`,fontSize:11}}>
+                                <span style={{width:6,height:6,borderRadius:3,background:isActive?"#16a34a":"#d4d4d4",flexShrink:0}}/>
+                                <span style={{fontWeight:700,color:C.ink,flex:1}}>{pr.promo_name}</span>
+                                <span style={{color:C.inkMid,fontSize:9}}>{pr.channel}</span>
+                                <span style={{color:C.inkLt,fontSize:9}}>{pr.start_date?.slice(5)}~{pr.end_date?.slice(5)}</span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+
                       {/* 기간 선택 */}
                       {(p.products||[]).length>0 && (
-                        <div style={{display:"flex",gap:4,alignItems:"center",marginBottom:8}}>
+                        <div style={{display:"flex",gap:4,alignItems:"center",marginTop:12,marginBottom:8}}>
                           <span style={{fontSize:10,color:C.inkMid}}>기간</span>
-                          <select value={prodDataDays} onChange={e=>{setProdDataDays(Number(e.target.value));setSingleProdData({});setSelectedProdId(null);}} style={{padding:"3px 6px",border:`1px solid ${C.border}`,borderRadius:4,fontSize:10,fontFamily:"inherit"}}>
+                          <select value={prodDataDays} onChange={e=>{setProdDataDays(Number(e.target.value));setSingleProdData({});setSelectedProdId(null);setProjDailyChart(prev=>{const n={...prev};delete n[expandId];return n;});}} style={{padding:"3px 6px",border:`1px solid ${C.border}`,borderRadius:4,fontSize:10,fontFamily:"inherit"}}>
                             {[7,14,30,60,90].map(d=><option key={d} value={d}>{d}일</option>)}
                           </select>
                         </div>
