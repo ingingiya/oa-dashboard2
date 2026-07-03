@@ -3754,6 +3754,47 @@ function ProjectSection() {
                         );
                       })()}
 
+                      {/* 검색순위 (크게 자동 표시) */}
+                      {projRankData[p.id] && projRankData[p.id].length>0 && (
+                        <div style={{background:"#f0f9ff",border:"1px solid #bae6fd",borderRadius:12,padding:14,marginBottom:10}}>
+                          <div style={{fontSize:13,fontWeight:900,color:"#0369a1",marginBottom:10,display:"flex",alignItems:"center",gap:6}}><MI n="search" size={18}/> 검색순위 현황</div>
+                          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(140px,1fr))",gap:8,marginBottom:10}}>
+                            {projRankData[p.id].slice(0,8).map((kw,i)=>(
+                              <div key={i} style={{background:C.white,borderRadius:8,padding:"10px 12px",border:`1px solid ${kw.diff>0?"#bbf7d0":kw.diff<0?"#fecaca":"#e0e7ff"}`}}>
+                                <div style={{fontSize:11,fontWeight:700,color:C.ink,marginBottom:4,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{kw.keyword}</div>
+                                <div style={{display:"flex",alignItems:"baseline",gap:6}}>
+                                  <span style={{fontSize:22,fontWeight:900,color:kw.latestRank<=3?"#16a34a":kw.latestRank<=10?"#2563eb":"#0369a1"}}>{kw.latestRank}위</span>
+                                  {kw.diff!==0 && <span style={{fontSize:12,fontWeight:800,color:kw.diff>0?"#16a34a":"#dc2626"}}>{kw.diff>0?`▲${kw.diff}`:`▼${Math.abs(kw.diff)}`}</span>}
+                                </div>
+                                <div style={{fontSize:9,color:C.inkLt}}>{kw.latestDate?.slice(5)} 기준</div>
+                              </div>
+                            ))}
+                          </div>
+                          {(()=>{
+                            const top5 = projRankData[p.id].slice(0,5);
+                            const allDates = [...new Set(top5.flatMap(kw=>kw.trend.map(t=>t.date)))].sort();
+                            const chartData = allDates.map(date=>{
+                              const pt = {date};
+                              top5.forEach(kw=>{const t=kw.trend.find(t=>t.date===date);if(t)pt[kw.keyword]=t.rank;});
+                              return pt;
+                            });
+                            const COLORS = ["#2563eb","#16a34a","#ea580c","#6366f1","#dc2626"];
+                            return chartData.length>1 ? (
+                              <ResponsiveContainer width="100%" height={140}>
+                                <LineChart data={chartData}>
+                                  <CartesianGrid strokeDasharray="3 3" stroke={C.border}/>
+                                  <XAxis dataKey="date" tick={{fontSize:8}} tickFormatter={v=>v.slice(5)}/>
+                                  <YAxis reversed tick={{fontSize:8}} domain={[1,'auto']}/>
+                                  <Tooltip/>
+                                  <Legend wrapperStyle={{fontSize:9}}/>
+                                  {top5.map((kw,i)=><Line key={kw.keyword} type="monotone" dataKey={kw.keyword} stroke={COLORS[i]} strokeWidth={2} dot={false} connectNulls/>)}
+                                </LineChart>
+                              </ResponsiveContainer>
+                            ) : null;
+                          })()}
+                        </div>
+                      )}
+
                       {/* 전년 동기간 비교 */}
                       {(p.products||[]).length>0 && (()=>{
                         const yoy = yoyData[p.id];
