@@ -15,7 +15,7 @@ export async function GET(request) {
   const customerId = process.env.NAVER_CUSTOMER_ID;
 
   if (!apiKey || !secretKey || !customerId) {
-    return Response.json({ error: "네이버 API 키 없음" }, { status: 500 });
+    return Response.json({ error: `네이버 API 키 없음: apiKey=${!!apiKey}, secretKey=${!!secretKey}, customerId=${!!customerId}` }, { status: 500 });
   }
 
   const { searchParams } = new URL(request.url);
