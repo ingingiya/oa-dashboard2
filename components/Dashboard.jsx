@@ -2915,6 +2915,9 @@ function ProjectSection() {
   const [prodDataTab, setProdDataTab] = useState("sales");
   const [prodDataDays, setProdDataDays] = useState(30);
   const [prodDataLoading, setProdDataLoading] = useState({});
+  const [selectedProdId, setSelectedProdId] = useState(null); // 클릭한 제품 id
+  const [singleProdData, setSingleProdData] = useState({}); // {제품id: {sales,stock,...}}
+  const [singleProdLoading, setSingleProdLoading] = useState(false);
   const [formPreview, setFormPreview] = useState(null); // 폼에서 제품 미리보기
   const [formPreviewLoading, setFormPreviewLoading] = useState(false);
   const [filterStatus, setFilterStatus] = useState("all");
@@ -2937,6 +2940,8 @@ function ProjectSection() {
   const save = async () => {
     if(!form.name.trim()) return alert("프로젝트명을 입력하세요");
     const body = {...form, updated_at: new Date().toISOString()};
+    if(!body.start_date) body.start_date = null;
+    if(!body.end_date) body.end_date = null;
     try {
       const url = editId ? `${SURL}/rest/v1/projects?id=eq.${editId}` : `${SURL}/rest/v1/projects`;
       const res = await fetch(url, {method: editId?"PATCH":"POST", headers:{...sH,Prefer:"return=minimal"}, body:JSON.stringify(body)});
@@ -2988,6 +2993,37 @@ function ProjectSection() {
     const comments = [...(proj.comments||[]), {text:newComment.trim(),date:new Date().toISOString().slice(0,16).replace("T"," "),by:proj.assignee||""}];
     patchProject(proj, {comments});
     setNewComment("");
+  };
+
+  const loadSingleProduct = async (prod) => {
+    if(singleProdData[prod.id]) { setSelectedProdId(selectedProdId===prod.id?null:prod.id); return; }
+    setSelectedProdId(prod.id);
+    setSingleProdLoading(true);
+    try {
+      const [salesR, stockR] = await Promise.all([
+        fetch(`/api/project-data?action=sales&product_ids=${prod.id}&days=${prodDataDays}`).then(r=>r.json()),
+        fetch(`/api/project-data?action=stock&product_ids=${prod.id}`).then(r=>r.json()),
+      ]);
+      // 일별 데이터
+      const daily = {};
+      (salesR.rows||[]).forEach(r=>{
+        if(!daily[r.date]) daily[r.date]={date:r.date,qty:0,revenue:0,profit:0};
+        daily[r.date].qty+=r.qty; daily[r.date].revenue+=r.revenue; daily[r.date].profit+=r.profit;
+      });
+      const chartData = Object.values(daily).sort((a,b)=>a.date.localeCompare(b.date));
+      const totalQty = chartData.reduce((s,d)=>s+d.qty,0);
+      const totalRevenue = chartData.reduce((s,d)=>s+d.revenue,0);
+      const totalProfit = chartData.reduce((s,d)=>s+d.profit,0);
+      // 변동 (7일 vs 이전7일)
+      let recentQty=0, prevQty=0;
+      chartData.forEach(d=>{
+        const ago=Math.ceil((new Date()-new Date(d.date))/86400000);
+        if(ago<=7) recentQty+=d.qty; else if(ago<=14) prevQty+=d.qty;
+      });
+      const changePct = prevQty>0 ? Math.round((recentQty-prevQty)/prevQty*100) : (recentQty>0?999:0);
+      setSingleProdData(prev=>({...prev,[prod.id]:{chartData,stock:stockR.rows||[],totalQty,totalRevenue,totalProfit,recentQty,prevQty,changePct}}));
+    } catch(e) { console.error(e); }
+    setSingleProdLoading(false);
   };
 
   const loadFormPreview = async (prods) => {
@@ -3263,13 +3299,74 @@ function ProjectSection() {
 
                       {/* 연동 제품 */}
                       <div style={{fontSize:11,fontWeight:800,color:C.ink,marginTop:16,marginBottom:8,display:"flex",alignItems:"center",gap:4}}><MI n="inventory_2" size={14}/> 연동 제품 ({(p.products||[]).length})</div>
-                      <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:8}}>
-                        {(p.products||[]).map((pr,i)=>(
-                          <span key={i} style={{fontSize:10,fontWeight:700,color:"#2563eb",background:"#eff6ff",padding:"3px 10px",borderRadius:12,display:"flex",alignItems:"center",gap:4}}>
-                            {pr.brand && <span style={{color:C.inkLt}}>{pr.brand}</span>} {pr.name}
-                            <span onClick={()=>removeProductFromProject(p,i)} style={{cursor:"pointer",color:C.inkLt}}><MI n="close" size={10}/></span>
-                          </span>
-                        ))}
+                      <div style={{marginBottom:8}}>
+                        {(p.products||[]).map((pr,i)=>{
+                          const isSelected = selectedProdId===pr.id;
+                          const spd = singleProdData[pr.id];
+                          return (
+                            <div key={i} style={{marginBottom:6}}>
+                              <div style={{display:"flex",alignItems:"center",gap:6}}>
+                                <span onClick={()=>loadSingleProduct(pr)} style={{fontSize:11,fontWeight:700,color:isSelected?C.white:"#2563eb",background:isSelected?C.rose:"#eff6ff",padding:"5px 12px",borderRadius:8,cursor:"pointer",display:"flex",alignItems:"center",gap:4,transition:"all 0.2s"}}>
+                                  <MI n={isSelected?"expand_more":"chevron_right"} size={12}/>
+                                  {pr.brand && <span style={{color:isSelected?"#dbeafe":C.inkLt}}>{pr.brand}</span>} {pr.name}
+                                </span>
+                                <span onClick={()=>removeProductFromProject(p,i)} style={{cursor:"pointer",color:C.inkLt,padding:2}}><MI n="close" size={12}/></span>
+                              </div>
+                              {isSelected && singleProdLoading && <div style={{padding:8,fontSize:10,color:C.inkMid}}>로딩중...</div>}
+                              {isSelected && spd && (
+                                <div style={{background:C.cream,borderRadius:8,padding:10,marginTop:6,marginLeft:8}}>
+                                  {/* 요약 카드 */}
+                                  <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(90px,1fr))",gap:6,marginBottom:10}}>
+                                    <div style={{background:C.white,borderRadius:6,padding:"6px 8px"}}>
+                                      <div style={{fontSize:9,color:C.inkMid}}>판매수량</div>
+                                      <div style={{fontSize:14,fontWeight:800,color:C.ink}}>{spd.totalQty.toLocaleString()}개</div>
+                                    </div>
+                                    <div style={{background:C.white,borderRadius:6,padding:"6px 8px"}}>
+                                      <div style={{fontSize:9,color:C.inkMid}}>매출액</div>
+                                      <div style={{fontSize:14,fontWeight:800,color:"#2563eb"}}>{spd.totalRevenue>=10000?(spd.totalRevenue/10000).toFixed(0)+"만":spd.totalRevenue.toLocaleString()}원</div>
+                                    </div>
+                                    <div style={{background:C.white,borderRadius:6,padding:"6px 8px"}}>
+                                      <div style={{fontSize:9,color:C.inkMid}}>이익</div>
+                                      <div style={{fontSize:14,fontWeight:800,color:spd.totalProfit>0?"#16a34a":"#dc2626"}}>{spd.totalProfit>=10000?(spd.totalProfit/10000).toFixed(0)+"만":spd.totalProfit.toLocaleString()}원</div>
+                                    </div>
+                                    <div style={{background:C.white,borderRadius:6,padding:"6px 8px"}}>
+                                      <div style={{fontSize:9,color:C.inkMid}}>7일 변동</div>
+                                      <div style={{fontSize:14,fontWeight:800,color:spd.changePct>0?"#16a34a":spd.changePct<0?"#dc2626":C.inkMid}}>
+                                        {spd.changePct===999?"NEW":spd.changePct>0?`+${spd.changePct}%`:`${spd.changePct}%`}
+                                      </div>
+                                      <div style={{fontSize:8,color:C.inkLt}}>{spd.prevQty}→{spd.recentQty}</div>
+                                    </div>
+                                  </div>
+                                  {/* 차트 */}
+                                  {spd.chartData.length>1 && (
+                                    <ResponsiveContainer width="100%" height={120}>
+                                      <AreaChart data={spd.chartData}>
+                                        <CartesianGrid strokeDasharray="3 3" stroke={C.border}/>
+                                        <XAxis dataKey="date" tick={{fontSize:8}} tickFormatter={v=>v.slice(5)}/>
+                                        <YAxis tick={{fontSize:8}} tickFormatter={v=>v>=10000?(v/10000).toFixed(0)+"만":v}/>
+                                        <Tooltip formatter={v=>v.toLocaleString()}/>
+                                        <Area type="monotone" dataKey="revenue" stroke={C.rose} fill={C.blush} name="매출"/>
+                                      </AreaChart>
+                                    </ResponsiveContainer>
+                                  )}
+                                  {/* 재고 */}
+                                  {(spd.stock||[]).length>0 && (
+                                    <div style={{marginTop:8}}>
+                                      {spd.stock.map((s,si)=>(
+                                        <div key={si} style={{display:"flex",gap:10,fontSize:10,padding:"3px 0",borderBottom:`1px solid ${C.white}`}}>
+                                          <span style={{color:C.inkMid,flex:1}}>{s.model||s.name}</span>
+                                          <span style={{fontWeight:700,color:s.stock>0?"#16a34a":"#dc2626"}}>재고 {s.stock?.toLocaleString()}</span>
+                                          {s.producing>0&&<span style={{color:"#ea580c"}}>생산 {s.producing}</span>}
+                                          {s.transit>0&&<span style={{color:"#2563eb"}}>운송 {s.transit}</span>}
+                                        </div>
+                                      ))}
+                                    </div>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
                       </div>
                       <div style={{marginBottom:8}}>
                         <input value={productSearch} onChange={e=>{setProductSearch(e.target.value);searchProducts(e.target.value);}}
@@ -3289,276 +3386,15 @@ function ProjectSection() {
                         )}
                       </div>
 
-                      {/* 제품 데이터 */}
-                      {(p.products||[]).length>0 && (()=>{
-                        const pd = productData[p.id];
-                        const isLoading = prodDataLoading[p.id];
-
-                        // 변동 감지: 최근 7일 vs 이전 7일
-                        const changes = [];
-                        if(pd && pd.sales) {
-                          const byProd = {};
-                          pd.sales.forEach(r=>{
-                            if(!byProd[r.name]) byProd[r.name]={recent:0,prev:0};
-                            const d = new Date(r.date);
-                            const ago = Math.ceil((new Date()-d)/(86400000));
-                            if(ago<=7) byProd[r.name].recent+=r.qty;
-                            else if(ago<=14) byProd[r.name].prev+=r.qty;
-                          });
-                          Object.entries(byProd).forEach(([name,v])=>{
-                            if(v.prev>0) {
-                              const pct = Math.round((v.recent-v.prev)/v.prev*100);
-                              if(Math.abs(pct)>=20) changes.push({name,pct,recent:v.recent,prev:v.prev});
-                            } else if(v.recent>0) {
-                              changes.push({name,pct:999,recent:v.recent,prev:0});
-                            }
-                          });
-                          changes.sort((a,b)=>Math.abs(b.pct)-Math.abs(a.pct));
-                        }
-
-                        // 일별 차트 데이터
-                        const chartData = [];
-                        if(pd && pd.sales) {
-                          const byDate = {};
-                          pd.sales.forEach(r=>{
-                            const d = r.date;
-                            if(!byDate[d]) byDate[d]={date:d,qty:0,revenue:0};
-                            byDate[d].qty+=r.qty;
-                            byDate[d].revenue+=r.revenue;
-                          });
-                          Object.values(byDate).sort((a,b)=>a.date.localeCompare(b.date)).forEach(d=>chartData.push(d));
-                        }
-
-                        return (
-                          <div style={{background:C.cream,borderRadius:10,padding:12,marginBottom:12}}>
-                            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10,flexWrap:"wrap",gap:6}}>
-                              <div style={{display:"flex",gap:4}}>
-                                {[{id:"sales",label:"매출 추이"},{id:"ranking",label:"검색순위"},{id:"orders",label:"주문"},{id:"delivery",label:"배송"},{id:"stock",label:"재고"}].map(t=>(
-                                  <button key={t.id} onClick={()=>setProdDataTab(t.id)} style={{padding:"4px 10px",border:"none",borderRadius:6,background:prodDataTab===t.id?C.rose:"#fff",color:prodDataTab===t.id?"#fff":C.inkMid,fontSize:10,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>{t.label}</button>
-                                ))}
-                              </div>
-                              <div style={{display:"flex",gap:4,alignItems:"center"}}>
-                                <select value={prodDataDays} onChange={e=>{const v=Number(e.target.value);setProdDataDays(v);loadProductData(p,v);}} style={{padding:"3px 6px",border:`1px solid ${C.border}`,borderRadius:4,fontSize:10,fontFamily:"inherit"}}>
-                                  {[7,14,30,60,90].map(d=><option key={d} value={d}>{d}일</option>)}
-                                </select>
-                              </div>
-                            </div>
-
-                            {isLoading && <div style={{textAlign:"center",padding:20,color:C.inkMid,fontSize:11}}>데이터 불러오는 중...</div>}
-
-                            {/* 변동 감지 알림 */}
-                            {changes.length>0 && (
-                              <div style={{marginBottom:12}}>
-                                <div style={{fontSize:10,fontWeight:800,color:C.ink,marginBottom:6,display:"flex",alignItems:"center",gap:4}}><MI n="trending_up" size={14} style={{color:"#ea580c"}}/> 변동 감지 (최근 7일 vs 이전 7일)</div>
-                                <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
-                                  {changes.slice(0,5).map((c,i)=>(
-                                    <div key={i} style={{background:c.pct>0?"#f0fdf4":"#fef2f2",border:`1px solid ${c.pct>0?"#bbf7d0":"#fecaca"}`,borderRadius:8,padding:"6px 10px",fontSize:10}}>
-                                      <div style={{fontWeight:700,color:C.ink}}>{c.name}</div>
-                                      <div style={{fontWeight:800,color:c.pct>0?"#16a34a":"#dc2626",marginTop:2}}>
-                                        {c.pct===999?"NEW":c.pct>0?`+${c.pct}%`:`${c.pct}%`}
-                                        <span style={{fontWeight:500,color:C.inkMid,marginLeft:4}}>{c.prev}→{c.recent}개</span>
-                                      </div>
-                                    </div>
-                                  ))}
-                                </div>
-                              </div>
-                            )}
-
-                            {/* 매출 추이 차트 + 테이블 */}
-                            {pd && !isLoading && prodDataTab==="sales" && (
-                              <div>
-                                {chartData.length>1 && (
-                                  <div style={{marginBottom:12}}>
-                                    <ResponsiveContainer width="100%" height={180}>
-                                      <AreaChart data={chartData}>
-                                        <CartesianGrid strokeDasharray="3 3" stroke={C.border}/>
-                                        <XAxis dataKey="date" tick={{fontSize:9}} tickFormatter={v=>v.slice(5)}/>
-                                        <YAxis tick={{fontSize:9}} tickFormatter={v=>v>=10000?(v/10000).toFixed(0)+"만":v.toLocaleString()}/>
-                                        <Tooltip formatter={(v)=>v.toLocaleString()} labelFormatter={v=>v}/>
-                                        <Area type="monotone" dataKey="revenue" stroke={C.rose} fill={C.blush} name="매출액"/>
-                                      </AreaChart>
-                                    </ResponsiveContainer>
-                                    <ResponsiveContainer width="100%" height={120}>
-                                      <BarChart data={chartData}>
-                                        <CartesianGrid strokeDasharray="3 3" stroke={C.border}/>
-                                        <XAxis dataKey="date" tick={{fontSize:9}} tickFormatter={v=>v.slice(5)}/>
-                                        <YAxis tick={{fontSize:9}}/>
-                                        <Tooltip formatter={(v)=>v.toLocaleString()+"개"}/>
-                                        <Bar dataKey="qty" fill={C.sage} name="판매수량" radius={[4,4,0,0]}/>
-                                      </BarChart>
-                                    </ResponsiveContainer>
-                                  </div>
-                                )}
-                                {(()=>{
-                                  const byProduct = {};
-                                  (pd.sales||[]).forEach(r=>{if(!byProduct[r.name])byProduct[r.name]={qty:0,revenue:0,profit:0};byProduct[r.name].qty+=r.qty;byProduct[r.name].revenue+=r.revenue;byProduct[r.name].profit+=r.profit;});
-                                  return (
-                                    <table style={{width:"100%",borderCollapse:"collapse",fontSize:11}}>
-                                      <thead><tr style={{background:"#fff"}}>
-                                        {["제품명","판매수량","매출액","이익"].map(h=><th key={h} style={{padding:"6px 8px",textAlign:"left",fontWeight:700,color:C.inkMid,borderBottom:`1px solid ${C.border}`}}>{h}</th>)}
-                                      </tr></thead>
-                                      <tbody>
-                                        {Object.entries(byProduct).sort((a,b)=>b[1].revenue-a[1].revenue).map(([name,d])=>(
-                                          <tr key={name} style={{borderBottom:`1px solid ${C.cream}`}}>
-                                            <td style={{padding:"6px 8px",fontWeight:600}}>{name}</td>
-                                            <td style={{padding:"6px 8px"}}>{d.qty.toLocaleString()}</td>
-                                            <td style={{padding:"6px 8px"}}>{d.revenue.toLocaleString()}원</td>
-                                            <td style={{padding:"6px 8px",color:d.profit>0?"#16a34a":"#dc2626"}}>{d.profit.toLocaleString()}원</td>
-                                          </tr>
-                                        ))}
-                                      </tbody>
-                                    </table>
-                                  );
-                                })()}
-                              </div>
-                            )}
-                            {pd && !isLoading && prodDataTab==="ranking" && (
-                              <div>
-                                {(()=>{
-                                  const rankings = pd.ranking||[];
-                                  if(!rankings.length) return <div style={{textAlign:"center",padding:16,color:C.inkMid,fontSize:11}}>검색순위 데이터가 없습니다</div>;
-
-                                  // 키워드별 최신 순위 + 추이
-                                  const byKeyword = {};
-                                  rankings.forEach(r=>{
-                                    const k = `${r.keyword}|${r.channel}`;
-                                    if(!byKeyword[k]) byKeyword[k]={keyword:r.keyword,channel:r.channel,history:[],products:[]};
-                                    byKeyword[k].history.push({date:r.date,rank:r.rank_pos,product:r.product_name,type:r.product_type});
-                                  });
-
-                                  // 키워드별 최신/최고 순위
-                                  const kwList = Object.values(byKeyword).map(kw=>{
-                                    const sorted = [...kw.history].sort((a,b)=>a.date>b.date?-1:1);
-                                    const latest = sorted[0];
-                                    const best = kw.history.reduce((m,h)=>h.rank<m.rank?h:m, kw.history[0]);
-                                    // 순위 변동 (최신 vs 이전)
-                                    const prev = sorted.find(h=>h.date!==latest.date);
-                                    const diff = prev ? prev.rank - latest.rank : 0;
-                                    return {...kw, latest, best, diff, uniqueProducts: [...new Set(kw.history.map(h=>h.product))]};
-                                  });
-                                  kwList.sort((a,b)=>a.latest.rank-b.latest.rank);
-
-                                  // 순위 추이 차트 데이터 (키워드별 일별 최고 순위)
-                                  const chartKws = kwList.slice(0,5);
-                                  const allDates = [...new Set(rankings.map(r=>r.date))].sort();
-                                  const rankChart = allDates.map(date=>{
-                                    const point = {date};
-                                    chartKws.forEach(kw=>{
-                                      const dayRanks = kw.history.filter(h=>h.date===date);
-                                      if(dayRanks.length) point[kw.keyword] = Math.min(...dayRanks.map(h=>h.rank));
-                                    });
-                                    return point;
-                                  });
-                                  const RANK_COLORS = ["#2563eb","#16a34a","#ea580c","#6366f1","#dc2626"];
-
-                                  return (
-                                    <div>
-                                      {rankChart.length>1 && (
-                                        <div style={{marginBottom:12}}>
-                                          <div style={{fontSize:10,fontWeight:700,color:C.inkMid,marginBottom:4}}>순위 추이 (낮을수록 좋음)</div>
-                                          <ResponsiveContainer width="100%" height={160}>
-                                            <LineChart data={rankChart}>
-                                              <CartesianGrid strokeDasharray="3 3" stroke={C.border}/>
-                                              <XAxis dataKey="date" tick={{fontSize:9}} tickFormatter={v=>v.slice(5)}/>
-                                              <YAxis reversed tick={{fontSize:9}} domain={[1,'auto']}/>
-                                              <Tooltip/>
-                                              <Legend wrapperStyle={{fontSize:10}}/>
-                                              {chartKws.map((kw,i)=>(
-                                                <Line key={kw.keyword} type="monotone" dataKey={kw.keyword} stroke={RANK_COLORS[i%5]} strokeWidth={2} dot={{r:2}} name={kw.keyword} connectNulls/>
-                                              ))}
-                                            </LineChart>
-                                          </ResponsiveContainer>
-                                        </div>
-                                      )}
-                                      <table style={{width:"100%",borderCollapse:"collapse",fontSize:11}}>
-                                        <thead><tr style={{background:"#fff"}}>
-                                          {["키워드","채널","현재순위","변동","최고순위","상품수"].map(h=><th key={h} style={{padding:"6px 8px",textAlign:"left",fontWeight:700,color:C.inkMid,borderBottom:`1px solid ${C.border}`}}>{h}</th>)}
-                                        </tr></thead>
-                                        <tbody>
-                                          {kwList.map((kw,i)=>(
-                                            <tr key={i} style={{borderBottom:`1px solid ${C.cream}`}}>
-                                              <td style={{padding:"6px 8px",fontWeight:700}}>{kw.keyword}</td>
-                                              <td style={{padding:"6px 8px",fontSize:10,color:C.inkMid}}>{kw.channel}</td>
-                                              <td style={{padding:"6px 8px",fontWeight:800,color:kw.latest.rank<=3?"#16a34a":kw.latest.rank<=10?"#2563eb":C.ink}}>{kw.latest.rank}위</td>
-                                              <td style={{padding:"6px 8px",fontWeight:700,color:kw.diff>0?"#16a34a":kw.diff<0?"#dc2626":C.inkLt}}>
-                                                {kw.diff>0?`+${kw.diff}`:kw.diff<0?kw.diff:"-"}
-                                              </td>
-                                              <td style={{padding:"6px 8px",color:"#16a34a",fontWeight:600}}>{kw.best.rank}위</td>
-                                              <td style={{padding:"6px 8px",color:C.inkMid}}>{kw.uniqueProducts.length}</td>
-                                            </tr>
-                                          ))}
-                                        </tbody>
-                                      </table>
-                                    </div>
-                                  );
-                                })()}
-                              </div>
-                            )}
-                            {pd && !isLoading && prodDataTab==="orders" && (
-                              <div>
-                                {(()=>{
-                                  const byType = {};
-                                  (pd.orders||[]).forEach(r=>{const k=`${r.order_type||"기타"}`;if(!byType[k])byType[k]={qty:0,amount:0,cnt:0};byType[k].qty+=r.qty;byType[k].amount+=Number(r.amount||0);byType[k].cnt++;});
-                                  return (
-                                    <table style={{width:"100%",borderCollapse:"collapse",fontSize:11}}>
-                                      <thead><tr style={{background:"#fff"}}>
-                                        {["주문유형","건수","수량","금액"].map(h=><th key={h} style={{padding:"6px 8px",textAlign:"left",fontWeight:700,color:C.inkMid,borderBottom:`1px solid ${C.border}`}}>{h}</th>)}
-                                      </tr></thead>
-                                      <tbody>
-                                        {Object.entries(byType).map(([type,d])=>(
-                                          <tr key={type} style={{borderBottom:`1px solid ${C.cream}`}}>
-                                            <td style={{padding:"6px 8px",fontWeight:600}}>{type}</td>
-                                            <td style={{padding:"6px 8px"}}>{d.cnt.toLocaleString()}</td>
-                                            <td style={{padding:"6px 8px"}}>{d.qty.toLocaleString()}</td>
-                                            <td style={{padding:"6px 8px"}}>{d.amount.toLocaleString()}원</td>
-                                          </tr>
-                                        ))}
-                                      </tbody>
-                                    </table>
-                                  );
-                                })()}
-                              </div>
-                            )}
-                            {pd && !isLoading && prodDataTab==="delivery" && (
-                              <table style={{width:"100%",borderCollapse:"collapse",fontSize:11}}>
-                                <thead><tr style={{background:"#fff"}}>
-                                  {["제품","배송유형","상태","건수","수량"].map(h=><th key={h} style={{padding:"6px 8px",textAlign:"left",fontWeight:700,color:C.inkMid,borderBottom:`1px solid ${C.border}`}}>{h}</th>)}
-                                </tr></thead>
-                                <tbody>
-                                  {(pd.delivery||[]).map((r,i)=>(
-                                    <tr key={i} style={{borderBottom:`1px solid ${C.cream}`}}>
-                                      <td style={{padding:"6px 8px",fontWeight:600}}>{r.name}</td>
-                                      <td style={{padding:"6px 8px"}}><span style={{fontSize:9,padding:"2px 6px",borderRadius:8,background:r.type==="배송"?"#eff6ff":"#fef2f2",color:r.type==="배송"?"#2563eb":"#dc2626",fontWeight:700}}>{r.type}</span></td>
-                                      <td style={{padding:"6px 8px"}}>{r.status}</td>
-                                      <td style={{padding:"6px 8px"}}>{r.cnt}</td>
-                                      <td style={{padding:"6px 8px"}}>{r.qty}</td>
-                                    </tr>
-                                  ))}
-                                </tbody>
-                              </table>
-                            )}
-                            {pd && !isLoading && prodDataTab==="stock" && (
-                              <table style={{width:"100%",borderCollapse:"collapse",fontSize:11}}>
-                                <thead><tr style={{background:"#fff"}}>
-                                  {["제품","모델","재고","생산중","출하","운송중"].map(h=><th key={h} style={{padding:"6px 8px",textAlign:"left",fontWeight:700,color:C.inkMid,borderBottom:`1px solid ${C.border}`}}>{h}</th>)}
-                                </tr></thead>
-                                <tbody>
-                                  {(pd.stock||[]).map((r,i)=>(
-                                    <tr key={i} style={{borderBottom:`1px solid ${C.cream}`}}>
-                                      <td style={{padding:"6px 8px",fontWeight:600}}>{r.name}</td>
-                                      <td style={{padding:"6px 8px",color:C.inkMid}}>{r.model}</td>
-                                      <td style={{padding:"6px 8px",fontWeight:700,color:r.stock>0?"#16a34a":"#dc2626"}}>{r.stock?.toLocaleString()}</td>
-                                      <td style={{padding:"6px 8px"}}>{r.producing?.toLocaleString()}</td>
-                                      <td style={{padding:"6px 8px"}}>{r.shipping?.toLocaleString()}</td>
-                                      <td style={{padding:"6px 8px"}}>{r.transit?.toLocaleString()}</td>
-                                    </tr>
-                                  ))}
-                                </tbody>
-                              </table>
-                            )}
-                          </div>
-                        );
-                      })()}
+                      {/* 기간 선택 */}
+                      {(p.products||[]).length>0 && (
+                        <div style={{display:"flex",gap:4,alignItems:"center",marginBottom:8}}>
+                          <span style={{fontSize:10,color:C.inkMid}}>기간</span>
+                          <select value={prodDataDays} onChange={e=>{setProdDataDays(Number(e.target.value));setSingleProdData({});setSelectedProdId(null);}} style={{padding:"3px 6px",border:`1px solid ${C.border}`,borderRadius:4,fontSize:10,fontFamily:"inherit"}}>
+                            {[7,14,30,60,90].map(d=><option key={d} value={d}>{d}일</option>)}
+                          </select>
+                        </div>
+                      )}
 
                       {/* 코멘트 */}
                       <div style={{fontSize:11,fontWeight:800,color:C.ink,marginTop:16,marginBottom:8,display:"flex",alignItems:"center",gap:4}}><MI n="chat" size={14}/> 메모 ({comments.length})</div>
