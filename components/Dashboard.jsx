@@ -3108,7 +3108,7 @@ function ProjectSection() {
         const t={qty:0,revenue:0,days:new Set(),byChannel:{}};
         rows.flat().forEach(r=>{
           t.qty+=(r.qty||0);t.revenue+=Number(r.revenue||0);t.days.add(r.date);
-          const ch=r.channel||""; if(!ch) return;
+          const ch=(r.channel||"").trim(); if(!ch) return;
           if(!t.byChannel[ch]) t.byChannel[ch]={qty:0,revenue:0};
           t.byChannel[ch].qty+=(r.qty||0);t.byChannel[ch].revenue+=Number(r.revenue||0);
         });
@@ -3352,7 +3352,7 @@ function ProjectSection() {
         const midDate = new Date(now.getTime()-halfDays*86400000).toISOString().split('T')[0];
         const byCh = {};
         results.flat().forEach(r=>{
-          const ch=r.channel||""; if(!ch) return;
+          const ch=(r.channel||"").trim(); if(!ch) return;
           if(!byCh[ch]) byCh[ch]={recent:{qty:0,rev:0},prev:{qty:0,rev:0}};
           if(r.date>=midDate) {byCh[ch].recent.qty+=(r.qty||0);byCh[ch].recent.rev+=Number(r.revenue||0);}
           else {byCh[ch].prev.qty+=(r.qty||0);byCh[ch].prev.rev+=Number(r.revenue||0);}
@@ -3929,6 +3929,31 @@ function ProjectSection() {
                         </div>
                       )}
 
+                      {/* 매출처 현황 */}
+                      {projChannelData[p.id] && (()=>{
+                        const {top,gainers,losers} = projChannelData[p.id];
+                        const fmtRev = v=>v>=100000000?(v/100000000).toFixed(1)+"억":v>=10000?(v/10000).toFixed(0)+"만":v.toLocaleString();
+                        return (
+                          <div style={{background:C.white,border:`1px solid ${C.border}`,borderRadius:10,padding:12,marginBottom:10}}>
+                            <div style={{fontSize:12,fontWeight:800,color:C.ink,marginBottom:8,display:"flex",alignItems:"center",gap:4}}><MI n="storefront" size={16}/> 매출처 현황</div>
+                            <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:8}}>
+                              {top.map((c,i)=>(
+                                <div key={i} style={{background:C.cream,borderRadius:8,padding:"6px 10px",fontSize:10,minWidth:100}}>
+                                  <div style={{fontWeight:700,color:C.ink}}>{c.channel}</div>
+                                  <div style={{fontWeight:800,color:"#2563eb"}}>{fmtRev(c.recentRev)}원</div>
+                                </div>
+                              ))}
+                            </div>
+                            {(gainers.length>0||losers.length>0) && (
+                              <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+                                {gainers.map((c,i)=>(<div key={"g"+i} style={{background:"#f0fdf4",border:"1px solid #bbf7d0",borderRadius:6,padding:"4px 8px",fontSize:10}}><div style={{fontWeight:700}}>{c.channel}</div><div style={{fontWeight:800,color:"#16a34a"}}>▲ +{c.revDiff}%</div></div>))}
+                                {losers.map((c,i)=>(<div key={"l"+i} style={{background:"#fef2f2",border:"1px solid #fecaca",borderRadius:6,padding:"4px 8px",fontSize:10}}><div style={{fontWeight:700}}>{c.channel}</div><div style={{fontWeight:800,color:"#dc2626"}}>▼ {c.revDiff}%</div></div>))}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })()}
+
                       {/* 일별 추이 차트 */}
                       {(p.products||[]).length>0 && (()=>{
                         const chart = projDailyChart[p.id];
@@ -4073,41 +4098,6 @@ function ProjectSection() {
                           </div>
                         )}
                       </div>
-
-                      {/* 매출처 변동 */}
-                      {projChannelData[p.id] && (()=>{
-                        const {top,gainers,losers} = projChannelData[p.id];
-                        const fmtRev = v=>v>=100000000?(v/100000000).toFixed(1)+"억":v>=10000?(v/10000).toFixed(0)+"만":v.toLocaleString();
-                        return (
-                          <div style={{background:C.white,border:`1px solid ${C.border}`,borderRadius:10,padding:12,marginBottom:10}}>
-                            <div style={{fontSize:12,fontWeight:800,color:C.ink,marginBottom:8,display:"flex",alignItems:"center",gap:4}}><MI n="storefront" size={16}/> 매출처 현황</div>
-                            <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:8}}>
-                              {top.map((c,i)=>(
-                                <div key={i} style={{background:C.cream,borderRadius:8,padding:"6px 10px",fontSize:10,minWidth:100}}>
-                                  <div style={{fontWeight:700,color:C.ink}}>{c.channel}</div>
-                                  <div style={{fontWeight:800,color:"#2563eb"}}>{fmtRev(c.recentRev)}원</div>
-                                </div>
-                              ))}
-                            </div>
-                            {(gainers.length>0||losers.length>0) && (
-                              <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
-                                {gainers.map((c,i)=>(
-                                  <div key={"g"+i} style={{background:"#f0fdf4",border:"1px solid #bbf7d0",borderRadius:6,padding:"4px 8px",fontSize:10}}>
-                                    <div style={{fontWeight:700}}>{c.channel}</div>
-                                    <div style={{fontWeight:800,color:"#16a34a"}}>▲ +{c.revDiff}%</div>
-                                  </div>
-                                ))}
-                                {losers.map((c,i)=>(
-                                  <div key={"l"+i} style={{background:"#fef2f2",border:"1px solid #fecaca",borderRadius:6,padding:"4px 8px",fontSize:10}}>
-                                    <div style={{fontWeight:700}}>{c.channel}</div>
-                                    <div style={{fontWeight:800,color:"#dc2626"}}>▼ {c.revDiff}%</div>
-                                  </div>
-                                ))}
-                              </div>
-                            )}
-                          </div>
-                        );
-                      })()}
 
                       {/* 광고비 (ROAS) */}
                       {(p.products||[]).length>0 && (()=>{
