@@ -10,8 +10,8 @@ function makeSignature(timestamp, method, path, secretKey) {
 }
 
 export async function GET(request) {
-  const apiKey = process.env.NAVER_API_KEY;
-  const secretKey = process.env.NAVER_SECRET_KEY;
+  const apiKey = process.env.naver_ad;
+  const secretKey = process.env.naver_ad_key;
   const customerId = process.env.NAVER_CUSTOMER_ID;
 
   if (!apiKey || !secretKey || !customerId) {
