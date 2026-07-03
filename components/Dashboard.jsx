@@ -2915,6 +2915,8 @@ function ProjectSection() {
   const [prodDataTab, setProdDataTab] = useState("sales");
   const [prodDataDays, setProdDataDays] = useState(30);
   const [prodDataLoading, setProdDataLoading] = useState({});
+  const [formPreview, setFormPreview] = useState(null); // 폼에서 제품 미리보기
+  const [formPreviewLoading, setFormPreviewLoading] = useState(false);
   const [filterStatus, setFilterStatus] = useState("all");
   const [filterPriority, setFilterPriority] = useState("all");
   const [filterAssignee, setFilterAssignee] = useState("all");
@@ -2939,7 +2941,7 @@ function ProjectSection() {
       const url = editId ? `${SURL}/rest/v1/projects?id=eq.${editId}` : `${SURL}/rest/v1/projects`;
       const res = await fetch(url, {method: editId?"PATCH":"POST", headers:{...sH,Prefer:"return=minimal"}, body:JSON.stringify(body)});
       if(!res.ok) { const err = await res.text(); alert("저장 실패: "+err); return; }
-      setShowForm(false); setEditId(null); setForm(emptyForm); load();
+      setShowForm(false); setEditId(null); setForm(emptyForm); setFormPreview(null); load();
     } catch(e) { alert("저장 에러: "+e.message); }
   };
 
@@ -2988,6 +2990,26 @@ function ProjectSection() {
     setNewComment("");
   };
 
+  const loadFormPreview = async (prods) => {
+    if(!prods.length) { setFormPreview(null); return; }
+    setFormPreviewLoading(true);
+    const ids = prods.map(p=>p.id).join(",");
+    const brands = [...new Set(prods.map(p=>p.brand).filter(Boolean))].join(",");
+    try {
+      const [salesR, stockR] = await Promise.all([
+        fetch(`/api/project-data?action=sales&product_ids=${ids}&days=14`).then(r=>r.json()),
+        fetch(`/api/project-data?action=stock&product_ids=${ids}`).then(r=>r.json()),
+      ]);
+      const byProd = {};
+      (salesR.rows||[]).forEach(r=>{
+        if(!byProd[r.name]) byProd[r.name]={qty:0,revenue:0};
+        byProd[r.name].qty+=r.qty; byProd[r.name].revenue+=r.revenue;
+      });
+      setFormPreview({sales:byProd, stock:stockR.rows||[]});
+    } catch(e) { console.error(e); }
+    setFormPreviewLoading(false);
+  };
+
   const searchProducts = async (kw) => {
     if(!kw.trim()) { setProductResults([]); return; }
     try {
@@ -3030,7 +3052,10 @@ function ProjectSection() {
     const prods = [...(proj.products||[])];
     if(prods.find(p=>p.id===product.id)) return;
     prods.push({id:product.id, name:product.name, brand:product.brand});
-    patchProject(proj, {products:prods});
+    await patchProject(proj, {products:prods});
+    // 즉시 데이터 리로드
+    const updated = {...proj, products:prods};
+    setTimeout(()=>loadProductData(updated), 300);
   };
 
   const removeProductFromProject = async (proj, idx) => {
@@ -3627,7 +3652,7 @@ function ProjectSection() {
                 <label style={{fontSize:11,fontWeight:700,color:C.inkMid}}>연동 제품</label>
                 <div style={{display:"flex",gap:6,flexWrap:"wrap",marginTop:6,marginBottom:6}}>
                   {(form.products||[]).map((pr,i)=>(
-                    <span key={i} onClick={()=>setForm({...form,products:form.products.filter((_,j)=>j!==i)})}
+                    <span key={i} onClick={()=>{const newProds=form.products.filter((_,j)=>j!==i);setForm({...form,products:newProds});loadFormPreview(newProds);}}
                       style={{fontSize:10,fontWeight:700,color:"#2563eb",background:"#eff6ff",padding:"3px 10px",borderRadius:12,cursor:"pointer"}}>{pr.brand} {pr.name} x</span>
                   ))}
                 </div>
@@ -3637,7 +3662,7 @@ function ProjectSection() {
                   {productResults.length>0 && (
                     <div style={{background:C.white,border:`1px solid ${C.border}`,borderRadius:8,maxHeight:180,overflow:"auto",marginTop:6}}>
                       {productResults.map((pr,i)=>(
-                        <div key={i} onClick={()=>{if(!(form.products||[]).find(p=>p.id===pr.id))setForm({...form,products:[...(form.products||[]),{id:pr.id,name:pr.name,brand:pr.brand}]});setProductSearch("");setProductResults([]);}}
+                        <div key={i} onClick={()=>{const newProds=[...(form.products||[]),{id:pr.id,name:pr.name,brand:pr.brand}];if(!(form.products||[]).find(p=>p.id===pr.id)){setForm({...form,products:newProds});loadFormPreview(newProds);}setProductSearch("");setProductResults([]);}}
                           style={{padding:"8px 12px",cursor:"pointer",fontSize:11,borderBottom:`1px solid ${C.cream}`}}
                           onMouseEnter={e=>e.currentTarget.style.background="#f9fafb"} onMouseLeave={e=>e.currentTarget.style.background="#fff"}>
                           <span style={{color:C.inkLt}}>{pr.brand}</span> {pr.name}
@@ -3646,6 +3671,33 @@ function ProjectSection() {
                     </div>
                   )}
                 </div>
+                {/* 제품 미리보기 */}
+                {formPreviewLoading && <div style={{padding:8,fontSize:11,color:C.inkMid}}>데이터 불러오는 중...</div>}
+                {formPreview && (form.products||[]).length>0 && (
+                  <div style={{background:C.cream,borderRadius:8,padding:10,marginTop:8}}>
+                    <div style={{fontSize:10,fontWeight:800,color:C.ink,marginBottom:6}}>최근 14일 요약</div>
+                    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:6,marginBottom:8}}>
+                      {Object.entries(formPreview.sales||{}).map(([name,d])=>(
+                        <div key={name} style={{background:C.white,borderRadius:6,padding:"6px 8px"}}>
+                          <div style={{fontSize:9,color:C.inkMid,fontWeight:600,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{name}</div>
+                          <div style={{fontSize:13,fontWeight:800,color:C.ink}}>{d.qty.toLocaleString()}개</div>
+                          <div style={{fontSize:10,color:"#2563eb",fontWeight:600}}>{d.revenue.toLocaleString()}원</div>
+                        </div>
+                      ))}
+                    </div>
+                    {(formPreview.stock||[]).length>0 && (
+                      <div>
+                        <div style={{fontSize:10,fontWeight:800,color:C.ink,marginBottom:4}}>재고</div>
+                        {(formPreview.stock||[]).map((s,i)=>(
+                          <div key={i} style={{display:"flex",gap:8,fontSize:10,padding:"3px 0"}}>
+                            <span style={{flex:1,color:C.inkMid}}>{s.name}</span>
+                            <span style={{fontWeight:700,color:s.stock>0?"#16a34a":"#dc2626"}}>{s.stock?.toLocaleString()}개</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
               <div>
                 <label style={{fontSize:11,fontWeight:700,color:C.inkMid}}>설명</label>
