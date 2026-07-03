@@ -3379,8 +3379,8 @@ function ProjectSection() {
         return parts;
       }).filter(k=>k.length>=2))];
       const filters = [
-        ...kwParts.map(k=>`product_name.ilike.*${encodeURIComponent(k)}*`),
-        ...projKeywords.map(k=>`keyword.ilike.*${encodeURIComponent(k)}*`),
+        ...kwParts.map(k=>`product_name.ilike.*${k}*`),
+        ...projKeywords.map(k=>`keyword.ilike.*${k}*`),
       ];
       const prodFilter = filters.join(',');
       fetch(`${SURL}/rest/v1/search_rankings?or=(${prodFilter})&date=gte.${cutoff}&order=date.desc&limit=2000`,{headers:sH})
