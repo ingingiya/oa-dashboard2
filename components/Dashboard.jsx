@@ -3044,17 +3044,20 @@ function ProjectSection() {
     setFormPreviewLoading(false);
   };
 
-  const searchProducts = async (kw) => {
+  const searchTimerRef = useRef(null);
+  const searchProducts = (kw) => {
     if(!kw.trim()) { setProductResults([]); return; }
-    try {
-      const r = await fetch(`${SURL}/rest/v1/project_product_data?select=product_id,product_name,brand&product_name=ilike.*${encodeURIComponent(kw)}*&order=product_name&limit=30`,{headers:sH});
-      const d = await r.json();
-      // 중복 제거
-      const seen = new Set();
-      const unique = (Array.isArray(d)?d:[]).filter(p=>{if(seen.has(p.product_id))return false;seen.add(p.product_id);return true;})
-        .map(p=>({id:p.product_id, name:p.product_name, brand:p.brand}));
-      setProductResults(unique);
-    } catch(e) { setProductResults([]); }
+    clearTimeout(searchTimerRef.current);
+    searchTimerRef.current = setTimeout(async ()=>{
+      try {
+        const r = await fetch(`${SURL}/rest/v1/project_product_data?select=product_id,product_name,brand&product_name=ilike.*${encodeURIComponent(kw)}*&order=product_name&limit=30`,{headers:sH});
+        const d = await r.json();
+        const seen = new Set();
+        const unique = (Array.isArray(d)?d:[]).filter(p=>{if(seen.has(p.product_id))return false;seen.add(p.product_id);return true;})
+          .map(p=>({id:p.product_id, name:p.product_name, brand:p.brand}));
+        setProductResults(unique);
+      } catch(e) { setProductResults([]); }
+    }, 400);
   };
 
   const loadProductData = async (proj, overrideDays) => {
