@@ -23,10 +23,17 @@ async function main() {
     const projects = await projRes.json();
     const prodNames = [...new Set((Array.isArray(projects)?projects:[]).flatMap(p=>(p.products||[]).map(pr=>pr.name)).filter(Boolean))];
     if (!prodNames.length) { console.log('연동된 제품 없음'); return; }
-    // 제품명에서 핵심 키워드 추출 (브랜드+모델명, 색상/옵션 제거)
-    const keywords = [...new Set(prodNames.map(n => {
-      // "오아소닉플로우-베이지" → "소닉플로우"
-      return n.replace(/^(오아|보아르|삼대오백|뉴트리커먼)/, '').replace(/[-_](화이트|블랙|베이지|그레이|핑크|실버|크림|노즐|파우치|공용).*$/, '').trim();
+    // 제품명에서 핵심 키워드 추출
+    const keywords = [...new Set(prodNames.flatMap(n => {
+      // "오아에어리소닉드라이기-베이지" → ["에어리소닉", "에어리소닉드라이기"]
+      const base = n.replace(/^(오아|보아르|삼대오백|뉴트리커먼)/, '').replace(/[-_](화이트|블랙|베이지|그레이|핑크|실버|크림|노즐|파우치|공용).*$/, '').trim();
+      const parts = [base];
+      // 긴 이름이면 앞부분도 추가 (에어리소닉드라이기 → 에어리소닉)
+      if (base.length > 4) {
+        const sub = base.replace(/(드라이기|선풍기|마사지기|가습기|세정기)$/, '').trim();
+        if (sub.length >= 2 && sub !== base) parts.push(sub);
+      }
+      return parts;
     }).filter(k => k.length >= 2))];
     console.log(`  연동 제품 ${prodNames.length}개 → 검색 키워드: ${keywords.join(', ')}`);
 
