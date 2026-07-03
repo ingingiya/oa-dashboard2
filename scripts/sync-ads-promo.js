@@ -81,7 +81,17 @@ async function main() {
       ORDER BY s.시작일 DESC
       LIMIT 500
     `);
-    console.log(`  -> 프로모션 ${promoRows.length}건`);
+    // 프로모션별 상품 조회
+    const [merchRows] = await pool.query(`
+      SELECT 행사일정ID as promo_id, 상품명 as product_name
+      FROM v_sales_promotion_schedule_merchandise
+    `);
+    const merchMap = {};
+    merchRows.forEach(r => {
+      if (!merchMap[r.promo_id]) merchMap[r.promo_id] = [];
+      merchMap[r.promo_id].push(r.product_name);
+    });
+    console.log(`  -> 프로모션 ${promoRows.length}건 (상품 ${merchRows.length}건)`);
 
     if (promoRows.length) {
       const rows = promoRows.map(r => ({
@@ -93,6 +103,7 @@ async function main() {
         brand: r.brand,
         memo: r.memo,
         manager: r.manager,
+        products: merchMap[r.promo_id] || [],
         synced_at: new Date().toISOString(),
       }));
 
@@ -119,3 +130,4 @@ async function main() {
 }
 
 main();
+// 이 파일 끝에 monthly_meta도 동기화하도록 별도 실행

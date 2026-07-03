@@ -3088,6 +3088,33 @@ function ProjectSection() {
     setFormPreviewLoading(false);
   };
 
+  const loadYoYGlobal = async (days) => {
+    setYoyGlobalLoading(true);
+    const now = new Date();
+    const thisStart = new Date(now.getTime()-days*86400000).toISOString().split('T')[0];
+    const lyEnd = new Date(now); lyEnd.setFullYear(lyEnd.getFullYear()-1);
+    const lyStart = new Date(lyEnd.getTime()-days*86400000);
+    const lyStartStr = lyStart.toISOString().split('T')[0];
+    const lyEndStr = lyEnd.toISOString().split('T')[0];
+    try {
+      const [thisR, lastR] = await Promise.all([
+        fetch(`${SURL}/rest/v1/project_product_data?date=gte.${thisStart}&select=date,qty,revenue,profit`,{headers:sH}).then(r=>r.json()),
+        fetch(`${SURL}/rest/v1/project_product_data?date=gte.${lyStartStr}&date=lte.${lyEndStr}&select=date,qty,revenue,profit`,{headers:sH}).then(r=>r.json()),
+      ]);
+      const sum = (rows) => {
+        const t={qty:0,revenue:0,profit:0};
+        const daily={};
+        (Array.isArray(rows)?rows:[]).forEach(r=>{
+          t.qty+=(r.qty||0);t.revenue+=Number(r.revenue||0);t.profit+=Number(r.profit||0);
+          const d=r.date;if(!daily[d])daily[d]={date:d,revenue:0};daily[d].revenue+=Number(r.revenue||0);
+        });
+        return{...t,daily:Object.values(daily).sort((a,b)=>a.date.localeCompare(b.date))};
+      };
+      setYoyGlobal({this:sum(thisR),last:sum(lastR)});
+    } catch(e){console.error(e);}
+    setYoyGlobalLoading(false);
+  };
+
   const loadYoY = async (proj) => {
     const prods = proj.products||[];
     if(!prods.length) return;
@@ -3190,6 +3217,9 @@ function ProjectSection() {
   const [compareMode, setCompareMode] = useState(false);
   const [compareIds, setCompareIds] = useState([]); // 비교할 프로젝트 id 2개
   const [compareData, setCompareData] = useState(null);
+  const [yoyGlobal, setYoyGlobal] = useState(null); // 전체 전년비교
+  const [yoyGlobalLoading, setYoyGlobalLoading] = useState(false);
+  const [yoyPeriod, setYoyPeriod] = useState(30);
 
   // 펼칠 때 선택 초기화 + 일별 추이 로드
   useEffect(()=>{
@@ -3229,13 +3259,17 @@ function ProjectSection() {
         }).catch(()=>{});
     }
 
-    // 프로모션 로드
-    const brands = [...new Set((proj.products||[]).map(p=>p.brand).filter(Boolean))];
-    if(brands.length && !projPromoData[expandId]) {
-      const brandFilter = brands.map(b=>`brand.eq.${encodeURIComponent(b)}`).join(',');
-      fetch(`${SURL}/rest/v1/promotions?or=(${brandFilter})&order=start_date.desc&limit=10`,{headers:sH})
+    // 프로모션 로드 (연동 제품이 포함된 것만)
+    const prodNames = (proj.products||[]).map(p=>p.name);
+    if(prodNames.length && !projPromoData[expandId]) {
+      fetch(`${SURL}/rest/v1/promotions?order=start_date.desc&limit=100`,{headers:sH})
         .then(r=>r.json()).then(rows=>{
-          if(Array.isArray(rows)) setProjPromoData(prev=>({...prev,[expandId]:rows}));
+          if(!Array.isArray(rows)) return;
+          const matched = rows.filter(pr=>{
+            const prProds = pr.products||[];
+            return prProds.some(pp=>prodNames.some(pn=>pp.includes(pn)||pn.includes(pp)));
+          });
+          setProjPromoData(prev=>({...prev,[expandId]:matched}));
         }).catch(()=>{});
     }
   },[expandId, projects]);
@@ -3346,6 +3380,80 @@ function ProjectSection() {
       {/* 비교 모드 */}
       {compareMode && (
         <div style={{background:"#faf5ff",border:"1px solid #e9d5ff",borderRadius:12,padding:16,marginBottom:20}}>
+          {/* 탭: 프로젝트비교 / 전년비교 */}
+          <div style={{display:"flex",gap:4,marginBottom:12}}>
+            {[{id:"proj",label:"프로젝트 비교"},{id:"yoy",label:"전년 동기간 비교"}].map(t=>(
+              <button key={t.id} onClick={()=>{if(t.id==="yoy"&&!yoyGlobal)loadYoYGlobal(yoyPeriod);setCompareData(t.id==="yoy"?"yoy":null);setCompareIds([]);}}
+                style={{padding:"6px 14px",border:"none",borderRadius:8,background:((t.id==="yoy"&&compareData==="yoy")||(t.id==="proj"&&compareData!=="yoy"))?"#7c3aed":"#ede9fe",color:((t.id==="yoy"&&compareData==="yoy")||(t.id==="proj"&&compareData!=="yoy"))?"#fff":"#7c3aed",fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>{t.label}</button>
+            ))}
+          </div>
+
+          {/* 전년 비교 */}
+          {compareData==="yoy" && (
+            <div>
+              <div style={{display:"flex",gap:4,marginBottom:12}}>
+                {[7,14,30,60,90].map(d=>(
+                  <button key={d} onClick={()=>{setYoyPeriod(d);loadYoYGlobal(d);}}
+                    style={{padding:"3px 10px",border:"none",borderRadius:6,background:yoyPeriod===d?"#7c3aed":"#fff",color:yoyPeriod===d?"#fff":"#7c3aed",fontSize:10,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>{d}일</button>
+                ))}
+              </div>
+              {yoyGlobalLoading && <div style={{padding:12,fontSize:11,color:"#7c3aed"}}>로딩중...</div>}
+              {yoyGlobal && !yoyGlobalLoading && (()=>{
+                const y = yoyGlobal;
+                const fmtRev = v => v>=100000000?(v/100000000).toFixed(1)+"억":v>=10000?(v/10000).toFixed(0)+"만":v.toLocaleString();
+                const revDiff = y.last.revenue>0 ? Math.round((y.this.revenue-y.last.revenue)/y.last.revenue*100) : 0;
+                const qtyDiff = y.last.qty>0 ? Math.round((y.this.qty-y.last.qty)/y.last.qty*100) : 0;
+                // 차트 merge
+                const allDates = [...new Set([...y.this.daily.map(d=>d.date.slice(5)),...y.last.daily.map(d=>d.date.slice(5))])].sort();
+                const thisMap = {}; y.this.daily.forEach(d=>thisMap[d.date.slice(5)]=d.revenue);
+                const lastMap = {}; y.last.daily.forEach(d=>lastMap[d.date.slice(5)]=d.revenue);
+                const chart = allDates.map(d=>({date:d,"올해":thisMap[d]||0,"작년":lastMap[d]||0}));
+                return (
+                  <div>
+                    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:12}}>
+                      <div style={{background:C.white,borderRadius:10,padding:12}}>
+                        <div style={{fontSize:11,color:C.inkMid,fontWeight:600}}>올해 ({yoyPeriod}일)</div>
+                        <div style={{fontSize:20,fontWeight:900,color:"#7c3aed"}}>{fmtRev(y.this.revenue)}원</div>
+                        <div style={{fontSize:11,color:C.inkMid}}>{y.this.qty.toLocaleString()}개 판매</div>
+                      </div>
+                      <div style={{background:C.white,borderRadius:10,padding:12}}>
+                        <div style={{fontSize:11,color:C.inkMid,fontWeight:600}}>작년 동기간</div>
+                        <div style={{fontSize:20,fontWeight:900,color:C.inkMid}}>{fmtRev(y.last.revenue)}원</div>
+                        <div style={{fontSize:11,color:C.inkMid}}>{y.last.qty.toLocaleString()}개 판매</div>
+                      </div>
+                    </div>
+                    <div style={{display:"flex",gap:12,marginBottom:12}}>
+                      <div style={{background:revDiff>=0?"#f0fdf4":"#fef2f2",borderRadius:8,padding:"8px 14px",flex:1,textAlign:"center"}}>
+                        <div style={{fontSize:10,color:C.inkMid}}>매출 변동</div>
+                        <div style={{fontSize:18,fontWeight:900,color:revDiff>=0?"#16a34a":"#dc2626"}}>{revDiff>0?"+":""}{revDiff}%</div>
+                      </div>
+                      <div style={{background:qtyDiff>=0?"#f0fdf4":"#fef2f2",borderRadius:8,padding:"8px 14px",flex:1,textAlign:"center"}}>
+                        <div style={{fontSize:10,color:C.inkMid}}>수량 변동</div>
+                        <div style={{fontSize:18,fontWeight:900,color:qtyDiff>=0?"#16a34a":"#dc2626"}}>{qtyDiff>0?"+":""}{qtyDiff}%</div>
+                      </div>
+                    </div>
+                    {chart.length>1 && (
+                      <ResponsiveContainer width="100%" height={200}>
+                        <LineChart data={chart}>
+                          <CartesianGrid strokeDasharray="3 3" stroke={C.border}/>
+                          <XAxis dataKey="date" tick={{fontSize:9}}/>
+                          <YAxis tick={{fontSize:9}} tickFormatter={v=>v>=10000?(v/10000).toFixed(0)+"만":v}/>
+                          <Tooltip formatter={v=>v.toLocaleString()+"원"}/>
+                          <Legend wrapperStyle={{fontSize:10}}/>
+                          <Line type="monotone" dataKey="올해" stroke="#7c3aed" strokeWidth={2} dot={false}/>
+                          <Line type="monotone" dataKey="작년" stroke="#d4d4d4" strokeWidth={2} dot={false} strokeDasharray="5 5"/>
+                        </LineChart>
+                      </ResponsiveContainer>
+                    )}
+                  </div>
+                );
+              })()}
+            </div>
+          )}
+
+          {/* 프로젝트 비교 */}
+          {compareData!=="yoy" && (
+            <div>
           <div style={{fontSize:12,fontWeight:800,color:"#7c3aed",marginBottom:8}}>프로젝트 비교 — 2개를 선택하세요</div>
           <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:12}}>
             {projects.map(p=>{
@@ -3356,8 +3464,8 @@ function ProjectSection() {
               }} style={{padding:"5px 12px",borderRadius:8,border:sel?"2px solid #7c3aed":`1px solid ${C.border}`,background:sel?"#ede9fe":"#fff",color:sel?"#7c3aed":C.ink,fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>{p.name}</button>;
             })}
           </div>
-          {compareIds.length===2 && !compareData && <button onClick={loadCompare} style={{padding:"6px 16px",background:"#7c3aed",color:"#fff",border:"none",borderRadius:8,fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>비교하기</button>}
-          {compareData && (()=>{
+          {compareIds.length===2 && (!compareData||compareData==="yoy") && <button onClick={loadCompare} style={{padding:"6px 16px",background:"#7c3aed",color:"#fff",border:"none",borderRadius:8,fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>비교하기</button>}
+          {compareData && compareData!=="yoy" && (()=>{
             const {a,b,chart,keyA,keyB} = compareData;
             const fmtRev = v => v>=100000000?(v/100000000).toFixed(1)+"억":v>=10000?(v/10000).toFixed(0)+"만":v.toLocaleString();
             return (
@@ -3388,6 +3496,8 @@ function ProjectSection() {
               </div>
             );
           })()}
+            </div>
+          )}
         </div>
       )}
 
