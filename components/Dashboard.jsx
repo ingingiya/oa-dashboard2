@@ -3000,28 +3000,23 @@ function ProjectSection() {
     setSelectedProdId(prod.id);
     setSingleProdLoading(true);
     try {
-      const [salesR, stockR] = await Promise.all([
-        fetch(`/api/project-data?action=sales&product_ids=${prod.id}&days=${prodDataDays}`).then(r=>r.json()),
-        fetch(`/api/project-data?action=stock&product_ids=${prod.id}`).then(r=>r.json()),
-      ]);
-      // 일별 데이터
-      const daily = {};
-      (salesR.rows||[]).forEach(r=>{
-        if(!daily[r.date]) daily[r.date]={date:r.date,qty:0,revenue:0,profit:0};
-        daily[r.date].qty+=r.qty; daily[r.date].revenue+=r.revenue; daily[r.date].profit+=r.profit;
-      });
-      const chartData = Object.values(daily).sort((a,b)=>a.date.localeCompare(b.date));
+      const cutoff = new Date(Date.now()-prodDataDays*86400000).toISOString().split('T')[0];
+      const r = await fetch(`${SURL}/rest/v1/project_product_data?product_id=eq.${prod.id}&date=gte.${cutoff}&order=date.asc`,{headers:sH});
+      const rows = await r.json();
+      const chartData = (Array.isArray(rows)?rows:[]).map(r=>({date:r.date,qty:r.qty||0,revenue:Number(r.revenue)||0,profit:Number(r.profit)||0}));
       const totalQty = chartData.reduce((s,d)=>s+d.qty,0);
       const totalRevenue = chartData.reduce((s,d)=>s+d.revenue,0);
       const totalProfit = chartData.reduce((s,d)=>s+d.profit,0);
-      // 변동 (7일 vs 이전7일)
       let recentQty=0, prevQty=0;
       chartData.forEach(d=>{
         const ago=Math.ceil((new Date()-new Date(d.date))/86400000);
         if(ago<=7) recentQty+=d.qty; else if(ago<=14) prevQty+=d.qty;
       });
       const changePct = prevQty>0 ? Math.round((recentQty-prevQty)/prevQty*100) : (recentQty>0?999:0);
-      setSingleProdData(prev=>({...prev,[prod.id]:{chartData,stock:stockR.rows||[],totalQty,totalRevenue,totalProfit,recentQty,prevQty,changePct}}));
+      // 최신 재고
+      const latestStock = [...(Array.isArray(rows)?rows:[])].reverse().find(r=>r.stock!==null);
+      const stock = latestStock ? [{name:prod.name,stock:latestStock.stock,producing:latestStock.producing,shipping:latestStock.shipping,transit:latestStock.transit}] : [];
+      setSingleProdData(prev=>({...prev,[prod.id]:{chartData,stock,totalQty,totalRevenue,totalProfit,recentQty,prevQty,changePct}}));
     } catch(e) { console.error(e); }
     setSingleProdLoading(false);
   };
@@ -3029,19 +3024,22 @@ function ProjectSection() {
   const loadFormPreview = async (prods) => {
     if(!prods.length) { setFormPreview(null); return; }
     setFormPreviewLoading(true);
-    const ids = prods.map(p=>p.id).join(",");
-    const brands = [...new Set(prods.map(p=>p.brand).filter(Boolean))].join(",");
     try {
-      const [salesR, stockR] = await Promise.all([
-        fetch(`/api/project-data?action=sales&product_ids=${ids}&days=14`).then(r=>r.json()),
-        fetch(`/api/project-data?action=stock&product_ids=${ids}`).then(r=>r.json()),
-      ]);
+      const cutoff = new Date(Date.now()-14*86400000).toISOString().split('T')[0];
       const byProd = {};
-      (salesR.rows||[]).forEach(r=>{
-        if(!byProd[r.name]) byProd[r.name]={qty:0,revenue:0};
-        byProd[r.name].qty+=r.qty; byProd[r.name].revenue+=r.revenue;
-      });
-      setFormPreview({sales:byProd, stock:stockR.rows||[]});
+      const stockList = [];
+      for(const p of prods) {
+        const r = await fetch(`${SURL}/rest/v1/project_product_data?product_id=eq.${p.id}&date=gte.${cutoff}&order=date.desc`,{headers:sH});
+        const rows = await r.json();
+        if(Array.isArray(rows)&&rows.length) {
+          let qty=0, revenue=0;
+          rows.forEach(r=>{qty+=r.qty||0;revenue+=Number(r.revenue)||0;});
+          byProd[p.name]={qty,revenue};
+          const latest = rows.find(r=>r.stock!==null);
+          if(latest) stockList.push({name:p.name,stock:latest.stock});
+        }
+      }
+      setFormPreview({sales:byProd,stock:stockList});
     } catch(e) { console.error(e); }
     setFormPreviewLoading(false);
   };
@@ -3049,9 +3047,13 @@ function ProjectSection() {
   const searchProducts = async (kw) => {
     if(!kw.trim()) { setProductResults([]); return; }
     try {
-      const r = await fetch(`/api/project-data?action=search&keyword=${encodeURIComponent(kw)}`);
+      const r = await fetch(`${SURL}/rest/v1/project_product_data?select=product_id,product_name,brand&product_name=ilike.*${encodeURIComponent(kw)}*&order=product_name&limit=30`,{headers:sH});
       const d = await r.json();
-      setProductResults(d.rows||[]);
+      // 중복 제거
+      const seen = new Set();
+      const unique = (Array.isArray(d)?d:[]).filter(p=>{if(seen.has(p.product_id))return false;seen.add(p.product_id);return true;})
+        .map(p=>({id:p.product_id, name:p.product_name, brand:p.brand}));
+      setProductResults(unique);
     } catch(e) { setProductResults([]); }
   };
 
@@ -3075,14 +3077,8 @@ function ProjectSection() {
     setProdDataLoading(prev=>({...prev,[proj.id]:false}));
   };
 
-  // 펼칠 때 자동 로드
-  useEffect(()=>{
-    if(!expandId) return;
-    const proj = projects.find(p=>p.id===expandId);
-    if(proj && (proj.products||[]).length>0 && !productData[expandId]) {
-      loadProductData(proj);
-    }
-  },[expandId, projects]);
+  // 펼칠 때 선택 초기화
+  useEffect(()=>{ setSelectedProdId(null); setSingleProdData({}); },[expandId]);
 
   const addProductToProject = async (proj, product) => {
     const prods = [...(proj.products||[])];
