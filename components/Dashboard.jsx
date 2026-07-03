@@ -3277,6 +3277,7 @@ function ProjectSection() {
   const [projDailyLoading, setProjDailyLoading] = useState({});
   const [projAdData, setProjAdData] = useState({});
   const [projPromoData, setProjPromoData] = useState({});
+  const [projRankData, setProjRankData] = useState({}); // 검색순위 자동 로드
   const [showYoY, setShowYoY] = useState(false); // 전년 비교
   const [yoyData, setYoyData] = useState({});
   const [compareMode, setCompareMode] = useState(false);
@@ -3336,6 +3337,36 @@ function ProjectSection() {
             return prProds.some(pp=>prodNames.some(pn=>pp.includes(pn)||pn.includes(pp)));
           });
           setProjPromoData(prev=>({...prev,[expandId]:matched}));
+        }).catch(()=>{});
+    }
+
+    // 검색순위 자동 로드 (연동 제품 브랜드)
+    const projBrands = [...new Set((proj.products||[]).map(p=>p.brand).filter(Boolean))];
+    if(projBrands.length && !projRankData[expandId]) {
+      const brandFilter = projBrands.map(b=>`brand.eq.${encodeURIComponent(b)}`).join(',');
+      fetch(`${SURL}/rest/v1/search_rankings?or=(${brandFilter})&date=gte.${cutoff}&order=date.desc&limit=1000`,{headers:sH})
+        .then(r=>r.json()).then(rows=>{
+          if(!Array.isArray(rows)) return;
+          // 키워드별 일별 최고순위
+          const byKw = {};
+          rows.forEach(r=>{
+            if(!byKw[r.keyword]) byKw[r.keyword]={keyword:r.keyword,daily:{},latestRank:null,latestDate:null};
+            const d = r.date;
+            if(!byKw[r.keyword].daily[d] || r.rank_pos<byKw[r.keyword].daily[d]) byKw[r.keyword].daily[d]=r.rank_pos;
+            if(!byKw[r.keyword].latestDate || d>byKw[r.keyword].latestDate) {byKw[r.keyword].latestDate=d;byKw[r.keyword].latestRank=r.rank_pos;}
+          });
+          // 일별 변동 계산
+          Object.values(byKw).forEach(kw=>{
+            const dates = Object.keys(kw.daily).sort();
+            kw.trend = dates.map(d=>({date:d,rank:kw.daily[d]}));
+            if(dates.length>=2) {
+              const recent = kw.daily[dates[dates.length-1]];
+              const prev = kw.daily[dates[dates.length-2]];
+              kw.diff = prev - recent; // 양수=순위 상승
+            } else kw.diff=0;
+          });
+          const kwList = Object.values(byKw).sort((a,b)=>(a.latestRank||999)-(b.latestRank||999));
+          setProjRankData(prev=>({...prev,[expandId]:kwList}));
         }).catch(()=>{});
     }
   },[expandId, projects]);
@@ -3667,6 +3698,61 @@ function ProjectSection() {
                   {expanded && (
                     <div style={{padding:"0 16px 16px",borderTop:`1px solid ${C.cream}`}}>
                       {p.description && <div style={{fontSize:12,color:C.inkMid,padding:"12px 0",lineHeight:1.6,whiteSpace:"pre-wrap"}}>{p.description}</div>}
+
+                      {/* 검색순위 변동 (자동) */}
+                      {(p.products||[]).length>0 && (()=>{
+                        const brands = [...new Set((p.products||[]).map(pr=>pr.brand).filter(Boolean))];
+                        if(!brands.length) return null;
+                        const rid = "rank_"+p.id;
+                        if(!projImpact[rid] && !projImpact[rid+"_loading"]) {
+                          setProjImpact(prev=>({...prev,[rid+"_loading"]:true}));
+                          const brandFilter = brands.map(b=>`brand.eq.${encodeURIComponent(b)}`).join(',');
+                          const now = new Date().toISOString().split('T')[0];
+                          const d7 = new Date(Date.now()-7*86400000).toISOString().split('T')[0];
+                          const d14 = new Date(Date.now()-14*86400000).toISOString().split('T')[0];
+                          Promise.all([
+                            fetch(`${SURL}/rest/v1/search_rankings?or=(${brandFilter})&date=gte.${d7}&date=lte.${now}&select=keyword,rank_pos,date&order=date.desc`,{headers:sH}).then(r=>r.json()),
+                            fetch(`${SURL}/rest/v1/search_rankings?or=(${brandFilter})&date=gte.${d14}&date=lt.${d7}&select=keyword,rank_pos&order=date.desc`,{headers:sH}).then(r=>r.json()),
+                          ]).then(([recent,prev])=>{
+                            const recentByKw={}, prevByKw={};
+                            (Array.isArray(recent)?recent:[]).forEach(r=>{if(!recentByKw[r.keyword])recentByKw[r.keyword]=[];recentByKw[r.keyword].push(r.rank_pos);});
+                            (Array.isArray(prev)?prev:[]).forEach(r=>{if(!prevByKw[r.keyword])prevByKw[r.keyword]=[];prevByKw[r.keyword].push(r.rank_pos);});
+                            const keywords = Object.keys(recentByKw).map(kw=>{
+                              const avg = Math.round(recentByKw[kw].reduce((s,v)=>s+v,0)/recentByKw[kw].length);
+                              const best = Math.min(...recentByKw[kw]);
+                              const prevAvg = prevByKw[kw] ? Math.round(prevByKw[kw].reduce((s,v)=>s+v,0)/prevByKw[kw].length) : null;
+                              const diff = prevAvg ? prevAvg - avg : 0;
+                              return {keyword:kw, avg, best, prevAvg, diff};
+                            }).sort((a,b)=>a.avg-b.avg);
+                            setProjImpact(prev=>({...prev,[rid]:keywords,[rid+"_loading"]:false}));
+                          });
+                        }
+                        const rankData = projImpact[rid];
+                        if(!rankData) return projImpact[rid+"_loading"] ? <div style={{padding:8,fontSize:10,color:C.inkMid}}>검색순위 로딩중...</div> : null;
+                        if(!rankData.length) return null;
+                        return (
+                          <div style={{background:"#f0f9ff",border:"1px solid #bae6fd",borderRadius:10,padding:14,marginBottom:8}}>
+                            <div style={{fontSize:13,fontWeight:900,color:"#0369a1",marginBottom:10,display:"flex",alignItems:"center",gap:6}}><MI n="search" size={16}/> 검색순위 (최근 7일)</div>
+                            <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(140px,1fr))",gap:8}}>
+                              {rankData.slice(0,12).map((kw,i)=>(
+                                <div key={i} style={{background:C.white,borderRadius:8,padding:"8px 10px",border:`1px solid ${kw.diff>0?"#bbf7d0":kw.diff<0?"#fecaca":"#e0f2fe"}`}}>
+                                  <div style={{fontSize:11,fontWeight:800,color:C.ink,marginBottom:4,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{kw.keyword}</div>
+                                  <div style={{display:"flex",alignItems:"baseline",gap:6}}>
+                                    <span style={{fontSize:20,fontWeight:900,color:kw.avg<=3?"#16a34a":kw.avg<=10?"#0369a1":"#52525b"}}>{kw.avg}<span style={{fontSize:11}}>위</span></span>
+                                    {kw.diff!==0 && (
+                                      <span style={{fontSize:12,fontWeight:800,color:kw.diff>0?"#16a34a":"#dc2626"}}>
+                                        {kw.diff>0?"▲":"▼"}{Math.abs(kw.diff)}
+                                      </span>
+                                    )}
+                                  </div>
+                                  {kw.prevAvg && <div style={{fontSize:9,color:C.inkLt}}>이전 {kw.prevAvg}위 → {kw.avg}위</div>}
+                                  <div style={{fontSize:9,color:C.inkLt}}>최고 {kw.best}위</div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        );
+                      })()}
 
                       {/* 전년 동기간 비교 */}
                       {(p.products||[]).length>0 && (()=>{
@@ -4008,18 +4094,14 @@ function ProjectSection() {
                             const today = new Date().toISOString().split('T')[0];
                             const isActive = pr.start_date<=today && pr.end_date>=today;
                             const isPast = pr.end_date<today;
-                            // 프로모션 기간 매출 계산
-                            const chart = projDailyChart[p.id]||[];
-                            let promoRevenue = 0;
-                            if(chart.length && pr.start_date && pr.end_date) {
-                              chart.forEach(d=>{if(d.date>=pr.start_date&&d.date<=pr.end_date) promoRevenue+=d.revenue;});
-                            }
+                            // 프로모션 상품 표시
+                            const promoProds = (pr.products||[]).filter(pp=>(p.products||[]).some(lp=>pp.includes(lp.name)||lp.name.includes(pp)));
                             const fmtRev = v=>v>=100000000?(v/100000000).toFixed(1)+"억":v>=10000?(v/10000).toFixed(0)+"만":v.toLocaleString();
                             return (
                               <div key={i} style={{display:"flex",gap:8,alignItems:"center",padding:"5px 0",borderBottom:`1px solid #fed7aa`,fontSize:11}}>
                                 <span style={{width:6,height:6,borderRadius:3,background:isActive?"#16a34a":isPast?"#d4d4d4":"#2563eb",flexShrink:0}}/>
                                 <span style={{fontWeight:700,color:C.ink,flex:1,minWidth:0,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{pr.promo_name}</span>
-                                {promoRevenue>0 && <span style={{fontSize:9,fontWeight:700,color:"#ea580c",background:"#fff7ed",padding:"1px 6px",borderRadius:8,flexShrink:0}}>{fmtRev(promoRevenue)}원</span>}
+                                {promoProds.length>0 && <span style={{fontSize:8,color:"#ea580c",fontWeight:600,flexShrink:0}}>{promoProds.length}개 제품</span>}
                                 <span style={{color:C.inkMid,fontSize:9,flexShrink:0}}>{pr.channel}</span>
                                 <span style={{color:C.inkLt,fontSize:9,flexShrink:0}}>{pr.start_date?.slice(5)}~{pr.end_date?.slice(5)}</span>
                               </div>
