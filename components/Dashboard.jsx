@@ -2902,7 +2902,7 @@ function ProjectSection() {
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editId, setEditId] = useState(null);
-  const emptyForm = {name:"",status:"planning",start_date:"",end_date:"",progress:0,description:"",tasks:[],assignee:"",priority:"normal",tags:[],comments:[],products:[]};
+  const emptyForm = {name:"",status:"planning",start_date:"",end_date:"",progress:0,description:"",tasks:[],assignee:"",priority:"normal",tags:[],comments:[],products:[],target_revenue:0};
   const [form, setForm] = useState(emptyForm);
   const [expandId, setExpandId] = useState(null);
   const [newTask, setNewTask] = useState("");
@@ -3001,7 +3001,7 @@ function ProjectSection() {
   };
 
   const edit = (p) => {
-    setForm({name:p.name,status:p.status,start_date:p.start_date||"",end_date:p.end_date||"",progress:p.progress||0,description:p.description||"",tasks:p.tasks||[],assignee:p.assignee||"",priority:p.priority||"normal",tags:p.tags||[],comments:p.comments||[],products:p.products||[]});
+    setForm({name:p.name,status:p.status,start_date:p.start_date||"",end_date:p.end_date||"",progress:p.progress||0,description:p.description||"",tasks:p.tasks||[],assignee:p.assignee||"",priority:p.priority||"normal",tags:p.tags||[],comments:p.comments||[],products:p.products||[],target_revenue:p.target_revenue||0});
     setEditId(p.id); setShowForm(true);
   };
 
@@ -3414,13 +3414,31 @@ function ProjectSection() {
                         const totalQty = chart.reduce((s,d)=>s+d.qty,0);
                         const totalRev = chart.reduce((s,d)=>s+d.revenue,0);
                         const totalProfit = chart.reduce((s,d)=>s+d.profit,0);
+                        const target = p.target_revenue||0;
+                        const achievePct = target>0 ? Math.round(totalRev/target*100) : 0;
+                        const fmtRev = v => v>=100000000?(v/100000000).toFixed(1)+"억":v>=10000?(v/10000).toFixed(0)+"만":v.toLocaleString();
                         return (
                           <div style={{background:C.cream,borderRadius:10,padding:12,marginTop:12,marginBottom:4}}>
-                            <div style={{display:"flex",gap:12,marginBottom:10,flexWrap:"wrap"}}>
+                            <div style={{display:"flex",gap:12,marginBottom:10,flexWrap:"wrap",alignItems:"center"}}>
                               <div><span style={{fontSize:10,color:C.inkMid}}>총 판매</span> <span style={{fontSize:16,fontWeight:900,color:C.ink}}>{totalQty.toLocaleString()}개</span></div>
-                              <div><span style={{fontSize:10,color:C.inkMid}}>매출</span> <span style={{fontSize:16,fontWeight:900,color:"#2563eb"}}>{totalRev>=10000?(totalRev/10000).toFixed(0)+"만":totalRev.toLocaleString()}원</span></div>
-                              <div><span style={{fontSize:10,color:C.inkMid}}>이익</span> <span style={{fontSize:16,fontWeight:900,color:totalProfit>0?"#16a34a":"#dc2626"}}>{totalProfit>=10000?(totalProfit/10000).toFixed(0)+"만":totalProfit.toLocaleString()}원</span></div>
+                              <div><span style={{fontSize:10,color:C.inkMid}}>매출</span> <span style={{fontSize:16,fontWeight:900,color:"#2563eb"}}>{fmtRev(totalRev)}원</span></div>
+                              <div><span style={{fontSize:10,color:C.inkMid}}>이익</span> <span style={{fontSize:16,fontWeight:900,color:totalProfit>0?"#16a34a":"#dc2626"}}>{fmtRev(totalProfit)}원</span></div>
                             </div>
+                            {target>0 && (
+                              <div style={{marginBottom:10}}>
+                                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4}}>
+                                  <span style={{fontSize:10,fontWeight:700,color:C.inkMid}}>목표 달성률</span>
+                                  <span style={{fontSize:13,fontWeight:900,color:achievePct>=100?"#16a34a":achievePct>=70?"#2563eb":"#ea580c"}}>{achievePct}%</span>
+                                </div>
+                                <div style={{height:10,background:C.white,borderRadius:5,overflow:"hidden"}}>
+                                  <div style={{width:`${Math.min(achievePct,100)}%`,height:"100%",background:achievePct>=100?"#16a34a":achievePct>=70?"#2563eb":"#ea580c",borderRadius:5,transition:"width 0.5s"}}/>
+                                </div>
+                                <div style={{display:"flex",justifyContent:"space-between",marginTop:3}}>
+                                  <span style={{fontSize:9,color:C.inkLt}}>{fmtRev(totalRev)}원</span>
+                                  <span style={{fontSize:9,color:C.inkLt}}>목표 {fmtRev(target)}원</span>
+                                </div>
+                              </div>
+                            )}
                             <ResponsiveContainer width="100%" height={140}>
                               <AreaChart data={chart}>
                                 <CartesianGrid strokeDasharray="3 3" stroke={C.border}/>
@@ -3663,6 +3681,10 @@ function ProjectSection() {
                     onKeyDown={e=>{if(e.key==="Enter"&&newTag.trim()){setForm({...form,tags:[...(form.tags||[]),newTag.trim()]});setNewTag("");}}}
                     placeholder="태그 입력 후 Enter" style={{padding:"4px 8px",border:`1px solid ${C.border}`,borderRadius:6,fontSize:11,fontFamily:"inherit",outline:"none",width:120}}/>
                 </div>
+              </div>
+              <div>
+                <label style={{fontSize:11,fontWeight:700,color:C.inkMid}}>목표 매출 (원)</label>
+                <input type="number" value={form.target_revenue||""} onChange={e=>setForm({...form,target_revenue:Number(e.target.value)||0})} placeholder="예: 50000000 (5천만원)" style={inputStyle}/>
               </div>
               <div>
                 <label style={{fontSize:11,fontWeight:700,color:C.inkMid}}>연동 제품</label>
