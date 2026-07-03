@@ -2935,12 +2935,12 @@ function ProjectSection() {
   const save = async () => {
     if(!form.name.trim()) return alert("프로젝트명을 입력하세요");
     const body = {...form, updated_at: new Date().toISOString()};
-    if(editId) {
-      await fetch(`${SURL}/rest/v1/projects?id=eq.${editId}`,{method:"PATCH",headers:{...sH,Prefer:"return=minimal"},body:JSON.stringify(body)});
-    } else {
-      await fetch(`${SURL}/rest/v1/projects`,{method:"POST",headers:{...sH,Prefer:"return=minimal"},body:JSON.stringify(body)});
-    }
-    setShowForm(false); setEditId(null); setForm(emptyForm); load();
+    try {
+      const url = editId ? `${SURL}/rest/v1/projects?id=eq.${editId}` : `${SURL}/rest/v1/projects`;
+      const res = await fetch(url, {method: editId?"PATCH":"POST", headers:{...sH,Prefer:"return=minimal"}, body:JSON.stringify(body)});
+      if(!res.ok) { const err = await res.text(); alert("저장 실패: "+err); return; }
+      setShowForm(false); setEditId(null); setForm(emptyForm); load();
+    } catch(e) { alert("저장 에러: "+e.message); }
   };
 
   const del = async (id) => {
