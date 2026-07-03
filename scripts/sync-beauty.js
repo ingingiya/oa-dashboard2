@@ -46,7 +46,7 @@ async function upsertToSupabase(rows) {
       synced_at: new Date().toISOString(),
     }));
 
-    const res = await fetch(`${SUPA_URL}/rest/v1/beauty_sales`, {
+    const res = await fetch(`${SUPA_URL}/rest/v1/beauty_sales?on_conflict=name,cat_id,channel,date`, {
       method: 'POST',
       headers: {
         'apikey': SUPA_KEY,

@@ -2902,13 +2902,18 @@ function ProjectSection() {
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editId, setEditId] = useState(null);
-  const emptyForm = {name:"",status:"planning",start_date:"",end_date:"",progress:0,description:"",tasks:[],assignee:"",priority:"normal",tags:[],comments:[]};
+  const emptyForm = {name:"",status:"planning",start_date:"",end_date:"",progress:0,description:"",tasks:[],assignee:"",priority:"normal",tags:[],comments:[],products:[]};
   const [form, setForm] = useState(emptyForm);
   const [expandId, setExpandId] = useState(null);
   const [newTask, setNewTask] = useState("");
   const [newComment, setNewComment] = useState("");
   const [newTag, setNewTag] = useState("");
   const [viewMode, setViewMode] = useState("list"); // list | gantt
+  const [productSearch, setProductSearch] = useState("");
+  const [productResults, setProductResults] = useState([]);
+  const [productData, setProductData] = useState({}); // {projectId: {sales,orders,delivery,stock}}
+  const [prodDataTab, setProdDataTab] = useState("sales");
+  const [prodDataDays, setProdDataDays] = useState(30);
   const [filterStatus, setFilterStatus] = useState("all");
   const [filterPriority, setFilterPriority] = useState("all");
   const [filterAssignee, setFilterAssignee] = useState("all");
@@ -2916,7 +2921,7 @@ function ProjectSection() {
   const STATUS_MAP = {planning:{label:"기획중",color:"#6366f1",bg:"#eef2ff"},in_progress:{label:"진행중",color:"#2563eb",bg:"#eff6ff"},done:{label:"완료",color:"#16a34a",bg:"#f0fdf4"},paused:{label:"보류",color:"#a1a1aa",bg:"#f4f4f5"}};
   const PRIORITY_MAP = {urgent:{label:"긴급",color:"#dc2626",bg:"#fef2f2",icon:"priority_high"},high:{label:"높음",color:"#ea580c",bg:"#fff7ed",icon:"arrow_upward"},normal:{label:"보통",color:"#2563eb",bg:"#eff6ff",icon:"remove"},low:{label:"낮음",color:"#a1a1aa",bg:"#f4f4f5",icon:"arrow_downward"}};
   const TAG_COLORS = ["#2563eb","#6366f1","#16a34a","#ea580c","#dc2626","#0891b2","#7c3aed","#c026d3"];
-  const ASSIGNEES = ["대표","마케팅","디자인","개발","MD","CS","물류"];
+  const ASSIGNEES = ["지원","경은","소리","지수","영서"];
 
   const load = () => {
     setLoading(true);
@@ -2944,7 +2949,7 @@ function ProjectSection() {
   };
 
   const edit = (p) => {
-    setForm({name:p.name,status:p.status,start_date:p.start_date||"",end_date:p.end_date||"",progress:p.progress||0,description:p.description||"",tasks:p.tasks||[],assignee:p.assignee||"",priority:p.priority||"normal",tags:p.tags||[],comments:p.comments||[]});
+    setForm({name:p.name,status:p.status,start_date:p.start_date||"",end_date:p.end_date||"",progress:p.progress||0,description:p.description||"",tasks:p.tasks||[],assignee:p.assignee||"",priority:p.priority||"normal",tags:p.tags||[],comments:p.comments||[],products:p.products||[]});
     setEditId(p.id); setShowForm(true);
   };
 
@@ -2980,6 +2985,42 @@ function ProjectSection() {
     const comments = [...(proj.comments||[]), {text:newComment.trim(),date:new Date().toISOString().slice(0,16).replace("T"," "),by:proj.assignee||""}];
     patchProject(proj, {comments});
     setNewComment("");
+  };
+
+  const searchProducts = async (kw) => {
+    if(!kw.trim()) { setProductResults([]); return; }
+    try {
+      const r = await fetch(`/api/project-data?action=search&keyword=${encodeURIComponent(kw)}`);
+      const d = await r.json();
+      setProductResults(d.rows||[]);
+    } catch(e) { setProductResults([]); }
+  };
+
+  const loadProductData = async (proj) => {
+    const prods = proj.products||[];
+    if(!prods.length) return;
+    const ids = prods.map(p=>p.id).join(",");
+    try {
+      const [salesR, ordersR, deliveryR, stockR] = await Promise.all([
+        fetch(`/api/project-data?action=sales&product_ids=${ids}&days=${prodDataDays}`).then(r=>r.json()),
+        fetch(`/api/project-data?action=orders&product_ids=${ids}&days=${prodDataDays}`).then(r=>r.json()),
+        fetch(`/api/project-data?action=delivery&product_ids=${ids}&days=${prodDataDays}`).then(r=>r.json()),
+        fetch(`/api/project-data?action=stock&product_ids=${ids}`).then(r=>r.json()),
+      ]);
+      setProductData(prev=>({...prev,[proj.id]:{sales:salesR.rows||[],orders:ordersR.rows||[],delivery:deliveryR.rows||[],stock:stockR.rows||[]}}));
+    } catch(e) { console.error(e); }
+  };
+
+  const addProductToProject = async (proj, product) => {
+    const prods = [...(proj.products||[])];
+    if(prods.find(p=>p.id===product.id)) return;
+    prods.push({id:product.id, name:product.name, brand:product.brand});
+    patchProject(proj, {products:prods});
+  };
+
+  const removeProductFromProject = async (proj, idx) => {
+    const prods = (proj.products||[]).filter((_,i)=>i!==idx);
+    patchProject(proj, {products:prods});
   };
 
   const removeComment = async (proj, idx) => {
@@ -3180,6 +3221,144 @@ function ProjectSection() {
                         <button onClick={()=>addTask(p)} style={{padding:"6px 12px",background:C.blush,color:C.rose,border:"none",borderRadius:6,fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>추가</button>
                       </div>
 
+                      {/* 연동 제품 */}
+                      <div style={{fontSize:11,fontWeight:800,color:C.ink,marginTop:16,marginBottom:8,display:"flex",alignItems:"center",gap:4}}><MI n="inventory_2" size={14}/> 연동 제품 ({(p.products||[]).length})</div>
+                      <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:8}}>
+                        {(p.products||[]).map((pr,i)=>(
+                          <span key={i} style={{fontSize:10,fontWeight:700,color:"#2563eb",background:"#eff6ff",padding:"3px 10px",borderRadius:12,display:"flex",alignItems:"center",gap:4}}>
+                            {pr.brand && <span style={{color:C.inkLt}}>{pr.brand}</span>} {pr.name}
+                            <span onClick={()=>removeProductFromProject(p,i)} style={{cursor:"pointer",color:C.inkLt}}><MI n="close" size={10}/></span>
+                          </span>
+                        ))}
+                      </div>
+                      <div style={{position:"relative",marginBottom:8}}>
+                        <input value={productSearch} onChange={e=>{setProductSearch(e.target.value);searchProducts(e.target.value);}}
+                          placeholder="제품 검색 (이름 또는 브랜드)..." style={{width:"100%",padding:"6px 10px",border:`1px solid ${C.border}`,borderRadius:6,fontSize:12,fontFamily:"inherit",outline:"none",boxSizing:"border-box"}}/>
+                        {productResults.length>0 && (
+                          <div style={{position:"absolute",top:"100%",left:0,right:0,background:C.white,border:`1px solid ${C.border}`,borderRadius:8,maxHeight:200,overflow:"auto",zIndex:50,boxShadow:"0 4px 12px rgba(0,0,0,0.1)"}}>
+                            {productResults.map((pr,i)=>(
+                              <div key={i} onClick={()=>{addProductToProject(p,pr);setProductSearch("");setProductResults([]);}}
+                                style={{padding:"8px 12px",cursor:"pointer",fontSize:11,borderBottom:`1px solid ${C.cream}`,display:"flex",gap:8}}
+                                onMouseEnter={e=>e.currentTarget.style.background="#f9fafb"} onMouseLeave={e=>e.currentTarget.style.background="#fff"}>
+                                <span style={{color:C.inkLt,fontWeight:600}}>{pr.brand}</span>
+                                <span style={{color:C.ink}}>{pr.name}</span>
+                                {pr.category && <span style={{color:C.inkLt,fontSize:9}}>{pr.category}</span>}
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* 제품 데이터 */}
+                      {(p.products||[]).length>0 && (()=>{
+                        const pd = productData[p.id];
+                        return (
+                          <div style={{background:C.cream,borderRadius:10,padding:12,marginBottom:12}}>
+                            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
+                              <div style={{display:"flex",gap:4}}>
+                                {[{id:"sales",label:"매출"},{id:"orders",label:"주문"},{id:"delivery",label:"배송"},{id:"stock",label:"재고"}].map(t=>(
+                                  <button key={t.id} onClick={()=>setProdDataTab(t.id)} style={{padding:"4px 10px",border:"none",borderRadius:6,background:prodDataTab===t.id?C.rose:"#fff",color:prodDataTab===t.id?"#fff":C.inkMid,fontSize:10,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>{t.label}</button>
+                                ))}
+                              </div>
+                              <div style={{display:"flex",gap:4,alignItems:"center"}}>
+                                <select value={prodDataDays} onChange={e=>setProdDataDays(Number(e.target.value))} style={{padding:"3px 6px",border:`1px solid ${C.border}`,borderRadius:4,fontSize:10,fontFamily:"inherit"}}>
+                                  {[7,14,30,60,90].map(d=><option key={d} value={d}>{d}일</option>)}
+                                </select>
+                                <button onClick={()=>loadProductData(p)} style={{padding:"4px 10px",border:"none",borderRadius:6,background:C.rose,color:"#fff",fontSize:10,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>조회</button>
+                              </div>
+                            </div>
+                            {!pd && <div style={{textAlign:"center",padding:16,color:C.inkMid,fontSize:11}}>"조회" 버튼을 눌러 데이터를 불러오세요</div>}
+                            {pd && prodDataTab==="sales" && (
+                              <div>
+                                {(()=>{
+                                  const byProduct = {};
+                                  (pd.sales||[]).forEach(r=>{if(!byProduct[r.name])byProduct[r.name]={qty:0,revenue:0,profit:0};byProduct[r.name].qty+=r.qty;byProduct[r.name].revenue+=r.revenue;byProduct[r.name].profit+=r.profit;});
+                                  return (
+                                    <table style={{width:"100%",borderCollapse:"collapse",fontSize:11}}>
+                                      <thead><tr style={{background:"#fff"}}>
+                                        {["제품명","판매수량","매출액","이익"].map(h=><th key={h} style={{padding:"6px 8px",textAlign:"left",fontWeight:700,color:C.inkMid,borderBottom:`1px solid ${C.border}`}}>{h}</th>)}
+                                      </tr></thead>
+                                      <tbody>
+                                        {Object.entries(byProduct).sort((a,b)=>b[1].revenue-a[1].revenue).map(([name,d])=>(
+                                          <tr key={name} style={{borderBottom:`1px solid ${C.cream}`}}>
+                                            <td style={{padding:"6px 8px",fontWeight:600}}>{name}</td>
+                                            <td style={{padding:"6px 8px"}}>{d.qty.toLocaleString()}</td>
+                                            <td style={{padding:"6px 8px"}}>{d.revenue.toLocaleString()}원</td>
+                                            <td style={{padding:"6px 8px",color:d.profit>0?"#16a34a":"#dc2626"}}>{d.profit.toLocaleString()}원</td>
+                                          </tr>
+                                        ))}
+                                      </tbody>
+                                    </table>
+                                  );
+                                })()}
+                              </div>
+                            )}
+                            {pd && prodDataTab==="orders" && (
+                              <div>
+                                {(()=>{
+                                  const byType = {};
+                                  (pd.orders||[]).forEach(r=>{const k=`${r.order_type||"기타"}`;if(!byType[k])byType[k]={qty:0,amount:0,cnt:0};byType[k].qty+=r.qty;byType[k].amount+=Number(r.amount||0);byType[k].cnt++;});
+                                  return (
+                                    <table style={{width:"100%",borderCollapse:"collapse",fontSize:11}}>
+                                      <thead><tr style={{background:"#fff"}}>
+                                        {["주문유형","건수","수량","금액"].map(h=><th key={h} style={{padding:"6px 8px",textAlign:"left",fontWeight:700,color:C.inkMid,borderBottom:`1px solid ${C.border}`}}>{h}</th>)}
+                                      </tr></thead>
+                                      <tbody>
+                                        {Object.entries(byType).map(([type,d])=>(
+                                          <tr key={type} style={{borderBottom:`1px solid ${C.cream}`}}>
+                                            <td style={{padding:"6px 8px",fontWeight:600}}>{type}</td>
+                                            <td style={{padding:"6px 8px"}}>{d.cnt.toLocaleString()}</td>
+                                            <td style={{padding:"6px 8px"}}>{d.qty.toLocaleString()}</td>
+                                            <td style={{padding:"6px 8px"}}>{d.amount.toLocaleString()}원</td>
+                                          </tr>
+                                        ))}
+                                      </tbody>
+                                    </table>
+                                  );
+                                })()}
+                              </div>
+                            )}
+                            {pd && prodDataTab==="delivery" && (
+                              <table style={{width:"100%",borderCollapse:"collapse",fontSize:11}}>
+                                <thead><tr style={{background:"#fff"}}>
+                                  {["제품","배송유형","상태","건수","수량"].map(h=><th key={h} style={{padding:"6px 8px",textAlign:"left",fontWeight:700,color:C.inkMid,borderBottom:`1px solid ${C.border}`}}>{h}</th>)}
+                                </tr></thead>
+                                <tbody>
+                                  {(pd.delivery||[]).map((r,i)=>(
+                                    <tr key={i} style={{borderBottom:`1px solid ${C.cream}`}}>
+                                      <td style={{padding:"6px 8px",fontWeight:600}}>{r.name}</td>
+                                      <td style={{padding:"6px 8px"}}><span style={{fontSize:9,padding:"2px 6px",borderRadius:8,background:r.type==="배송"?"#eff6ff":"#fef2f2",color:r.type==="배송"?"#2563eb":"#dc2626",fontWeight:700}}>{r.type}</span></td>
+                                      <td style={{padding:"6px 8px"}}>{r.status}</td>
+                                      <td style={{padding:"6px 8px"}}>{r.cnt}</td>
+                                      <td style={{padding:"6px 8px"}}>{r.qty}</td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            )}
+                            {pd && prodDataTab==="stock" && (
+                              <table style={{width:"100%",borderCollapse:"collapse",fontSize:11}}>
+                                <thead><tr style={{background:"#fff"}}>
+                                  {["제품","모델","재고","생산중","출하","운송중"].map(h=><th key={h} style={{padding:"6px 8px",textAlign:"left",fontWeight:700,color:C.inkMid,borderBottom:`1px solid ${C.border}`}}>{h}</th>)}
+                                </tr></thead>
+                                <tbody>
+                                  {(pd.stock||[]).map((r,i)=>(
+                                    <tr key={i} style={{borderBottom:`1px solid ${C.cream}`}}>
+                                      <td style={{padding:"6px 8px",fontWeight:600}}>{r.name}</td>
+                                      <td style={{padding:"6px 8px",color:C.inkMid}}>{r.model}</td>
+                                      <td style={{padding:"6px 8px",fontWeight:700,color:r.stock>0?"#16a34a":"#dc2626"}}>{r.stock?.toLocaleString()}</td>
+                                      <td style={{padding:"6px 8px"}}>{r.producing?.toLocaleString()}</td>
+                                      <td style={{padding:"6px 8px"}}>{r.shipping?.toLocaleString()}</td>
+                                      <td style={{padding:"6px 8px"}}>{r.transit?.toLocaleString()}</td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            )}
+                          </div>
+                        );
+                      })()}
+
                       {/* 코멘트 */}
                       <div style={{fontSize:11,fontWeight:800,color:C.ink,marginTop:16,marginBottom:8,display:"flex",alignItems:"center",gap:4}}><MI n="chat" size={14}/> 메모 ({comments.length})</div>
                       {comments.map((c,i)=>(
@@ -3266,6 +3445,30 @@ function ProjectSection() {
                   <input value={newTag} onChange={e=>setNewTag(e.target.value)}
                     onKeyDown={e=>{if(e.key==="Enter"&&newTag.trim()){setForm({...form,tags:[...(form.tags||[]),newTag.trim()]});setNewTag("");}}}
                     placeholder="태그 입력 후 Enter" style={{padding:"4px 8px",border:`1px solid ${C.border}`,borderRadius:6,fontSize:11,fontFamily:"inherit",outline:"none",width:120}}/>
+                </div>
+              </div>
+              <div>
+                <label style={{fontSize:11,fontWeight:700,color:C.inkMid}}>연동 제품</label>
+                <div style={{display:"flex",gap:6,flexWrap:"wrap",marginTop:6,marginBottom:6}}>
+                  {(form.products||[]).map((pr,i)=>(
+                    <span key={i} onClick={()=>setForm({...form,products:form.products.filter((_,j)=>j!==i)})}
+                      style={{fontSize:10,fontWeight:700,color:"#2563eb",background:"#eff6ff",padding:"3px 10px",borderRadius:12,cursor:"pointer"}}>{pr.brand} {pr.name} x</span>
+                  ))}
+                </div>
+                <div style={{position:"relative"}}>
+                  <input value={productSearch} onChange={e=>{setProductSearch(e.target.value);searchProducts(e.target.value);}}
+                    placeholder="제품명 또는 브랜드 검색..." style={{...inputStyle,marginTop:0}}/>
+                  {productResults.length>0 && (
+                    <div style={{position:"absolute",top:"100%",left:0,right:0,background:C.white,border:`1px solid ${C.border}`,borderRadius:8,maxHeight:180,overflow:"auto",zIndex:50,boxShadow:"0 4px 12px rgba(0,0,0,0.1)"}}>
+                      {productResults.map((pr,i)=>(
+                        <div key={i} onClick={()=>{if(!(form.products||[]).find(p=>p.id===pr.id))setForm({...form,products:[...(form.products||[]),{id:pr.id,name:pr.name,brand:pr.brand}]});setProductSearch("");setProductResults([]);}}
+                          style={{padding:"8px 12px",cursor:"pointer",fontSize:11,borderBottom:`1px solid ${C.cream}`}}
+                          onMouseEnter={e=>e.currentTarget.style.background="#f9fafb"} onMouseLeave={e=>e.currentTarget.style.background="#fff"}>
+                          <span style={{color:C.inkLt}}>{pr.brand}</span> {pr.name}
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
               <div>
