@@ -3231,11 +3231,11 @@ function ProjectSection() {
                           </span>
                         ))}
                       </div>
-                      <div style={{position:"relative",marginBottom:8}}>
+                      <div style={{marginBottom:8}}>
                         <input value={productSearch} onChange={e=>{setProductSearch(e.target.value);searchProducts(e.target.value);}}
                           placeholder="제품 검색 (이름 또는 브랜드)..." style={{width:"100%",padding:"6px 10px",border:`1px solid ${C.border}`,borderRadius:6,fontSize:12,fontFamily:"inherit",outline:"none",boxSizing:"border-box"}}/>
                         {productResults.length>0 && (
-                          <div style={{position:"absolute",top:"100%",left:0,right:0,background:C.white,border:`1px solid ${C.border}`,borderRadius:8,maxHeight:200,overflow:"auto",zIndex:50,boxShadow:"0 4px 12px rgba(0,0,0,0.1)"}}>
+                          <div style={{background:C.white,border:`1px solid ${C.border}`,borderRadius:8,maxHeight:200,overflow:"auto",marginTop:6}}>
                             {productResults.map((pr,i)=>(
                               <div key={i} onClick={()=>{addProductToProject(p,pr);setProductSearch("");setProductResults([]);}}
                                 style={{padding:"8px 12px",cursor:"pointer",fontSize:11,borderBottom:`1px solid ${C.cream}`,display:"flex",gap:8}}
@@ -3455,11 +3455,11 @@ function ProjectSection() {
                       style={{fontSize:10,fontWeight:700,color:"#2563eb",background:"#eff6ff",padding:"3px 10px",borderRadius:12,cursor:"pointer"}}>{pr.brand} {pr.name} x</span>
                   ))}
                 </div>
-                <div style={{position:"relative"}}>
+                <div>
                   <input value={productSearch} onChange={e=>{setProductSearch(e.target.value);searchProducts(e.target.value);}}
                     placeholder="제품명 또는 브랜드 검색..." style={{...inputStyle,marginTop:0}}/>
                   {productResults.length>0 && (
-                    <div style={{position:"absolute",top:"100%",left:0,right:0,background:C.white,border:`1px solid ${C.border}`,borderRadius:8,maxHeight:180,overflow:"auto",zIndex:50,boxShadow:"0 4px 12px rgba(0,0,0,0.1)"}}>
+                    <div style={{background:C.white,border:`1px solid ${C.border}`,borderRadius:8,maxHeight:180,overflow:"auto",marginTop:6}}>
                       {productResults.map((pr,i)=>(
                         <div key={i} onClick={()=>{if(!(form.products||[]).find(p=>p.id===pr.id))setForm({...form,products:[...(form.products||[]),{id:pr.id,name:pr.name,brand:pr.brand}]});setProductSearch("");setProductResults([]);}}
                           style={{padding:"8px 12px",cursor:"pointer",fontSize:11,borderBottom:`1px solid ${C.cream}`}}
