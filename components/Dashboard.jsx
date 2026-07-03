@@ -3602,6 +3602,46 @@ function ProjectSection() {
                     <div style={{padding:"0 16px 16px",borderTop:`1px solid ${C.cream}`}}>
                       {p.description && <div style={{fontSize:12,color:C.inkMid,padding:"12px 0",lineHeight:1.6,whiteSpace:"pre-wrap"}}>{p.description}</div>}
 
+                      {/* 전년 동기간 비교 */}
+                      {(p.products||[]).length>0 && (()=>{
+                        const yoy = yoyData[p.id];
+                        return (
+                          <div style={{marginBottom:8}}>
+                            <button onClick={()=>{if(!yoy)loadYoY(p);setShowYoY(showYoY===p.id?null:p.id);}} style={{fontSize:10,fontWeight:700,color:"#7c3aed",background:"#ede9fe",border:"none",borderRadius:6,padding:"5px 12px",cursor:"pointer",fontFamily:"inherit",display:"flex",alignItems:"center",gap:4}}>
+                              <MI n="compare_arrows" size={14}/> {showYoY===p.id?"전년비교 닫기":"전년 동기간 비교"}
+                            </button>
+                            {showYoY===p.id && !yoy && <div style={{padding:8,fontSize:10,color:"#7c3aed"}}>로딩중...</div>}
+                            {showYoY===p.id && yoy && (()=>{
+                              const fmtRev = v=>v>=100000000?(v/100000000).toFixed(1)+"억":v>=10000?(v/10000).toFixed(0)+"만":v.toLocaleString();
+                              const revDiff = yoy.last.revenue>0?Math.round((yoy.this.revenue-yoy.last.revenue)/yoy.last.revenue*100):0;
+                              const qtyDiff = yoy.last.qty>0?Math.round((yoy.this.qty-yoy.last.qty)/yoy.last.qty*100):0;
+                              return (
+                                <div style={{background:"#faf5ff",borderRadius:8,padding:10,marginTop:6}}>
+                                  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr 1fr",gap:6,fontSize:11}}>
+                                    <div style={{background:C.white,borderRadius:6,padding:"6px 8px"}}>
+                                      <div style={{fontSize:9,color:C.inkMid}}>올해 매출</div>
+                                      <div style={{fontWeight:800,color:"#7c3aed"}}>{fmtRev(yoy.this.revenue)}원</div>
+                                    </div>
+                                    <div style={{background:C.white,borderRadius:6,padding:"6px 8px"}}>
+                                      <div style={{fontSize:9,color:C.inkMid}}>작년 매출</div>
+                                      <div style={{fontWeight:800,color:C.inkMid}}>{fmtRev(yoy.last.revenue)}원</div>
+                                    </div>
+                                    <div style={{background:revDiff>=0?"#f0fdf4":"#fef2f2",borderRadius:6,padding:"6px 8px"}}>
+                                      <div style={{fontSize:9,color:C.inkMid}}>매출 변동</div>
+                                      <div style={{fontWeight:900,color:revDiff>=0?"#16a34a":"#dc2626"}}>{revDiff>0?"+":""}{revDiff}%</div>
+                                    </div>
+                                    <div style={{background:qtyDiff>=0?"#f0fdf4":"#fef2f2",borderRadius:6,padding:"6px 8px"}}>
+                                      <div style={{fontSize:9,color:C.inkMid}}>수량 변동</div>
+                                      <div style={{fontWeight:900,color:qtyDiff>=0?"#16a34a":"#dc2626"}}>{qtyDiff>0?"+":""}{qtyDiff}%</div>
+                                    </div>
+                                  </div>
+                                </div>
+                              );
+                            })()}
+                          </div>
+                        );
+                      })()}
+
                       {/* 할일 */}
                       <div style={{fontSize:11,fontWeight:800,color:C.ink,marginTop:8,marginBottom:8,display:"flex",alignItems:"center",gap:4}}><MI n="checklist" size={14}/> 할일 ({tasks.filter(t=>t.done).length}/{tasks.length})</div>
                       {tasks.map((t,i)=>(
@@ -3773,56 +3813,6 @@ function ProjectSection() {
                           </div>
                         )}
                       </div>
-
-                      {/* 전년 비교 */}
-                      {(p.products||[]).length>0 && (
-                        <div style={{marginTop:8}}>
-                          <button onClick={()=>{if(!yoyData[p.id])loadYoY(p);setShowYoY(!showYoY);}} style={{fontSize:10,fontWeight:700,color:C.rose,background:C.blush,border:"none",borderRadius:6,padding:"4px 12px",cursor:"pointer",fontFamily:"inherit",display:"flex",alignItems:"center",gap:4}}>
-                            <MI n="compare_arrows" size={14}/> {showYoY?"전년비교 닫기":"전년 동기간 비교"}
-                          </button>
-                          {showYoY && yoyData[p.id] && (()=>{
-                            const y = yoyData[p.id];
-                            const fmtRev = v => v>=100000000?(v/100000000).toFixed(1)+"억":v>=10000?(v/10000).toFixed(0)+"만":v.toLocaleString();
-                            const revDiff = y.last.revenue>0 ? Math.round((y.this.revenue-y.last.revenue)/y.last.revenue*100) : (y.this.revenue>0?999:0);
-                            const qtyDiff = y.last.qty>0 ? Math.round((y.this.qty-y.last.qty)/y.last.qty*100) : (y.this.qty>0?999:0);
-                            return (
-                              <div style={{background:"#faf5ff",borderRadius:8,padding:10,marginTop:6}}>
-                                <table style={{width:"100%",borderCollapse:"collapse",fontSize:11}}>
-                                  <thead><tr>
-                                    <th style={{padding:"4px 8px",textAlign:"left",color:C.inkMid,fontWeight:700}}></th>
-                                    <th style={{padding:"4px 8px",textAlign:"right",color:"#7c3aed",fontWeight:700}}>올해</th>
-                                    <th style={{padding:"4px 8px",textAlign:"right",color:C.inkMid,fontWeight:700}}>작년</th>
-                                    <th style={{padding:"4px 8px",textAlign:"right",color:C.inkMid,fontWeight:700}}>변동</th>
-                                  </tr></thead>
-                                  <tbody>
-                                    <tr style={{borderBottom:`1px solid #e9d5ff`}}>
-                                      <td style={{padding:"6px 8px",fontWeight:600}}>매출</td>
-                                      <td style={{padding:"6px 8px",textAlign:"right",fontWeight:800,color:"#7c3aed"}}>{fmtRev(y.this.revenue)}원</td>
-                                      <td style={{padding:"6px 8px",textAlign:"right",color:C.inkMid}}>{fmtRev(y.last.revenue)}원</td>
-                                      <td style={{padding:"6px 8px",textAlign:"right",fontWeight:800,color:revDiff>0?"#16a34a":"#dc2626"}}>{revDiff===999?"NEW":revDiff>0?`+${revDiff}%`:`${revDiff}%`}</td>
-                                    </tr>
-                                    <tr style={{borderBottom:`1px solid #e9d5ff`}}>
-                                      <td style={{padding:"6px 8px",fontWeight:600}}>판매수량</td>
-                                      <td style={{padding:"6px 8px",textAlign:"right",fontWeight:800,color:"#7c3aed"}}>{y.this.qty.toLocaleString()}개</td>
-                                      <td style={{padding:"6px 8px",textAlign:"right",color:C.inkMid}}>{y.last.qty.toLocaleString()}개</td>
-                                      <td style={{padding:"6px 8px",textAlign:"right",fontWeight:800,color:qtyDiff>0?"#16a34a":"#dc2626"}}>{qtyDiff===999?"NEW":qtyDiff>0?`+${qtyDiff}%`:`${qtyDiff}%`}</td>
-                                    </tr>
-                                    <tr>
-                                      <td style={{padding:"6px 8px",fontWeight:600}}>이익</td>
-                                      <td style={{padding:"6px 8px",textAlign:"right",fontWeight:800,color:"#7c3aed"}}>{fmtRev(y.this.profit)}원</td>
-                                      <td style={{padding:"6px 8px",textAlign:"right",color:C.inkMid}}>{fmtRev(y.last.profit)}원</td>
-                                      <td style={{padding:"6px 8px",textAlign:"right",fontWeight:800,color:y.this.profit>y.last.profit?"#16a34a":"#dc2626"}}>
-                                        {y.last.profit>0?`${Math.round((y.this.profit-y.last.profit)/y.last.profit*100)}%`:"-"}
-                                      </td>
-                                    </tr>
-                                  </tbody>
-                                </table>
-                              </div>
-                            );
-                          })()}
-                          {showYoY && !yoyData[p.id] && <div style={{padding:8,fontSize:10,color:C.inkMid}}>로딩중...</div>}
-                        </div>
-                      )}
 
                       {/* 광고비 (ROAS) */}
                       {(p.products||[]).length>0 && (()=>{
