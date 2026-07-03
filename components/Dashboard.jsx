@@ -3868,15 +3868,6 @@ function ProjectSection() {
                               <div style={{background:C.white,borderRadius:6,padding:"6px 8px"}}><div style={{fontSize:9,color:C.inkMid}}>일평균 판매</div><div style={{fontWeight:800,color:"#0891b2"}}>{after.avgQty.toLocaleString()}개</div><div style={{fontSize:9,color:C.inkLt}}>이전: {before.avgQty.toLocaleString()}개</div></div>
                               <div style={{background:revChange>=0?"#f0fdf4":"#fef2f2",borderRadius:6,padding:"6px 8px"}}><div style={{fontSize:9,color:C.inkMid}}>변동률</div><div style={{fontWeight:900,color:revChange>=0?"#16a34a":"#dc2626"}}>매출 {revChange>0?"+":""}{revChange}%</div><div style={{fontWeight:900,color:qtyChange>=0?"#16a34a":"#dc2626",fontSize:10}}>수량 {qtyChange>0?"+":""}{qtyChange}%</div></div>
                             </div>
-                            {(topGainers?.length>0||topLosers?.length>0) && (
-                              <div style={{marginBottom:8}}>
-                                <div style={{fontSize:10,fontWeight:800,color:C.ink,marginBottom:4}}>매출처 변동</div>
-                                <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
-                                  {(topGainers||[]).map((c,i)=>(<div key={"g"+i} style={{background:"#f0fdf4",border:"1px solid #bbf7d0",borderRadius:6,padding:"4px 8px",fontSize:10}}><div style={{fontWeight:700}}>{c.channel}</div><div style={{fontWeight:800,color:"#16a34a"}}>+{c.revDiff}%</div></div>))}
-                                  {(topLosers||[]).map((c,i)=>(<div key={"l"+i} style={{background:"#fef2f2",border:"1px solid #fecaca",borderRadius:6,padding:"4px 8px",fontSize:10}}><div style={{fontWeight:700}}>{c.channel}</div><div style={{fontWeight:800,color:"#dc2626"}}>{c.revDiff}%</div></div>))}
-                                </div>
-                              </div>
-                            )}
                           </div>
                         );
                       })()}
