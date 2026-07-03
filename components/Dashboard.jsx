@@ -2914,6 +2914,8 @@ function ProjectSection() {
   const [productData, setProductData] = useState({}); // {projectId: {sales,orders,delivery,stock}}
   const [prodDataTab, setProdDataTab] = useState("sales");
   const [prodDataDays, setProdDataDays] = useState(30);
+  const [customDateFrom, setCustomDateFrom] = useState("");
+  const [customDateTo, setCustomDateTo] = useState("");
   const [prodDataLoading, setProdDataLoading] = useState({});
   const [selectedProdId, setSelectedProdId] = useState(null); // 클릭한 제품 id
   const [singleProdData, setSingleProdData] = useState({}); // {제품id: {sales,stock,...}}
@@ -3659,13 +3661,27 @@ function ProjectSection() {
 
                       {/* 기간 선택 */}
                       {(p.products||[]).length>0 && (
-                        <div style={{display:"flex",gap:6,alignItems:"center",marginTop:12,marginBottom:8}}>
+                        <div style={{display:"flex",gap:6,alignItems:"center",marginTop:12,marginBottom:8,flexWrap:"wrap"}}>
                           <MI n="date_range" size={14} style={{color:C.inkMid}}/>
-                          <span style={{fontSize:10,fontWeight:700,color:C.inkMid}}>기간</span>
-                          {[{v:7,l:"7일"},{v:14,l:"14일"},{v:30,l:"30일"},{v:60,l:"60일"},{v:90,l:"90일"},{v:9999,l:"전체"}].map(d=>(
-                            <button key={d.v} onClick={()=>{setProdDataDays(d.v);setSingleProdData({});setSelectedProdId(null);setProjDailyChart(prev=>{const n={...prev};delete n[p.id];return n;});setProjAdData(prev=>{const n={...prev};delete n[p.id];return n;});}}
-                              style={{padding:"3px 10px",border:"none",borderRadius:6,background:prodDataDays===d.v?C.rose:"#fff",color:prodDataDays===d.v?"#fff":C.inkMid,fontSize:10,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>{d.l}</button>
+                          {[{v:1,l:"1일"},{v:7,l:"7일"},{v:14,l:"14일"},{v:30,l:"30일"},{v:60,l:"60일"},{v:90,l:"90일"},{v:9999,l:"전체"}].map(d=>(
+                            <button key={d.v} onClick={()=>{setProdDataDays(d.v);setCustomDateFrom("");setCustomDateTo("");setSingleProdData({});setSelectedProdId(null);setProjDailyChart(prev=>{const n={...prev};delete n[p.id];return n;});setProjAdData(prev=>{const n={...prev};delete n[p.id];return n;});}}
+                              style={{padding:"3px 10px",border:"none",borderRadius:6,background:prodDataDays===d.v&&!customDateFrom?C.rose:"#fff",color:prodDataDays===d.v&&!customDateFrom?"#fff":C.inkMid,fontSize:10,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>{d.l}</button>
                           ))}
+                          <span style={{fontSize:10,color:C.inkLt}}>|</span>
+                          <input type="date" value={customDateFrom} onChange={e=>setCustomDateFrom(e.target.value)}
+                            style={{padding:"2px 6px",border:`1px solid ${C.border}`,borderRadius:4,fontSize:10,fontFamily:"inherit"}}/>
+                          <span style={{fontSize:10,color:C.inkMid}}>~</span>
+                          <input type="date" value={customDateTo} onChange={e=>setCustomDateTo(e.target.value)}
+                            style={{padding:"2px 6px",border:`1px solid ${C.border}`,borderRadius:4,fontSize:10,fontFamily:"inherit"}}/>
+                          {customDateFrom && customDateTo && (
+                            <button onClick={()=>{
+                              const days = Math.ceil((new Date(customDateTo)-new Date(customDateFrom))/86400000)+1;
+                              setProdDataDays(days);
+                              setSingleProdData({});setSelectedProdId(null);
+                              setProjDailyChart(prev=>{const n={...prev};delete n[p.id];return n;});
+                              setProjAdData(prev=>{const n={...prev};delete n[p.id];return n;});
+                            }} style={{padding:"3px 10px",border:"none",borderRadius:6,background:C.rose,color:"#fff",fontSize:10,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>적용</button>
+                          )}
                         </div>
                       )}
 
@@ -3842,14 +3858,24 @@ function ProjectSection() {
                       {projPromoData[p.id] && projPromoData[p.id].length>0 && (
                         <div style={{background:"#fff7ed",borderRadius:10,padding:12,marginTop:8}}>
                           <div style={{fontSize:11,fontWeight:800,color:C.ink,marginBottom:8,display:"flex",alignItems:"center",gap:4}}><MI n="campaign" size={14}/> 프로모션 일정</div>
-                          {projPromoData[p.id].slice(0,5).map((pr,i)=>{
-                            const isActive = pr.start_date<=new Date().toISOString().split('T')[0] && pr.end_date>=new Date().toISOString().split('T')[0];
+                          {projPromoData[p.id].slice(0,8).map((pr,i)=>{
+                            const today = new Date().toISOString().split('T')[0];
+                            const isActive = pr.start_date<=today && pr.end_date>=today;
+                            const isPast = pr.end_date<today;
+                            // 프로모션 기간 매출 계산
+                            const chart = projDailyChart[p.id]||[];
+                            let promoRevenue = 0;
+                            if(chart.length && pr.start_date && pr.end_date) {
+                              chart.forEach(d=>{if(d.date>=pr.start_date&&d.date<=pr.end_date) promoRevenue+=d.revenue;});
+                            }
+                            const fmtRev = v=>v>=100000000?(v/100000000).toFixed(1)+"억":v>=10000?(v/10000).toFixed(0)+"만":v.toLocaleString();
                             return (
                               <div key={i} style={{display:"flex",gap:8,alignItems:"center",padding:"5px 0",borderBottom:`1px solid #fed7aa`,fontSize:11}}>
-                                <span style={{width:6,height:6,borderRadius:3,background:isActive?"#16a34a":"#d4d4d4",flexShrink:0}}/>
-                                <span style={{fontWeight:700,color:C.ink,flex:1}}>{pr.promo_name}</span>
-                                <span style={{color:C.inkMid,fontSize:9}}>{pr.channel}</span>
-                                <span style={{color:C.inkLt,fontSize:9}}>{pr.start_date?.slice(5)}~{pr.end_date?.slice(5)}</span>
+                                <span style={{width:6,height:6,borderRadius:3,background:isActive?"#16a34a":isPast?"#d4d4d4":"#2563eb",flexShrink:0}}/>
+                                <span style={{fontWeight:700,color:C.ink,flex:1,minWidth:0,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{pr.promo_name}</span>
+                                {promoRevenue>0 && <span style={{fontSize:9,fontWeight:700,color:"#ea580c",background:"#fff7ed",padding:"1px 6px",borderRadius:8,flexShrink:0}}>{fmtRev(promoRevenue)}원</span>}
+                                <span style={{color:C.inkMid,fontSize:9,flexShrink:0}}>{pr.channel}</span>
+                                <span style={{color:C.inkLt,fontSize:9,flexShrink:0}}>{pr.start_date?.slice(5)}~{pr.end_date?.slice(5)}</span>
                               </div>
                             );
                           })}
