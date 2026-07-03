@@ -3090,6 +3090,31 @@ function ProjectSection() {
     setFormPreviewLoading(false);
   };
 
+  const loadProjectImpact = async (proj) => {
+    if(!proj.start_date || !(proj.products||[]).length) return;
+    const ids = (proj.products||[]).map(p=>p.id);
+    const startDate = proj.start_date;
+    const now = new Date().toISOString().split('T')[0];
+    const daysSinceStart = Math.ceil((new Date(now)-new Date(startDate))/86400000);
+    const beforeStart = new Date(new Date(startDate).getTime()-daysSinceStart*86400000).toISOString().split('T')[0];
+
+    try {
+      const [beforeRows, afterRows] = await Promise.all([
+        Promise.all(ids.map(id=>fetch(`${SURL}/rest/v1/project_product_data?product_id=eq.${id}&date=gte.${beforeStart}&date=lt.${startDate}&select=date,qty,revenue`,{headers:sH}).then(r=>r.json()))),
+        Promise.all(ids.map(id=>fetch(`${SURL}/rest/v1/project_product_data?product_id=eq.${id}&date=gte.${startDate}&date=lte.${now}&select=date,qty,revenue`,{headers:sH}).then(r=>r.json()))),
+      ]);
+      const sum = (rows) => {
+        const t={qty:0,revenue:0,days:new Set()};
+        rows.flat().forEach(r=>{t.qty+=(r.qty||0);t.revenue+=Number(r.revenue||0);t.days.add(r.date);});
+        t.dayCount=t.days.size; delete t.days;
+        t.avgQty=t.dayCount?Math.round(t.qty/t.dayCount):0;
+        t.avgRevenue=t.dayCount?Math.round(t.revenue/t.dayCount):0;
+        return t;
+      };
+      setProjImpact(prev=>({...prev,[proj.id]:{before:sum(beforeRows),after:sum(afterRows),startDate}}));
+    } catch(e){console.error(e);}
+  };
+
   const loadYoYGlobal = async (days) => {
     setYoyGlobalLoading(true);
     const now = new Date();
@@ -3219,6 +3244,7 @@ function ProjectSection() {
   const [compareMode, setCompareMode] = useState(false);
   const [compareIds, setCompareIds] = useState([]); // 비교할 프로젝트 id 2개
   const [compareData, setCompareData] = useState(null);
+  const [projImpact, setProjImpact] = useState({}); // 프로젝트 시작 전/후 비교
   const [yoyGlobal, setYoyGlobal] = useState(null); // 전체 전년비교
   const [yoyGlobalLoading, setYoyGlobalLoading] = useState(false);
   const [yoyPeriod, setYoyPeriod] = useState(30);
@@ -3635,6 +3661,48 @@ function ProjectSection() {
                                     <div style={{background:qtyDiff>=0?"#f0fdf4":"#fef2f2",borderRadius:6,padding:"6px 8px"}}>
                                       <div style={{fontSize:9,color:C.inkMid}}>수량 변동</div>
                                       <div style={{fontWeight:900,color:qtyDiff>=0?"#16a34a":"#dc2626"}}>{qtyDiff>0?"+":""}{qtyDiff}%</div>
+                                    </div>
+                                  </div>
+                                </div>
+                              );
+                            })()}
+                          </div>
+                        );
+                      })()}
+
+                      {/* 프로젝트 시작 전/후 비교 */}
+                      {p.start_date && (p.products||[]).length>0 && (()=>{
+                        const impact = projImpact[p.id];
+                        return (
+                          <div style={{marginBottom:8}}>
+                            <button onClick={()=>{if(!impact)loadProjectImpact(p);}} style={{fontSize:10,fontWeight:700,color:"#0891b2",background:"#ecfeff",border:"none",borderRadius:6,padding:"5px 12px",cursor:"pointer",fontFamily:"inherit",display:"flex",alignItems:"center",gap:4}}>
+                              <MI n="trending_up" size={14}/> {impact?"시작 전/후 비교":"시작 전/후 효과 분석"}
+                            </button>
+                            {impact && (()=>{
+                              const {before,after} = impact;
+                              const fmtRev = v=>v>=100000000?(v/100000000).toFixed(1)+"억":v>=10000?(v/10000).toFixed(0)+"만":v.toLocaleString();
+                              const revChange = before.avgRevenue>0?Math.round((after.avgRevenue-before.avgRevenue)/before.avgRevenue*100):0;
+                              const qtyChange = before.avgQty>0?Math.round((after.avgQty-before.avgQty)/before.avgQty*100):0;
+                              return (
+                                <div style={{background:"#ecfeff",borderRadius:8,padding:10,marginTop:6}}>
+                                  <div style={{fontSize:10,color:"#0891b2",fontWeight:700,marginBottom:6}}>시작일: {p.start_date} 기준 (전 {before.dayCount}일 vs 후 {after.dayCount}일)</div>
+                                  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:6,fontSize:11}}>
+                                    <div style={{background:C.white,borderRadius:6,padding:"6px 8px"}}>
+                                      <div style={{fontSize:9,color:C.inkMid}}>일평균 매출</div>
+                                      <div style={{display:"flex",gap:4,alignItems:"baseline"}}>
+                                        <span style={{fontWeight:800,color:"#0891b2"}}>{fmtRev(after.avgRevenue)}원</span>
+                                      </div>
+                                      <div style={{fontSize:9,color:C.inkLt}}>이전: {fmtRev(before.avgRevenue)}원</div>
+                                    </div>
+                                    <div style={{background:C.white,borderRadius:6,padding:"6px 8px"}}>
+                                      <div style={{fontSize:9,color:C.inkMid}}>일평균 판매</div>
+                                      <div style={{fontWeight:800,color:"#0891b2"}}>{after.avgQty.toLocaleString()}개</div>
+                                      <div style={{fontSize:9,color:C.inkLt}}>이전: {before.avgQty.toLocaleString()}개</div>
+                                    </div>
+                                    <div style={{background:revChange>=0?"#f0fdf4":"#fef2f2",borderRadius:6,padding:"6px 8px"}}>
+                                      <div style={{fontSize:9,color:C.inkMid}}>변동률</div>
+                                      <div style={{fontWeight:900,color:revChange>=0?"#16a34a":"#dc2626"}}>매출 {revChange>0?"+":""}{revChange}%</div>
+                                      <div style={{fontWeight:900,color:qtyChange>=0?"#16a34a":"#dc2626",fontSize:10}}>수량 {qtyChange>0?"+":""}{qtyChange}%</div>
                                     </div>
                                   </div>
                                 </div>
