@@ -2914,6 +2914,7 @@ function ProjectSection() {
   const [productData, setProductData] = useState({}); // {projectId: {sales,orders,delivery,stock}}
   const [prodDataTab, setProdDataTab] = useState("sales");
   const [prodDataDays, setProdDataDays] = useState(30);
+  const [prodDataLoading, setProdDataLoading] = useState({});
   const [filterStatus, setFilterStatus] = useState("all");
   const [filterPriority, setFilterPriority] = useState("all");
   const [filterAssignee, setFilterAssignee] = useState("all");
@@ -2996,20 +2997,32 @@ function ProjectSection() {
     } catch(e) { setProductResults([]); }
   };
 
-  const loadProductData = async (proj) => {
+  const loadProductData = async (proj, overrideDays) => {
     const prods = proj.products||[];
     if(!prods.length) return;
     const ids = prods.map(p=>p.id).join(",");
+    const d = overrideDays || prodDataDays;
+    setProdDataLoading(prev=>({...prev,[proj.id]:true}));
     try {
       const [salesR, ordersR, deliveryR, stockR] = await Promise.all([
-        fetch(`/api/project-data?action=sales&product_ids=${ids}&days=${prodDataDays}`).then(r=>r.json()),
-        fetch(`/api/project-data?action=orders&product_ids=${ids}&days=${prodDataDays}`).then(r=>r.json()),
-        fetch(`/api/project-data?action=delivery&product_ids=${ids}&days=${prodDataDays}`).then(r=>r.json()),
+        fetch(`/api/project-data?action=sales&product_ids=${ids}&days=${d}`).then(r=>r.json()),
+        fetch(`/api/project-data?action=orders&product_ids=${ids}&days=${d}`).then(r=>r.json()),
+        fetch(`/api/project-data?action=delivery&product_ids=${ids}&days=${d}`).then(r=>r.json()),
         fetch(`/api/project-data?action=stock&product_ids=${ids}`).then(r=>r.json()),
       ]);
       setProductData(prev=>({...prev,[proj.id]:{sales:salesR.rows||[],orders:ordersR.rows||[],delivery:deliveryR.rows||[],stock:stockR.rows||[]}}));
     } catch(e) { console.error(e); }
+    setProdDataLoading(prev=>({...prev,[proj.id]:false}));
   };
+
+  // 펼칠 때 자동 로드
+  useEffect(()=>{
+    if(!expandId) return;
+    const proj = projects.find(p=>p.id===expandId);
+    if(proj && (proj.products||[]).length>0 && !productData[expandId]) {
+      loadProductData(proj);
+    }
+  },[expandId, projects]);
 
   const addProductToProject = async (proj, product) => {
     const prods = [...(proj.products||[])];
@@ -3252,24 +3265,103 @@ function ProjectSection() {
                       {/* 제품 데이터 */}
                       {(p.products||[]).length>0 && (()=>{
                         const pd = productData[p.id];
+                        const isLoading = prodDataLoading[p.id];
+
+                        // 변동 감지: 최근 7일 vs 이전 7일
+                        const changes = [];
+                        if(pd && pd.sales) {
+                          const byProd = {};
+                          pd.sales.forEach(r=>{
+                            if(!byProd[r.name]) byProd[r.name]={recent:0,prev:0};
+                            const d = new Date(r.date);
+                            const ago = Math.ceil((new Date()-d)/(86400000));
+                            if(ago<=7) byProd[r.name].recent+=r.qty;
+                            else if(ago<=14) byProd[r.name].prev+=r.qty;
+                          });
+                          Object.entries(byProd).forEach(([name,v])=>{
+                            if(v.prev>0) {
+                              const pct = Math.round((v.recent-v.prev)/v.prev*100);
+                              if(Math.abs(pct)>=20) changes.push({name,pct,recent:v.recent,prev:v.prev});
+                            } else if(v.recent>0) {
+                              changes.push({name,pct:999,recent:v.recent,prev:0});
+                            }
+                          });
+                          changes.sort((a,b)=>Math.abs(b.pct)-Math.abs(a.pct));
+                        }
+
+                        // 일별 차트 데이터
+                        const chartData = [];
+                        if(pd && pd.sales) {
+                          const byDate = {};
+                          pd.sales.forEach(r=>{
+                            const d = r.date;
+                            if(!byDate[d]) byDate[d]={date:d,qty:0,revenue:0};
+                            byDate[d].qty+=r.qty;
+                            byDate[d].revenue+=r.revenue;
+                          });
+                          Object.values(byDate).sort((a,b)=>a.date.localeCompare(b.date)).forEach(d=>chartData.push(d));
+                        }
+
                         return (
                           <div style={{background:C.cream,borderRadius:10,padding:12,marginBottom:12}}>
-                            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
+                            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10,flexWrap:"wrap",gap:6}}>
                               <div style={{display:"flex",gap:4}}>
-                                {[{id:"sales",label:"매출"},{id:"orders",label:"주문"},{id:"delivery",label:"배송"},{id:"stock",label:"재고"}].map(t=>(
+                                {[{id:"sales",label:"매출 추이"},{id:"orders",label:"주문"},{id:"delivery",label:"배송"},{id:"stock",label:"재고"}].map(t=>(
                                   <button key={t.id} onClick={()=>setProdDataTab(t.id)} style={{padding:"4px 10px",border:"none",borderRadius:6,background:prodDataTab===t.id?C.rose:"#fff",color:prodDataTab===t.id?"#fff":C.inkMid,fontSize:10,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>{t.label}</button>
                                 ))}
                               </div>
                               <div style={{display:"flex",gap:4,alignItems:"center"}}>
-                                <select value={prodDataDays} onChange={e=>setProdDataDays(Number(e.target.value))} style={{padding:"3px 6px",border:`1px solid ${C.border}`,borderRadius:4,fontSize:10,fontFamily:"inherit"}}>
+                                <select value={prodDataDays} onChange={e=>{const v=Number(e.target.value);setProdDataDays(v);loadProductData(p,v);}} style={{padding:"3px 6px",border:`1px solid ${C.border}`,borderRadius:4,fontSize:10,fontFamily:"inherit"}}>
                                   {[7,14,30,60,90].map(d=><option key={d} value={d}>{d}일</option>)}
                                 </select>
-                                <button onClick={()=>loadProductData(p)} style={{padding:"4px 10px",border:"none",borderRadius:6,background:C.rose,color:"#fff",fontSize:10,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>조회</button>
                               </div>
                             </div>
-                            {!pd && <div style={{textAlign:"center",padding:16,color:C.inkMid,fontSize:11}}>"조회" 버튼을 눌러 데이터를 불러오세요</div>}
-                            {pd && prodDataTab==="sales" && (
+
+                            {isLoading && <div style={{textAlign:"center",padding:20,color:C.inkMid,fontSize:11}}>데이터 불러오는 중...</div>}
+
+                            {/* 변동 감지 알림 */}
+                            {changes.length>0 && (
+                              <div style={{marginBottom:12}}>
+                                <div style={{fontSize:10,fontWeight:800,color:C.ink,marginBottom:6,display:"flex",alignItems:"center",gap:4}}><MI n="trending_up" size={14} style={{color:"#ea580c"}}/> 변동 감지 (최근 7일 vs 이전 7일)</div>
+                                <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+                                  {changes.slice(0,5).map((c,i)=>(
+                                    <div key={i} style={{background:c.pct>0?"#f0fdf4":"#fef2f2",border:`1px solid ${c.pct>0?"#bbf7d0":"#fecaca"}`,borderRadius:8,padding:"6px 10px",fontSize:10}}>
+                                      <div style={{fontWeight:700,color:C.ink}}>{c.name}</div>
+                                      <div style={{fontWeight:800,color:c.pct>0?"#16a34a":"#dc2626",marginTop:2}}>
+                                        {c.pct===999?"NEW":c.pct>0?`+${c.pct}%`:`${c.pct}%`}
+                                        <span style={{fontWeight:500,color:C.inkMid,marginLeft:4}}>{c.prev}→{c.recent}개</span>
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+
+                            {/* 매출 추이 차트 + 테이블 */}
+                            {pd && !isLoading && prodDataTab==="sales" && (
                               <div>
+                                {chartData.length>1 && (
+                                  <div style={{marginBottom:12}}>
+                                    <ResponsiveContainer width="100%" height={180}>
+                                      <AreaChart data={chartData}>
+                                        <CartesianGrid strokeDasharray="3 3" stroke={C.border}/>
+                                        <XAxis dataKey="date" tick={{fontSize:9}} tickFormatter={v=>v.slice(5)}/>
+                                        <YAxis tick={{fontSize:9}} tickFormatter={v=>v>=10000?(v/10000).toFixed(0)+"만":v.toLocaleString()}/>
+                                        <Tooltip formatter={(v)=>v.toLocaleString()} labelFormatter={v=>v}/>
+                                        <Area type="monotone" dataKey="revenue" stroke={C.rose} fill={C.blush} name="매출액"/>
+                                      </AreaChart>
+                                    </ResponsiveContainer>
+                                    <ResponsiveContainer width="100%" height={120}>
+                                      <BarChart data={chartData}>
+                                        <CartesianGrid strokeDasharray="3 3" stroke={C.border}/>
+                                        <XAxis dataKey="date" tick={{fontSize:9}} tickFormatter={v=>v.slice(5)}/>
+                                        <YAxis tick={{fontSize:9}}/>
+                                        <Tooltip formatter={(v)=>v.toLocaleString()+"개"}/>
+                                        <Bar dataKey="qty" fill={C.sage} name="판매수량" radius={[4,4,0,0]}/>
+                                      </BarChart>
+                                    </ResponsiveContainer>
+                                  </div>
+                                )}
                                 {(()=>{
                                   const byProduct = {};
                                   (pd.sales||[]).forEach(r=>{if(!byProduct[r.name])byProduct[r.name]={qty:0,revenue:0,profit:0};byProduct[r.name].qty+=r.qty;byProduct[r.name].revenue+=r.revenue;byProduct[r.name].profit+=r.profit;});
@@ -3293,7 +3385,7 @@ function ProjectSection() {
                                 })()}
                               </div>
                             )}
-                            {pd && prodDataTab==="orders" && (
+                            {pd && !isLoading && prodDataTab==="orders" && (
                               <div>
                                 {(()=>{
                                   const byType = {};
@@ -3318,7 +3410,7 @@ function ProjectSection() {
                                 })()}
                               </div>
                             )}
-                            {pd && prodDataTab==="delivery" && (
+                            {pd && !isLoading && prodDataTab==="delivery" && (
                               <table style={{width:"100%",borderCollapse:"collapse",fontSize:11}}>
                                 <thead><tr style={{background:"#fff"}}>
                                   {["제품","배송유형","상태","건수","수량"].map(h=><th key={h} style={{padding:"6px 8px",textAlign:"left",fontWeight:700,color:C.inkMid,borderBottom:`1px solid ${C.border}`}}>{h}</th>)}
@@ -3336,7 +3428,7 @@ function ProjectSection() {
                                 </tbody>
                               </table>
                             )}
-                            {pd && prodDataTab==="stock" && (
+                            {pd && !isLoading && prodDataTab==="stock" && (
                               <table style={{width:"100%",borderCollapse:"collapse",fontSize:11}}>
                                 <thead><tr style={{background:"#fff"}}>
                                   {["제품","모델","재고","생산중","출하","운송중"].map(h=><th key={h} style={{padding:"6px 8px",textAlign:"left",fontWeight:700,color:C.inkMid,borderBottom:`1px solid ${C.border}`}}>{h}</th>)}
