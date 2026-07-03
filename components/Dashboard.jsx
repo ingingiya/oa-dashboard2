@@ -2891,6 +2891,236 @@ function NaverSection() {
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 프로젝트 관리
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function ProjectSection() {
+  const SURL = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const SKEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  const sH = {apikey:SKEY, Authorization:`Bearer ${SKEY}`, "Content-Type":"application/json"};
+
+  const [projects, setProjects] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [showForm, setShowForm] = useState(false);
+  const [editId, setEditId] = useState(null);
+  const [form, setForm] = useState({name:"",status:"planning",start_date:"",end_date:"",progress:0,description:"",tasks:[]});
+  const [expandId, setExpandId] = useState(null);
+  const [newTask, setNewTask] = useState("");
+
+  const STATUS_MAP = {planning:{label:"기획중",color:"#6366f1",bg:"#eef2ff"},in_progress:{label:"진행중",color:"#2563eb",bg:"#eff6ff"},done:{label:"완료",color:"#16a34a",bg:"#f0fdf4"},paused:{label:"보류",color:"#a1a1aa",bg:"#f4f4f5"}};
+
+  const load = () => {
+    setLoading(true);
+    fetch(`${SURL}/rest/v1/projects?select=*&order=created_at.desc`,{headers:sH})
+      .then(r=>r.json()).then(d=>{setProjects(Array.isArray(d)?d:[]);setLoading(false);})
+      .catch(()=>setLoading(false));
+  };
+  useEffect(()=>{load();},[]);
+
+  const save = async () => {
+    if(!form.name.trim()) return alert("프로젝트명을 입력하세요");
+    const body = {...form, updated_at: new Date().toISOString()};
+    if(editId) {
+      await fetch(`${SURL}/rest/v1/projects?id=eq.${editId}`,{method:"PATCH",headers:{...sH,Prefer:"return=minimal"},body:JSON.stringify(body)});
+    } else {
+      await fetch(`${SURL}/rest/v1/projects`,{method:"POST",headers:{...sH,Prefer:"return=minimal"},body:JSON.stringify(body)});
+    }
+    setShowForm(false); setEditId(null); setForm({name:"",status:"planning",start_date:"",end_date:"",progress:0,description:"",tasks:[]}); load();
+  };
+
+  const del = async (id) => {
+    if(!confirm("이 프로젝트를 삭제할까요?")) return;
+    await fetch(`${SURL}/rest/v1/projects?id=eq.${id}`,{method:"DELETE",headers:sH});
+    load();
+  };
+
+  const edit = (p) => {
+    setForm({name:p.name,status:p.status,start_date:p.start_date||"",end_date:p.end_date||"",progress:p.progress||0,description:p.description||"",tasks:p.tasks||[]});
+    setEditId(p.id); setShowForm(true);
+  };
+
+  const toggleTask = async (proj, idx) => {
+    const tasks = [...(proj.tasks||[])];
+    tasks[idx] = {...tasks[idx], done:!tasks[idx].done};
+    const doneCount = tasks.filter(t=>t.done).length;
+    const progress = tasks.length ? Math.round(doneCount/tasks.length*100) : 0;
+    await fetch(`${SURL}/rest/v1/projects?id=eq.${proj.id}`,{method:"PATCH",headers:{...sH,Prefer:"return=minimal"},body:JSON.stringify({tasks,progress,updated_at:new Date().toISOString()})});
+    load();
+  };
+
+  const addTask = async (proj) => {
+    if(!newTask.trim()) return;
+    const tasks = [...(proj.tasks||[]), {text:newTask.trim(),done:false}];
+    const progress = tasks.length ? Math.round(tasks.filter(t=>t.done).length/tasks.length*100) : 0;
+    await fetch(`${SURL}/rest/v1/projects?id=eq.${proj.id}`,{method:"PATCH",headers:{...sH,Prefer:"return=minimal"},body:JSON.stringify({tasks,progress,updated_at:new Date().toISOString()})});
+    setNewTask(""); load();
+  };
+
+  const removeTask = async (proj, idx) => {
+    const tasks = (proj.tasks||[]).filter((_,i)=>i!==idx);
+    const progress = tasks.length ? Math.round(tasks.filter(t=>t.done).length/tasks.length*100) : 0;
+    await fetch(`${SURL}/rest/v1/projects?id=eq.${proj.id}`,{method:"PATCH",headers:{...sH,Prefer:"return=minimal"},body:JSON.stringify({tasks,progress,updated_at:new Date().toISOString()})});
+    load();
+  };
+
+  const daysLeft = (end) => {
+    if(!end) return null;
+    const d = Math.ceil((new Date(end)-new Date())/(1000*60*60*24));
+    return d;
+  };
+
+  const grouped = {in_progress:[], planning:[], paused:[], done:[]};
+  projects.forEach(p => { if(grouped[p.status]) grouped[p.status].push(p); else grouped.in_progress.push(p); });
+
+  return (
+    <div style={{padding:"24px 0"}}>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:20}}>
+        <div>
+          <div style={{fontSize:20,fontWeight:900,color:C.ink}}>프로젝트 관리</div>
+          <div style={{fontSize:12,color:C.inkMid,marginTop:2}}>진행중인 프로젝트와 할일을 한눈에</div>
+        </div>
+        <button onClick={()=>{setShowForm(true);setEditId(null);setForm({name:"",status:"planning",start_date:"",end_date:"",progress:0,description:"",tasks:[]});}}
+          style={{padding:"8px 16px",background:C.rose,color:"#fff",border:"none",borderRadius:8,fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit",display:"flex",alignItems:"center",gap:4}}>
+          <MI n="add" size={16}/> 새 프로젝트
+        </button>
+      </div>
+
+      {/* 요약 카드 */}
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(140px,1fr))",gap:12,marginBottom:24}}>
+        {[{label:"전체",count:projects.length,color:C.ink},{label:"진행중",count:grouped.in_progress.length,color:"#2563eb"},{label:"기획중",count:grouped.planning.length,color:"#6366f1"},{label:"완료",count:grouped.done.length,color:"#16a34a"}].map(s=>(
+          <div key={s.label} style={{background:C.white,borderRadius:12,padding:"16px",border:`1px solid ${C.border}`}}>
+            <div style={{fontSize:11,color:C.inkMid,fontWeight:600}}>{s.label}</div>
+            <div style={{fontSize:24,fontWeight:900,color:s.color,marginTop:4}}>{s.count}</div>
+          </div>
+        ))}
+      </div>
+
+      {loading && <div style={{textAlign:"center",padding:40,color:C.inkMid}}>로딩중...</div>}
+
+      {/* 프로젝트 리스트 */}
+      {["in_progress","planning","paused","done"].map(status => {
+        const list = grouped[status];
+        if(!list.length) return null;
+        const st = STATUS_MAP[status];
+        return (
+          <div key={status} style={{marginBottom:24}}>
+            <div style={{fontSize:13,fontWeight:800,color:st.color,marginBottom:10,display:"flex",alignItems:"center",gap:6}}>
+              <span style={{width:8,height:8,borderRadius:4,background:st.color,display:"inline-block"}}/> {st.label} ({list.length})
+            </div>
+            {list.map(p => {
+              const expanded = expandId===p.id;
+              const dl = daysLeft(p.end_date);
+              const tasks = p.tasks||[];
+              return (
+                <div key={p.id} style={{background:C.white,borderRadius:12,border:`1px solid ${C.border}`,marginBottom:10,overflow:"hidden"}}>
+                  {/* 헤더 */}
+                  <div onClick={()=>setExpandId(expanded?null:p.id)} style={{padding:"14px 16px",cursor:"pointer",display:"flex",alignItems:"center",gap:12}}>
+                    <MI n={expanded?"expand_more":"chevron_right"} size={18} style={{color:C.inkLt}}/>
+                    <div style={{flex:1,minWidth:0}}>
+                      <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
+                        <span style={{fontSize:14,fontWeight:800,color:C.ink}}>{p.name}</span>
+                        <span style={{fontSize:9,fontWeight:700,color:st.color,background:st.bg,padding:"2px 8px",borderRadius:10}}>{st.label}</span>
+                        {dl!==null && status!=="done" && (
+                          <span style={{fontSize:9,fontWeight:700,color:dl<0?"#dc2626":dl<=3?"#ea580c":"#16a34a",background:dl<0?"#fef2f2":dl<=3?"#fff7ed":"#f0fdf4",padding:"2px 8px",borderRadius:10}}>
+                            {dl<0?`${Math.abs(dl)}일 초과`:`D-${dl}`}
+                          </span>
+                        )}
+                      </div>
+                      <div style={{display:"flex",alignItems:"center",gap:8,marginTop:6}}>
+                        {p.start_date && <span style={{fontSize:10,color:C.inkLt}}>{p.start_date} ~ {p.end_date||"미정"}</span>}
+                        <div style={{flex:1,maxWidth:120,height:6,background:C.cream,borderRadius:3,overflow:"hidden"}}>
+                          <div style={{width:`${p.progress||0}%`,height:"100%",background:p.progress>=100?"#16a34a":C.rose,borderRadius:3,transition:"width 0.3s"}}/>
+                        </div>
+                        <span style={{fontSize:10,fontWeight:700,color:C.inkMid}}>{p.progress||0}%</span>
+                      </div>
+                    </div>
+                    <div style={{display:"flex",gap:4}}>
+                      <button onClick={(e)=>{e.stopPropagation();edit(p);}} style={{background:"none",border:"none",cursor:"pointer",padding:4}}><MI n="edit" size={16} style={{color:C.inkLt}}/></button>
+                      <button onClick={(e)=>{e.stopPropagation();del(p.id);}} style={{background:"none",border:"none",cursor:"pointer",padding:4}}><MI n="delete" size={16} style={{color:C.inkLt}}/></button>
+                    </div>
+                  </div>
+
+                  {/* 확장 영역 */}
+                  {expanded && (
+                    <div style={{padding:"0 16px 16px",borderTop:`1px solid ${C.cream}`}}>
+                      {p.description && <div style={{fontSize:12,color:C.inkMid,padding:"12px 0",lineHeight:1.6}}>{p.description}</div>}
+                      <div style={{fontSize:11,fontWeight:800,color:C.ink,marginTop:8,marginBottom:8}}>할일 ({tasks.filter(t=>t.done).length}/{tasks.length})</div>
+                      {tasks.map((t,i)=>(
+                        <div key={i} style={{display:"flex",alignItems:"center",gap:8,padding:"6px 0",borderBottom:`1px solid ${C.cream}`}}>
+                          <input type="checkbox" checked={t.done} onChange={()=>toggleTask(p,i)} style={{accentColor:C.rose}}/>
+                          <span style={{flex:1,fontSize:12,color:t.done?C.inkLt:C.ink,textDecoration:t.done?"line-through":"none"}}>{t.text}</span>
+                          <button onClick={()=>removeTask(p,i)} style={{background:"none",border:"none",cursor:"pointer",padding:2}}><MI n="close" size={14} style={{color:C.inkLt}}/></button>
+                        </div>
+                      ))}
+                      <div style={{display:"flex",gap:8,marginTop:8}}>
+                        <input value={newTask} onChange={e=>setNewTask(e.target.value)} onKeyDown={e=>e.key==="Enter"&&addTask(p)}
+                          placeholder="할일 추가..." style={{flex:1,padding:"6px 10px",border:`1px solid ${C.border}`,borderRadius:6,fontSize:12,fontFamily:"inherit",outline:"none"}}/>
+                        <button onClick={()=>addTask(p)} style={{padding:"6px 12px",background:C.blush,color:C.rose,border:"none",borderRadius:6,fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>추가</button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        );
+      })}
+
+      {!loading && !projects.length && (
+        <div style={{textAlign:"center",padding:60,color:C.inkMid}}>
+          <MI n="folder_open" size={48} style={{color:C.border}}/>
+          <div style={{marginTop:12,fontSize:14,fontWeight:600}}>아직 프로젝트가 없어요</div>
+          <div style={{marginTop:4,fontSize:12}}>위의 "새 프로젝트" 버튼으로 시작하세요</div>
+        </div>
+      )}
+
+      {/* 폼 모달 */}
+      {showForm && (
+        <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.4)",zIndex:1000,display:"flex",alignItems:"center",justifyContent:"center",padding:20}} onClick={()=>setShowForm(false)}>
+          <div onClick={e=>e.stopPropagation()} style={{background:C.white,borderRadius:16,padding:24,width:"100%",maxWidth:480,maxHeight:"80vh",overflow:"auto"}}>
+            <div style={{fontSize:16,fontWeight:900,color:C.ink,marginBottom:16}}>{editId?"프로젝트 수정":"새 프로젝트"}</div>
+            <div style={{display:"flex",flexDirection:"column",gap:12}}>
+              <div>
+                <label style={{fontSize:11,fontWeight:700,color:C.inkMid}}>프로젝트명 *</label>
+                <input value={form.name} onChange={e=>setForm({...form,name:e.target.value})}
+                  style={{width:"100%",padding:"8px 10px",border:`1px solid ${C.border}`,borderRadius:8,fontSize:13,fontFamily:"inherit",marginTop:4,outline:"none",boxSizing:"border-box"}}/>
+              </div>
+              <div>
+                <label style={{fontSize:11,fontWeight:700,color:C.inkMid}}>상태</label>
+                <select value={form.status} onChange={e=>setForm({...form,status:e.target.value})}
+                  style={{width:"100%",padding:"8px 10px",border:`1px solid ${C.border}`,borderRadius:8,fontSize:13,fontFamily:"inherit",marginTop:4,outline:"none",boxSizing:"border-box"}}>
+                  {Object.entries(STATUS_MAP).map(([k,v])=><option key={k} value={k}>{v.label}</option>)}
+                </select>
+              </div>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
+                <div>
+                  <label style={{fontSize:11,fontWeight:700,color:C.inkMid}}>시작일</label>
+                  <input type="date" value={form.start_date} onChange={e=>setForm({...form,start_date:e.target.value})}
+                    style={{width:"100%",padding:"8px 10px",border:`1px solid ${C.border}`,borderRadius:8,fontSize:13,fontFamily:"inherit",marginTop:4,outline:"none",boxSizing:"border-box"}}/>
+                </div>
+                <div>
+                  <label style={{fontSize:11,fontWeight:700,color:C.inkMid}}>종료일</label>
+                  <input type="date" value={form.end_date} onChange={e=>setForm({...form,end_date:e.target.value})}
+                    style={{width:"100%",padding:"8px 10px",border:`1px solid ${C.border}`,borderRadius:8,fontSize:13,fontFamily:"inherit",marginTop:4,outline:"none",boxSizing:"border-box"}}/>
+                </div>
+              </div>
+              <div>
+                <label style={{fontSize:11,fontWeight:700,color:C.inkMid}}>설명</label>
+                <textarea value={form.description} onChange={e=>setForm({...form,description:e.target.value})} rows={3}
+                  style={{width:"100%",padding:"8px 10px",border:`1px solid ${C.border}`,borderRadius:8,fontSize:13,fontFamily:"inherit",marginTop:4,outline:"none",resize:"vertical",boxSizing:"border-box"}}/>
+              </div>
+            </div>
+            <div style={{display:"flex",gap:8,marginTop:20,justifyContent:"flex-end"}}>
+              <button onClick={()=>setShowForm(false)} style={{padding:"8px 16px",background:C.cream,color:C.inkMid,border:"none",borderRadius:8,fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>취소</button>
+              <button onClick={save} style={{padding:"8px 16px",background:C.rose,color:"#fff",border:"none",borderRadius:8,fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>저장</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // ERP 섹션 (이미용 판매 데이터)
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 function ErpSection() {
@@ -5126,6 +5356,7 @@ export default function OaDashboard(){
     {id:"schedule",  icon:"calendar_month", label:"스케줄"},
     {id:"creative",  icon:"palette",        label:"소재"},
     {id:"insight",   icon:"edit_note",      label:"팀 노트"},
+    {id:"projects",  icon:"folder_open",    label:"프로젝트"},
   ];
   const NAVS_WIP=[
     {id:"keyword",   icon:"search",         label:"키워드"},
@@ -12747,6 +12978,7 @@ export default function OaDashboard(){
           {sec==="review"      && ReviewSection}
           {sec==="naver_review" && <NaverReviewSection/>}
           {sec==="insight"     && InsightSection}
+          {sec==="projects"    && <ProjectSection/>}
           {sec==="coupang"     && CoupangSection}
         </main>
       </div>
