@@ -3770,7 +3770,7 @@ function ProjectSection() {
                       {/* 검색순위 (크게 자동 표시) */}
                       {projRankData[p.id] && projRankData[p.id].length>0 && (
                         <div style={{background:"#f0f9ff",border:"1px solid #bae6fd",borderRadius:12,padding:14,marginBottom:10}}>
-                          <div style={{fontSize:13,fontWeight:900,color:"#0369a1",marginBottom:10,display:"flex",alignItems:"center",gap:6}}><MI n="search" size={18}/> 검색순위 현황</div>
+                          <div style={{fontSize:13,fontWeight:900,color:"#0369a1",marginBottom:10,display:"flex",alignItems:"center",gap:6}}><MI n="search" size={18}/> 검색순위 현황 ({prodDataDays>365?"전체":prodDataDays+"일"})</div>
                           <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(140px,1fr))",gap:8,marginBottom:10}}>
                             {projRankData[p.id].slice(0,8).map((kw,i)=>{
                               const vol = (projKeywordVol[p.id]||{})[kw.keyword];
@@ -3812,124 +3812,49 @@ function ProjectSection() {
                         </div>
                       )}
 
-                      {/* 전년 동기간 비교 */}
-                      {(p.products||[]).length>0 && (()=>{
+                      {/* 전년비교/시작전후 결과 (기간선택 바에서 토글) */}
+                      {showYoY===p.id && (()=>{
                         const yoy = yoyData[p.id];
+                        if(!yoy) return <div style={{padding:8,fontSize:10,color:"#7c3aed"}}>로딩중...</div>;
+                        const fmtRev = v=>v>=100000000?(v/100000000).toFixed(1)+"억":v>=10000?(v/10000).toFixed(0)+"만":v.toLocaleString();
+                        const revDiff = yoy.last.revenue>0?Math.round((yoy.this.revenue-yoy.last.revenue)/yoy.last.revenue*100):0;
+                        const qtyDiff = yoy.last.qty>0?Math.round((yoy.this.qty-yoy.last.qty)/yoy.last.qty*100):0;
                         return (
-                          <div style={{marginBottom:8}}>
-                            <button onClick={()=>{if(!yoy)loadYoY(p);setShowYoY(showYoY===p.id?null:p.id);}} style={{fontSize:10,fontWeight:700,color:"#7c3aed",background:"#ede9fe",border:"none",borderRadius:6,padding:"5px 12px",cursor:"pointer",fontFamily:"inherit",display:"flex",alignItems:"center",gap:4}}>
-                              <MI n="compare_arrows" size={14}/> {showYoY===p.id?"전년비교 닫기":"전년 동기간 비교"}
-                            </button>
-                            {showYoY===p.id && !yoy && <div style={{padding:8,fontSize:10,color:"#7c3aed"}}>로딩중...</div>}
-                            {showYoY===p.id && yoy && (()=>{
-                              const fmtRev = v=>v>=100000000?(v/100000000).toFixed(1)+"억":v>=10000?(v/10000).toFixed(0)+"만":v.toLocaleString();
-                              const revDiff = yoy.last.revenue>0?Math.round((yoy.this.revenue-yoy.last.revenue)/yoy.last.revenue*100):0;
-                              const qtyDiff = yoy.last.qty>0?Math.round((yoy.this.qty-yoy.last.qty)/yoy.last.qty*100):0;
-                              return (
-                                <div style={{background:"#faf5ff",borderRadius:8,padding:10,marginTop:6}}>
-                                  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr 1fr",gap:6,fontSize:11}}>
-                                    <div style={{background:C.white,borderRadius:6,padding:"6px 8px"}}>
-                                      <div style={{fontSize:9,color:C.inkMid}}>올해 매출</div>
-                                      <div style={{fontWeight:800,color:"#7c3aed"}}>{fmtRev(yoy.this.revenue)}원</div>
-                                    </div>
-                                    <div style={{background:C.white,borderRadius:6,padding:"6px 8px"}}>
-                                      <div style={{fontSize:9,color:C.inkMid}}>작년 매출</div>
-                                      <div style={{fontWeight:800,color:C.inkMid}}>{fmtRev(yoy.last.revenue)}원</div>
-                                    </div>
-                                    <div style={{background:revDiff>=0?"#f0fdf4":"#fef2f2",borderRadius:6,padding:"6px 8px"}}>
-                                      <div style={{fontSize:9,color:C.inkMid}}>매출 변동</div>
-                                      <div style={{fontWeight:900,color:revDiff>=0?"#16a34a":"#dc2626"}}>{revDiff>0?"+":""}{revDiff}%</div>
-                                    </div>
-                                    <div style={{background:qtyDiff>=0?"#f0fdf4":"#fef2f2",borderRadius:6,padding:"6px 8px"}}>
-                                      <div style={{fontSize:9,color:C.inkMid}}>수량 변동</div>
-                                      <div style={{fontWeight:900,color:qtyDiff>=0?"#16a34a":"#dc2626"}}>{qtyDiff>0?"+":""}{qtyDiff}%</div>
-                                    </div>
-                                  </div>
-                                </div>
-                              );
-                            })()}
+                          <div style={{background:"#faf5ff",borderRadius:8,padding:10,marginBottom:8}}>
+                            <div style={{fontSize:10,fontWeight:800,color:"#7c3aed",marginBottom:6}}>전년 동기간 비교 ({prodDataDays}일)</div>
+                            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr 1fr",gap:6,fontSize:11}}>
+                              <div style={{background:C.white,borderRadius:6,padding:"6px 8px"}}><div style={{fontSize:9,color:C.inkMid}}>올해</div><div style={{fontWeight:800,color:"#7c3aed"}}>{fmtRev(yoy.this.revenue)}원</div></div>
+                              <div style={{background:C.white,borderRadius:6,padding:"6px 8px"}}><div style={{fontSize:9,color:C.inkMid}}>작년</div><div style={{fontWeight:800,color:C.inkMid}}>{fmtRev(yoy.last.revenue)}원</div></div>
+                              <div style={{background:revDiff>=0?"#f0fdf4":"#fef2f2",borderRadius:6,padding:"6px 8px"}}><div style={{fontSize:9,color:C.inkMid}}>매출</div><div style={{fontWeight:900,color:revDiff>=0?"#16a34a":"#dc2626"}}>{revDiff>0?"+":""}{revDiff}%</div></div>
+                              <div style={{background:qtyDiff>=0?"#f0fdf4":"#fef2f2",borderRadius:6,padding:"6px 8px"}}><div style={{fontSize:9,color:C.inkMid}}>수량</div><div style={{fontWeight:900,color:qtyDiff>=0?"#16a34a":"#dc2626"}}>{qtyDiff>0?"+":""}{qtyDiff}%</div></div>
+                            </div>
                           </div>
                         );
                       })()}
-
-                      {/* 프로젝트 시작 전/후 비교 */}
-                      {p.start_date && (p.products||[]).length>0 && (()=>{
+                      {showYoY===p.id+"_impact" && (()=>{
                         const impact = projImpact[p.id];
+                        if(!impact) return <div style={{padding:8,fontSize:10,color:"#0891b2"}}>로딩중...</div>;
+                        const {before,after,topGainers,topLosers,rankBefore,rankAfter} = impact;
+                        const fmtRev = v=>v>=100000000?(v/100000000).toFixed(1)+"억":v>=10000?(v/10000).toFixed(0)+"만":v.toLocaleString();
+                        const revChange = before.avgRevenue>0?Math.round((after.avgRevenue-before.avgRevenue)/before.avgRevenue*100):0;
+                        const qtyChange = before.avgQty>0?Math.round((after.avgQty-before.avgQty)/before.avgQty*100):0;
                         return (
-                          <div style={{marginBottom:8}}>
-                            <button onClick={()=>{if(!impact)loadProjectImpact(p);}} style={{fontSize:10,fontWeight:700,color:"#0891b2",background:"#ecfeff",border:"none",borderRadius:6,padding:"5px 12px",cursor:"pointer",fontFamily:"inherit",display:"flex",alignItems:"center",gap:4}}>
-                              <MI n="trending_up" size={14}/> {impact?"시작 전/후 비교":"시작 전/후 효과 분석"}
-                            </button>
-                            {impact && (()=>{
-                              const {before,after,topGainers,topLosers,rankBefore,rankAfter} = impact;
-                              const fmtRev = v=>v>=100000000?(v/100000000).toFixed(1)+"억":v>=10000?(v/10000).toFixed(0)+"만":v.toLocaleString();
-                              const revChange = before.avgRevenue>0?Math.round((after.avgRevenue-before.avgRevenue)/before.avgRevenue*100):0;
-                              const qtyChange = before.avgQty>0?Math.round((after.avgQty-before.avgQty)/before.avgQty*100):0;
-                              return (
-                                <div style={{background:"#ecfeff",borderRadius:8,padding:10,marginTop:6}}>
-                                  <div style={{fontSize:10,color:"#0891b2",fontWeight:700,marginBottom:6}}>시작일: {p.start_date} 기준 (전 {before.dayCount}일 vs 후 {after.dayCount}일)</div>
-                                  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:6,fontSize:11,marginBottom:8}}>
-                                    <div style={{background:C.white,borderRadius:6,padding:"6px 8px"}}>
-                                      <div style={{fontSize:9,color:C.inkMid}}>일평균 매출</div>
-                                      <div style={{fontWeight:800,color:"#0891b2"}}>{fmtRev(after.avgRevenue)}원</div>
-                                      <div style={{fontSize:9,color:C.inkLt}}>이전: {fmtRev(before.avgRevenue)}원</div>
-                                    </div>
-                                    <div style={{background:C.white,borderRadius:6,padding:"6px 8px"}}>
-                                      <div style={{fontSize:9,color:C.inkMid}}>일평균 판매</div>
-                                      <div style={{fontWeight:800,color:"#0891b2"}}>{after.avgQty.toLocaleString()}개</div>
-                                      <div style={{fontSize:9,color:C.inkLt}}>이전: {before.avgQty.toLocaleString()}개</div>
-                                    </div>
-                                    <div style={{background:revChange>=0?"#f0fdf4":"#fef2f2",borderRadius:6,padding:"6px 8px"}}>
-                                      <div style={{fontSize:9,color:C.inkMid}}>변동률</div>
-                                      <div style={{fontWeight:900,color:revChange>=0?"#16a34a":"#dc2626"}}>매출 {revChange>0?"+":""}{revChange}%</div>
-                                      <div style={{fontWeight:900,color:qtyChange>=0?"#16a34a":"#dc2626",fontSize:10}}>수량 {qtyChange>0?"+":""}{qtyChange}%</div>
-                                    </div>
-                                  </div>
-                                  {/* 매출처 급등/급락 */}
-                                  {(topGainers?.length>0||topLosers?.length>0) && (
-                                    <div style={{marginBottom:8}}>
-                                      <div style={{fontSize:10,fontWeight:800,color:C.ink,marginBottom:4}}>매출처 변동</div>
-                                      <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
-                                        {(topGainers||[]).map((c,i)=>(
-                                          <div key={"g"+i} style={{background:"#f0fdf4",border:"1px solid #bbf7d0",borderRadius:6,padding:"4px 8px",fontSize:10}}>
-                                            <div style={{fontWeight:700,color:C.ink}}>{c.channel}</div>
-                                            <div style={{fontWeight:800,color:"#16a34a"}}>+{c.revDiff}% <span style={{fontWeight:500,color:C.inkMid}}>{fmtRev(c.beforeRev)}→{fmtRev(c.afterRev)}</span></div>
-                                          </div>
-                                        ))}
-                                        {(topLosers||[]).map((c,i)=>(
-                                          <div key={"l"+i} style={{background:"#fef2f2",border:"1px solid #fecaca",borderRadius:6,padding:"4px 8px",fontSize:10}}>
-                                            <div style={{fontWeight:700,color:C.ink}}>{c.channel}</div>
-                                            <div style={{fontWeight:800,color:"#dc2626"}}>{c.revDiff}% <span style={{fontWeight:500,color:C.inkMid}}>{fmtRev(c.beforeRev)}→{fmtRev(c.afterRev)}</span></div>
-                                          </div>
-                                        ))}
-                                      </div>
-                                    </div>
-                                  )}
-                                  {/* 검색순위 변동 */}
-                                  {rankBefore && rankAfter && (
-                                    <div>
-                                      <div style={{fontSize:10,fontWeight:800,color:C.ink,marginBottom:4}}>검색순위 변동</div>
-                                      <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
-                                        {rankAfter.slice(0,6).map((kw,i)=>{
-                                          const bk = (rankBefore||[]).find(b=>b.keyword===kw.keyword);
-                                          const diff = bk ? bk.avgRank - kw.avgRank : 0;
-                                          return (
-                                            <div key={i} style={{background:C.white,borderRadius:6,padding:"4px 8px",fontSize:10,border:`1px solid ${diff>0?"#bbf7d0":diff<0?"#fecaca":C.border}`}}>
-                                              <div style={{fontWeight:700,color:C.ink}}>{kw.keyword}</div>
-                                              <div style={{display:"flex",gap:4,alignItems:"center"}}>
-                                                <span style={{fontWeight:800,color:"#0891b2"}}>{kw.avgRank}위</span>
-                                                {bk && <span style={{fontSize:9,color:C.inkLt}}>← {bk.avgRank}위</span>}
-                                                {diff!==0 && <span style={{fontWeight:800,color:diff>0?"#16a34a":"#dc2626",fontSize:9}}>{diff>0?`▲${diff}`:`▼${Math.abs(diff)}`}</span>}
-                                              </div>
-                                            </div>
-                                          );
-                                        })}
-                                      </div>
-                                    </div>
-                                  )}
+                          <div style={{background:"#ecfeff",borderRadius:8,padding:10,marginBottom:8}}>
+                            <div style={{fontSize:10,color:"#0891b2",fontWeight:700,marginBottom:6}}>시작일: {p.start_date} 기준 (전 {before.dayCount}일 vs 후 {after.dayCount}일)</div>
+                            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:6,fontSize:11,marginBottom:8}}>
+                              <div style={{background:C.white,borderRadius:6,padding:"6px 8px"}}><div style={{fontSize:9,color:C.inkMid}}>일평균 매출</div><div style={{fontWeight:800,color:"#0891b2"}}>{fmtRev(after.avgRevenue)}원</div><div style={{fontSize:9,color:C.inkLt}}>이전: {fmtRev(before.avgRevenue)}원</div></div>
+                              <div style={{background:C.white,borderRadius:6,padding:"6px 8px"}}><div style={{fontSize:9,color:C.inkMid}}>일평균 판매</div><div style={{fontWeight:800,color:"#0891b2"}}>{after.avgQty.toLocaleString()}개</div><div style={{fontSize:9,color:C.inkLt}}>이전: {before.avgQty.toLocaleString()}개</div></div>
+                              <div style={{background:revChange>=0?"#f0fdf4":"#fef2f2",borderRadius:6,padding:"6px 8px"}}><div style={{fontSize:9,color:C.inkMid}}>변동률</div><div style={{fontWeight:900,color:revChange>=0?"#16a34a":"#dc2626"}}>매출 {revChange>0?"+":""}{revChange}%</div><div style={{fontWeight:900,color:qtyChange>=0?"#16a34a":"#dc2626",fontSize:10}}>수량 {qtyChange>0?"+":""}{qtyChange}%</div></div>
+                            </div>
+                            {(topGainers?.length>0||topLosers?.length>0) && (
+                              <div style={{marginBottom:8}}>
+                                <div style={{fontSize:10,fontWeight:800,color:C.ink,marginBottom:4}}>매출처 변동</div>
+                                <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+                                  {(topGainers||[]).map((c,i)=>(<div key={"g"+i} style={{background:"#f0fdf4",border:"1px solid #bbf7d0",borderRadius:6,padding:"4px 8px",fontSize:10}}><div style={{fontWeight:700}}>{c.channel}</div><div style={{fontWeight:800,color:"#16a34a"}}>+{c.revDiff}%</div></div>))}
+                                  {(topLosers||[]).map((c,i)=>(<div key={"l"+i} style={{background:"#fef2f2",border:"1px solid #fecaca",borderRadius:6,padding:"4px 8px",fontSize:10}}><div style={{fontWeight:700}}>{c.channel}</div><div style={{fontWeight:800,color:"#dc2626"}}>{c.revDiff}%</div></div>))}
                                 </div>
-                              );
-                            })()}
+                              </div>
+                            )}
                           </div>
                         );
                       })()}
@@ -3971,6 +3896,13 @@ function ProjectSection() {
                               setProjDailyChart(prev=>{const n={...prev};delete n[p.id];return n;});
                               setProjAdData(prev=>{const n={...prev};delete n[p.id];return n;});
                             }} style={{padding:"3px 10px",border:"none",borderRadius:6,background:C.rose,color:"#fff",fontSize:10,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>적용</button>
+                          )}
+                          <span style={{fontSize:10,color:C.inkLt}}>|</span>
+                          <button onClick={()=>{if(!yoyData[p.id])loadYoY(p);setShowYoY(showYoY===p.id?null:p.id);}}
+                            style={{padding:"3px 10px",border:"none",borderRadius:6,background:showYoY===p.id?"#7c3aed":"#ede9fe",color:showYoY===p.id?"#fff":"#7c3aed",fontSize:10,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>전년비교</button>
+                          {p.start_date && (
+                            <button onClick={()=>{if(!projImpact[p.id])loadProjectImpact(p);setShowYoY(showYoY===p.id+"_impact"?null:p.id+"_impact");}}
+                              style={{padding:"3px 10px",border:"none",borderRadius:6,background:showYoY===p.id+"_impact"?"#0891b2":"#ecfeff",color:showYoY===p.id+"_impact"?"#fff":"#0891b2",fontSize:10,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>시작전후</button>
                           )}
                         </div>
                       )}
