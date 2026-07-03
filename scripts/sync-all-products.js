@@ -7,6 +7,7 @@ const mysql = require('mysql2/promise');
 const SUPA_URL = 'https://lugqeflqusqsyotdiaxg.supabase.co';
 const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx1Z3FlZmxxdXNxc3lvdGRpYXhnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMxOTkzMzksImV4cCI6MjA4ODc3NTMzOX0.ls7CN3iISLM_JcGEaVRV_JDSvm4BFqYMU6m4iBGiRA0';
 const sH = { apikey: SUPA_KEY, Authorization: `Bearer ${SUPA_KEY}`, 'Content-Type': 'application/json' };
+const SYNC_DAYS = 400; // 전년 비교를 위해 13개월+
 
 async function main() {
   console.log(`[${new Date().toLocaleString('ko-KR')}] 전체 제품 동기화 시작`);
@@ -22,7 +23,7 @@ async function main() {
   });
 
   try {
-    console.log('매출 데이터 조회 중 (90일)...');
+    console.log(`매출 데이터 조회 중 (${SYNC_DAYS}일)...`);
     const [salesRows] = await pool.query(`
       SELECT
         제품번호 as product_id,
@@ -33,7 +34,7 @@ async function main() {
         SUM(총매출액) as revenue,
         SUM(총매출이익) as profit
       FROM v_daily_sales_detail
-      WHERE 판매날짜 >= DATE_SUB(CURDATE(), INTERVAL 90 DAY)
+      WHERE 판매날짜 >= DATE_SUB(CURDATE(), INTERVAL ${SYNC_DAYS} DAY)
       GROUP BY 제품번호, 제품명, 브랜드명, DATE(판매날짜)
       ORDER BY date DESC
     `);
