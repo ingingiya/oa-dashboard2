@@ -3108,7 +3108,7 @@ function ProjectSection() {
         const t={qty:0,revenue:0,days:new Set(),byChannel:{}};
         rows.flat().forEach(r=>{
           t.qty+=(r.qty||0);t.revenue+=Number(r.revenue||0);t.days.add(r.date);
-          const ch=r.channel||"기타";
+          const ch=r.channel||""; if(!ch) return;
           if(!t.byChannel[ch]) t.byChannel[ch]={qty:0,revenue:0};
           t.byChannel[ch].qty+=(r.qty||0);t.byChannel[ch].revenue+=Number(r.revenue||0);
         });
@@ -3352,7 +3352,7 @@ function ProjectSection() {
         const midDate = new Date(now.getTime()-halfDays*86400000).toISOString().split('T')[0];
         const byCh = {};
         results.flat().forEach(r=>{
-          const ch=r.channel||"기타";
+          const ch=r.channel||""; if(!ch) return;
           if(!byCh[ch]) byCh[ch]={recent:{qty:0,rev:0},prev:{qty:0,rev:0}};
           if(r.date>=midDate) {byCh[ch].recent.qty+=(r.qty||0);byCh[ch].recent.rev+=Number(r.revenue||0);}
           else {byCh[ch].prev.qty+=(r.qty||0);byCh[ch].prev.rev+=Number(r.revenue||0);}
@@ -3372,8 +3372,12 @@ function ProjectSection() {
     const projProdNames = (proj.products||[]).map(p=>p.name).filter(Boolean);
     const projKeywords = proj.keywords||[];
     if((projProdNames.length||projKeywords.length) && !projRankData[expandId]) {
-      const kwParts = [...new Set(projProdNames.map(n=>n.replace(/^(오아|보아르|삼대오백|뉴트리커먼)/,'').replace(/[-_](화이트|블랙|베이지|그레이|핑크|실버|크림|노즐|파우치|공용).*$/,'').trim()).filter(k=>k.length>=2))];
-      // 제품명 필터 + 키워드 필터 합치기
+      const kwParts = [...new Set(projProdNames.flatMap(n=>{
+        const base = n.replace(/^(오아|보아르|삼대오백|뉴트리커먼)/,'').replace(/[-_](화이트|블랙|베이지|그레이|핑크|실버|크림|노즐|파우치|공용).*$/,'').trim();
+        const parts = [base];
+        if(base.length>4){const sub=base.replace(/(드라이기|선풍기|마사지기|가습기|세정기)$/,'').trim();if(sub.length>=2&&sub!==base)parts.push(sub);}
+        return parts;
+      }).filter(k=>k.length>=2))];
       const filters = [
         ...kwParts.map(k=>`product_name.ilike.*${encodeURIComponent(k)}*`),
         ...projKeywords.map(k=>`keyword.ilike.*${encodeURIComponent(k)}*`),
