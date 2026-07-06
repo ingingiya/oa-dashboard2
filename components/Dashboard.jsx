@@ -11001,6 +11001,18 @@ export default function OaDashboard(){
                 <div style={{fontSize:11,color:C.inkMid,marginTop:6,background:C.cream,
                   padding:"6px 10px",borderRadius:8}}>근거: {h.evidence}</div>
               )}
+              {h.status==="open"&&h.auto_verdict&&(()=>{
+                const av = {confirm:{label:"🤖 AI 제안: 검증",color:"#059669"},
+                  reject:{label:"🤖 AI 제안: 기각",color:C.rose},
+                  unclear:{label:"🤖 AI 판단: 불확실",color:C.inkMid}}[h.auto_verdict];
+                if(!av) return null;
+                return(
+                <div style={{fontSize:11,marginTop:6,padding:"6px 10px",borderRadius:8,
+                  border:`1px dashed ${av.color}55`,background:`${av.color}0a`}}>
+                  <span style={{fontWeight:800,color:av.color}}>{av.label}</span>
+                  {h.auto_note&&<span style={{color:C.inkMid}}> — {h.auto_note}</span>}
+                </div>);
+              })()}
               {h.status==="open"&&(
                 <div style={{display:"flex",gap:6,marginTop:8}}>
                   <button onClick={()=>setHypoStatus(h.id,"confirmed")}

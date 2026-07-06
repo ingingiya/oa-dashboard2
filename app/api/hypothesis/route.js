@@ -148,6 +148,116 @@ async function sendTelegramBriefing(today, hypotheses) {
   }
 }
 
+// 7일 지난 open 가설을 전후 판매 비교로 자동 검증 (AI 제안, 확정은 사용자가)
+async function verifyOldHypotheses() {
+  const kstNow = new Date(Date.now() + 9 * 3600 * 1000);
+  const dstr = (d) => new Date(kstNow.getTime() - d * 86400000).toISOString().split('T')[0];
+  const cutoff = dstr(7);
+
+  // 검증 대상: 7일 이상 지난 open 가설 중 아직 AI 제안이 없는 것
+  const res = await fetch(
+    `${SUPA_URL}/rest/v1/daily_hypotheses?select=id,date,type,product,hypothesis,evidence&status=eq.open&date=lte.${cutoff}&or=(auto_verdict.is.null,auto_verdict.eq.)&order=date.asc&limit=12`,
+    { headers: sH, cache: 'no-store' }
+  );
+  const targets = await res.json();
+  if (!Array.isArray(targets) || targets.length === 0) return [];
+
+  // 대상 제품들의 전후 판매 조회 (가장 오래된 가설 기준 -7일부터 오늘까지)
+  const minDate = targets[0].date;
+  const fromDate = new Date(new Date(minDate).getTime() - 7 * 86400000).toISOString().split('T')[0];
+  const products = [...new Set(targets.map(t => t.product).filter(Boolean))];
+  const nameFilter = products.map(p => `"${p.replace(/"/g, '')}"`).join(',');
+
+  const all = [];
+  const PAGE = 1000;
+  for (let offset = 0; offset < 20000; offset += PAGE) {
+    const r = await fetch(
+      `${SUPA_URL}/rest/v1/beauty_sales?select=name,date,qty,revenue&date=gte.${fromDate}&name=in.(${encodeURIComponent(nameFilter)})`,
+      { headers: { ...sH, Range: `${offset}-${offset + PAGE - 1}` }, cache: 'no-store' }
+    );
+    if (!r.ok) throw new Error(`검증용 판매 조회 실패: ${await r.text()}`);
+    const page = await r.json();
+    all.push(...page);
+    if (page.length < PAGE) break;
+  }
+
+  // 가설별 전후 7일 집계
+  const fmt = (n) => Math.round(Number(n) / 10000);
+  const cases = targets.map(t => {
+    const d0 = new Date(t.date).getTime();
+    let bQty = 0, bRev = 0, aQty = 0, aRev = 0;
+    for (const r of all) {
+      if (r.name !== t.product) continue;
+      const dt = new Date(r.date).getTime();
+      const diff = (dt - d0) / 86400000;
+      if (diff >= -7 && diff < 0) { bQty += Number(r.qty) || 0; bRev += Number(r.revenue) || 0; }
+      else if (diff >= 0 && diff < 7) { aQty += Number(r.qty) || 0; aRev += Number(r.revenue) || 0; }
+    }
+    return { ...t, before: { qty: bQty, rev: fmt(bRev) }, after: { qty: aQty, rev: fmt(aRev) } };
+  });
+
+  const casesText = cases.map(c =>
+    `id ${c.id} [${c.type}] ${c.product}\n가설: ${c.hypothesis}\n근거: ${c.evidence}\n가설 이전 7일: ${c.before.qty}개 ${c.before.rev}만원 → 가설 이후 7일: ${c.after.qty}개 ${c.after.rev}만원`
+  ).join('\n\n');
+
+  const prompt = `당신은 OA 뷰티의 판매 데이터 분석가입니다. 아래 가설들이 세워진 뒤 7일간의 실제 판매를 보고, 가설이 맞았는지 판단하세요.
+
+${casesText}
+
+## 출력 형식 (반드시 JSON 배열만)
+[{"id":숫자,"verdict":"confirm|reject|unclear","note":"판단 이유 1문장 (실제 숫자 인용)"}]
+
+## 규칙
+- confirm: 이후 판매 흐름이 가설과 부합 / reject: 가설과 반대 / unclear: 판단 근거 부족
+- 마케팅액션 가설은 실행 여부를 알 수 없으므로, 판매 흐름이 액션의 전제와 여전히 부합하는지로 판단
+- 한국어로 작성`;
+
+  const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+  const msg = await client.messages.create({
+    model: 'claude-opus-4-6',
+    max_tokens: 2000,
+    messages: [{ role: 'user', content: prompt }],
+  });
+  const raw = msg.content.find(b => b.type === 'text')?.text || '[]';
+  const match = raw.match(/\[[\s\S]*\]/);
+  if (!match) throw new Error('검증 JSON 파싱 실패: ' + raw.slice(0, 200));
+  const verdicts = JSON.parse(match[0]);
+
+  const results = [];
+  for (const v of verdicts) {
+    const target = targets.find(t => t.id === Number(v.id));
+    if (!target) continue;
+    await fetch(`${SUPA_URL}/rest/v1/daily_hypotheses?id=eq.${Number(v.id)}`, {
+      method: 'PATCH',
+      headers: { ...sH, Prefer: 'return=minimal' },
+      body: JSON.stringify({ auto_verdict: v.verdict || 'unclear', auto_note: v.note || '' }),
+    });
+    results.push({ ...target, verdict: v.verdict, note: v.note });
+  }
+  return results;
+}
+
+async function sendVerifyTelegram(results) {
+  const token = process.env.TELEGRAM_BOT_TOKEN;
+  const chatId = process.env.TELEGRAM_CHAT_ID;
+  if (!token || !chatId || results.length === 0) return;
+
+  const icon = { confirm: '✅ 검증 제안', reject: '❌ 기각 제안', unclear: '❓ 불확실' };
+  const text = `🤖 <b>가설 자동 검증</b> (7일 경과분)\n\n` + results.map(r =>
+    `${icon[r.verdict] || '❓'} <b>${r.product}</b> (${r.date})\n${r.hypothesis}\n<i>${r.note}</i>`
+  ).join('\n\n') + `\n\n👉 대시보드 가설 탭에서 확정해주세요`;
+
+  try {
+    await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ chat_id: chatId, text, parse_mode: 'HTML' }),
+    });
+  } catch (e) {
+    console.error('검증 텔레그램 발송 실패:', e.message);
+  }
+}
+
 export async function GET(request) {
   const { searchParams } = new URL(request.url);
   const action = searchParams.get('action') || 'list';
@@ -201,7 +311,22 @@ export async function GET(request) {
 
       await sendTelegramBriefing(today, rows);
 
+      // 7일 지난 가설 자동 검증 (실패해도 생성 결과에는 영향 없음)
+      try {
+        const results = await verifyOldHypotheses();
+        await sendVerifyTelegram(results);
+      } catch (e) {
+        console.error('자동 검증 실패:', e.message);
+      }
+
       return Response.json({ ok: true, count: rows.length, date: today });
+    }
+
+    // 수동 검증 트리거
+    if (action === 'verify') {
+      const results = await verifyOldHypotheses();
+      await sendVerifyTelegram(results);
+      return Response.json({ ok: true, verified: results.length });
     }
 
     return Response.json({ error: '알 수 없는 action' }, { status: 400 });
