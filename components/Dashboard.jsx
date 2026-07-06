@@ -2354,11 +2354,28 @@ function NaverSection() {
     });
   })();
 
-  // 집계 (캠페인별 or 날짜별)
+  // campaign_name 파싱: "캠페인 > 광고그룹 > 키워드"
+  const getGroupKey = (r) => {
+    const parts = (r.campaign_name||"").split(" > ");
+    if(groupBy==="campaign") return parts[0];
+    if(groupBy==="adgroup") return parts.length>=2 ? parts[0]+" > "+parts[1] : null;
+    if(groupBy==="keyword") return parts.length>=3 ? parts.slice(1).join(" > ") : null;
+    if(groupBy==="date") return r.date;
+    return r.campaign_name;
+  };
+  const filterByLevel = (r) => {
+    const depth = (r.campaign_name||"").split(" > ").length;
+    if(groupBy==="campaign") return depth===1;
+    if(groupBy==="adgroup") return depth===2;
+    if(groupBy==="keyword") return depth===3;
+    return depth===1; // date: 캠페인 단위만
+  };
+
+  // 집계
   const aggregated = (() => {
     const map = {};
-    activeRows.forEach(r => {
-      const key = groupBy==="campaign" ? r.campaign_name : groupBy==="type" ? r.campaign_type : r.date;
+    activeRows.filter(filterByLevel).forEach(r => {
+      const key = getGroupKey(r);
       if(!key) return;
       if(!map[key]) map[key] = {
         label: key,
@@ -2384,8 +2401,8 @@ function NaverSection() {
   const prevAggMap = (() => {
     if(!showCompare || !compareRows.length) return {};
     const map = {};
-    compareRows.forEach(r => {
-      const key = groupBy==="campaign" ? r.campaign_name : groupBy==="type" ? r.campaign_type : r.date;
+    compareRows.filter(filterByLevel).forEach(r => {
+      const key = getGroupKey(r);
       if(!key) return;
       if(!map[key]) map[key] = {convAmt:0, cost:0};
       map[key].cost    += Number(r.spend)||0;
@@ -2416,7 +2433,7 @@ function NaverSection() {
   const totalRoas = total.cost>0 ? Math.round(total.convAmt/total.cost*100) : 0;
 
   const COLS = [
-    {key:"label",   label:groupBy==="campaign"?"캠페인":groupBy==="type"?"유형":"날짜", align:"left", fmt:v=>v},
+    {key:"label",   label:groupBy==="campaign"?"캠페인":groupBy==="adgroup"?"광고그룹":groupBy==="keyword"?"키워드":"날짜", align:"left", fmt:v=>v},
     {key:"imp",     label:"노출",     align:"right", fmt:fmtN},
     {key:"click",   label:"클릭",     align:"right", fmt:fmtN},
     {key:"ctr",     label:"CTR%",     align:"right", fmt:v=>v+"%"},
@@ -2527,7 +2544,7 @@ function NaverSection() {
 
           {/* 그룹 + 검색 */}
           <div style={{display:"flex",gap:8,flexWrap:"wrap",alignItems:"center"}}>
-            {[{k:"campaign",l:"캠페인"},{k:"type",l:"유형"},{k:"date",l:"날짜별"}].map(g=>(
+            {[{k:"campaign",l:"캠페인"},{k:"adgroup",l:"광고그룹"},{k:"keyword",l:"키워드"},{k:"date",l:"날짜별"}].map(g=>(
               <button key={g.k} onClick={()=>setGroupBy(g.k)} style={{
                 padding:"5px 12px",borderRadius:8,fontSize:11,fontWeight:700,cursor:"pointer",
                 border:`1px solid ${groupBy===g.k?"#03C75A":C.border}`,
@@ -3356,6 +3373,58 @@ function ProjectSection() {
           </div>
         ))}
       </div>
+
+      {/* 지금 해야 할 액션 */}
+      {(()=>{
+        const todayStr = new Date().toISOString().slice(0,10);
+        const active = projects.filter(p=>p.status==="in_progress"||p.status==="planning");
+        const dday = p=>Math.ceil((new Date(p.end_date)-new Date(todayStr))/86400000);
+        const deadline = active.filter(p=>p.end_date&&dday(p)<=7)
+          .sort((a,b)=>a.end_date.localeCompare(b.end_date));
+        const priRank = {urgent:0,high:1,normal:2,low:3};
+        const todos = active
+          .sort((a,b)=>(priRank[a.priority]??2)-(priRank[b.priority]??2))
+          .flatMap(p=>(p.tasks||[]).filter(t=>!t.done).map(t=>({proj:p,text:t.text})))
+          .slice(0,8);
+        if(!deadline.length&&!todos.length) return null;
+        return(
+        <div style={{background:"#fffbeb",border:"1px solid #fde68a",borderRadius:12,padding:"14px 16px",marginBottom:20}}>
+          <div style={{fontSize:13,fontWeight:900,color:"#b45309",marginBottom:10,display:"flex",alignItems:"center",gap:6}}>
+            <MI n="bolt" size={16}/> 지금 해야 할 액션
+          </div>
+          {deadline.length>0&&(
+            <div style={{marginBottom:todos.length?10:0}}>
+              {deadline.map(p=>{
+                const d=dday(p);
+                return(
+                <div key={p.id} onClick={()=>setExpandId(expandId===p.id?null:p.id)}
+                  style={{display:"flex",alignItems:"center",gap:8,padding:"5px 0",cursor:"pointer",fontSize:12}}>
+                  <span style={{fontSize:10,fontWeight:900,color:d<0?"#dc2626":"#ea580c",
+                    background:d<0?"#fef2f2":"#fff7ed",padding:"2px 8px",borderRadius:10,whiteSpace:"nowrap"}}>
+                    {d<0?`마감 ${-d}일 지남`:d===0?"오늘 마감":`D-${d}`}
+                  </span>
+                  <span style={{fontWeight:700,color:C.ink}}>{p.name}</span>
+                  <span style={{fontSize:10,color:C.inkMid}}>{p.assignee||"미지정"} · 진행률 {p.progress||0}%</span>
+                </div>);
+              })}
+            </div>
+          )}
+          {todos.length>0&&(
+            <div style={{display:"flex",flexDirection:"column",gap:3}}>
+              {todos.map((t,i)=>(
+                <div key={i} onClick={()=>setExpandId(t.proj.id)}
+                  style={{display:"flex",alignItems:"center",gap:8,fontSize:12,padding:"3px 0",cursor:"pointer"}}>
+                  <MI n="check_box_outline_blank" size={13}/>
+                  <span style={{color:C.ink}}>{t.text}</span>
+                  <span style={{fontSize:10,color:PRIORITY_MAP[t.proj.priority]?.color||C.inkMid,fontWeight:700}}>
+                    {t.proj.name}{t.proj.priority==="urgent"?" 🔥":""}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>);
+      })()}
 
       {/* 필터 */}
       <div style={{display:"flex",gap:8,marginBottom:16,flexWrap:"wrap",alignItems:"center"}}>
