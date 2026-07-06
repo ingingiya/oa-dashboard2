@@ -1,4 +1,5 @@
 export const dynamic = 'force-dynamic';
+export const maxDuration = 60; // MySQL 조회 + AI 생성에 시간 필요
 
 import mysql from 'mysql2/promise';
 
