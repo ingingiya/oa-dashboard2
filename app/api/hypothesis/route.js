@@ -1,5 +1,5 @@
 export const dynamic = 'force-dynamic';
-export const maxDuration = 60; // 데이터 조회 + AI 생성에 시간 필요
+export const maxDuration = 300; // 데이터 조회 + AI 생성 + 자동 검증에 시간 필요
 
 import Anthropic from '@anthropic-ai/sdk';
 
