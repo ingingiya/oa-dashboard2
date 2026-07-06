@@ -11751,6 +11751,15 @@ export default function OaDashboard(){
       }catch(e){}
     }
 
+    async function setHypoExecuted(id, executed){
+      setHypoRows(rows=>rows.map(r=>r.id===id?{...r,executed}:r));
+      try{
+        await fetch("/api/hypothesis",{method:"PATCH",
+          headers:{"Content-Type":"application/json"},
+          body:JSON.stringify({id,executed})});
+      }catch(e){}
+    }
+
     const HYPO_TYPE_COLORS = {원인분석:"#0891b2", 마케팅액션:"#7c3aed"};
     const HYPO_PRI = {high:{label:"높음",color:C.rose}, mid:{label:"중간",color:"#f59e0b"}, low:{label:"낮음",color:C.inkLt}};
     const HYPO_STATUS = {open:{label:"검증 전",color:C.inkMid}, confirmed:{label:"검증됨",color:"#059669"}, rejected:{label:"기각",color:C.inkLt}};
@@ -11946,6 +11955,10 @@ export default function OaDashboard(){
                 <span style={{fontSize:10,fontWeight:800,color:pri.color,background:`${pri.color}14`,
                   padding:"2px 8px",borderRadius:10}}>우선순위 {pri.label}</span>
                 <span style={{fontSize:10,fontWeight:700,color:st.color}}>{st.label}</span>
+                {h.type==="마케팅액션"&&h.executed&&(
+                  <span style={{fontSize:10,fontWeight:800,color:"#7c3aed",background:"#7c3aed14",
+                    padding:"2px 8px",borderRadius:10}}>🚀 실행됨{h.executed_at?` ${h.executed_at.slice(5)}`:""}</span>
+                )}
                 {h.product&&<span style={{fontSize:11,fontWeight:800,color:C.ink,marginLeft:"auto"}}>{h.product}</span>}
               </div>
               <div style={{fontSize:13,color:C.ink,lineHeight:1.5}}>{h.hypothesis}</div>
@@ -11981,6 +11994,18 @@ export default function OaDashboard(){
                     style={{fontSize:10,fontWeight:700,padding:"4px 10px",borderRadius:6,
                       border:`1px solid ${C.border}`,background:"#fff",color:C.inkMid,
                       cursor:"pointer",fontFamily:"inherit"}}>기각</button>
+                  {h.type==="마케팅액션"&&!h.executed&&(
+                    <button onClick={()=>setHypoExecuted(h.id,true)}
+                      style={{fontSize:10,fontWeight:700,padding:"4px 10px",borderRadius:6,
+                        border:"1px solid #7c3aed33",background:"#7c3aed10",color:"#7c3aed",
+                        cursor:"pointer",fontFamily:"inherit"}}>🚀 실행함</button>
+                  )}
+                  {h.type==="마케팅액션"&&h.executed&&(
+                    <button onClick={()=>setHypoExecuted(h.id,false)}
+                      style={{fontSize:10,fontWeight:700,padding:"4px 10px",borderRadius:6,
+                        border:`1px solid ${C.border}`,background:"#fff",color:C.inkLt,
+                        cursor:"pointer",fontFamily:"inherit"}}>실행 취소</button>
+                  )}
                 </div>
               )}
             </div>);

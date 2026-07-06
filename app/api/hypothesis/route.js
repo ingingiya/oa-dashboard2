@@ -397,15 +397,21 @@ async function computeStockAlerts() {
   return alerts;
 }
 
-// 텔레그램 인라인 버튼 (✅검증/❌기각 → action=set 링크)
+// 텔레그램 인라인 버튼 (✅검증/❌기각/🚀실행함 → action=set 링크)
 function hypoButtons(items) {
   const short = (p) => String(p || '').replace(/^오아/, '').slice(0, 14);
   return items
     .filter(h => h.id)
-    .map(h => ([
-      { text: `✅ ${short(h.product)}`, url: `${APP_URL}/api/hypothesis?action=set&id=${h.id}&status=confirmed` },
-      { text: `❌ ${short(h.product)}`, url: `${APP_URL}/api/hypothesis?action=set&id=${h.id}&status=rejected` },
-    ]));
+    .map(h => {
+      const row = [
+        { text: `✅ ${short(h.product)}`, url: `${APP_URL}/api/hypothesis?action=set&id=${h.id}&status=confirmed` },
+        { text: `❌ ${short(h.product)}`, url: `${APP_URL}/api/hypothesis?action=set&id=${h.id}&status=rejected` },
+      ];
+      if (h.type === '마케팅액션') {
+        row.push({ text: '🚀 실행함', url: `${APP_URL}/api/hypothesis?action=set&id=${h.id}&executed=1` });
+      }
+      return row;
+    });
 }
 
 // 텔레그램 아침 브리핑 (실패해도 가설 저장에는 영향 없음)
@@ -456,7 +462,7 @@ async function verifyOldHypotheses() {
 
   // 검증 대상: 7일 이상 지난 open 가설 중 아직 AI 제안이 없는 것
   const res = await fetch(
-    `${SUPA_URL}/rest/v1/daily_hypotheses?select=id,date,type,product,hypothesis,evidence&status=eq.open&date=lte.${cutoff}&or=(auto_verdict.is.null,auto_verdict.eq.)&order=date.asc&limit=12`,
+    `${SUPA_URL}/rest/v1/daily_hypotheses?select=id,date,type,product,hypothesis,evidence,executed,executed_at&status=eq.open&date=lte.${cutoff}&or=(auto_verdict.is.null,auto_verdict.eq.)&order=date.asc&limit=12`,
     { headers: sH, cache: 'no-store' }
   );
   const targets = await res.json();
@@ -497,7 +503,7 @@ async function verifyOldHypotheses() {
   });
 
   const casesText = cases.map(c =>
-    `id ${c.id} [${c.type}] ${c.product}\n가설: ${c.hypothesis}\n근거: ${c.evidence}\n가설 이전 7일: ${c.before.qty}개 ${c.before.rev}만원 → 가설 이후 7일: ${c.after.qty}개 ${c.after.rev}만원`
+    `id ${c.id} [${c.type}]${c.type === '마케팅액션' ? (c.executed ? ` (실행됨${c.executed_at ? ` ${c.executed_at}` : ''})` : ' (미실행)') : ''} ${c.product}\n가설: ${c.hypothesis}\n근거: ${c.evidence}\n가설 이전 7일: ${c.before.qty}개 ${c.before.rev}만원 → 가설 이후 7일: ${c.after.qty}개 ${c.after.rev}만원`
   ).join('\n\n');
 
   const prompt = `당신은 OA 뷰티의 판매 데이터 분석가입니다. 아래 가설들이 세워진 뒤 7일간의 실제 판매를 보고, 가설이 맞았는지 판단하세요.
@@ -509,7 +515,7 @@ ${casesText}
 
 ## 규칙
 - confirm: 이후 판매 흐름이 가설과 부합 / reject: 가설과 반대 / unclear: 판단 근거 부족
-- 마케팅액션 가설은 실행 여부를 알 수 없으므로, 판매 흐름이 액션의 전제와 여전히 부합하는지로 판단
+- 마케팅액션 가설: (실행됨) 표시가 있으면 실행 이후 판매 변화가 예상 효과와 부합하는지로 판단, (미실행)이면 판매 흐름이 액션의 전제와 여전히 부합하는지로만 판단
 - 한국어로 작성`;
 
   const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
@@ -646,14 +652,18 @@ export async function GET(request) {
         `<div style="text-align:center"><div style="font-size:44px">${color}</div><div style="font-size:18px;font-weight:700;margin-top:12px">${title}</div>` +
         `<div style="font-size:13px;color:#888;margin-top:8px">이 창은 닫아도 돼요</div></div></body></html>`,
         { headers: { 'Content-Type': 'text/html; charset=utf-8' } });
-      if (!id || !['confirmed', 'rejected'].includes(status)) return page('잘못된 요청이에요', '⚠️');
+      const executed = searchParams.get('executed') === '1';
+      if (!id || (!executed && !['confirmed', 'rejected'].includes(status))) return page('잘못된 요청이에요', '⚠️');
+      const todayKST = new Date(Date.now() + 9 * 3600 * 1000).toISOString().split('T')[0];
+      const body = executed ? { executed: true, executed_at: todayKST } : { status };
       const res = await fetch(`${SUPA_URL}/rest/v1/daily_hypotheses?id=eq.${id}&select=product`, {
         method: 'PATCH',
         headers: { ...sH, Prefer: 'return=representation' },
-        body: JSON.stringify({ status }),
+        body: JSON.stringify(body),
       });
       const upd = await res.json().catch(() => []);
       if (!res.ok || !Array.isArray(upd) || upd.length === 0) return page('가설을 찾을 수 없어요', '⚠️');
+      if (executed) return page(`${upd[0].product || ''} 액션 실행 처리 완료`, '🚀');
       return page(
         `${upd[0].product || ''} 가설 ${status === 'confirmed' ? '검증' : '기각'} 처리 완료`,
         status === 'confirmed' ? '✅' : '❌');
@@ -675,13 +685,19 @@ export async function GET(request) {
 // 가설 상태 변경 (검증완료/기각)
 export async function PATCH(request) {
   try {
-    const { id, status } = await request.json();
-    if (!id || !status) return Response.json({ error: 'id, status 필요' }, { status: 400 });
+    const { id, status, executed } = await request.json();
+    if (!id || (!status && executed === undefined)) return Response.json({ error: 'id + status 또는 executed 필요' }, { status: 400 });
 
+    const body = {};
+    if (status) body.status = status;
+    if (executed !== undefined) {
+      body.executed = !!executed;
+      body.executed_at = executed ? new Date(Date.now() + 9 * 3600 * 1000).toISOString().split('T')[0] : null;
+    }
     const res = await fetch(`${SUPA_URL}/rest/v1/daily_hypotheses?id=eq.${Number(id)}`, {
       method: 'PATCH',
       headers: { ...sH, Prefer: 'return=minimal' },
-      body: JSON.stringify({ status }),
+      body: JSON.stringify(body),
     });
     if (!res.ok) throw new Error(await res.text());
     return Response.json({ ok: true });
