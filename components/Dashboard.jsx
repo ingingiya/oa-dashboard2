@@ -2252,21 +2252,22 @@ function NaverSection() {
 
   const SURL = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const SKEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-  const sh = {"apikey":SKEY,"Authorization":`Bearer ${SKEY}`,"Content-Type":"application/json"};
-
-  const BEAUTY_KW = ["이미용"];
+  const sh = useRef({"apikey":SKEY,"Authorization":`Bearer ${SKEY}`,"Content-Type":"application/json"}).current;
 
   useEffect(()=>{
+    let cancelled = false;
     async function load() {
+      setLoading(true);
       try {
         const cutoff = new Date(Date.now()-days*86400000).toISOString().split("T")[0];
         const [r1, fixRes] = await Promise.all([
-          fetch(`${SURL}/rest/v1/ad_campaigns?date=gte.${cutoff}&order=date.desc&limit=5000`, {headers:sh}),
+          fetch(`${SURL}/rest/v1/ad_campaigns?date=gte.${cutoff}&order=date.desc&limit=10000`, {headers:sh}),
           fetch(`${SURL}/rest/v1/naver_ads_fixlist?select=*`, {headers:sh}),
         ]);
+        if(cancelled) return;
         if(r1.ok) {
           const data = await r1.json();
-          const filtered = data.filter(r=> BEAUTY_KW.some(k=> (r.campaign_name||"").includes(k)));
+          const filtered = data.filter(r=> (r.campaign_name||"").includes("이미용"));
           setAllRows(filtered);
         }
         if(fixRes.ok) {
@@ -2276,9 +2277,11 @@ function NaverSection() {
           setFixList(map);
         }
       } catch(e){ console.error(e); }
-      setLoading(false);
+      if(!cancelled) setLoading(false);
     }
+    setDateFilter({from:"",to:""});
     load();
+    return ()=>{ cancelled=true; };
   },[days]);
 
   const fmtN = v => Number(v||0).toLocaleString();
@@ -2296,7 +2299,7 @@ function NaverSection() {
       await fetch(`${SURL}/rest/v1/naver_ads_fixlist?label=eq.${encodeURIComponent(r.label)}`,
         {method:"DELETE", headers:sh});
     } else {
-      const item = {label:r.label, cost:r.cost, roas:r.roas, checked_at: new Date().toLocaleDateString("ko-KR"), memo:""};
+      const item = {label:r.label, cost:r.cost, roas:r.roas||0, checked_at: new Date().toLocaleDateString("ko-KR"), memo:""};
       next[r.label] = item;
       setFixList(next);
       await fetch(`${SURL}/rest/v1/naver_ads_fixlist`,
@@ -2416,7 +2419,7 @@ function NaverSection() {
     compareRows.filter(filterByLevel).forEach(r => {
       const key = getGroupKey(r);
       if(!key) return;
-      if(!map[key]) map[key] = {convAmt:0, cost:0};
+      if(!map[key]) map[key] = {cost:0, convAmt:0};
       map[key].cost    += Number(r.spend)||0;
       map[key].convAmt += Number(r.conv_amount)||0;
     });
@@ -2433,16 +2436,19 @@ function NaverSection() {
     .filter(r => !search || r.label.toLowerCase().includes(search.toLowerCase()))
     .filter(r => {
       if(quickFilter==="warn") return r.cost>0 && r.roas < 300;
+      if(quickFilter==="highcpc") return r.cpc > 500;
       return true;
     })
     .sort((a,b)=> sortAsc ? a[sortCol]-b[sortCol] : b[sortCol]-a[sortCol]);
 
   // 합계
   const total = filtered.reduce((s,r)=>({
-    imp:s.imp+r.imp, click:s.click+r.click, cost:s.cost+r.cost,
-    conv:s.conv+r.conv, convAmt:s.convAmt+r.convAmt,
+    imp:s.imp+r.imp, click:s.click+r.click, cost:s.cost+r.cost, conv:s.conv+r.conv, convAmt:s.convAmt+r.convAmt,
   }),{imp:0,click:0,cost:0,conv:0,convAmt:0});
+  const avgCpc = total.click>0 ? Math.round(total.cost/total.click) : 0;
+  const avgCtr = total.imp>0 ? (total.click/total.imp*100).toFixed(2) : "0";
   const totalRoas = total.cost>0 ? Math.round(total.convAmt/total.cost*100) : 0;
+  const roasColor = v => v>=500?C.good:v>=300?"#CA8A04":C.bad;
 
   const COLS = [
     {key:"label",   label:groupBy==="campaign"?"캠페인":groupBy==="adgroup"?"광고그룹":groupBy==="keyword"?"키워드":"날짜", align:"left", fmt:v=>v},
@@ -2468,8 +2474,6 @@ function NaverSection() {
     else { setSortCol(key); setSortAsc(false); }
   }
 
-  const roasColor = v => v>=500?C.good:v>=300?"#CA8A04":C.bad;
-
   if(loading) return <div style={{padding:40,textAlign:"center",color:C.inkLt,fontSize:13}}>불러오는 중...</div>;
 
   return (
@@ -2478,7 +2482,7 @@ function NaverSection() {
       {/* 헤더 */}
       <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:8}}>
         <div>
-          <div style={{fontSize:16,fontWeight:900,color:C.ink}}>📊 네이버 광고 · <span style={{color:"#03C75A"}}>이미용 ROAS</span></div>
+          <div style={{fontSize:16,fontWeight:900,color:C.ink}}>📊 네이버 광고 · <span style={{color:"#03C75A"}}>이미용</span></div>
           <div style={{fontSize:11,color:C.inkLt,marginTop:2}}>API 자동 수집 · 매일 오전 9시 동기화{allRows.length>0&&` · ${availableDates[0]} ~ ${availableDates[availableDates.length-1]}`}</div>
         </div>
         <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}>
@@ -2527,10 +2531,10 @@ function NaverSection() {
           {/* KPI 배너 */}
           <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:10}}>
             {[
-              {label:"총 광고비",  value:fmtW(total.cost),     color:C.ink},
-              {label:"전환 수",    value:fmtN(total.conv)+"건", color:C.ink},
-              {label:"전환 매출",  value:fmtW(total.convAmt),  color:C.rose},
-              {label:"ROAS",       value:totalRoas+"%",         color:roasColor(totalRoas)},
+              {label:"총 광고비",  value:fmtW(total.cost),       color:C.ink},
+              {label:"전환 매출",  value:fmtW(total.convAmt),   color:C.rose},
+              {label:"ROAS",       value:totalRoas+"%",          color:roasColor(totalRoas)},
+              {label:"평균 CPC",   value:fmtN(avgCpc)+"원",     color:C.ink},
             ].map(k=>(
               <div key={k.label} style={{background:C.white,border:`1px solid ${C.border}`,borderRadius:10,padding:"12px 14px"}}>
                 <div style={{fontSize:10,color:C.inkLt,fontWeight:700}}>{k.label}</div>
@@ -2543,7 +2547,8 @@ function NaverSection() {
           <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
             {[
               {key:"all",  label:"전체",               color:C.inkMid},
-              {key:"warn", label:"⚠️ ROAS 경고 (<300%)", color:C.bad},
+              {key:"warn", label:"⚠️ ROAS <300%",    color:C.bad},
+              {key:"highcpc", label:"💰 CPC 500원+", color:"#EA580C"},
             ].map(f=>(
               <button key={f.key} onClick={()=>setQuickFilter(f.key)} style={{
                 padding:"5px 14px",borderRadius:20,fontSize:11,fontWeight:700,cursor:"pointer",
@@ -2650,15 +2655,16 @@ function NaverSection() {
                     <td style={{padding:"9px 12px",fontWeight:800,fontSize:11}}>합계 ({filtered.length}건)</td>
                     <td style={{padding:"9px 12px",textAlign:"right",fontWeight:700}}>{fmtN(total.imp)}</td>
                     <td style={{padding:"9px 12px",textAlign:"right",fontWeight:700}}>{fmtN(total.click)}</td>
-                    <td/>
-                    <td/>
+                    <td style={{padding:"9px 12px",textAlign:"right",fontWeight:700}}>{avgCtr}%</td>
+                    <td style={{padding:"9px 12px",textAlign:"right",fontWeight:700}}>{fmtN(avgCpc)}원</td>
                     <td style={{padding:"9px 12px",textAlign:"right",fontWeight:800,color:C.ink}}>{fmtW(total.cost)}</td>
                     <td style={{padding:"9px 12px",textAlign:"right",fontWeight:700}}>{fmtN(total.conv)}</td>
                     <td style={{padding:"9px 12px",textAlign:"right",fontWeight:800,color:C.rose}}>{fmtW(total.convAmt)}</td>
                     <td style={{padding:"9px 12px",textAlign:"right",fontWeight:900,color:roasColor(totalRoas)}}>{fmtN(totalRoas)}%</td>
                     {showCompare&&compareRows.length>0&&(()=>{
-                      const cmpTotal = Object.values(prevAggMap).reduce((acc,p)=>({cost:acc.cost+p.cost}),{cost:0});
-                      const cmpRoas = cmpTotal.cost>0?Math.round(Object.values(prevAggMap).reduce((s,p)=>s+p.roas*p.cost,0)/cmpTotal.cost):0;
+                      const cmpTotal = Object.values(prevAggMap).reduce((acc,p)=>({cost:acc.cost+p.cost,roas:0}),{cost:0});
+                      const cmpConvAmt = Object.values(prevAggMap).reduce((s,p)=>s+(p.roas*p.cost/100),0);
+                      const cmpRoas = cmpTotal.cost>0?Math.round(cmpConvAmt/cmpTotal.cost*100):0;
                       return(<><td style={{padding:"9px 12px",textAlign:"right",fontWeight:700,fontSize:11,color:C.inkMid}}>{fmtW(cmpTotal.cost)}</td><td style={{padding:"9px 12px",textAlign:"right",fontWeight:900,fontSize:11,color:roasColor(cmpRoas)}}>{cmpRoas}%</td><td/></>);
                     })()}
                     <td/>
@@ -7889,6 +7895,23 @@ export default function OaDashboard(){
             }
           });
           const weeks=Object.values(weekMap).sort((a,b)=>b.week.localeCompare(a.week));
+          // ── 소재 피로도: 최근 3개 게재 주 연속 ROAS 하락 감지 (주 지출 1만원↑ 주만 카운트) ──
+          const fatigued=new Set();
+          {
+            const weeksAsc=[...weeks].sort((a,b)=>a.week.localeCompare(b.week));
+            const trail={};
+            weeksAsc.forEach(w=>{
+              Object.entries(w.ads||{}).forEach(([n,v])=>{
+                if(v.spend>=10000)(trail[n]=trail[n]||[]).push(v.convValue/v.spend);
+              });
+            });
+            Object.entries(trail).forEach(([n,arr])=>{
+              if(arr.length>=3){
+                const [a,b,c]=arr.slice(-3);
+                if(a>b&&b>c&&c<4) fatigued.add(n);
+              }
+            });
+          }
           // ── 이번 주 액션 추천 (가이드 기준 자동 적용) ──
           const actionCard=(()=>{
             const cur=weeks[0], prev=weeks[1];
@@ -7898,18 +7921,41 @@ export default function OaDashboard(){
               .sort((a,b)=>b[1].convValue/b[1].spend-a[1].convValue/a[1].spend).slice(0,3);
             const stop=curAds.filter(([,v])=>(v.spend>=30000&&v.purchases===0)||(v.spend>=50000&&v.convValue/v.spend<2))
               .sort((a,b)=>b[1].spend-a[1].spend).slice(0,5);
+            const fatigue=curAds.filter(([n])=>fatigued.has(n)
+              &&!stop.some(([sn])=>sn===n)&&!scaleUp.some(([sn])=>sn===n))
+              .sort((a,b)=>b[1].spend-a[1].spend).slice(0,3);
             const curRoas=cur.spend>0?(cur.convValue/cur.spend)*100:0;
             const prevRoas=prev&&prev.spend>0?(prev.convValue/prev.spend)*100:null;
             const roasDelta=prevRoas!==null?Math.round(curRoas-prevRoas):null;
             const spendDelta=prev&&prev.spend>0?Math.round(((cur.spend-prev.spend)/prev.spend)*100):null;
-            if(!scaleUp.length&&!stop.length&&roasDelta===null) return null;
-            const row=(name,v,color,label)=>(
+            if(!scaleUp.length&&!stop.length&&!fatigue.length&&roasDelta===null) return null;
+            const alreadyReq=n=>(recreateReqs||[]).some(r=>r.adName===n&&r.status==="pending");
+            const requestFromWeekly=(name,v)=>{
+              const thumb=adImages.find(img=>img.name&&name&&(name.includes(img.name)||img.name.includes(name)))||matchMetaThumb(name);
+              setRecreateReqs(prev=>[{
+                id:Date.now()+"", adName:name, adset:"", campaign:"",
+                ctr:"", roas:v.spend>0?String(Math.round((v.convValue/v.spend)*100)):"0", spend:v.spend,
+                thumbUrl:thumb?.url||"",
+                note:"주별 액션 추천 — 중단 검토/피로 소재 재제작",
+                assignee:"", status:"pending",
+                requestedAt:new Date().toISOString().slice(0,10),
+              },...(prev||[])]);
+            };
+            const row=(name,v,color,label,canReq)=>(
               <div key={label+name} style={{display:"flex",alignItems:"center",gap:8,padding:"6px 10px",borderRadius:8,background:C.white,border:`1px solid ${color}33`}}>
                 <span style={{fontSize:9,fontWeight:800,color,background:color+"18",padding:"2px 7px",borderRadius:4,flexShrink:0}}>{label}</span>
                 <span style={{flex:1,fontSize:11,fontWeight:700,color:C.ink,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{name}</span>
                 <span style={{fontSize:10,color:C.inkLt,flexShrink:0}}>
                   {fmtW(v.spend)} · {v.purchases>0?`ROAS ${Math.round((v.convValue/v.spend)*100)}%`:"구매 0"}
                 </span>
+                {canReq&&(alreadyReq(name)
+                  ?<span style={{fontSize:9,fontWeight:700,color:"#8b5cf6",flexShrink:0}}><MI n="check" size={11}/> 요청됨</span>
+                  :<button onClick={()=>requestFromWeekly(name,v)}
+                      style={{fontSize:9,fontWeight:700,padding:"3px 8px",borderRadius:6,flexShrink:0,
+                        border:"1px solid #8b5cf644",background:"#f5f3ff",color:"#8b5cf6",
+                        cursor:"pointer",fontFamily:"inherit"}}>
+                      <MI n="palette" size={10}/> 재제작
+                    </button>)}
               </div>
             );
             return(
@@ -7922,10 +7968,12 @@ export default function OaDashboard(){
                   </div>
                 </div>
                 <div style={{display:"flex",flexDirection:"column",gap:4}}>
-                  {scaleUp.map(([n,v])=>row(n,v,C.sage,"증액"))}
-                  {stop.map(([n,v])=>row(n,v,C.bad,"중단 검토"))}
-                  {!scaleUp.length&&!stop.length&&<div style={{fontSize:11,color:C.inkLt}}>이번 주는 증액/중단 대상 소재가 없어요</div>}
+                  {scaleUp.map(([n,v])=>row(n,v,C.sage,"증액",false))}
+                  {fatigue.map(([n,v])=>row(n,v,"#d97706","교체 준비",true))}
+                  {stop.map(([n,v])=>row(n,v,C.bad,"중단 검토",true))}
+                  {!scaleUp.length&&!stop.length&&!fatigue.length&&<div style={{fontSize:11,color:C.inkLt}}>이번 주는 증액/중단 대상 소재가 없어요</div>}
                 </div>
+                {fatigue.length>0&&<div style={{fontSize:9,color:C.inkLt,marginTop:6}}>교체 준비 = 최근 3개 게재 주 연속 ROAS 하락 — 소재 수명 끝나기 전에 변주 준비</div>}
               </div>
             );
           })();
@@ -8004,11 +8052,18 @@ export default function OaDashboard(){
                                     <div style={{flex:1,minWidth:0}}>
                                       <div style={{fontSize:11,fontWeight:700,color:C.ink,
                                         overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{name}</div>
-                                      <div style={{fontSize:10,color:C.inkLt,display:"flex",gap:8,marginTop:2,alignItems:"center"}}>
+                                      <div style={{fontSize:10,color:C.inkLt,display:"flex",gap:8,marginTop:2,alignItems:"center",flexWrap:"wrap"}}>
                                         {(()=>{const ap=classifyAppeal(name);return <span style={{fontSize:8.5,fontWeight:800,color:"#fff",background:APPEAL_COLORS[ap],padding:"1px 6px",borderRadius:4}}>{ap}</span>;})()}
+                                        {fatigued.has(name)&&<span style={{fontSize:8.5,fontWeight:800,color:"#fff",background:"#d97706",padding:"1px 6px",borderRadius:4}}>피로↓</span>}
                                         {v.purchases>0&&<span style={{color:C.sage,fontWeight:700}}>{v.purchases}건</span>}
                                         {cr!==null&&<span style={{fontWeight:700,color:cr>=400?C.sage:cr<200?C.bad:C.inkMid}}>ROAS {cr}%</span>}
                                         {cr===null&&v.spend>0&&<span style={{color:C.bad,fontWeight:700}}>구매 0</span>}
+                                        {(()=>{
+                                          const am=getAdMargin(name,"",margins||[],margin||30000);
+                                          if(!am||!v.purchases) return null;
+                                          const p=v.purchases*am-v.spend;
+                                          return <span style={{fontWeight:800,color:p>=0?C.sage:C.bad}}>{p>=0?"흑자":"적자"} {fmtW(Math.abs(p))}</span>;
+                                        })()}
                                         {v.clicks>0&&<span>{v.clicks.toLocaleString()} 클릭</span>}
                                       </div>
                                     </div>
@@ -8262,6 +8317,62 @@ export default function OaDashboard(){
                 </div>
                 <div style={{fontSize:9,color:C.inkLt,marginTop:8}}>"현재" = 연결된 시트 데이터 기준, 광고명 키워드 자동 분류 · "상반기" = 2026 상반기 95개 소재 분석</div>
               </div>
+              {(()=>{
+                // 제품 × 소구 매트릭스 (현재 시트 데이터)
+                const PRODUCTS=(margins||[]).map(m=>m.keyword).filter(Boolean);
+                if(!PRODUCTS.length) return null;
+                const APS=["상황/라이프스타일","가격/프로모션","기능/스펙","협력","기타"];
+                const APS_SHORT={"상황/라이프스타일":"상황","가격/프로모션":"가격","기능/스펙":"기능","협력":"협력","기타":"기타"};
+                const mx={};
+                metaForChart.forEach(r=>{
+                  if(!r.adName||!r.spend) return;
+                  const nm=r.adName.toLowerCase();
+                  let prod="기타 제품";
+                  PRODUCTS.forEach(p=>{if(nm.includes(p.toLowerCase()))prod=p;});
+                  const ap=classifyAppeal(r.adName);
+                  if(!mx[prod]) mx[prod]={};
+                  if(!mx[prod][ap]) mx[prod][ap]={spend:0,convValue:0};
+                  mx[prod][ap].spend+=(r.spend||0);
+                  mx[prod][ap].convValue+=(r.convValue||0);
+                });
+                const prods=Object.keys(mx).sort((a,b)=>{
+                  const sa=Object.values(mx[a]).reduce((s,v)=>s+v.spend,0);
+                  const sb=Object.values(mx[b]).reduce((s,v)=>s+v.spend,0);
+                  return sb-sa;
+                });
+                if(!prods.length) return null;
+                const cell=(v,key)=>{
+                  if(!v||v.spend<30000) return <td key={key} style={{padding:"7px 6px",textAlign:"center",fontSize:10,color:C.inkLt}}>—</td>;
+                  const r=v.convValue/v.spend;
+                  return <td key={key} style={{padding:"7px 6px",textAlign:"center",fontSize:11,fontWeight:800,
+                    color:r>=4?C.sage:r>=2?C.inkMid:C.bad,
+                    background:r>=4?"#f0fdf4":r<2?"#fff5f5":"transparent",borderRadius:6}}>{r.toFixed(1)}</td>;
+                };
+                return(
+                  <div style={card}>
+                    <div style={h}><MI n="grid_on" size={15}/> 제품 × 소구 매트릭스 — 어떤 제품에 어떤 훅이 먹히나</div>
+                    <div style={{overflowX:"auto"}}>
+                      <table style={{width:"100%",borderCollapse:"collapse",minWidth:420}}>
+                        <thead>
+                          <tr>
+                            <th style={{padding:"6px",textAlign:"left",fontSize:10,color:C.inkLt,fontWeight:700}}>제품</th>
+                            {APS.map(a=><th key={a} style={{padding:"6px",textAlign:"center",fontSize:10,fontWeight:800,color:APPEAL_COLORS[a]}}>{APS_SHORT[a]}</th>)}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {prods.map(p=>(
+                            <tr key={p} style={{borderTop:`1px solid ${C.border}66`}}>
+                              <td style={{padding:"7px 6px",fontSize:11,fontWeight:700,color:C.ink,whiteSpace:"nowrap"}}>{p}</td>
+                              {APS.map(a=>cell(mx[p][a],a))}
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                    <div style={{fontSize:9,color:C.inkLt,marginTop:8}}>숫자 = ROAS (배수) · 지출 3만원 미만 셀은 표시 안 함 · 🟢 4.0↑ 확장, 🔴 2.0↓ 회피 조합</div>
+                  </div>
+                );
+              })()}
               <div style={card}>
                 <div style={h}><MI n="rule" size={15}/> 제작 5원칙</div>
                 <div style={{display:"flex",flexDirection:"column",gap:8}}>

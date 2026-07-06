@@ -119,6 +119,22 @@ export async function GET() {
   const weekKeys = Object.keys(weekMap).sort().reverse();
   if (!weekKeys.length) return Response.json({ error: "주별 데이터 없음" }, { status: 400 });
   const cur = weekMap[weekKeys[0]], prev = weekMap[weekKeys[1]];
+
+  // 4.5. 소재 피로도: 주별 ROAS 3주 연속 하락 & 마지막 <4
+  const asc = [...weekKeys].sort();
+  const trail = {};
+  for (const wk of asc) {
+    for (const [ad, v] of Object.entries(weekMap[wk].ads)) {
+      if (v.spend < 10000) continue;
+      (trail[ad] = trail[ad] || []).push(v.convValue / v.spend);
+    }
+  }
+  const fatigued = new Set();
+  for (const [ad, arr] of Object.entries(trail)) {
+    if (arr.length < 3) continue;
+    const [a, b, c] = arr.slice(-3);
+    if (a > b && b > c && c < 4) fatigued.add(ad);
+  }
   const curWk = weekKeys[0];
   const end = new Date(curWk); end.setDate(end.getDate() + 6);
   const range = `${curWk.slice(5).replace("-", "/")} ~ ${String(end.getMonth() + 1).padStart(2, "0")}/${String(end.getDate()).padStart(2, "0")}`;
@@ -129,6 +145,9 @@ export async function GET() {
     .sort((a, b) => b[1].convValue / b[1].spend - a[1].convValue / a[1].spend).slice(0, 3);
   const stop = curAds.filter(([, v]) => (v.spend >= 30000 && v.purchases === 0) || (v.spend >= 50000 && v.convValue / v.spend < 2))
     .sort((a, b) => b[1].spend - a[1].spend).slice(0, 5);
+  const picked = new Set([...scaleUp, ...stop].map(([n]) => n));
+  const fatigue = curAds.filter(([n]) => fatigued.has(n) && !picked.has(n))
+    .sort((a, b) => b[1].spend - a[1].spend).slice(0, 3);
 
   const roas = cur.spend > 0 ? Math.round((cur.convValue / cur.spend) * 100) : 0;
   const prevRoas = prev && prev.spend > 0 ? Math.round((prev.convValue / prev.spend) * 100) : null;
@@ -153,7 +172,13 @@ export async function GET() {
     for (const [n, v] of stop)
       lines.push(`· ${n} [${classifyAppeal(n)}] — ${v.purchases === 0 ? "구매 0" : `ROAS ${Math.round((v.convValue / v.spend) * 100)}%`} / ${fmtW(v.spend)}`);
   }
-  if (!scaleUp.length && !stop.length) {
+  if (fatigue.length) {
+    lines.push(``);
+    lines.push(`🟡 교체 준비 (ROAS 3주 연속 하락)`);
+    for (const [n, v] of fatigue)
+      lines.push(`· ${n} [${classifyAppeal(n)}] — ROAS ${Math.round((v.convValue / v.spend) * 100)}% / ${fmtW(v.spend)}`);
+  }
+  if (!scaleUp.length && !stop.length && !fatigue.length) {
     lines.push(``);
     lines.push(`증액/중단 대상 소재 없음 — 안정 운영 중`);
   }
@@ -169,5 +194,48 @@ export async function GET() {
   const tgData = await tgRes.json();
   if (!tgData.ok) return Response.json({ error: "텔레그램 발송 실패", detail: tgData }, { status: 502 });
 
-  return Response.json({ ok: true, week: curWk, spend: cur.spend, roas, scaleUp: scaleUp.length, stop: stop.length });
+  // 8. 소재 썸네일 첨부 (oa_meta_thumbs_v1 매칭, 최대 4장)
+  let photos = 0;
+  try {
+    const thRes = await fetch(`${SUPA_URL}/rest/v1/settings?key=eq.oa_meta_thumbs_v1&select=value`, {
+      headers: { apikey: SUPA_KEY, Authorization: `Bearer ${SUPA_KEY}` },
+    });
+    const thData = await thRes.json();
+    let thumbs = thData?.[0]?.value;
+    if (typeof thumbs === "string") { try { thumbs = JSON.parse(thumbs); } catch { thumbs = null; } }
+    if (thumbs && typeof thumbs === "object") {
+      const norm = s => String(s || "").toLowerCase().replace(/[\s_\-\.]+/g, "");
+      const keys = Object.keys(thumbs);
+      const findThumb = name => {
+        if (thumbs[name]) return thumbs[name];
+        const n = norm(name);
+        if (!n) return null;
+        const k = keys.find(k => { const kk = norm(k); return kk.includes(n) || n.includes(kk); });
+        return k ? thumbs[k] : null;
+      };
+      const targets = [
+        ...scaleUp.map(([n, v]) => ({ n, v, tag: "🟢 증액" })),
+        ...stop.map(([n, v]) => ({ n, v, tag: "🔴 중단" })),
+        ...fatigue.map(([n, v]) => ({ n, v, tag: "🟡 교체" })),
+      ];
+      for (const t of targets) {
+        if (photos >= 4) break;
+        const url = findThumb(t.n);
+        if (!url) continue;
+        try {
+          const pr = await fetch(`https://api.telegram.org/bot${botToken}/sendPhoto`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              chat_id: chatId, photo: url,
+              caption: `${t.tag} · ${t.n}\nROAS ${Math.round((t.v.convValue / t.v.spend) * 100)}% / ${fmtW(t.v.spend)}`,
+            }),
+          });
+          if ((await pr.json()).ok) photos++;
+        } catch {}
+      }
+    }
+  } catch {}
+
+  return Response.json({ ok: true, week: curWk, spend: cur.spend, roas, scaleUp: scaleUp.length, stop: stop.length, fatigue: fatigue.length, photos });
 }
