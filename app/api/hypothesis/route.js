@@ -11,8 +11,8 @@ const sH = {
   'Content-Type': 'application/json',
 };
 
-// 이미용 카테고리 코드 (드라이기, 고데기, 안마기, 갈바닉, 전동칫솔, 구강세정기, 칫솔살균기, 체중계, 화장거울)
-const BEAUTY_CODES = ['DRY','STR','MSG','GVN','ETB','ORL','TBS','SCA','MUM'];
+// 이미용 카테고리 코드 (드라이기, 고데기, 갈바닉, 화장거울)
+const BEAUTY_CODES = ['DRY','STR','GVN','MUM'];
 
 // Supabase beauty_sales에서 최근 14일 이미용 데이터 조회 (매일 MySQL→Supabase 동기화됨)
 // Vercel에서 MySQL 직접 접속이 차단되어 있어 동기화 테이블 사용
