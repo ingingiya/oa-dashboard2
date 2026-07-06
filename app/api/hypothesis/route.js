@@ -333,6 +333,12 @@ export async function GET(request) {
         if (Array.isArray(existing) && existing.length > 0) {
           return Response.json({ ok: true, skipped: true, message: '오늘 가설이 이미 있어요' });
         }
+      } else {
+        // 재생성: 오늘 기존 가설 삭제 (중복 방지)
+        await fetch(`${SUPA_URL}/rest/v1/daily_hypotheses?date=eq.${today}`, {
+          method: 'DELETE',
+          headers: sH,
+        });
       }
 
       const [salesData, pastVerdicts] = await Promise.all([fetchSalesData(), fetchPastVerdicts()]);
