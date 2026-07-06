@@ -129,6 +129,117 @@ async function fetchRealChannelSales() {
     .slice(0, 25);
 }
 
+// 메타 광고비 (구글시트 CSV, 최근 14일 제품군별 주간 집계 + 일별 총액)
+const AD_GROUPS = [['소닉플로우',['소닉플로우','sonic']],['갈바닉',['갈바닉']],['화장거울',['거울']],['고데기',['고데기']],['드라이기',['드라이','에어리']]];
+function csvParse(text) {
+  const rows = [];
+  let row = [], field = '', inQ = false;
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (inQ) {
+      if (c === '"') { if (text[i + 1] === '"') { field += '"'; i++; } else inQ = false; }
+      else field += c;
+    } else if (c === '"') inQ = true;
+    else if (c === ',') { row.push(field); field = ''; }
+    else if (c === '\n' || c === '\r') {
+      if (c === '\r' && text[i + 1] === '\n') i++;
+      row.push(field); field = '';
+      if (row.some(f => f !== '')) rows.push(row);
+      row = [];
+    } else field += c;
+  }
+  row.push(field);
+  if (row.some(f => f !== '')) rows.push(row);
+  return rows;
+}
+const csvNum = v => { const n = parseFloat(String(v || '').replace(/,/g, '').replace(/[^0-9.-]/g, '')); return isNaN(n) ? 0 : n; };
+const csvDate = v => {
+  const s = String(v || '').trim();
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+  const ko = s.match(/^(\d{4})[.\s]+(\d{1,2})[.\s]+(\d{1,2})/);
+  if (ko) return `${ko[1]}-${ko[2].padStart(2, '0')}-${ko[3].padStart(2, '0')}`;
+  const us = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+  if (us) return `${us[3]}-${us[1].padStart(2, '0')}-${us[2].padStart(2, '0')}`;
+  return '';
+};
+
+async function fetchMetaSpend() {
+  try {
+    const setRes = await fetch(`${SUPA_URL}/rest/v1/settings?key=eq.oa_conv_sheet_url_v1&select=value`, {
+      headers: sH, cache: 'no-store',
+    });
+    let sheetUrl = (await setRes.json())?.[0]?.value;
+    if (typeof sheetUrl === 'string') sheetUrl = sheetUrl.replace(/^"|"$/g, '');
+    if (!sheetUrl) return null;
+
+    const m = sheetUrl.match(/\/spreadsheets\/d\/([a-zA-Z0-9_-]+)/);
+    let csvUrl = sheetUrl;
+    if (m) {
+      const gid = (sheetUrl.match(/[#&?]gid=(\d+)/) || [])[1] || '0';
+      csvUrl = `https://docs.google.com/spreadsheets/d/${m[1]}/export?format=csv&gid=${gid}&t=${Date.now()}`;
+    }
+    const csvRes = await fetch(csvUrl, { headers: { 'User-Agent': 'Mozilla/5.0' }, cache: 'no-store', redirect: 'follow' });
+    if (!csvRes.ok) return null;
+    const rows = csvParse(await csvRes.text());
+    if (rows.length < 2) return null;
+
+    const header = rows[0].map(h => h.trim());
+    const idx = (...names) => header.findIndex(h => names.some(n => h.replace(/\s/g, '') === n.replace(/\s/g, '')));
+    const iDate = idx('일', '날짜', '보고 시작');
+    const iCamp = idx('캠페인 이름');
+    const iAd = idx('광고 이름');
+    const iSpend = idx('지출 금액 (KRW)', '지출 금액');
+    const iPurch = idx('공유 항목이 포함된 구매', '웹사이트 구매', '구매');
+    const iConvV = idx('공유 항목의 구매 전환값', '웹사이트 구매 전환값', '구매 전환값');
+    if (iDate < 0 || iSpend < 0) return null;
+
+    const kstNow = new Date(Date.now() + 9 * 3600 * 1000);
+    const dstr = (d) => new Date(kstNow.getTime() - d * 86400000).toISOString().split('T')[0];
+    const from14 = dstr(14), from7 = dstr(7);
+
+    const groups = {}; // group -> {tSpend,tPurch,tConvV,lSpend,lPurch,lConvV}
+    const daily = {};  // date -> spend
+    for (const r of rows.slice(1)) {
+      const date = csvDate(r[iDate]);
+      if (!date || date < from14) continue;
+      const name = `${r[iCamp] || ''} ${r[iAd] || ''}`;
+      if (name.includes('Instagram 게시물')) continue;
+      const spend = csvNum(r[iSpend]);
+      const purch = iPurch >= 0 ? csvNum(r[iPurch]) : 0;
+      const convV = iConvV >= 0 ? csvNum(r[iConvV]) : 0;
+      daily[date] = (daily[date] || 0) + spend;
+      const lower = name.toLowerCase();
+      const gr = AD_GROUPS.find(([, kws]) => kws.some(k => lower.includes(k)))?.[0];
+      if (!gr) continue;
+      const o = groups[gr] = groups[gr] || { tSpend: 0, tPurch: 0, tConvV: 0, lSpend: 0, lPurch: 0, lConvV: 0 };
+      if (date >= from7) { o.tSpend += spend; o.tPurch += purch; o.tConvV += convV; }
+      else { o.lSpend += spend; o.lPurch += purch; o.lConvV += convV; }
+    }
+    if (!Object.keys(daily).length) return null;
+    return { groups, daily };
+  } catch { return null; } // 광고 데이터 없어도 가설 생성은 진행
+}
+
+// 프로모션 일정 (진행중 + 최근 종료 + 예정)
+async function fetchPromotions() {
+  try {
+    const kstNow = new Date(Date.now() + 9 * 3600 * 1000);
+    const from14 = new Date(kstNow.getTime() - 14 * 86400000).toISOString().split('T')[0];
+    const res = await fetch(
+      `${SUPA_URL}/rest/v1/promotions?select=channel,promo_name,start_date,end_date,products&end_date=gte.${from14}&brand=ilike.*${encodeURIComponent('오아')}*&order=start_date.desc&limit=40`,
+      { headers: sH, cache: 'no-store' }
+    );
+    if (!res.ok) return [];
+    const rows = await res.json();
+    if (!Array.isArray(rows)) return [];
+    const kw = ['드라이', '고데기', '갈바닉', '거울', '소닉플로우', '에어리'];
+    return rows
+      .filter(r => !Array.isArray(r.products) || !r.products.length
+        || r.products.some(p => kw.some(k => String(p || '').includes(k))))
+      .slice(0, 20);
+  } catch { return []; }
+}
+
 // 과거 검증 결과 (피드백 루프용)
 async function fetchPastVerdicts() {
   const res = await fetch(
@@ -139,7 +250,7 @@ async function fetchPastVerdicts() {
   return Array.isArray(rows) ? rows : [];
 }
 
-async function generateHypotheses(salesData, pastVerdicts, realChannel) {
+async function generateHypotheses(salesData, pastVerdicts, realChannel, metaSpend, promotions) {
   const ANTHROPIC_KEY = process.env.ANTHROPIC_API_KEY;
   if (!ANTHROPIC_KEY) throw new Error('ANTHROPIC_API_KEY 환경변수가 없어요');
 
@@ -159,6 +270,27 @@ async function generateHypotheses(salesData, pastVerdicts, realChannel) {
       ).join('\n')
     : '(아직 없음)';
 
+  // 메타 광고비 (제품군별 주간 + 일별 총액)
+  let adText = '(데이터 없음)';
+  if (metaSpend) {
+    const man = (n) => Math.round(n / 10000);
+    const roas = (v, s) => s > 0 ? Math.round(v / s * 100) : 0;
+    const gLines = Object.entries(metaSpend.groups).map(([gr, o]) =>
+      `${gr}: 지난주 ${man(o.lSpend)}만원(구매 ${Math.round(o.lPurch)}건, ROAS ${roas(o.lConvV, o.lSpend)}%) → 이번주 ${man(o.tSpend)}만원(구매 ${Math.round(o.tPurch)}건, ROAS ${roas(o.tConvV, o.tSpend)}%)`
+    ).join('\n');
+    const dLines = Object.entries(metaSpend.daily).sort()
+      .map(([d, s]) => `${d.slice(5)}: ${man(s)}만원`).join(', ');
+    adText = `[제품군별 주간]\n${gLines || '(제품군 매칭 없음)'}\n[일별 총 지출]\n${dLines}`;
+  }
+
+  // 프로모션
+  const promoText = promotions.length
+    ? promotions.map(p => {
+        const prods = Array.isArray(p.products) ? p.products.slice(0, 4).join(', ') : '';
+        return `${p.start_date}~${p.end_date} [${p.channel}] ${p.promo_name}${prods ? ` (${prods})` : ''}`;
+      }).join('\n')
+    : '(데이터 없음)';
+
   const prompt = `당신은 OA 뷰티(이미용 브랜드)의 판매 데이터 분석가입니다. 아래 데이터를 보고 가설을 만드세요.
 
 ## 4주 판매 추이 (제품별 주간 수량, 변동 큰 순)
@@ -173,18 +305,26 @@ ${yesterdayText}
 ## 쿠팡·지그재그 실판매 (실제 소비자 판매, 주간 수량)
 ${realChannel.length ? realChannel.map(o => `${o.name} [${o.channel}]: 지난주 ${o.last_week}개 → 이번주 ${o.this_week}개`).join('\n') : '(데이터 없음)'}
 
+## 메타 광고 집행 (최근 14일)
+${adText}
+
+## 프로모션 일정 (진행중 · 최근 종료 · 예정)
+${promoText}
+
 ## 과거 가설 검증 결과 (참고 — 맞았던 패턴은 발전시키고, 틀렸던 유형의 가설은 피하세요)
 ${feedbackText}
 
 ## 출력 형식 (반드시 JSON 배열만, 다른 텍스트 없이)
 [
-  {"type":"원인분석","product":"제품명","hypothesis":"판매 변동의 원인 가설 (1-2문장)","evidence":"근거가 된 숫자","priority":"high|mid|low","expected_impact":"가설이 맞다면 예상되는 효과/리스크 1문장 (숫자 포함)","how_to_verify":"이 가설을 확인하는 구체적 방법 1문장"},
-  {"type":"마케팅액션","product":"제품명","hypothesis":"다음에 시도해볼 마케팅/광고 액션 가설 (1-2문장)","evidence":"근거가 된 숫자","priority":"high|mid|low","expected_impact":"실행 시 기대 효과 1문장 (숫자 포함)","how_to_verify":"성공 여부를 판단할 지표/방법 1문장"}
+  {"type":"원인분석","product":"제품명","hypothesis":"판매 변동의 원인 가설 (1-2문장, 광고비·프로모션 변화와 판매 변화를 연결해 설명)","evidence":"근거가 된 실제 숫자 (판매+광고/프로모션 교차 인용)","priority":"high|mid|low","expected_impact":"가설이 맞다면 예상되는 효과/리스크 — 반드시 구체적 수치 예측 포함 (예: 주간 -30개 추가 하락, 매출 -200만원)","how_to_verify":"판정 기준+기한 포함 (예: 3일 내 실판매가 지난주 대비 20% 회복 안 되면 기각)"},
+  {"type":"마케팅액션","product":"제품명","hypothesis":"시도할 액션 + 실행 스텝 (예: ① 소닉플로우 메타 예산 일 5만→8만원 증액 ② 가격소구 소재로 교체 ③ 3일 후 ROAS 확인)","evidence":"근거가 된 실제 숫자","priority":"high|mid|low","expected_impact":"실행 시 기대 효과 — 구체적 수치 목표 (예: 주간 구매 15→25건, ROAS 300% 유지)","how_to_verify":"성공/실패 판정 기준+기한 (예: 7일 내 주간 실판매 +20개 미달이면 실패)"}
 ]
 
 ## 규칙
 - 원인분석 가설 3개 + 마케팅액션 가설 3개, 총 6개
-- 반드시 위 데이터의 실제 숫자를 evidence에 인용
+- 반드시 위 데이터의 실제 숫자를 evidence에 인용. 판매 변동을 광고비 증감·프로모션 시작/종료와 교차 검증해서 원인을 좁힐 것 (예: 광고비 그대로인데 판매 급감 → 광고 외 원인)
+- expected_impact는 반드시 구체적 수치 예측 (개수/만원/%), how_to_verify는 반드시 판정 기준+기한을 포함
+- 마케팅액션의 hypothesis에는 ①②③ 실행 스텝을 포함
 - 4주 추이에서 지속 상승/하락 vs 일시 변동을 구분하고, 채널 이동 신호를 활용
 - 주의: 위 판매 추이/어제 판매(ERP)의 쿠팡·지그재그 수치는 플랫폼 일괄 발주(사입)라 하루에 몰려 잡힘. 쿠팡·지그재그 판단은 반드시 "쿠팡·지그재그 실판매" 섹션 수치를 기준으로 할 것 (실판매 데이터 없으면 발주 가능성을 언급)
 - 변동폭이 큰 제품 위주로
@@ -458,10 +598,10 @@ export async function GET(request) {
         });
       }
 
-      const [salesData, pastVerdicts, realChannel] = await Promise.all([
-        fetchSalesData(), fetchPastVerdicts(), fetchRealChannelSales(),
+      const [salesData, pastVerdicts, realChannel, metaSpend, promotions] = await Promise.all([
+        fetchSalesData(), fetchPastVerdicts(), fetchRealChannelSales(), fetchMetaSpend(), fetchPromotions(),
       ]);
-      const hypotheses = await generateHypotheses(salesData, pastVerdicts, realChannel);
+      const hypotheses = await generateHypotheses(salesData, pastVerdicts, realChannel, metaSpend, promotions);
 
       const rows = hypotheses.map(h => ({
         date: today,
