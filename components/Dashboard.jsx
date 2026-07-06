@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback, useRef } from "react";
-import { getSetting, setSetting, getAdImages, saveAdImagesMeta, uploadAdImage, uploadSettleFile } from "../lib/useSupabase";
+import { getSetting, setSetting, getAdImages, saveAdImagesMeta, uploadAdImage, uploadSettleFile, getBeautyRealSales } from "../lib/useSupabase";
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // Supabase 동기화 훅 — 팀 전체 공유 (localStorage 대체)
@@ -49,7 +49,7 @@ function useSupabaseState(key, def) {
   return [data, save, loaded];
 }
 import {
-  AreaChart, Area, BarChart, Bar, LineChart, Line,
+  AreaChart, Area, BarChart, Bar, LineChart, Line, ComposedChart,
   XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell
 } from "recharts";
 
@@ -3383,790 +3383,428 @@ function ProjectSection() {
   const allAssignees = [...new Set(projects.map(p=>p.assignee||"미지정"))];
 
   const inputStyle = {width:"100%",padding:"8px 10px",border:`1px solid ${C.border}`,borderRadius:8,fontSize:13,fontFamily:"inherit",marginTop:4,outline:"none",boxSizing:"border-box"};
+  const MI_S = ({n,size=14,color})=><span className="material-symbols-outlined" style={{fontSize:size,color}}>{n}</span>;
+  const fmtRev = v => v>=100000000?(v/100000000).toFixed(1)+"억":v>=10000?Math.round(v/10000).toLocaleString()+"만":Number(v).toLocaleString()+"원";
+  const [projTab, setProjTab] = useState("overview"); // overview | tasks | products | data
 
   return (
     <div style={{padding:"24px 0"}}>
+      {/* 헤더 */}
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:20,flexWrap:"wrap",gap:12}}>
         <div>
           <div style={{fontSize:20,fontWeight:900,color:C.ink}}>프로젝트 관리</div>
-          <div style={{fontSize:12,color:C.inkMid,marginTop:2}}>진행중인 프로젝트와 할일을 한눈에</div>
+          <div style={{fontSize:12,color:C.inkMid,marginTop:2}}>진행중 프로젝트 현황</div>
         </div>
-        <div style={{display:"flex",gap:8,alignItems:"center"}}>
-          <div style={{display:"flex",background:C.cream,borderRadius:8,overflow:"hidden"}}>
-            {[{id:"list",icon:"view_list"},{id:"gantt",icon:"view_timeline"}].map(v=>(
-              <button key={v.id} onClick={()=>setViewMode(v.id)} style={{padding:"6px 10px",border:"none",background:viewMode===v.id?C.rose:"transparent",color:viewMode===v.id?"#fff":C.inkMid,cursor:"pointer",display:"flex",alignItems:"center"}}><MI n={v.icon} size={16}/></button>
-            ))}
-          </div>
-          <button onClick={()=>{setCompareMode(!compareMode);setCompareIds([]);setCompareData(null);}}
-            style={{padding:"8px 14px",background:compareMode?"#7c3aed":C.cream,color:compareMode?"#fff":C.inkMid,border:"none",borderRadius:8,fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit",display:"flex",alignItems:"center",gap:4}}>
-            <MI n="compare_arrows" size={16}/> 비교
-          </button>
-          <button onClick={()=>{setShowForm(true);setEditId(null);setForm(emptyForm);}}
-            style={{padding:"8px 16px",background:C.rose,color:"#fff",border:"none",borderRadius:8,fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit",display:"flex",alignItems:"center",gap:4}}>
-            <MI n="add" size={16}/> 새 프로젝트
-          </button>
-        </div>
+        <button onClick={()=>{setShowForm(true);setEditId(null);setForm(emptyForm);}}
+          style={{padding:"8px 16px",background:C.rose,color:"#fff",border:"none",borderRadius:8,fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit",display:"flex",alignItems:"center",gap:4}}>
+          <MI n="add" size={16}/> 새 프로젝트
+        </button>
       </div>
 
       {/* 요약 카드 */}
-      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(120px,1fr))",gap:10,marginBottom:20}}>
-        {[{label:"전체",count:projects.length,color:C.ink},{label:"진행중",count:projects.filter(p=>p.status==="in_progress").length,color:"#2563eb"},{label:"기획중",count:projects.filter(p=>p.status==="planning").length,color:"#6366f1"},{label:"완료",count:projects.filter(p=>p.status==="done").length,color:"#16a34a"},{label:"긴급",count:projects.filter(p=>p.priority==="urgent").length,color:"#dc2626"}].map(s=>(
-          <div key={s.label} style={{background:C.white,borderRadius:12,padding:"14px",border:`1px solid ${C.border}`}}>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(100px,1fr))",gap:8,marginBottom:20}}>
+        {[
+          {label:"전체",count:projects.length,color:C.ink,filter:"all"},
+          {label:"진행중",count:projects.filter(p=>p.status==="in_progress").length,color:"#2563eb",filter:"in_progress"},
+          {label:"기획중",count:projects.filter(p=>p.status==="planning").length,color:"#6366f1",filter:"planning"},
+          {label:"완료",count:projects.filter(p=>p.status==="done").length,color:"#16a34a",filter:"done"},
+        ].map(s=>(
+          <div key={s.label} onClick={()=>setFilterStatus(filterStatus===s.filter?"all":s.filter)}
+            style={{background:filterStatus===s.filter?s.color+"11":C.white,borderRadius:10,padding:"12px",
+              border:`1.5px solid ${filterStatus===s.filter?s.color:C.border}`,cursor:"pointer",transition:"all 0.15s"}}>
             <div style={{fontSize:10,color:C.inkMid,fontWeight:600}}>{s.label}</div>
-            <div style={{fontSize:22,fontWeight:900,color:s.color,marginTop:2}}>{s.count}</div>
+            <div style={{fontSize:22,fontWeight:900,color:s.color}}>{s.count}</div>
           </div>
         ))}
       </div>
 
-      {/* 지금 해야 할 액션 */}
+      {/* 액션 알림 */}
       {(()=>{
         const todayStr = new Date().toISOString().slice(0,10);
         const active = projects.filter(p=>p.status==="in_progress"||p.status==="planning");
         const dday = p=>Math.ceil((new Date(p.end_date)-new Date(todayStr))/86400000);
-        const deadline = active.filter(p=>p.end_date&&dday(p)<=7)
-          .sort((a,b)=>a.end_date.localeCompare(b.end_date));
-        const priRank = {urgent:0,high:1,normal:2,low:3};
-        const todos = active
-          .sort((a,b)=>(priRank[a.priority]??2)-(priRank[b.priority]??2))
-          .flatMap(p=>(p.tasks||[]).filter(t=>!t.done).map(t=>({proj:p,text:t.text})))
-          .slice(0,8);
+        const deadline = active.filter(p=>p.end_date&&dday(p)<=7).sort((a,b)=>a.end_date.localeCompare(b.end_date));
+        const todos = active.flatMap(p=>(p.tasks||[]).filter(t=>!t.done).map(t=>({proj:p,text:t.text}))).slice(0,5);
         if(!deadline.length&&!todos.length) return null;
         return(
-        <div style={{background:"#fffbeb",border:"1px solid #fde68a",borderRadius:12,padding:"14px 16px",marginBottom:20}}>
-          <div style={{fontSize:13,fontWeight:900,color:"#b45309",marginBottom:10,display:"flex",alignItems:"center",gap:6}}>
-            <MI n="bolt" size={16}/> 지금 해야 할 액션
-          </div>
-          {deadline.length>0&&(
-            <div style={{marginBottom:todos.length?10:0}}>
-              {deadline.map(p=>{
-                const d=dday(p);
-                return(
-                <div key={p.id} onClick={()=>setExpandId(expandId===p.id?null:p.id)}
-                  style={{display:"flex",alignItems:"center",gap:8,padding:"5px 0",cursor:"pointer",fontSize:12}}>
-                  <span style={{fontSize:10,fontWeight:900,color:d<0?"#dc2626":"#ea580c",
-                    background:d<0?"#fef2f2":"#fff7ed",padding:"2px 8px",borderRadius:10,whiteSpace:"nowrap"}}>
-                    {d<0?`마감 ${-d}일 지남`:d===0?"오늘 마감":`D-${d}`}
-                  </span>
-                  <span style={{fontWeight:700,color:C.ink}}>{p.name}</span>
-                  <span style={{fontSize:10,color:C.inkMid}}>{p.assignee||"미지정"} · 진행률 {p.progress||0}%</span>
-                </div>);
-              })}
+        <div style={{background:"#fffbeb",border:"1px solid #fde68a",borderRadius:10,padding:"12px 14px",marginBottom:16}}>
+          <div style={{fontSize:12,fontWeight:800,color:"#b45309",marginBottom:8}}><MI_S n="bolt" size={14}/> 액션 필요</div>
+          {deadline.map(p=>(
+            <div key={p.id} onClick={()=>setExpandId(expandId===p.id?null:p.id)}
+              style={{display:"flex",alignItems:"center",gap:6,padding:"3px 0",cursor:"pointer",fontSize:11}}>
+              <span style={{fontSize:10,fontWeight:800,color:dday(p)<0?"#dc2626":"#ea580c",
+                background:dday(p)<0?"#fef2f2":"#fff7ed",padding:"2px 6px",borderRadius:8}}>
+                {dday(p)<0?`+${-dday(p)}일`:dday(p)===0?"오늘":`D-${dday(p)}`}
+              </span>
+              <span style={{fontWeight:700,color:C.ink}}>{p.name}</span>
             </div>
-          )}
-          {todos.length>0&&(
-            <div style={{display:"flex",flexDirection:"column",gap:3}}>
-              {todos.map((t,i)=>(
-                <div key={i} onClick={()=>setExpandId(t.proj.id)}
-                  style={{display:"flex",alignItems:"center",gap:8,fontSize:12,padding:"3px 0",cursor:"pointer"}}>
-                  <MI n="check_box_outline_blank" size={13}/>
-                  <span style={{color:C.ink}}>{t.text}</span>
-                  <span style={{fontSize:10,color:PRIORITY_MAP[t.proj.priority]?.color||C.inkMid,fontWeight:700}}>
-                    {t.proj.name}{t.proj.priority==="urgent"?" 🔥":""}
-                  </span>
-                </div>
-              ))}
+          ))}
+          {todos.map((t,i)=>(
+            <div key={i} style={{display:"flex",alignItems:"center",gap:6,fontSize:11,padding:"2px 0"}}>
+              <MI_S n="radio_button_unchecked" size={12} color={C.inkLt}/>
+              <span style={{color:C.inkMid}}>{t.proj.name}:</span>
+              <span style={{color:C.ink}}>{t.text}</span>
             </div>
-          )}
+          ))}
         </div>);
       })()}
 
-      {/* 필터 */}
-      <div style={{display:"flex",gap:8,marginBottom:16,flexWrap:"wrap",alignItems:"center"}}>
-        <span style={{fontSize:11,fontWeight:700,color:C.inkMid}}><MI n="filter_list" size={14}/></span>
-        <select value={filterStatus} onChange={e=>setFilterStatus(e.target.value)} style={{padding:"4px 8px",border:`1px solid ${C.border}`,borderRadius:6,fontSize:11,fontFamily:"inherit"}}>
-          <option value="all">전체 상태</option>
-          {Object.entries(STATUS_MAP).map(([k,v])=><option key={k} value={k}>{v.label}</option>)}
-        </select>
-        <select value={filterPriority} onChange={e=>setFilterPriority(e.target.value)} style={{padding:"4px 8px",border:`1px solid ${C.border}`,borderRadius:6,fontSize:11,fontFamily:"inherit"}}>
-          <option value="all">전체 우선순위</option>
-          {Object.entries(PRIORITY_MAP).map(([k,v])=><option key={k} value={k}>{v.label}</option>)}
-        </select>
-        <select value={filterAssignee} onChange={e=>setFilterAssignee(e.target.value)} style={{padding:"4px 8px",border:`1px solid ${C.border}`,borderRadius:6,fontSize:11,fontFamily:"inherit"}}>
-          <option value="all">전체 담당</option>
-          {allAssignees.map(a=><option key={a} value={a}>{a}</option>)}
-        </select>
-        {(filterStatus!=="all"||filterPriority!=="all"||filterAssignee!=="all")&&(
-          <button onClick={()=>{setFilterStatus("all");setFilterPriority("all");setFilterAssignee("all");}} style={{padding:"4px 8px",border:"none",background:C.cream,borderRadius:6,fontSize:10,fontWeight:700,color:C.inkMid,cursor:"pointer",fontFamily:"inherit"}}>초기화</button>
-        )}
-      </div>
+      {loading && <div style={{padding:40,textAlign:"center",color:C.inkLt,fontSize:13}}>불러오는 중...</div>}
 
-      {/* 비교 모드 */}
-      {compareMode && (
-        <div style={{background:"#faf5ff",border:"1px solid #e9d5ff",borderRadius:12,padding:16,marginBottom:20}}>
-          {/* 탭: 프로젝트비교 / 전년비교 */}
-          <div style={{display:"flex",gap:4,marginBottom:12}}>
-            {[{id:"proj",label:"프로젝트 비교"},{id:"yoy",label:"전년 동기간 비교"}].map(t=>(
-              <button key={t.id} onClick={()=>{if(t.id==="yoy"&&!yoyGlobal)loadYoYGlobal(yoyPeriod);setCompareData(t.id==="yoy"?"yoy":null);setCompareIds([]);}}
-                style={{padding:"6px 14px",border:"none",borderRadius:8,background:((t.id==="yoy"&&compareData==="yoy")||(t.id==="proj"&&compareData!=="yoy"))?"#7c3aed":"#ede9fe",color:((t.id==="yoy"&&compareData==="yoy")||(t.id==="proj"&&compareData!=="yoy"))?"#fff":"#7c3aed",fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>{t.label}</button>
-            ))}
-          </div>
+      {/* 프로젝트 카드 목록 */}
+      <div style={{display:"flex",flexDirection:"column",gap:10}}>
+        {filtered.map(p=>{
+          const isOpen = expandId===p.id;
+          const st = STATUS_MAP[p.status]||STATUS_MAP.planning;
+          const pri = PRIORITY_MAP[p.priority||"normal"]||PRIORITY_MAP.normal;
+          const tasksDone = (p.tasks||[]).filter(t=>t.done).length;
+          const tasksTotal = (p.tasks||[]).length;
+          const dl = daysLeft(p.end_date);
+          const daily = projDailyChart[p.id]||[];
+          const rankData = projRankData[p.id]||[];
+          const chanData = projChannelData[p.id];
 
-          {/* 전년 비교 */}
-          {compareData==="yoy" && (
-            <div>
-              <div style={{display:"flex",gap:4,marginBottom:12}}>
-                {[7,14,30,60,90].map(d=>(
-                  <button key={d} onClick={()=>{setYoyPeriod(d);loadYoYGlobal(d);}}
-                    style={{padding:"3px 10px",border:"none",borderRadius:6,background:yoyPeriod===d?"#7c3aed":"#fff",color:yoyPeriod===d?"#fff":"#7c3aed",fontSize:10,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>{d}일</button>
-                ))}
+          return (
+          <div key={p.id} style={{background:C.white,border:`1.5px solid ${isOpen?C.rose:C.border}`,borderRadius:12,overflow:"hidden",transition:"border 0.15s"}}>
+            {/* 카드 헤더 — 클릭으로 펼치기 */}
+            <div onClick={()=>setExpandId(isOpen?null:p.id)}
+              style={{padding:"14px 16px",cursor:"pointer",display:"flex",alignItems:"center",gap:12}}>
+              {/* 상태 뱃지 */}
+              <div style={{width:8,height:8,borderRadius:"50%",background:st.color,flexShrink:0}}/>
+              {/* 이름 + 태그 */}
+              <div style={{flex:1,minWidth:0}}>
+                <div style={{display:"flex",alignItems:"center",gap:6,flexWrap:"wrap"}}>
+                  <span style={{fontSize:14,fontWeight:800,color:C.ink}}>{p.name}</span>
+                  <span style={{fontSize:9,fontWeight:700,color:st.color,background:st.bg,padding:"1px 6px",borderRadius:6}}>{st.label}</span>
+                  {p.priority==="urgent"&&<span style={{fontSize:9,fontWeight:700,color:"#dc2626",background:"#fef2f2",padding:"1px 6px",borderRadius:6}}>긴급</span>}
+                  {p.priority==="high"&&<span style={{fontSize:9,fontWeight:700,color:"#ea580c",background:"#fff7ed",padding:"1px 6px",borderRadius:6}}>높음</span>}
+                </div>
+                <div style={{display:"flex",gap:12,marginTop:4,fontSize:10,color:C.inkMid}}>
+                  {p.assignee&&<span>{p.assignee}</span>}
+                  {p.start_date&&<span>{p.start_date} ~ {p.end_date||"미정"}</span>}
+                  {dl!==null&&dl<=7&&<span style={{color:dl<0?"#dc2626":"#ea580c",fontWeight:700}}>
+                    {dl<0?`마감 ${-dl}일 지남`:dl===0?"오늘 마감":`D-${dl}`}
+                  </span>}
+                  {tasksTotal>0&&<span>할일 {tasksDone}/{tasksTotal}</span>}
+                </div>
               </div>
-              {yoyGlobalLoading && <div style={{padding:12,fontSize:11,color:"#7c3aed"}}>로딩중...</div>}
-              {yoyGlobal && !yoyGlobalLoading && (()=>{
-                const y = yoyGlobal;
-                const fmtRev = v => v>=100000000?(v/100000000).toFixed(1)+"억":v>=10000?(v/10000).toFixed(0)+"만":v.toLocaleString();
-                const revDiff = y.last.revenue>0 ? Math.round((y.this.revenue-y.last.revenue)/y.last.revenue*100) : 0;
-                const qtyDiff = y.last.qty>0 ? Math.round((y.this.qty-y.last.qty)/y.last.qty*100) : 0;
-                // 차트 merge
-                const allDates = [...new Set([...y.this.daily.map(d=>d.date.slice(5)),...y.last.daily.map(d=>d.date.slice(5))])].sort();
-                const thisMap = {}; y.this.daily.forEach(d=>thisMap[d.date.slice(5)]=d.revenue);
-                const lastMap = {}; y.last.daily.forEach(d=>lastMap[d.date.slice(5)]=d.revenue);
-                const chart = allDates.map(d=>({date:d,"올해":thisMap[d]||0,"작년":lastMap[d]||0}));
-                return (
-                  <div>
-                    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:12}}>
-                      <div style={{background:C.white,borderRadius:10,padding:12}}>
-                        <div style={{fontSize:11,color:C.inkMid,fontWeight:600}}>올해 ({yoyPeriod}일)</div>
-                        <div style={{fontSize:20,fontWeight:900,color:"#7c3aed"}}>{fmtRev(y.this.revenue)}원</div>
-                        <div style={{fontSize:11,color:C.inkMid}}>{y.this.qty.toLocaleString()}개 판매</div>
-                      </div>
-                      <div style={{background:C.white,borderRadius:10,padding:12}}>
-                        <div style={{fontSize:11,color:C.inkMid,fontWeight:600}}>작년 동기간</div>
-                        <div style={{fontSize:20,fontWeight:900,color:C.inkMid}}>{fmtRev(y.last.revenue)}원</div>
-                        <div style={{fontSize:11,color:C.inkMid}}>{y.last.qty.toLocaleString()}개 판매</div>
-                      </div>
-                    </div>
-                    <div style={{display:"flex",gap:12,marginBottom:12}}>
-                      <div style={{background:revDiff>=0?"#f0fdf4":"#fef2f2",borderRadius:8,padding:"8px 14px",flex:1,textAlign:"center"}}>
-                        <div style={{fontSize:10,color:C.inkMid}}>매출 변동</div>
-                        <div style={{fontSize:18,fontWeight:900,color:revDiff>=0?"#16a34a":"#dc2626"}}>{revDiff>0?"+":""}{revDiff}%</div>
-                      </div>
-                      <div style={{background:qtyDiff>=0?"#f0fdf4":"#fef2f2",borderRadius:8,padding:"8px 14px",flex:1,textAlign:"center"}}>
-                        <div style={{fontSize:10,color:C.inkMid}}>수량 변동</div>
-                        <div style={{fontSize:18,fontWeight:900,color:qtyDiff>=0?"#16a34a":"#dc2626"}}>{qtyDiff>0?"+":""}{qtyDiff}%</div>
-                      </div>
-                    </div>
-                    {chart.length>1 && (
-                      <ResponsiveContainer width="100%" height={200}>
-                        <LineChart data={chart}>
-                          <CartesianGrid strokeDasharray="3 3" stroke={C.border}/>
-                          <XAxis dataKey="date" tick={{fontSize:9}}/>
-                          <YAxis tick={{fontSize:9}} tickFormatter={v=>v>=10000?(v/10000).toFixed(0)+"만":v}/>
-                          <Tooltip formatter={v=>v.toLocaleString()+"원"}/>
-                          <Legend wrapperStyle={{fontSize:10}}/>
-                          <Line type="monotone" dataKey="올해" stroke="#7c3aed" strokeWidth={2} dot={false}/>
-                          <Line type="monotone" dataKey="작년" stroke="#d4d4d4" strokeWidth={2} dot={false} strokeDasharray="5 5"/>
-                        </LineChart>
-                      </ResponsiveContainer>
-                    )}
-                  </div>
-                );
-              })()}
+              {/* 진행률 */}
+              {tasksTotal>0&&(
+                <div style={{width:40,textAlign:"center",flexShrink:0}}>
+                  <div style={{fontSize:14,fontWeight:900,color:p.progress>=100?C.good:C.ink}}>{p.progress||0}%</div>
+                </div>
+              )}
+              <MI n={isOpen?"expand_less":"expand_more"} size={20}/>
             </div>
-          )}
 
-          {/* 프로젝트 비교 */}
-          {compareData!=="yoy" && (
-            <div>
-          <div style={{fontSize:12,fontWeight:800,color:"#7c3aed",marginBottom:8}}>프로젝트 비교 — 2개를 선택하세요</div>
-          <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:12}}>
-            {projects.map(p=>{
-              const sel = compareIds.includes(p.id);
-              return <button key={p.id} onClick={()=>{
-                if(sel) setCompareIds(compareIds.filter(x=>x!==p.id));
-                else if(compareIds.length<2) setCompareIds([...compareIds,p.id]);
-              }} style={{padding:"5px 12px",borderRadius:8,border:sel?"2px solid #7c3aed":`1px solid ${C.border}`,background:sel?"#ede9fe":"#fff",color:sel?"#7c3aed":C.ink,fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>{p.name}</button>;
-            })}
-          </div>
-          {compareIds.length===2 && (!compareData||compareData==="yoy") && <button onClick={loadCompare} style={{padding:"6px 16px",background:"#7c3aed",color:"#fff",border:"none",borderRadius:8,fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>비교하기</button>}
-          {compareData && compareData!=="yoy" && (()=>{
-            const {a,b,chart,keyA,keyB} = compareData;
-            const fmtRev = v => v>=100000000?(v/100000000).toFixed(1)+"억":v>=10000?(v/10000).toFixed(0)+"만":v.toLocaleString();
-            return (
-              <div>
-                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:12}}>
-                  {[a,b].map((d,i)=>(
-                    <div key={i} style={{background:C.white,borderRadius:10,padding:12,border:`2px solid ${i===0?"#2563eb":"#ea580c"}`}}>
-                      <div style={{fontSize:13,fontWeight:900,color:i===0?"#2563eb":"#ea580c",marginBottom:8}}>{d.name}</div>
-                      <div style={{fontSize:11}}><span style={{color:C.inkMid}}>매출</span> <span style={{fontWeight:800}}>{fmtRev(d.revenue)}원</span></div>
-                      <div style={{fontSize:11}}><span style={{color:C.inkMid}}>판매</span> <span style={{fontWeight:800}}>{d.qty.toLocaleString()}개</span></div>
-                      <div style={{fontSize:11}}><span style={{color:C.inkMid}}>이익</span> <span style={{fontWeight:800,color:d.profit>0?"#16a34a":"#dc2626"}}>{fmtRev(d.profit)}원</span></div>
-                    </div>
+            {/* 펼친 상세 */}
+            {isOpen && (
+              <div style={{borderTop:`1px solid ${C.border}`,padding:"16px"}}>
+                {/* 탭 */}
+                <div style={{display:"flex",gap:4,marginBottom:14}}>
+                  {[
+                    {id:"overview",label:"개요",icon:"dashboard"},
+                    {id:"tasks",label:`할일 (${tasksTotal})`,icon:"checklist"},
+                    {id:"products",label:`제품 (${(p.products||[]).length})`,icon:"inventory_2"},
+                    {id:"data",label:"데이터",icon:"bar_chart"},
+                  ].map(t=>(
+                    <button key={t.id} onClick={()=>setProjTab(t.id)} style={{
+                      padding:"6px 12px",border:"none",borderRadius:8,fontSize:11,fontWeight:700,cursor:"pointer",
+                      background:projTab===t.id?C.rose:"transparent",color:projTab===t.id?"#fff":C.inkMid,
+                      display:"flex",alignItems:"center",gap:4,fontFamily:"inherit",
+                    }}><MI_S n={t.icon} size={13} color={projTab===t.id?"#fff":C.inkMid}/>{t.label}</button>
                   ))}
                 </div>
-                {chart.length>1 && (
-                  <ResponsiveContainer width="100%" height={200}>
-                    <LineChart data={chart}>
-                      <CartesianGrid strokeDasharray="3 3" stroke={C.border}/>
-                      <XAxis dataKey="date" tick={{fontSize:9}} tickFormatter={v=>v.slice(5)}/>
-                      <YAxis tick={{fontSize:9}} tickFormatter={v=>v>=10000?(v/10000).toFixed(0)+"만":v}/>
-                      <Tooltip formatter={v=>v.toLocaleString()+"원"}/>
-                      <Legend wrapperStyle={{fontSize:10}}/>
-                      <Line type="monotone" dataKey={keyA} stroke="#2563eb" strokeWidth={2} dot={false}/>
-                      <Line type="monotone" dataKey={keyB} stroke="#ea580c" strokeWidth={2} dot={false}/>
-                    </LineChart>
-                  </ResponsiveContainer>
-                )}
-              </div>
-            );
-          })()}
-            </div>
-          )}
-        </div>
-      )}
 
-      {loading && <div style={{textAlign:"center",padding:40,color:C.inkMid}}>로딩중...</div>}
+                {/* 개요 탭 */}
+                {projTab==="overview"&&(
+                  <div style={{display:"flex",flexDirection:"column",gap:14}}>
+                    {p.description&&<div style={{fontSize:12,color:C.inkMid,lineHeight:1.6}}>{p.description}</div>}
 
-      {/* ── 간트 차트 뷰 ── */}
-      {viewMode==="gantt" && !loading && (
-        <div style={{background:C.white,borderRadius:12,border:`1px solid ${C.border}`,overflow:"auto",marginBottom:24}}>
-          <div style={{minWidth:800,padding:16}}>
-            {/* 월 헤더 */}
-            <div style={{display:"flex",marginLeft:180}}>
-              {Array.from({length:Math.ceil(ganttDays/30)+1}).map((_,i)=>{
-                const d = new Date(ganttStart.getTime()+i*30*86400000);
-                return <div key={i} style={{flex:`0 0 ${100/ganttDays*30}%`,fontSize:10,fontWeight:700,color:C.inkMid,borderLeft:`1px solid ${C.cream}`,paddingLeft:4}}>{d.getFullYear()}.{String(d.getMonth()+1).padStart(2,"0")}</div>;
-              })}
-            </div>
-            {ganttProjects.map(p=>{
-              const st = STATUS_MAP[p.status]||STATUS_MAP.planning;
-              const pri = PRIORITY_MAP[p.priority||"normal"];
-              const startOff = Math.max(0,(new Date(p.start_date)-ganttStart)/(86400000));
-              const dur = p.end_date ? Math.max(1,(new Date(p.end_date)-new Date(p.start_date))/(86400000)) : 14;
-              const leftPct = (startOff/ganttDays)*100;
-              const widthPct = (dur/ganttDays)*100;
-              return (
-                <div key={p.id} style={{display:"flex",alignItems:"center",height:36,borderBottom:`1px solid ${C.cream}`}}>
-                  <div style={{width:180,flexShrink:0,paddingRight:8,display:"flex",alignItems:"center",gap:6,overflow:"hidden"}}>
-                    <MI n={pri.icon} size={12} style={{color:pri.color,flexShrink:0}}/>
-                    <span style={{fontSize:11,fontWeight:700,color:C.ink,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{p.name}</span>
-                    {p.assignee && <span style={{fontSize:9,color:C.inkLt,flexShrink:0}}>{p.assignee}</span>}
-                  </div>
-                  <div style={{flex:1,position:"relative",height:"100%"}}>
-                    <div style={{position:"absolute",left:`${leftPct}%`,width:`${widthPct}%`,top:10,height:16,borderRadius:8,background:st.color,opacity:0.85,display:"flex",alignItems:"center",justifyContent:"center",minWidth:20,cursor:"pointer"}}
-                      onClick={()=>setExpandId(expandId===p.id?null:p.id)}>
-                      <span style={{fontSize:8,color:"#fff",fontWeight:700}}>{p.progress||0}%</span>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-            {!ganttProjects.length && <div style={{padding:20,textAlign:"center",color:C.inkMid,fontSize:12}}>날짜가 설정된 프로젝트가 없어요</div>}
-          </div>
-        </div>
-      )}
+                    {/* 일별 매출 차트 */}
+                    {projDailyLoading[p.id]&&<div style={{fontSize:11,color:C.inkLt}}>차트 로딩...</div>}
+                    {daily.length>1&&(
+                      <div style={{background:C.bg,borderRadius:10,padding:12}}>
+                        <div style={{fontSize:11,fontWeight:700,color:C.inkMid,marginBottom:8}}>일별 매출 추이</div>
+                        <ResponsiveContainer width="100%" height={180}>
+                          <AreaChart data={daily}>
+                            <CartesianGrid strokeDasharray="3 3" stroke={C.border}/>
+                            <XAxis dataKey="date" tick={{fontSize:9}} tickFormatter={v=>v.slice(5)}/>
+                            <YAxis tick={{fontSize:9}} tickFormatter={v=>v>=10000?(v/10000).toFixed(0)+"만":v}/>
+                            <Tooltip formatter={v=>Number(v).toLocaleString()+"원"} labelFormatter={v=>v}/>
+                            <Area type="monotone" dataKey="revenue" fill={C.rose+"33"} stroke={C.rose} strokeWidth={2}/>
+                          </AreaChart>
+                        </ResponsiveContainer>
+                        {/* 기간 요약 */}
+                        <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:8,marginTop:10}}>
+                          {[
+                            {label:"총 매출",value:fmtRev(daily.reduce((s,d)=>s+d.revenue,0))},
+                            {label:"총 수량",value:daily.reduce((s,d)=>s+d.qty,0).toLocaleString()+"개"},
+                            {label:"총 이익",value:fmtRev(daily.reduce((s,d)=>s+d.profit,0))},
+                          ].map(k=>(
+                            <div key={k.label} style={{textAlign:"center"}}>
+                              <div style={{fontSize:9,color:C.inkLt}}>{k.label}</div>
+                              <div style={{fontSize:13,fontWeight:800,color:C.ink}}>{k.value}</div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
 
-      {/* ── 리스트 뷰 ── */}
-      {viewMode==="list" && !loading && ["in_progress","planning","paused","done"].map(status => {
-        const list = grouped[status];
-        if(!list.length) return null;
-        const st = STATUS_MAP[status];
-        return (
-          <div key={status} style={{marginBottom:24}}>
-            <div style={{fontSize:13,fontWeight:800,color:st.color,marginBottom:10,display:"flex",alignItems:"center",gap:6}}>
-              <span style={{width:8,height:8,borderRadius:4,background:st.color,display:"inline-block"}}/> {st.label} ({list.length})
-            </div>
-            {list.map(p => {
-              const expanded = expandId===p.id;
-              const dl = daysLeft(p.end_date);
-              const tasks = p.tasks||[];
-              const comments = p.comments||[];
-              const tags = p.tags||[];
-              const pri = PRIORITY_MAP[p.priority||"normal"];
-              return (
-                <div key={p.id} style={{background:C.white,borderRadius:12,border:`1px solid ${C.border}`,marginBottom:10,overflow:"hidden",borderLeft:`3px solid ${pri.color}`}}>
-                  {/* 헤더 */}
-                  <div onClick={()=>setExpandId(expanded?null:p.id)} style={{padding:"14px 16px",cursor:"pointer",display:"flex",alignItems:"center",gap:12}}>
-                    <MI n={expanded?"expand_more":"chevron_right"} size={18} style={{color:C.inkLt}}/>
-                    <div style={{flex:1,minWidth:0}}>
-                      <div style={{display:"flex",alignItems:"center",gap:6,flexWrap:"wrap"}}>
-                        <MI n={pri.icon} size={14} style={{color:pri.color}}/>
-                        <span style={{fontSize:14,fontWeight:800,color:C.ink}}>{p.name}</span>
-                        <span style={{fontSize:9,fontWeight:700,color:st.color,background:st.bg,padding:"2px 8px",borderRadius:10}}>{st.label}</span>
-                        {p.assignee && <span style={{fontSize:9,fontWeight:700,color:"#374151",background:"#e5e7eb",padding:"2px 8px",borderRadius:10}}>{p.assignee}</span>}
-                        {dl!==null && status!=="done" && (
-                          <span style={{fontSize:9,fontWeight:700,color:dl<0?"#dc2626":dl<=3?"#ea580c":"#16a34a",background:dl<0?"#fef2f2":dl<=3?"#fff7ed":"#f0fdf4",padding:"2px 8px",borderRadius:10}}>
-                            {dl<0?`${Math.abs(dl)}일 초과`:`D-${dl}`}
-                          </span>
-                        )}
-                        {tags.map((t,i)=>(
-                          <span key={i} style={{fontSize:9,fontWeight:700,color:TAG_COLORS[i%TAG_COLORS.length],background:TAG_COLORS[i%TAG_COLORS.length]+"18",padding:"2px 8px",borderRadius:10}}>{t}</span>
+                    {/* 매출처 TOP */}
+                    {chanData&&chanData.top&&chanData.top.length>0&&(
+                      <div style={{background:C.bg,borderRadius:10,padding:12}}>
+                        <div style={{fontSize:11,fontWeight:700,color:C.inkMid,marginBottom:8}}>매출처 TOP 5</div>
+                        {chanData.top.map((ch,i)=>(
+                          <div key={ch.channel} style={{display:"flex",alignItems:"center",gap:8,padding:"4px 0",fontSize:11}}>
+                            <span style={{width:16,fontWeight:800,color:C.inkLt}}>{i+1}</span>
+                            <span style={{flex:1,fontWeight:600,color:C.ink}}>{ch.channel}</span>
+                            <span style={{fontWeight:700,color:C.rose}}>{fmtRev(ch.recentRev)}</span>
+                            <span style={{fontSize:10,fontWeight:700,color:ch.revDiff>0?C.good:ch.revDiff<0?C.bad:C.inkLt,width:45,textAlign:"right"}}>
+                              {ch.revDiff===999?"NEW":ch.revDiff>0?`+${ch.revDiff}%`:ch.revDiff<0?`${ch.revDiff}%`:"—"}
+                            </span>
+                          </div>
                         ))}
                       </div>
-                      <div style={{display:"flex",alignItems:"center",gap:8,marginTop:6}}>
-                        {p.start_date && <span style={{fontSize:10,color:C.inkLt}}>{p.start_date} ~ {p.end_date||"미정"}</span>}
-                        <div style={{flex:1,maxWidth:120,height:6,background:C.cream,borderRadius:3,overflow:"hidden"}}>
-                          <div style={{width:`${p.progress||0}%`,height:"100%",background:p.progress>=100?"#16a34a":C.rose,borderRadius:3,transition:"width 0.3s"}}/>
+                    )}
+
+                    {/* 검색순위 */}
+                    {rankData.length>0&&(
+                      <div style={{background:C.bg,borderRadius:10,padding:12}}>
+                        <div style={{fontSize:11,fontWeight:700,color:C.inkMid,marginBottom:8}}>검색순위 (전날 기준)</div>
+                        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(140px,1fr))",gap:6}}>
+                          {rankData.slice(0,8).map(kw=>(
+                            <div key={kw.keyword} style={{background:C.white,borderRadius:8,padding:"8px 10px",border:`1px solid ${C.border}`}}>
+                              <div style={{fontSize:10,color:C.inkMid,fontWeight:600,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{kw.keyword}</div>
+                              <div style={{display:"flex",alignItems:"baseline",gap:4,marginTop:2}}>
+                                <span style={{fontSize:16,fontWeight:900,color:kw.latestRank<=10?C.good:kw.latestRank<=30?"#CA8A04":C.ink}}>{kw.latestRank}위</span>
+                                {kw.diff!==0&&<span style={{fontSize:10,fontWeight:700,color:kw.diff>0?C.good:C.bad}}>
+                                  {kw.diff>0?`▲${kw.diff}`:`▼${-kw.diff}`}
+                                </span>}
+                              </div>
+                            </div>
+                          ))}
                         </div>
-                        <span style={{fontSize:10,fontWeight:700,color:C.inkMid}}>{p.progress||0}%</span>
-                        {tasks.length>0 && <span style={{fontSize:9,color:C.inkLt}}><MI n="check_circle" size={10}/> {tasks.filter(t=>t.done).length}/{tasks.length}</span>}
-                        {comments.length>0 && <span style={{fontSize:9,color:C.inkLt}}><MI n="chat" size={10}/> {comments.length}</span>}
                       </div>
-                    </div>
-                    <div style={{display:"flex",gap:2}}>
-                      <button onClick={(e)=>{e.stopPropagation();edit(p);}} title="수정" style={{background:"none",border:"none",cursor:"pointer",padding:4}}><MI n="edit" size={15} style={{color:C.inkLt}}/></button>
-                      <button onClick={(e)=>{e.stopPropagation();duplicate(p);}} title="복제" style={{background:"none",border:"none",cursor:"pointer",padding:4}}><MI n="content_copy" size={15} style={{color:C.inkLt}}/></button>
-                      <button onClick={(e)=>{e.stopPropagation();exportExcel(p);}} title="내보내기" style={{background:"none",border:"none",cursor:"pointer",padding:4}}><MI n="download" size={15} style={{color:C.inkLt}}/></button>
-                      <button onClick={(e)=>{e.stopPropagation();del(p.id);}} title="삭제" style={{background:"none",border:"none",cursor:"pointer",padding:4}}><MI n="delete" size={15} style={{color:C.inkLt}}/></button>
+                    )}
+
+                    {/* 코멘트 */}
+                    {(p.comments||[]).length>0&&(
+                      <div>
+                        <div style={{fontSize:11,fontWeight:700,color:C.inkMid,marginBottom:6}}>코멘트</div>
+                        {(p.comments||[]).slice(-3).map((c,i)=>(
+                          <div key={i} style={{fontSize:11,color:C.ink,padding:"4px 0",borderBottom:`1px solid ${C.border}22`}}>
+                            <span style={{color:C.inkLt,fontSize:10}}>{c.date} {c.by&&`· ${c.by}`}</span>
+                            <div>{c.text}</div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    {/* 코멘트 입력 */}
+                    <div style={{display:"flex",gap:6}}>
+                      <input value={newComment} onChange={e=>setNewComment(e.target.value)}
+                        onKeyDown={e=>{if(e.key==="Enter")addComment(p);}}
+                        placeholder="코멘트 추가..."
+                        style={{flex:1,padding:"6px 10px",border:`1px solid ${C.border}`,borderRadius:8,fontSize:11,outline:"none",fontFamily:"inherit"}}/>
+                      <button onClick={()=>addComment(p)} style={{padding:"6px 12px",background:C.rose,color:"#fff",border:"none",borderRadius:8,fontSize:11,fontWeight:700,cursor:"pointer"}}>추가</button>
                     </div>
                   </div>
+                )}
 
-                  {/* 확장 영역 */}
-                  {expanded && (
-                    <div style={{padding:"0 16px 16px",borderTop:`1px solid ${C.cream}`}}>
-                      {p.description && <div style={{fontSize:12,color:C.inkMid,padding:"12px 0",lineHeight:1.6,whiteSpace:"pre-wrap"}}>{p.description}</div>}
-
-                      {/* 검색순위 (제품별 분리, 전날 기준) */}
-                      {projRankData[p.id] && projRankData[p.id].length>0 && (()=>{
-                        // 제품별로 그룹핑
-                        const prodNames = (p.products||[]).map(pr=>pr.name);
-                        const kwParts = prodNames.map(n=>({
-                          name:n,
-                          key:n.replace(/^(오아|보아르|삼대오백|뉴트리커먼)/,'').replace(/[-_](화이트|블랙|베이지|그레이|핑크|실버|크림|노즐|파우치|공용).*$/,'').trim()
-                        }));
-                        // 각 키워드가 어떤 제품에 속하는지
-                        const byProduct = {};
-                        prodNames.forEach(n=>{byProduct[n]=[];});
-                        projRankData[p.id].forEach(kw=>{
-                          const matched = kwParts.find(kp=>kw.trend.some(t=>true)); // product_name으로 매칭
-                          // product_name 기반 매칭
-                          const prodMatch = prodNames.find(pn=>{
-                            const pk = pn.replace(/^(오아|보아르|삼대오백|뉴트리커먼)/,'').replace(/[-_](화이트|블랙|베이지|그레이|핑크|실버|크림|노즐|파우치|공용).*$/,'').trim();
-                            return pk && kw.trend.length>0;
-                          });
-                          if(prodMatch) byProduct[prodMatch]?.push(kw);
-                          else { const first=prodNames[0]; if(byProduct[first])byProduct[first].push(kw); }
-                        });
-
-                        return (
-                          <div style={{background:"#f0f9ff",border:"1px solid #bae6fd",borderRadius:12,padding:14,marginBottom:10}}>
-                            <div style={{fontSize:13,fontWeight:900,color:"#0369a1",marginBottom:10,display:"flex",alignItems:"center",gap:6}}><MI n="search" size={18}/> 검색순위 (전날 기준)</div>
-                            {prodNames.map((pName,pi)=>{
-                              const kwList = byProduct[pName]||[];
-                              if(!kwList.length) return null;
-                              return (
-                                <div key={pi} style={{marginBottom:12}}>
-                                  <div style={{fontSize:11,fontWeight:800,color:"#0369a1",marginBottom:6,display:"flex",alignItems:"center",gap:4}}>
-                                    <span style={{width:6,height:6,borderRadius:3,background:"#0369a1",display:"inline-block"}}/> {pName}
-                                  </div>
-                                  <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(140px,1fr))",gap:8,marginBottom:8}}>
-                                    {kwList.slice(0,6).map((kw,i)=>{
-                                      const vol = (projKeywordVol[p.id]||{})[kw.keyword];
-                                      return (
-                                        <div key={i} style={{background:C.white,borderRadius:8,padding:"10px 12px",border:`1px solid ${kw.diff>0?"#bbf7d0":kw.diff<0?"#fecaca":"#e0e7ff"}`}}>
-                                          <div style={{fontSize:11,fontWeight:700,color:C.ink,marginBottom:4,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{kw.keyword}</div>
-                                          <div style={{display:"flex",alignItems:"baseline",gap:6}}>
-                                            <span style={{fontSize:22,fontWeight:900,color:kw.latestRank<=3?"#16a34a":kw.latestRank<=10?"#2563eb":"#0369a1"}}>{kw.latestRank}위</span>
-                                            {kw.diff!==0 && <span style={{fontSize:12,fontWeight:800,color:kw.diff>0?"#16a34a":"#dc2626"}}>{kw.diff>0?`▲${kw.diff}`:`▼${Math.abs(kw.diff)}`}</span>}
-                                          </div>
-                                          {vol && <div style={{fontSize:10,color:"#0369a1",fontWeight:700,marginTop:2}}>월 {vol.total.toLocaleString()}회</div>}
-                                          <div style={{fontSize:9,color:C.inkLt}}>{kw.latestDate?.slice(5)} 기준</div>
-                                        </div>
-                                      );
-                                    })}
-                                  </div>
-                                </div>
-                              );
-                            })}
-                            {/* 순위 추이 차트 */}
-                            {(()=>{
-                              const top5 = projRankData[p.id].slice(0,5);
-                              const allDates = [...new Set(top5.flatMap(kw=>kw.trend.map(t=>t.date)))].sort();
-                              const chartData = allDates.map(date=>{
-                                const pt = {date};
-                                top5.forEach(kw=>{const t=kw.trend.find(t=>t.date===date);if(t)pt[kw.keyword]=t.rank;});
-                                return pt;
-                              });
-                              const COLORS = ["#2563eb","#16a34a","#ea580c","#6366f1","#dc2626"];
-                              return chartData.length>1 ? (
-                                <ResponsiveContainer width="100%" height={140}>
-                                  <LineChart data={chartData}>
-                                    <CartesianGrid strokeDasharray="3 3" stroke={C.border}/>
-                                    <XAxis dataKey="date" tick={{fontSize:8}} tickFormatter={v=>v.slice(5)}/>
-                                    <YAxis reversed tick={{fontSize:8}} domain={[1,'auto']}/>
-                                    <Tooltip/>
-                                    <Legend wrapperStyle={{fontSize:9}}/>
-                                    {top5.map((kw,i)=><Line key={kw.keyword} type="monotone" dataKey={kw.keyword} stroke={COLORS[i]} strokeWidth={2} dot={false} connectNulls/>)}
-                                  </LineChart>
-                                </ResponsiveContainer>
-                              ) : null;
-                            })()}
-                          </div>
-                        );
-                      })()}
-
-                      {/* 전년비교/시작전후 결과 (기간선택 바에서 토글) */}
-                      {showYoY===p.id && (()=>{
-                        const yoy = yoyData[p.id];
-                        if(!yoy) return <div style={{padding:8,fontSize:10,color:"#7c3aed"}}>로딩중...</div>;
-                        const fmtRev = v=>v>=100000000?(v/100000000).toFixed(1)+"억":v>=10000?(v/10000).toFixed(0)+"만":v.toLocaleString();
-                        const revDiff = yoy.last.revenue>0?Math.round((yoy.this.revenue-yoy.last.revenue)/yoy.last.revenue*100):0;
-                        const qtyDiff = yoy.last.qty>0?Math.round((yoy.this.qty-yoy.last.qty)/yoy.last.qty*100):0;
-                        return (
-                          <div style={{background:"#faf5ff",borderRadius:8,padding:10,marginBottom:8}}>
-                            <div style={{fontSize:10,fontWeight:800,color:"#7c3aed",marginBottom:6}}>전년 동기간 비교 ({prodDataDays}일)</div>
-                            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr 1fr",gap:6,fontSize:11}}>
-                              <div style={{background:C.white,borderRadius:6,padding:"6px 8px"}}><div style={{fontSize:9,color:C.inkMid}}>올해</div><div style={{fontWeight:800,color:"#7c3aed"}}>{fmtRev(yoy.this.revenue)}원</div></div>
-                              <div style={{background:C.white,borderRadius:6,padding:"6px 8px"}}><div style={{fontSize:9,color:C.inkMid}}>작년</div><div style={{fontWeight:800,color:C.inkMid}}>{fmtRev(yoy.last.revenue)}원</div></div>
-                              <div style={{background:revDiff>=0?"#f0fdf4":"#fef2f2",borderRadius:6,padding:"6px 8px"}}><div style={{fontSize:9,color:C.inkMid}}>매출</div><div style={{fontWeight:900,color:revDiff>=0?"#16a34a":"#dc2626"}}>{revDiff>0?"+":""}{revDiff}%</div></div>
-                              <div style={{background:qtyDiff>=0?"#f0fdf4":"#fef2f2",borderRadius:6,padding:"6px 8px"}}><div style={{fontSize:9,color:C.inkMid}}>수량</div><div style={{fontWeight:900,color:qtyDiff>=0?"#16a34a":"#dc2626"}}>{qtyDiff>0?"+":""}{qtyDiff}%</div></div>
-                            </div>
-                          </div>
-                        );
-                      })()}
-                      {showYoY===p.id+"_impact" && (()=>{
-                        const impact = projImpact[p.id];
-                        if(!impact) return <div style={{padding:8,fontSize:10,color:"#0891b2"}}>로딩중...</div>;
-                        const {before,after,topGainers,topLosers,rankBefore,rankAfter} = impact;
-                        const fmtRev = v=>v>=100000000?(v/100000000).toFixed(1)+"억":v>=10000?(v/10000).toFixed(0)+"만":v.toLocaleString();
-                        const revChange = before.avgRevenue>0?Math.round((after.avgRevenue-before.avgRevenue)/before.avgRevenue*100):0;
-                        const qtyChange = before.avgQty>0?Math.round((after.avgQty-before.avgQty)/before.avgQty*100):0;
-                        return (
-                          <div style={{background:"#ecfeff",borderRadius:8,padding:10,marginBottom:8}}>
-                            <div style={{fontSize:10,color:"#0891b2",fontWeight:700,marginBottom:6}}>시작일: {p.start_date} 기준 (전 {before.dayCount}일 vs 후 {after.dayCount}일)</div>
-                            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:6,fontSize:11,marginBottom:8}}>
-                              <div style={{background:C.white,borderRadius:6,padding:"6px 8px"}}><div style={{fontSize:9,color:C.inkMid}}>일평균 매출</div><div style={{fontWeight:800,color:"#0891b2"}}>{fmtRev(after.avgRevenue)}원</div><div style={{fontSize:9,color:C.inkLt}}>이전: {fmtRev(before.avgRevenue)}원</div></div>
-                              <div style={{background:C.white,borderRadius:6,padding:"6px 8px"}}><div style={{fontSize:9,color:C.inkMid}}>일평균 판매</div><div style={{fontWeight:800,color:"#0891b2"}}>{after.avgQty.toLocaleString()}개</div><div style={{fontSize:9,color:C.inkLt}}>이전: {before.avgQty.toLocaleString()}개</div></div>
-                              <div style={{background:revChange>=0?"#f0fdf4":"#fef2f2",borderRadius:6,padding:"6px 8px"}}><div style={{fontSize:9,color:C.inkMid}}>변동률</div><div style={{fontWeight:900,color:revChange>=0?"#16a34a":"#dc2626"}}>매출 {revChange>0?"+":""}{revChange}%</div><div style={{fontWeight:900,color:qtyChange>=0?"#16a34a":"#dc2626",fontSize:10}}>수량 {qtyChange>0?"+":""}{qtyChange}%</div></div>
-                            </div>
-                          </div>
-                        );
-                      })()}
-
-                      {/* 할일 */}
-                      <div style={{fontSize:11,fontWeight:800,color:C.ink,marginTop:8,marginBottom:8,display:"flex",alignItems:"center",gap:4}}><MI n="checklist" size={14}/> 할일 ({tasks.filter(t=>t.done).length}/{tasks.length})</div>
-                      {tasks.map((t,i)=>(
-                        <div key={i} style={{display:"flex",alignItems:"center",gap:8,padding:"6px 0",borderBottom:`1px solid ${C.cream}`}}>
-                          <input type="checkbox" checked={t.done} onChange={()=>toggleTask(p,i)} style={{accentColor:C.rose}}/>
-                          <span style={{flex:1,fontSize:12,color:t.done?C.inkLt:C.ink,textDecoration:t.done?"line-through":"none"}}>{t.text}</span>
-                          <button onClick={()=>removeTask(p,i)} style={{background:"none",border:"none",cursor:"pointer",padding:2}}><MI n="close" size={14} style={{color:C.inkLt}}/></button>
-                        </div>
-                      ))}
-                      <div style={{display:"flex",gap:8,marginTop:8}}>
-                        <input value={newTask} onChange={e=>setNewTask(e.target.value)} onKeyDown={e=>e.key==="Enter"&&addTask(p)}
-                          placeholder="할일 추가..." style={{flex:1,padding:"6px 10px",border:`1px solid ${C.border}`,borderRadius:6,fontSize:12,fontFamily:"inherit",outline:"none"}}/>
-                        <button onClick={()=>addTask(p)} style={{padding:"6px 12px",background:C.blush,color:C.rose,border:"none",borderRadius:6,fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>추가</button>
+                {/* 할일 탭 */}
+                {projTab==="tasks"&&(
+                  <div style={{display:"flex",flexDirection:"column",gap:6}}>
+                    {(p.tasks||[]).map((t,i)=>(
+                      <div key={i} style={{display:"flex",alignItems:"center",gap:8,padding:"6px 0",borderBottom:`1px solid ${C.border}22`}}>
+                        <button onClick={()=>toggleTask(p,i)} style={{border:"none",background:"none",cursor:"pointer",padding:0}}>
+                          <MI_S n={t.done?"check_circle":"radio_button_unchecked"} size={18} color={t.done?C.good:C.inkLt}/>
+                        </button>
+                        <span style={{flex:1,fontSize:12,color:t.done?C.inkLt:C.ink,textDecoration:t.done?"line-through":"none"}}>{t.text}</span>
+                        <button onClick={()=>removeTask(p,i)} style={{border:"none",background:"none",cursor:"pointer",padding:2}}>
+                          <MI_S n="close" size={14} color={C.inkLt}/>
+                        </button>
                       </div>
+                    ))}
+                    {tasksTotal===0&&<div style={{fontSize:11,color:C.inkLt,padding:8}}>할일이 없어요</div>}
+                    <div style={{display:"flex",gap:6,marginTop:4}}>
+                      <input value={newTask} onChange={e=>setNewTask(e.target.value)}
+                        onKeyDown={e=>{if(e.key==="Enter")addTask(p);}}
+                        placeholder="할일 추가..."
+                        style={{flex:1,padding:"6px 10px",border:`1px solid ${C.border}`,borderRadius:8,fontSize:11,outline:"none",fontFamily:"inherit"}}/>
+                      <button onClick={()=>addTask(p)} style={{padding:"6px 12px",background:C.ink,color:"#fff",border:"none",borderRadius:8,fontSize:11,fontWeight:700,cursor:"pointer"}}>추가</button>
+                    </div>
+                  </div>
+                )}
 
-                      {/* 기간 선택 */}
-                      {(p.products||[]).length>0 && (
-                        <div style={{display:"flex",gap:6,alignItems:"center",marginTop:12,marginBottom:8,flexWrap:"wrap"}}>
-                          <MI n="date_range" size={14} style={{color:C.inkMid}}/>
-                          {[{v:1,l:"1일"},{v:7,l:"7일"},{v:14,l:"14일"},{v:30,l:"30일"},{v:60,l:"60일"},{v:90,l:"90일"},{v:9999,l:"전체"}].map(d=>(
-                            <button key={d.v} onClick={()=>{setProdDataDays(d.v);setCustomDateFrom("");setCustomDateTo("");setSingleProdData({});setSelectedProdId(null);setProjDailyChart(prev=>{const n={...prev};delete n[p.id];return n;});setProjAdData(prev=>{const n={...prev};delete n[p.id];return n;});}}
-                              style={{padding:"3px 10px",border:"none",borderRadius:6,background:prodDataDays===d.v&&!customDateFrom?C.rose:"#fff",color:prodDataDays===d.v&&!customDateFrom?"#fff":C.inkMid,fontSize:10,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>{d.l}</button>
-                          ))}
-                          <span style={{fontSize:10,color:C.inkLt}}>|</span>
-                          <input type="date" value={customDateFrom} onChange={e=>setCustomDateFrom(e.target.value)}
-                            style={{padding:"2px 6px",border:`1px solid ${C.border}`,borderRadius:4,fontSize:10,fontFamily:"inherit"}}/>
-                          <span style={{fontSize:10,color:C.inkMid}}>~</span>
-                          <input type="date" value={customDateTo} onChange={e=>setCustomDateTo(e.target.value)}
-                            style={{padding:"2px 6px",border:`1px solid ${C.border}`,borderRadius:4,fontSize:10,fontFamily:"inherit"}}/>
-                          {customDateFrom && customDateTo && (
-                            <button onClick={()=>{
-                              const days = Math.ceil((new Date(customDateTo)-new Date(customDateFrom))/86400000)+1;
-                              setProdDataDays(days);
-                              setSingleProdData({});setSelectedProdId(null);
-                              setProjDailyChart(prev=>{const n={...prev};delete n[p.id];return n;});
-                              setProjAdData(prev=>{const n={...prev};delete n[p.id];return n;});
-                            }} style={{padding:"3px 10px",border:"none",borderRadius:6,background:C.rose,color:"#fff",fontSize:10,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>적용</button>
-                          )}
-                          <span style={{fontSize:10,color:C.inkLt}}>|</span>
-                          <button onClick={()=>{if(!yoyData[p.id])loadYoY(p);setShowYoY(showYoY===p.id?null:p.id);}}
-                            style={{padding:"3px 10px",border:"none",borderRadius:6,background:showYoY===p.id?"#7c3aed":"#ede9fe",color:showYoY===p.id?"#fff":"#7c3aed",fontSize:10,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>전년비교</button>
-                          {p.start_date && (
-                            <button onClick={()=>{if(!projImpact[p.id])loadProjectImpact(p);setShowYoY(showYoY===p.id+"_impact"?null:p.id+"_impact");}}
-                              style={{padding:"3px 10px",border:"none",borderRadius:6,background:showYoY===p.id+"_impact"?"#0891b2":"#ecfeff",color:showYoY===p.id+"_impact"?"#fff":"#0891b2",fontSize:10,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>시작전후</button>
-                          )}
-                        </div>
-                      )}
-
-                      {/* 매출처 현황 */}
-                      {projChannelData[p.id] && (()=>{
-                        const {top,gainers,losers} = projChannelData[p.id];
-                        const fmtRev = v=>v>=100000000?(v/100000000).toFixed(1)+"억":v>=10000?(v/10000).toFixed(0)+"만":v.toLocaleString();
-                        return (
-                          <div style={{background:C.white,border:`1px solid ${C.border}`,borderRadius:10,padding:12,marginBottom:10}}>
-                            <div style={{fontSize:12,fontWeight:800,color:C.ink,marginBottom:8,display:"flex",alignItems:"center",gap:4}}><MI n="storefront" size={16}/> 매출처 현황</div>
-                            <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:8}}>
-                              {top.map((c,i)=>(
-                                <div key={i} style={{background:C.cream,borderRadius:8,padding:"6px 10px",fontSize:10,minWidth:100}}>
-                                  <div style={{fontWeight:700,color:C.ink}}>{c.channel}</div>
-                                  <div style={{fontWeight:800,color:"#2563eb"}}>{fmtRev(c.recentRev)}원</div>
-                                </div>
-                              ))}
-                            </div>
-                            {(gainers.length>0||losers.length>0) && (
-                              <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
-                                {gainers.map((c,i)=>(<div key={"g"+i} style={{background:"#f0fdf4",border:"1px solid #bbf7d0",borderRadius:6,padding:"4px 8px",fontSize:10}}><div style={{fontWeight:700}}>{c.channel}</div><div style={{fontWeight:800,color:"#16a34a"}}>▲ +{c.revDiff}%</div></div>))}
-                                {losers.map((c,i)=>(<div key={"l"+i} style={{background:"#fef2f2",border:"1px solid #fecaca",borderRadius:6,padding:"4px 8px",fontSize:10}}><div style={{fontWeight:700}}>{c.channel}</div><div style={{fontWeight:800,color:"#dc2626"}}>▼ {c.revDiff}%</div></div>))}
-                              </div>
-                            )}
+                {/* 제품 탭 */}
+                {projTab==="products"&&(
+                  <div style={{display:"flex",flexDirection:"column",gap:8}}>
+                    {(p.products||[]).map((prod,i)=>{
+                      const sd = singleProdData[prod.id];
+                      const isSelected = selectedProdId===prod.id;
+                      return (
+                      <div key={prod.id} style={{background:C.bg,borderRadius:8,padding:"10px 12px",border:`1px solid ${isSelected?C.rose:C.border}`}}>
+                        <div style={{display:"flex",alignItems:"center",gap:8}}>
+                          <div onClick={()=>loadSingleProduct(prod)} style={{flex:1,cursor:"pointer"}}>
+                            <div style={{fontSize:12,fontWeight:700,color:C.ink}}>{prod.name}</div>
+                            <div style={{fontSize:10,color:C.inkMid}}>{prod.brand}</div>
                           </div>
-                        );
-                      })()}
-
-                      {/* 일별 추이 차트 */}
-                      {(p.products||[]).length>0 && (()=>{
-                        const chart = projDailyChart[p.id];
-                        const isLoading = projDailyLoading[p.id];
-                        if(isLoading) return <div style={{padding:12,fontSize:11,color:C.inkMid}}>차트 로딩중...</div>;
-                        if(!chart || !chart.length) return null;
-                        const totalQty = chart.reduce((s,d)=>s+d.qty,0);
-                        const totalRev = chart.reduce((s,d)=>s+d.revenue,0);
-                        const totalProfit = chart.reduce((s,d)=>s+d.profit,0);
-                        const target = p.target_revenue||0;
-                        const achievePct = target>0 ? Math.round(totalRev/target*100) : 0;
-                        const fmtRev = v => v>=100000000?(v/100000000).toFixed(1)+"억":v>=10000?(v/10000).toFixed(0)+"만":v.toLocaleString();
-                        return (
-                          <div style={{background:C.cream,borderRadius:10,padding:12,marginTop:12,marginBottom:4}}>
-                            <div style={{display:"flex",gap:12,marginBottom:10,flexWrap:"wrap",alignItems:"center"}}>
-                              <div><span style={{fontSize:10,color:C.inkMid}}>총 판매</span> <span style={{fontSize:16,fontWeight:900,color:C.ink}}>{totalQty.toLocaleString()}개</span></div>
-                              <div><span style={{fontSize:10,color:C.inkMid}}>매출</span> <span style={{fontSize:16,fontWeight:900,color:"#2563eb"}}>{fmtRev(totalRev)}원</span></div>
-                              <div><span style={{fontSize:10,color:C.inkMid}}>이익</span> <span style={{fontSize:16,fontWeight:900,color:totalProfit>0?"#16a34a":"#dc2626"}}>{fmtRev(totalProfit)}원</span></div>
+                          {sd&&(
+                            <div style={{display:"flex",gap:10,fontSize:10}}>
+                              <div style={{textAlign:"center"}}><div style={{color:C.inkLt}}>수량</div><div style={{fontWeight:800,color:C.ink}}>{sd.totalQty?.toLocaleString()}</div></div>
+                              <div style={{textAlign:"center"}}><div style={{color:C.inkLt}}>매출</div><div style={{fontWeight:800,color:C.rose}}>{fmtRev(sd.totalRevenue||0)}</div></div>
+                              <div style={{textAlign:"center"}}><div style={{color:C.inkLt}}>주간</div><div style={{fontWeight:800,color:sd.changePct>0?C.good:sd.changePct<0?C.bad:C.inkMid}}>{sd.changePct>0?"+":""}{sd.changePct}%</div></div>
                             </div>
-                            {target>0 && (
-                              <div style={{marginBottom:10}}>
-                                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4}}>
-                                  <span style={{fontSize:10,fontWeight:700,color:C.inkMid}}>목표 달성률</span>
-                                  <span style={{fontSize:13,fontWeight:900,color:achievePct>=100?"#16a34a":achievePct>=70?"#2563eb":"#ea580c"}}>{achievePct}%</span>
-                                </div>
-                                <div style={{height:10,background:C.white,borderRadius:5,overflow:"hidden"}}>
-                                  <div style={{width:`${Math.min(achievePct,100)}%`,height:"100%",background:achievePct>=100?"#16a34a":achievePct>=70?"#2563eb":"#ea580c",borderRadius:5,transition:"width 0.5s"}}/>
-                                </div>
-                                <div style={{display:"flex",justifyContent:"space-between",marginTop:3}}>
-                                  <span style={{fontSize:9,color:C.inkLt}}>{fmtRev(totalRev)}원</span>
-                                  <span style={{fontSize:9,color:C.inkLt}}>목표 {fmtRev(target)}원</span>
-                                </div>
-                              </div>
-                            )}
-                            <ResponsiveContainer width="100%" height={140}>
-                              <AreaChart data={chart}>
-                                <CartesianGrid strokeDasharray="3 3" stroke={C.border}/>
+                          )}
+                          <button onClick={()=>removeProductFromProject(p,i)} style={{border:"none",background:"none",cursor:"pointer",padding:2}}>
+                            <MI_S n="close" size={14} color={C.inkLt}/>
+                          </button>
+                        </div>
+                        {isSelected&&sd&&sd.chartData&&sd.chartData.length>1&&(
+                          <div style={{marginTop:8}}>
+                            <ResponsiveContainer width="100%" height={120}>
+                              <AreaChart data={sd.chartData}>
                                 <XAxis dataKey="date" tick={{fontSize:8}} tickFormatter={v=>v.slice(5)}/>
                                 <YAxis tick={{fontSize:8}} tickFormatter={v=>v>=10000?(v/10000).toFixed(0)+"만":v}/>
-                                <Tooltip formatter={v=>v.toLocaleString()}/>
-                                <Area type="monotone" dataKey="revenue" stroke={C.rose} fill={C.blush} name="매출"/>
+                                <Tooltip formatter={v=>Number(v).toLocaleString()+"원"}/>
+                                <Area type="monotone" dataKey="revenue" fill={C.rose+"33"} stroke={C.rose} strokeWidth={1.5}/>
                               </AreaChart>
                             </ResponsiveContainer>
-                            <ResponsiveContainer width="100%" height={100}>
-                              <BarChart data={chart}>
-                                <CartesianGrid strokeDasharray="3 3" stroke={C.border}/>
-                                <XAxis dataKey="date" tick={{fontSize:8}} tickFormatter={v=>v.slice(5)}/>
-                                <YAxis tick={{fontSize:8}}/>
-                                <Tooltip formatter={v=>v.toLocaleString()+"개"}/>
-                                <Bar dataKey="qty" fill={C.sage} name="판매수량" radius={[3,3,0,0]}/>
-                              </BarChart>
-                            </ResponsiveContainer>
-                          </div>
-                        );
-                      })()}
-
-                      {/* 연동 제품 */}
-                      <div style={{fontSize:11,fontWeight:800,color:C.ink,marginTop:16,marginBottom:8,display:"flex",alignItems:"center",gap:4}}><MI n="inventory_2" size={14}/> 연동 제품 ({(p.products||[]).length})</div>
-                      <div style={{marginBottom:8}}>
-                        {(p.products||[]).map((pr,i)=>{
-                          const isSelected = selectedProdId===pr.id;
-                          const spd = singleProdData[pr.id];
-                          return (
-                            <div key={i} style={{marginBottom:6}}>
-                              <div style={{display:"flex",alignItems:"center",gap:6}}>
-                                <span onClick={()=>loadSingleProduct(pr)} style={{fontSize:11,fontWeight:700,color:isSelected?C.white:"#2563eb",background:isSelected?C.rose:"#eff6ff",padding:"5px 12px",borderRadius:8,cursor:"pointer",display:"flex",alignItems:"center",gap:4,transition:"all 0.2s"}}>
-                                  <MI n={isSelected?"expand_more":"chevron_right"} size={12}/>
-                                  {pr.brand && <span style={{color:isSelected?"#dbeafe":C.inkLt}}>{pr.brand}</span>} {pr.name}
-                                </span>
-                                <span onClick={()=>removeProductFromProject(p,i)} style={{cursor:"pointer",color:C.inkLt,padding:2}}><MI n="close" size={12}/></span>
-                              </div>
-                              {isSelected && singleProdLoading && <div style={{padding:8,fontSize:10,color:C.inkMid}}>로딩중...</div>}
-                              {isSelected && spd && (
-                                <div style={{background:C.cream,borderRadius:8,padding:10,marginTop:6,marginLeft:8}}>
-                                  {/* 요약 카드 */}
-                                  <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(90px,1fr))",gap:6,marginBottom:10}}>
-                                    <div style={{background:C.white,borderRadius:6,padding:"6px 8px"}}>
-                                      <div style={{fontSize:9,color:C.inkMid}}>판매수량</div>
-                                      <div style={{fontSize:14,fontWeight:800,color:C.ink}}>{spd.totalQty.toLocaleString()}개</div>
-                                    </div>
-                                    <div style={{background:C.white,borderRadius:6,padding:"6px 8px"}}>
-                                      <div style={{fontSize:9,color:C.inkMid}}>매출액</div>
-                                      <div style={{fontSize:14,fontWeight:800,color:"#2563eb"}}>{spd.totalRevenue>=10000?(spd.totalRevenue/10000).toFixed(0)+"만":spd.totalRevenue.toLocaleString()}원</div>
-                                    </div>
-                                    <div style={{background:C.white,borderRadius:6,padding:"6px 8px"}}>
-                                      <div style={{fontSize:9,color:C.inkMid}}>이익</div>
-                                      <div style={{fontSize:14,fontWeight:800,color:spd.totalProfit>0?"#16a34a":"#dc2626"}}>{spd.totalProfit>=10000?(spd.totalProfit/10000).toFixed(0)+"만":spd.totalProfit.toLocaleString()}원</div>
-                                    </div>
-                                    <div style={{background:C.white,borderRadius:6,padding:"6px 8px"}}>
-                                      <div style={{fontSize:9,color:C.inkMid}}>7일 변동</div>
-                                      <div style={{fontSize:14,fontWeight:800,color:spd.changePct>0?"#16a34a":spd.changePct<0?"#dc2626":C.inkMid}}>
-                                        {spd.changePct===999?"NEW":spd.changePct>0?`+${spd.changePct}%`:`${spd.changePct}%`}
-                                      </div>
-                                      <div style={{fontSize:8,color:C.inkLt}}>{spd.prevQty}→{spd.recentQty}</div>
-                                    </div>
-                                  </div>
-                                  {/* 차트 */}
-                                  {spd.chartData.length>1 && (
-                                    <ResponsiveContainer width="100%" height={120}>
-                                      <AreaChart data={spd.chartData}>
-                                        <CartesianGrid strokeDasharray="3 3" stroke={C.border}/>
-                                        <XAxis dataKey="date" tick={{fontSize:8}} tickFormatter={v=>v.slice(5)}/>
-                                        <YAxis tick={{fontSize:8}} tickFormatter={v=>v>=10000?(v/10000).toFixed(0)+"만":v}/>
-                                        <Tooltip formatter={v=>v.toLocaleString()}/>
-                                        <Area type="monotone" dataKey="revenue" stroke={C.rose} fill={C.blush} name="매출"/>
-                                      </AreaChart>
-                                    </ResponsiveContainer>
-                                  )}
-                                  {/* 재고 */}
-                                  {(spd.stock||[]).length>0 && (
-                                    <div style={{marginTop:8}}>
-                                      {spd.stock.map((s,si)=>(
-                                        <div key={si} style={{display:"flex",gap:10,fontSize:10,padding:"3px 0",borderBottom:`1px solid ${C.white}`}}>
-                                          <span style={{color:C.inkMid,flex:1}}>{s.model||s.name}</span>
-                                          <span style={{fontWeight:700,color:s.stock>0?"#16a34a":"#dc2626"}}>재고 {s.stock?.toLocaleString()}</span>
-                                          {s.producing>0&&<span style={{color:"#ea580c"}}>생산 {s.producing}</span>}
-                                          {s.transit>0&&<span style={{color:"#2563eb"}}>운송 {s.transit}</span>}
-                                        </div>
-                                      ))}
-                                    </div>
-                                  )}
-                                </div>
-                              )}
-                            </div>
-                          );
-                        })}
-                      </div>
-                      <div style={{marginBottom:8}}>
-                        <input value={productSearch} onChange={e=>{setProductSearch(e.target.value);searchProducts(e.target.value);}}
-                          placeholder="제품 검색 (이름 또는 브랜드)..." style={{width:"100%",padding:"6px 10px",border:`1px solid ${C.border}`,borderRadius:6,fontSize:12,fontFamily:"inherit",outline:"none",boxSizing:"border-box"}}/>
-                        {productResults.length>0 && (
-                          <div style={{background:C.white,border:`1px solid ${C.border}`,borderRadius:8,maxHeight:200,overflow:"auto",marginTop:6}}>
-                            {productResults.map((pr,i)=>(
-                              <div key={i} onClick={()=>{addProductToProject(p,pr);setProductSearch("");setProductResults([]);}}
-                                style={{padding:"8px 12px",cursor:"pointer",fontSize:11,borderBottom:`1px solid ${C.cream}`,display:"flex",gap:8}}
-                                onMouseEnter={e=>e.currentTarget.style.background="#f9fafb"} onMouseLeave={e=>e.currentTarget.style.background="#fff"}>
-                                <span style={{color:C.inkLt,fontWeight:600}}>{pr.brand}</span>
-                                <span style={{color:C.ink}}>{pr.name}</span>
-                                {pr.category && <span style={{color:C.inkLt,fontSize:9}}>{pr.category}</span>}
-                              </div>
-                            ))}
                           </div>
                         )}
-                      </div>
-
-                      {/* 광고비 (ROAS) */}
-                      {(p.products||[]).length>0 && (()=>{
-                        const chart = projDailyChart[p.id]||[];
-                        const totalRev = chart.reduce((s,d)=>s+d.revenue,0);
-                        return projAdData[p.id] ? (
-                          <div style={{background:"#eff6ff",borderRadius:10,padding:12,marginTop:12}}>
-                            <div style={{fontSize:11,fontWeight:800,color:C.ink,marginBottom:8,display:"flex",alignItems:"center",gap:4}}><MI n="ads_click" size={14}/> 광고 성과</div>
-                            <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(80px,1fr))",gap:6,marginBottom:8}}>
-                              {(()=>{const ad=projAdData[p.id];return[
-                                {label:"광고비",value:ad.spend>=10000?(ad.spend/10000).toFixed(0)+"만":ad.spend.toLocaleString(),unit:"원"},
-                                {label:"클릭",value:ad.clicks.toLocaleString(),unit:""},
-                                {label:"전환",value:ad.conversions.toLocaleString(),unit:"건"},
-                                {label:"ROAS",value:ad.spend>0?((totalRev/ad.spend)*100).toFixed(0)+"%":"N/A",unit:""},
-                              ].map(s=>(
-                                <div key={s.label} style={{background:C.white,borderRadius:6,padding:"6px 8px"}}>
-                                  <div style={{fontSize:9,color:C.inkMid}}>{s.label}</div>
-                                  <div style={{fontSize:13,fontWeight:800,color:C.ink}}>{s.value}{s.unit}</div>
-                                </div>
-                              ))})()}
+                      </div>);
+                    })}
+                    {/* 제품 검색 추가 */}
+                    <div style={{marginTop:4}}>
+                      <input value={productSearch} onChange={e=>{setProductSearch(e.target.value);searchProducts(e.target.value);}}
+                        placeholder="제품 검색해서 추가..."
+                        style={{width:"100%",padding:"6px 10px",border:`1px solid ${C.border}`,borderRadius:8,fontSize:11,outline:"none",fontFamily:"inherit",boxSizing:"border-box"}}/>
+                      {productResults.length>0&&(
+                        <div style={{border:`1px solid ${C.border}`,borderRadius:8,marginTop:4,maxHeight:150,overflowY:"auto"}}>
+                          {productResults.map(pr=>(
+                            <div key={pr.id} onClick={()=>{addProductToProject(p,pr);setProductSearch("");setProductResults([]);}}
+                              style={{padding:"6px 10px",fontSize:11,cursor:"pointer",borderBottom:`1px solid ${C.border}22`,display:"flex",justifyContent:"space-between"}}>
+                              <span>{pr.name}</span><span style={{color:C.inkLt}}>{pr.brand}</span>
                             </div>
-                          </div>
-                        ) : null;
-                      })()}
-
-                      {/* 프로모션 일정 */}
-                      {projPromoData[p.id] && projPromoData[p.id].length>0 && (
-                        <div style={{background:"#fff7ed",borderRadius:10,padding:12,marginTop:8}}>
-                          <div style={{fontSize:11,fontWeight:800,color:C.ink,marginBottom:8,display:"flex",alignItems:"center",gap:4}}><MI n="campaign" size={14}/> 프로모션 일정</div>
-                          {projPromoData[p.id].slice(0,8).map((pr,i)=>{
-                            const today = new Date().toISOString().split('T')[0];
-                            const isActive = pr.start_date<=today && pr.end_date>=today;
-                            const isPast = pr.end_date<today;
-                            // 프로모션 상품 표시
-                            const promoProds = (pr.products||[]).filter(pp=>(p.products||[]).some(lp=>pp.includes(lp.name)||lp.name.includes(pp)));
-                            const fmtRev = v=>v>=100000000?(v/100000000).toFixed(1)+"억":v>=10000?(v/10000).toFixed(0)+"만":v.toLocaleString();
-                            return (
-                              <div key={i} style={{display:"flex",gap:8,alignItems:"center",padding:"5px 0",borderBottom:`1px solid #fed7aa`,fontSize:11}}>
-                                <span style={{width:6,height:6,borderRadius:3,background:isActive?"#16a34a":isPast?"#d4d4d4":"#2563eb",flexShrink:0}}/>
-                                <span style={{fontWeight:700,color:C.ink,flex:1,minWidth:0,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{pr.promo_name}</span>
-                                {promoProds.length>0 && <span style={{fontSize:8,color:"#ea580c",fontWeight:600,flexShrink:0}}>{promoProds.length}개 제품</span>}
-                                <span style={{color:C.inkMid,fontSize:9,flexShrink:0}}>{pr.channel}</span>
-                                <span style={{color:C.inkLt,fontSize:9,flexShrink:0}}>{pr.start_date?.slice(5)}~{pr.end_date?.slice(5)}</span>
-                              </div>
-                            );
-                          })}
+                          ))}
                         </div>
                       )}
-
-                      {/* 기간 선택은 위로 이동됨 */}
-
-                      {/* 코멘트 */}
-                      <div style={{fontSize:11,fontWeight:800,color:C.ink,marginTop:16,marginBottom:8,display:"flex",alignItems:"center",gap:4}}><MI n="chat" size={14}/> 메모 ({comments.length})</div>
-                      {comments.map((c,i)=>(
-                        <div key={i} style={{padding:"8px 10px",background:C.cream,borderRadius:8,marginBottom:6,position:"relative"}}>
-                          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4}}>
-                            <span style={{fontSize:10,fontWeight:700,color:C.inkMid}}>{c.by||"익명"} · {c.date}</span>
-                            <button onClick={()=>removeComment(p,i)} style={{background:"none",border:"none",cursor:"pointer",padding:0}}><MI n="close" size={12} style={{color:C.inkLt}}/></button>
-                          </div>
-                          <div style={{fontSize:12,color:C.ink,lineHeight:1.5,whiteSpace:"pre-wrap"}}>{c.text}</div>
-                        </div>
-                      ))}
-                      <div style={{display:"flex",gap:8,marginTop:4}}>
-                        <input value={newComment} onChange={e=>setNewComment(e.target.value)} onKeyDown={e=>e.key==="Enter"&&addComment(p)}
-                          placeholder="메모 추가..." style={{flex:1,padding:"6px 10px",border:`1px solid ${C.border}`,borderRadius:6,fontSize:12,fontFamily:"inherit",outline:"none"}}/>
-                        <button onClick={()=>addComment(p)} style={{padding:"6px 12px",background:C.blush,color:C.rose,border:"none",borderRadius:6,fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>메모</button>
-                      </div>
                     </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        );
-      })}
+                  </div>
+                )}
 
-      {!loading && !filtered.length && (
-        <div style={{textAlign:"center",padding:60,color:C.inkMid}}>
-          <MI n="folder_open" size={48} style={{color:C.border}}/>
-          <div style={{marginTop:12,fontSize:14,fontWeight:600}}>아직 프로젝트가 없어요</div>
-          <div style={{marginTop:4,fontSize:12}}>위의 "새 프로젝트" 버튼으로 시작하세요</div>
+                {/* 데이터 탭 */}
+                {projTab==="data"&&(
+                  <div style={{display:"flex",flexDirection:"column",gap:12}}>
+                    {/* 기간 선택 */}
+                    <div style={{display:"flex",gap:4}}>
+                      {[7,14,30,60,90].map(d=>(
+                        <button key={d} onClick={()=>{setProdDataDays(d);setProjDailyChart({});setProjChannelData({});setProjRankData({});setExpandId(null);setTimeout(()=>setExpandId(p.id),50);}}
+                          style={{padding:"4px 10px",border:"none",borderRadius:6,fontSize:10,fontWeight:700,cursor:"pointer",
+                            background:prodDataDays===d?C.rose:C.cream,color:prodDataDays===d?"#fff":C.inkMid}}>{d}일</button>
+                      ))}
+                    </div>
+
+                    {/* 광고비 요약 */}
+                    {projAdData[p.id]&&(
+                      <div style={{background:"#f0fdf4",borderRadius:10,padding:12}}>
+                        <div style={{fontSize:11,fontWeight:700,color:"#16a34a",marginBottom:6}}>광고 성과</div>
+                        <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:8}}>
+                          <div><div style={{fontSize:9,color:C.inkLt}}>광고비</div><div style={{fontSize:13,fontWeight:800}}>{fmtRev(projAdData[p.id].spend)}</div></div>
+                          <div><div style={{fontSize:9,color:C.inkLt}}>클릭</div><div style={{fontSize:13,fontWeight:800}}>{projAdData[p.id].clicks?.toLocaleString()}</div></div>
+                          <div><div style={{fontSize:9,color:C.inkLt}}>전환</div><div style={{fontSize:13,fontWeight:800}}>{projAdData[p.id].conversions?.toLocaleString()}</div></div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* 프로모션 */}
+                    {projPromoData[p.id]&&projPromoData[p.id].length>0&&(
+                      <div style={{background:"#faf5ff",borderRadius:10,padding:12}}>
+                        <div style={{fontSize:11,fontWeight:700,color:"#7c3aed",marginBottom:6}}>관련 프로모션</div>
+                        {projPromoData[p.id].slice(0,5).map(pr=>(
+                          <div key={pr.promo_id} style={{fontSize:11,padding:"3px 0",display:"flex",gap:8}}>
+                            <span style={{color:C.inkLt,fontSize:10}}>{pr.start_date}~{pr.end_date}</span>
+                            <span style={{color:C.ink,fontWeight:600}}>{pr.promo_name}</span>
+                            <span style={{color:C.inkMid}}>{pr.channel}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* 시작 전/후 비교 */}
+                    {p.start_date&&(p.products||[]).length>0&&!projImpact[p.id]&&(
+                      <button onClick={()=>loadProjectImpact(p)}
+                        style={{padding:"8px",border:`1px dashed ${C.border}`,borderRadius:8,background:"none",fontSize:11,fontWeight:700,color:C.inkMid,cursor:"pointer",fontFamily:"inherit"}}>
+                        프로젝트 시작 전/후 비교 보기
+                      </button>
+                    )}
+                    {projImpact[p.id]&&(()=>{
+                      const imp = projImpact[p.id];
+                      const revDiff = imp.before.avgRevenue>0?Math.round((imp.after.avgRevenue-imp.before.avgRevenue)/imp.before.avgRevenue*100):0;
+                      return(
+                      <div style={{background:C.bg,borderRadius:10,padding:12}}>
+                        <div style={{fontSize:11,fontWeight:700,color:C.inkMid,marginBottom:8}}>시작 전/후 비교 (일평균)</div>
+                        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8}}>
+                          <div><div style={{fontSize:9,color:C.inkLt}}>전 매출</div><div style={{fontSize:12,fontWeight:800}}>{fmtRev(imp.before.avgRevenue)}</div></div>
+                          <div><div style={{fontSize:9,color:C.inkLt}}>후 매출</div><div style={{fontSize:12,fontWeight:800,color:C.rose}}>{fmtRev(imp.after.avgRevenue)}</div></div>
+                          <div><div style={{fontSize:9,color:C.inkLt}}>변동</div><div style={{fontSize:12,fontWeight:900,color:revDiff>=0?C.good:C.bad}}>{revDiff>0?"+":""}{revDiff}%</div></div>
+                        </div>
+                      </div>);
+                    })()}
+                  </div>
+                )}
+
+                {/* 하단 액션 */}
+                <div style={{display:"flex",gap:6,marginTop:14,borderTop:`1px solid ${C.border}`,paddingTop:12}}>
+                  <button onClick={()=>edit(p)} style={{padding:"5px 12px",border:`1px solid ${C.border}`,borderRadius:6,background:C.white,fontSize:10,fontWeight:700,cursor:"pointer",color:C.inkMid,fontFamily:"inherit"}}>수정</button>
+                  <button onClick={()=>{const next=p.status==="in_progress"?"done":p.status==="planning"?"in_progress":p.status==="done"?"in_progress":"in_progress";patchProject(p,{status:next});}}
+                    style={{padding:"5px 12px",border:"none",borderRadius:6,background:p.status==="done"?C.ink:C.good,fontSize:10,fontWeight:700,cursor:"pointer",color:"#fff",fontFamily:"inherit"}}>
+                    {p.status==="done"?"다시 진행":p.status==="in_progress"?"완료":p.status==="planning"?"진행 시작":"진행"}
+                  </button>
+                  <button onClick={()=>exportCSV(p)} style={{padding:"5px 12px",border:`1px solid ${C.border}`,borderRadius:6,background:C.white,fontSize:10,fontWeight:700,cursor:"pointer",color:C.inkMid,fontFamily:"inherit"}}>CSV</button>
+                  <button onClick={()=>del(p.id)} style={{marginLeft:"auto",padding:"5px 12px",border:"none",borderRadius:6,background:"#fef2f2",fontSize:10,fontWeight:700,cursor:"pointer",color:"#dc2626",fontFamily:"inherit"}}>삭제</button>
+                </div>
+              </div>
+            )}
+          </div>
+          );
+        })}
+      </div>
+
+      {filtered.length===0&&!loading&&(
+        <div style={{textAlign:"center",padding:"40px 20px",color:C.inkMid}}>
+          <div style={{fontSize:28,marginBottom:8}}>📂</div>
+          <div style={{fontSize:13,fontWeight:700}}>프로젝트가 없어요</div>
+          <div style={{fontSize:11,color:C.inkLt,marginTop:4}}>새 프로젝트를 만들어보세요</div>
         </div>
       )}
 
-      {/* 폼 모달 */}
-      {showForm && (
-        <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.4)",zIndex:1000,display:"flex",alignItems:"center",justifyContent:"center",padding:20}} onClick={()=>setShowForm(false)}>
-          <div onClick={e=>e.stopPropagation()} style={{background:C.white,borderRadius:16,padding:24,width:"100%",maxWidth:520,maxHeight:"85vh",overflow:"auto"}}>
-            <div style={{fontSize:16,fontWeight:900,color:C.ink,marginBottom:16}}>{editId?"프로젝트 수정":"새 프로젝트"}</div>
+      {/* 프로젝트 생성/수정 모달 */}
+      {showForm&&(
+        <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.4)",zIndex:1000,display:"flex",alignItems:"center",justifyContent:"center",padding:20}}
+          onClick={()=>{setShowForm(false);setEditId(null);setForm(emptyForm);}}>
+          <div onClick={e=>e.stopPropagation()} style={{background:C.white,borderRadius:16,padding:24,width:"100%",maxWidth:500,maxHeight:"80vh",overflowY:"auto"}}>
+            <div style={{fontSize:16,fontWeight:900,marginBottom:16}}>{editId?"프로젝트 수정":"새 프로젝트"}</div>
             <div style={{display:"flex",flexDirection:"column",gap:12}}>
               <div>
                 <label style={{fontSize:11,fontWeight:700,color:C.inkMid}}>프로젝트명 *</label>
                 <input value={form.name} onChange={e=>setForm({...form,name:e.target.value})} style={inputStyle}/>
               </div>
-              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
                 <div>
                   <label style={{fontSize:11,fontWeight:700,color:C.inkMid}}>상태</label>
-                  <select value={form.status} onChange={e=>setForm({...form,status:e.target.value})} style={inputStyle}>
+                  <select value={form.status} onChange={e=>setForm({...form,status:e.target.value})} style={{...inputStyle}}>
                     {Object.entries(STATUS_MAP).map(([k,v])=><option key={k} value={k}>{v.label}</option>)}
                   </select>
                 </div>
                 <div>
                   <label style={{fontSize:11,fontWeight:700,color:C.inkMid}}>우선순위</label>
-                  <select value={form.priority} onChange={e=>setForm({...form,priority:e.target.value})} style={inputStyle}>
+                  <select value={form.priority} onChange={e=>setForm({...form,priority:e.target.value})} style={{...inputStyle}}>
                     {Object.entries(PRIORITY_MAP).map(([k,v])=><option key={k} value={k}>{v.label}</option>)}
                   </select>
                 </div>
               </div>
-              <div>
-                <label style={{fontSize:11,fontWeight:700,color:C.inkMid}}>담당자</label>
-                <div style={{display:"flex",gap:6,flexWrap:"wrap",marginTop:6}}>
-                  {ASSIGNEES.map(a=>(
-                    <button key={a} onClick={()=>setForm({...form,assignee:form.assignee===a?"":a})}
-                      style={{padding:"4px 12px",borderRadius:20,border:"none",background:form.assignee===a?"#374151":"#e5e7eb",color:form.assignee===a?"#fff":C.inkMid,fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>{a}</button>
-                  ))}
-                </div>
-              </div>
-              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
                 <div>
                   <label style={{fontSize:11,fontWeight:700,color:C.inkMid}}>시작일</label>
                   <input type="date" value={form.start_date} onChange={e=>setForm({...form,start_date:e.target.value})} style={inputStyle}/>
@@ -4177,92 +3815,24 @@ function ProjectSection() {
                 </div>
               </div>
               <div>
-                <label style={{fontSize:11,fontWeight:700,color:C.inkMid}}>태그</label>
-                <div style={{display:"flex",gap:6,flexWrap:"wrap",marginTop:6,alignItems:"center"}}>
-                  {(form.tags||[]).map((t,i)=>(
-                    <span key={i} onClick={()=>setForm({...form,tags:form.tags.filter((_,j)=>j!==i)})}
-                      style={{fontSize:10,fontWeight:700,color:TAG_COLORS[i%TAG_COLORS.length],background:TAG_COLORS[i%TAG_COLORS.length]+"18",padding:"3px 10px",borderRadius:12,cursor:"pointer"}}>{t} x</span>
-                  ))}
-                  <input value={newTag} onChange={e=>setNewTag(e.target.value)}
-                    onKeyDown={e=>{if(e.key==="Enter"&&newTag.trim()){setForm({...form,tags:[...(form.tags||[]),newTag.trim()]});setNewTag("");}}}
-                    placeholder="태그 입력 후 Enter" style={{padding:"4px 8px",border:`1px solid ${C.border}`,borderRadius:6,fontSize:11,fontFamily:"inherit",outline:"none",width:120}}/>
-                </div>
-              </div>
-              <div>
-                <label style={{fontSize:11,fontWeight:700,color:C.inkMid}}>목표 매출 (원)</label>
-                <input type="number" value={form.target_revenue||""} onChange={e=>setForm({...form,target_revenue:Number(e.target.value)||0})} placeholder="예: 50000000 (5천만원)" style={inputStyle}/>
-              </div>
-              <div>
-                <label style={{fontSize:11,fontWeight:700,color:C.inkMid}}>추적 키워드</label>
-                <div style={{display:"flex",gap:6,flexWrap:"wrap",marginTop:6,marginBottom:6}}>
-                  {(form.keywords||[]).map((kw,i)=>(
-                    <span key={i} onClick={()=>setForm({...form,keywords:form.keywords.filter((_,j)=>j!==i)})}
-                      style={{fontSize:10,fontWeight:700,color:"#0369a1",background:"#e0f2fe",padding:"3px 10px",borderRadius:12,cursor:"pointer"}}>{kw} x</span>
-                  ))}
-                </div>
-                <input placeholder="키워드 입력 후 Enter (예: 오아드라이기)" style={inputStyle}
-                  onKeyDown={e=>{if(e.key==="Enter"&&e.target.value.trim()){setForm({...form,keywords:[...(form.keywords||[]),e.target.value.trim()]});e.target.value="";}}}/>
-              </div>
-              <div>
-                <label style={{fontSize:11,fontWeight:700,color:C.inkMid}}>연동 제품</label>
-                <div style={{display:"flex",gap:6,flexWrap:"wrap",marginTop:6,marginBottom:6}}>
-                  {(form.products||[]).map((pr,i)=>(
-                    <span key={i} onClick={()=>{const newProds=form.products.filter((_,j)=>j!==i);setForm({...form,products:newProds});loadFormPreview(newProds);}}
-                      style={{fontSize:10,fontWeight:700,color:"#2563eb",background:"#eff6ff",padding:"3px 10px",borderRadius:12,cursor:"pointer"}}>{pr.brand} {pr.name} x</span>
-                  ))}
-                </div>
-                <div>
-                  <input value={productSearch} onChange={e=>{setProductSearch(e.target.value);searchProducts(e.target.value);}}
-                    placeholder="제품명 또는 브랜드 검색..." style={{...inputStyle,marginTop:0}}/>
-                  {productResults.length>0 && (
-                    <div style={{background:C.white,border:`1px solid ${C.border}`,borderRadius:8,maxHeight:180,overflow:"auto",marginTop:6}}>
-                      {productResults.map((pr,i)=>(
-                        <div key={i} onClick={()=>{const newProds=[...(form.products||[]),{id:pr.id,name:pr.name,brand:pr.brand}];if(!(form.products||[]).find(p=>p.id===pr.id)){setForm({...form,products:newProds});loadFormPreview(newProds);}setProductSearch("");setProductResults([]);}}
-                          style={{padding:"8px 12px",cursor:"pointer",fontSize:11,borderBottom:`1px solid ${C.cream}`}}
-                          onMouseEnter={e=>e.currentTarget.style.background="#f9fafb"} onMouseLeave={e=>e.currentTarget.style.background="#fff"}>
-                          <span style={{color:C.inkLt}}>{pr.brand}</span> {pr.name}
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-                {/* 제품 미리보기 */}
-                {formPreviewLoading && <div style={{padding:8,fontSize:11,color:C.inkMid}}>데이터 불러오는 중...</div>}
-                {formPreview && (form.products||[]).length>0 && (
-                  <div style={{background:C.cream,borderRadius:8,padding:10,marginTop:8}}>
-                    <div style={{fontSize:10,fontWeight:800,color:C.ink,marginBottom:6}}>최근 14일 요약</div>
-                    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:6,marginBottom:8}}>
-                      {Object.entries(formPreview.sales||{}).map(([name,d])=>(
-                        <div key={name} style={{background:C.white,borderRadius:6,padding:"6px 8px"}}>
-                          <div style={{fontSize:9,color:C.inkMid,fontWeight:600,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{name}</div>
-                          <div style={{fontSize:13,fontWeight:800,color:C.ink}}>{d.qty.toLocaleString()}개</div>
-                          <div style={{fontSize:10,color:"#2563eb",fontWeight:600}}>{d.revenue.toLocaleString()}원</div>
-                        </div>
-                      ))}
-                    </div>
-                    {(formPreview.stock||[]).length>0 && (
-                      <div>
-                        <div style={{fontSize:10,fontWeight:800,color:C.ink,marginBottom:4}}>재고</div>
-                        {(formPreview.stock||[]).map((s,i)=>(
-                          <div key={i} style={{display:"flex",gap:8,fontSize:10,padding:"3px 0"}}>
-                            <span style={{flex:1,color:C.inkMid}}>{s.name}</span>
-                            <span style={{fontWeight:700,color:s.stock>0?"#16a34a":"#dc2626"}}>{s.stock?.toLocaleString()}개</span>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                )}
+                <label style={{fontSize:11,fontWeight:700,color:C.inkMid}}>담당자</label>
+                <select value={form.assignee} onChange={e=>setForm({...form,assignee:e.target.value})} style={{...inputStyle}}>
+                  <option value="">미지정</option>
+                  {ASSIGNEES.map(a=><option key={a} value={a}>{a}</option>)}
+                </select>
               </div>
               <div>
                 <label style={{fontSize:11,fontWeight:700,color:C.inkMid}}>설명</label>
-                <textarea value={form.description} onChange={e=>setForm({...form,description:e.target.value})} rows={3}
-                  style={{...inputStyle,resize:"vertical"}}/>
+                <textarea value={form.description} onChange={e=>setForm({...form,description:e.target.value})}
+                  rows={3} style={{...inputStyle,resize:"vertical"}}/>
               </div>
             </div>
-            <div style={{display:"flex",gap:8,marginTop:20,justifyContent:"flex-end"}}>
-              <button onClick={()=>setShowForm(false)} style={{padding:"8px 16px",background:C.cream,color:C.inkMid,border:"none",borderRadius:8,fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>취소</button>
-              <button onClick={save} style={{padding:"8px 16px",background:C.rose,color:"#fff",border:"none",borderRadius:8,fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>저장</button>
+            <div style={{display:"flex",gap:8,marginTop:16}}>
+              <button onClick={save} style={{flex:1,padding:"10px",background:C.rose,color:"#fff",border:"none",borderRadius:8,fontSize:13,fontWeight:800,cursor:"pointer",fontFamily:"inherit"}}>
+                {editId?"수정 완료":"생성"}
+              </button>
+              <button onClick={()=>{setShowForm(false);setEditId(null);setForm(emptyForm);}}
+                style={{padding:"10px 20px",background:C.cream,color:C.inkMid,border:"none",borderRadius:8,fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>취소</button>
             </div>
           </div>
         </div>
@@ -5521,6 +5091,11 @@ export default function OaDashboard(){
   const [adImages, setAdImages]       = useState([]);
   // 메타 API에서 가져온 소재 썸네일 {광고명: url} — 수동 업로드(adImages)와 분리 저장
   const [metaThumbs, setMetaThumbs]   = useState({});
+  const [realSales, setRealSales]     = useState([]);   // 쿠팡 실판매 (이미용)
+  useEffect(()=>{
+    const from=new Date(Date.now()-45*86400000).toISOString().slice(0,10);
+    getBeautyRealSales(from).then(setRealSales).catch(()=>{});
+  },[]);
   const matchMetaThumb = (name) => {
     if(!name) return null;
     if(metaThumbs[name]) return {url:metaThumbs[name], name};
@@ -7192,6 +6767,30 @@ export default function OaDashboard(){
             )}
           </div>
         </div>
+
+        {/* 시트 데이터 누락 경고 배너 */}
+        {hasSheet&&(()=>{
+          const byDate={};
+          metaForChart.forEach(r=>{ if(r.date) byDate[r.date]=(byDate[r.date]||0)+(r.spend||0); });
+          const ds=Object.keys(byDate).sort();
+          if(ds.length<3) return null;
+          const recent=ds.slice(-7);
+          const missing=recent.filter(d=>byDate[d]===0);
+          if(!missing.length) return null;
+          const lastGood=ds.filter(d=>byDate[d]>0).pop();
+          return(
+            <div style={{display:"flex",alignItems:"center",gap:8,padding:"10px 14px",borderRadius:10,
+              background:"#fffbeb",border:"1px solid #fcd34d",fontSize:11,color:"#92400e"}}>
+              <MI n="warning" size={15}/>
+              <span style={{fontWeight:700}}>
+                시트 데이터 누락 의심: {missing.map(d=>d.slice(5).replace("-","/")).join(", ")}
+              </span>
+              <span style={{color:"#b45309"}}>
+                — 지출이 0으로 기록됨 · 마지막 정상 데이터 {lastGood?lastGood.slice(5).replace("-","/"):"없음"} · 메타 내보내기 확인 필요
+              </span>
+            </div>
+          );
+        })()}
 
         {/* 탭 */}
         <div style={{display:"flex",gap:6,overflowX:"auto",paddingBottom:2}}>
@@ -10139,6 +9738,34 @@ export default function OaDashboard(){
       setRecreateReqs(prev=>(prev||[]).filter(r=>r.id!==id));
     }
 
+    // ── 재제작 완료 루프: 요청일 이후 첫 지출 시작된 같은 제품 신규 소재 후보 ──
+    const adStatsForReq = (()=>{
+      let cache=null;
+      return ()=>{
+        if(cache) return cache;
+        cache={};
+        (metaForChart||[]).forEach(x=>{
+          if(!x.adName||!x.date) return;
+          const s=cache[x.adName]=cache[x.adName]||{first:null,spend:0,convValue:0,purchases:0};
+          if((x.spend||0)>0&&(!s.first||x.date<s.first)) s.first=x.date;
+          s.spend+=x.spend||0; s.convValue+=x.convValue||0; s.purchases+=x.purchases||0;
+        });
+        return cache;
+      };
+    })();
+    function reqCandidates(r){
+      if(!r.requestedAt||!r.adName) return [];
+      const kw=(margins||[]).map(m=>m.keyword).filter(Boolean).find(k=>r.adName.includes(k));
+      if(!kw) return [];
+      const stats=adStatsForReq();
+      return Object.entries(stats)
+        .filter(([n,s])=>n!==r.adName&&n.includes(kw)&&s.first&&s.first>r.requestedAt&&s.spend>0)
+        .sort((a,b)=>b[1].spend-a[1].spend).slice(0,3);
+    }
+    function linkNewAd(id,newAdName,newRoas){
+      setRecreateReqs(prev=>(prev||[]).map(x=>x.id===id?{...x,status:"done",newAdName,newRoas:String(newRoas)}:x));
+    }
+
     function addToLib(form) {
       if (libModal?.mode==="edit" && libModal?.item) {
         setCreativeLib(prev=>prev.map(i=>i.id===libModal.item.id?{...i,...form}:i));
@@ -10401,6 +10028,30 @@ export default function OaDashboard(){
                           {r.assignee&&<span style={{padding:"1px 7px",borderRadius:20,background:"#8b5cf622",color:"#8b5cf6",fontWeight:700,fontSize:10}}>{r.assignee}</span>}
                         </div>
                         {r.note&&<div style={{fontSize:10,color:C.inkMid,marginTop:2}}><MI n="chat_bubble" size={11}/> {r.note}</div>}
+                        {(()=>{
+                          const cands=reqCandidates(r);
+                          if(!cands.length) return null;
+                          return(
+                            <div style={{marginTop:5,display:"flex",flexDirection:"column",gap:3}}>
+                              {cands.map(([n,s])=>{
+                                const roas=s.spend>0?Math.round((s.convValue/s.spend)*100):0;
+                                return(
+                                  <div key={n} style={{display:"flex",alignItems:"center",gap:6,fontSize:10,
+                                    padding:"4px 8px",borderRadius:6,background:"#f0f9ff",border:"1px solid #7dd3fc44"}}>
+                                    <span style={{color:"#0284c7",fontWeight:800,flexShrink:0}}>신규 후보</span>
+                                    <span style={{flex:1,color:C.ink,fontWeight:700,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{n}</span>
+                                    <span style={{color:C.inkLt,flexShrink:0}}>ROAS {roas}%</span>
+                                    <button onClick={()=>linkNewAd(r.id,n,roas)}
+                                      style={{fontSize:9,fontWeight:700,padding:"2px 8px",borderRadius:5,flexShrink:0,
+                                        border:"1px solid #0284c744",background:"#e0f2fe",color:"#0284c7",
+                                        cursor:"pointer",fontFamily:"inherit"}}>연결·완료</button>
+                                  </div>
+                                );
+                              })}
+                              <div style={{fontSize:8,color:C.inkLt}}>요청일 이후 시작된 같은 제품 신규 소재 — 연결하면 완료 처리 + 신구 비교 기록</div>
+                            </div>
+                          );
+                        })()}
                       </div>
                       <div style={{display:"flex",flexDirection:"column",gap:4,flexShrink:0,alignItems:"flex-end"}}>
                         {(()=>{
@@ -10457,6 +10108,14 @@ export default function OaDashboard(){
                     <div style={{flex:1}}>
                       <div style={{fontSize:11,fontWeight:700,color:C.inkMid,textDecoration:"line-through"}}>{r.adName}</div>
                       <div style={{fontSize:9,color:C.inkLt}}>CTR {r.ctr}% · {r.requestedAt}</div>
+                      {r.newAdName&&(
+                        <div style={{fontSize:10,marginTop:2,color:"#0284c7",fontWeight:700}}>
+                          → {r.newAdName}
+                          {r.newRoas&&<span style={{marginLeft:6,color:Number(r.newRoas)>=Number(r.roas||0)?C.sage:C.bad}}>
+                            ROAS {r.newRoas}% (기존 {r.roas||0}%)
+                          </span>}
+                        </div>
+                      )}
                     </div>
                     <Btn variant="danger" small onClick={()=>deleteReq(r.id)}><MI n="delete" size={13}/></Btn>
                   </div>
