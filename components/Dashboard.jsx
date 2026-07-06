@@ -2791,6 +2791,358 @@ function NaverSection() {
 }
 
 
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 상세기획안 자동 생성
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function DetailPlanSection() {
+  const [form, setForm] = useState({productName:"",category:"이미용가전",features:"",targetAudience:"20-40대 여성",priceRange:"",competitors:""});
+  const [loading, setLoading] = useState(false);
+  const [plan, setPlan] = useState(null);
+  const [analysis, setAnalysis] = useState(null);
+  const [tab, setTab] = useState("generate"); // generate | analysis | history
+  const [history, setHistory] = useState([]);
+  const [expandSlide, setExpandSlide] = useState(null);
+  const [streamText, setStreamText] = useState("");
+
+  const SURL = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const SKEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  const sh = {apikey:SKEY,Authorization:`Bearer ${SKEY}`,"Content-Type":"application/json"};
+
+  useEffect(()=>{
+    fetch(`${SURL}/rest/v1/settings?key=eq.detail_plans&select=value`,{headers:sh})
+      .then(r=>r.json()).then(d=>{ if(d[0]?.value) setHistory(d[0].value); }).catch(()=>{});
+  },[]);
+
+  const saveHistory = async (item) => {
+    const next = [item,...history].slice(0,20);
+    setHistory(next);
+    await fetch(`${SURL}/rest/v1/settings`,{method:"POST",headers:{...sh,Prefer:"resolution=merge-duplicates"},
+      body:JSON.stringify({key:"detail_plans",value:next,updated_at:new Date().toISOString()})});
+  };
+
+  const streamFetch = async (mode) => {
+    if(!form.productName.trim()) return alert("제품명을 입력하세요");
+    setLoading(true);
+    setStreamText("");
+    setPlan(null);
+    setAnalysis(null);
+    try {
+      const res = await fetch("/api/detail-plan",{method:"POST",headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({...form,mode})});
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let fullText = "";
+      while(true) {
+        const {done,value} = await reader.read();
+        if(done) break;
+        const chunk = decoder.decode(value);
+        const lines = chunk.split("\n").filter(l=>l.startsWith("data: "));
+        for(const line of lines) {
+          try {
+            const d = JSON.parse(line.slice(6));
+            if(d.error) { alert("오류: "+d.error); setLoading(false); return; }
+            if(d.text) { fullText+=d.text; setStreamText(fullText); }
+            if(d.done) {
+              // 완료 — JSON 파싱
+              let result;
+              try {
+                const jsonMatch = fullText.match(/\{[\s\S]*\}/);
+                result = jsonMatch ? JSON.parse(jsonMatch[0]) : {raw:fullText};
+              } catch { result = {raw:fullText}; }
+              if(mode==="competitor") setAnalysis(result);
+              else { setPlan(result); saveHistory({...result,createdAt:new Date().toISOString()}); }
+              setStreamText("");
+            }
+          } catch {}
+        }
+      }
+    } catch(e) { alert("오류: "+e.message); }
+    setLoading(false);
+  };
+  const generate = () => streamFetch("generate");
+  const analyze = () => streamFetch("competitor");
+
+  const slideTypeColor = t => {
+    const m = {cover:"#7c3aed",hook:"#dc2626",model:"#0891b2",intro:"#2563eb",compare:"#ea580c",feature:"#16a34a",usage:"#6366f1",safety:"#64748b",color:"#ec4899",spec:"#475569",reference:"#a1a1aa"};
+    return m[t]||"#64748b";
+  };
+
+  const inputStyle = {width:"100%",padding:"8px 10px",border:`1px solid ${C.border}`,borderRadius:8,fontSize:12,fontFamily:"inherit",outline:"none",boxSizing:"border-box"};
+
+  return (
+    <div style={{padding:"24px 0"}}>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:20}}>
+        <div>
+          <div style={{fontSize:20,fontWeight:900,color:C.ink}}>상세페이지 기획안</div>
+          <div style={{fontSize:12,color:C.inkMid,marginTop:2}}>AI 자동 생성 · 경쟁사 분석 · OA 표준 템플릿 기반</div>
+        </div>
+      </div>
+
+      {/* 탭 */}
+      <div style={{display:"flex",gap:4,marginBottom:16}}>
+        {[{id:"generate",label:"기획안 생성",icon:"auto_awesome"},{id:"analysis",label:"경쟁사 분석",icon:"compare"},{id:"history",label:`히스토리 (${history.length})`,icon:"history"}].map(t=>(
+          <button key={t.id} onClick={()=>setTab(t.id)} style={{padding:"7px 14px",border:"none",borderRadius:8,fontSize:11,fontWeight:700,cursor:"pointer",
+            background:tab===t.id?C.rose:"transparent",color:tab===t.id?"#fff":C.inkMid,fontFamily:"inherit",display:"flex",alignItems:"center",gap:4}}>
+            <span className="material-symbols-outlined" style={{fontSize:14}}>{t.icon}</span>{t.label}
+          </button>
+        ))}
+      </div>
+
+      {/* 입력 폼 */}
+      {(tab==="generate"||tab==="analysis")&&(
+        <div style={{background:C.white,border:`1px solid ${C.border}`,borderRadius:12,padding:16,marginBottom:16}}>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+            <div>
+              <label style={{fontSize:10,fontWeight:700,color:C.inkMid}}>제품명 *</label>
+              <input value={form.productName} onChange={e=>setForm({...form,productName:e.target.value})} placeholder="예: 에어스트레이트" style={inputStyle}/>
+            </div>
+            <div>
+              <label style={{fontSize:10,fontWeight:700,color:C.inkMid}}>카테고리</label>
+              <select value={form.category} onChange={e=>setForm({...form,category:e.target.value})} style={inputStyle}>
+                {["이미용가전","생활가전","건강가전","계절가전","뷰티디바이스"].map(c=><option key={c}>{c}</option>)}
+              </select>
+            </div>
+            <div style={{gridColumn:"span 2"}}>
+              <label style={{fontSize:10,fontWeight:700,color:C.inkMid}}>핵심 기능 (쉼표 구분)</label>
+              <input value={form.features} onChange={e=>setForm({...form,features:e.target.value})} placeholder="예: 듀얼모드, 적외선케어, 97000RPM 항공모터, 글로우코팅" style={inputStyle}/>
+            </div>
+            <div>
+              <label style={{fontSize:10,fontWeight:700,color:C.inkMid}}>타겟</label>
+              <input value={form.targetAudience} onChange={e=>setForm({...form,targetAudience:e.target.value})} style={inputStyle}/>
+            </div>
+            <div>
+              <label style={{fontSize:10,fontWeight:700,color:C.inkMid}}>가격대</label>
+              <input value={form.priceRange} onChange={e=>setForm({...form,priceRange:e.target.value})} placeholder="예: 5-8만원" style={inputStyle}/>
+            </div>
+            <div style={{gridColumn:"span 2"}}>
+              <label style={{fontSize:10,fontWeight:700,color:C.inkMid}}>경쟁사/경쟁 제품</label>
+              <input value={form.competitors} onChange={e=>setForm({...form,competitors:e.target.value})} placeholder="예: 다이슨 에어랩, 샤오미 H501, 유닉스" style={inputStyle}/>
+            </div>
+          </div>
+          <div style={{display:"flex",gap:8,marginTop:12}}>
+            {tab==="generate"&&(
+              <button onClick={generate} disabled={loading} style={{flex:1,padding:"10px",background:C.rose,color:"#fff",border:"none",borderRadius:8,fontSize:13,fontWeight:800,cursor:"pointer",fontFamily:"inherit",opacity:loading?0.6:1}}>
+                {loading?"생성 중...":"기획안 생성"}
+              </button>
+            )}
+            {tab==="analysis"&&(
+              <button onClick={analyze} disabled={loading} style={{flex:1,padding:"10px",background:"#2563eb",color:"#fff",border:"none",borderRadius:8,fontSize:13,fontWeight:800,cursor:"pointer",fontFamily:"inherit",opacity:loading?0.6:1}}>
+                {loading?"분석 중...":"경쟁사 분석"}
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* 스트리밍 중 실시간 표시 */}
+      {loading&&streamText&&(
+        <div style={{background:C.white,border:`1px solid ${C.border}`,borderRadius:12,padding:16,marginBottom:12}}>
+          <div style={{fontSize:11,fontWeight:700,color:C.rose,marginBottom:8,display:"flex",alignItems:"center",gap:6}}>
+            <span style={{display:"inline-block",width:8,height:8,borderRadius:"50%",background:C.rose,animation:"pulse 1s infinite"}}/>
+            AI 생성 중...
+          </div>
+          <pre style={{fontSize:11,color:C.ink,whiteSpace:"pre-wrap",wordBreak:"break-word",lineHeight:1.6,maxHeight:400,overflowY:"auto",fontFamily:"inherit"}}>{streamText}</pre>
+        </div>
+      )}
+
+      {/* 기획안 결과 */}
+      {tab==="generate"&&plan&&(
+        <div style={{display:"flex",flexDirection:"column",gap:12}}>
+          {/* 요약 카드 */}
+          <div style={{background:"linear-gradient(135deg,#7c3aed11,#ec489811)",border:`1px solid #e9d5ff`,borderRadius:12,padding:16}}>
+            <div style={{fontSize:18,fontWeight:900,color:C.ink}}>{plan.productName||form.productName}</div>
+            <div style={{fontSize:14,fontWeight:700,color:C.rose,marginTop:4}}>{plan.mainCopy}</div>
+            {plan.subCopy&&<div style={{fontSize:12,color:C.inkMid,marginTop:2}}>{plan.subCopy}</div>}
+            {plan.techBranding&&<div style={{marginTop:8,display:"inline-block",padding:"4px 10px",background:"#1d4ed811",border:"1px solid #93c5fd",borderRadius:20,fontSize:11,fontWeight:700,color:"#2563eb"}}>{plan.techBranding}</div>}
+            <div style={{display:"flex",gap:8,marginTop:10,fontSize:10,color:C.inkMid}}>
+              {plan.copyTone&&<span>카피톤: {plan.copyTone}</span>}
+              {plan.designTone&&<span>디자인: {plan.designTone}</span>}
+            </div>
+            <button onClick={async()=>{
+              const fileKey = prompt("피그마 파일 키 또는 URL을 입력하세요","FrFw1cLuSagJ72RbIZLXF1");
+              if(!fileKey) return;
+              const key = fileKey.includes("figma.com") ? fileKey.match(/\/(design|slides|board)\/([^/]+)/)?.[2]||fileKey : fileKey;
+              try {
+                const res = await fetch("/api/figma-export",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({fileKey:key,plan})});
+                const data = await res.json();
+                if(data.ok) alert("피그마에 기획안이 코멘트로 추가되었습니다!");
+                else alert("오류: "+(data.error||"알 수 없는 오류"));
+              } catch(e) { alert("오류: "+e.message); }
+            }} style={{marginTop:10,padding:"6px 14px",background:"#1d1d1d",color:"#fff",border:"none",borderRadius:8,fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit",display:"flex",alignItems:"center",gap:4}}>
+              <svg width="14" height="14" viewBox="0 0 38 57" fill="none"><path d="M10 28.5a9.5 9.5 0 0 1 9.5-9.5h9.5v19H19.5A9.5 9.5 0 0 1 10 28.5Z" fill="#1ABCFE"/><path d="M1 47.5A9.5 9.5 0 0 1 10.5 38H20v9.5a9.5 9.5 0 0 1-19 0Z" fill="#0ACF83"/><path d="M20 1v19h9.5a9.5 9.5 0 0 0 0-19H20Z" fill="#FF7262"/><path d="M1 9.5A9.5 9.5 0 0 0 10.5 19H20V1H10.5A9.5 9.5 0 0 0 1 9.5Z" fill="#F24E1E"/><path d="M1 28.5A9.5 9.5 0 0 0 10.5 38H20V19H10.5A9.5 9.5 0 0 0 1 28.5Z" fill="#A259FF"/></svg>
+              피그마로 보내기
+            </button>
+          </div>
+
+          {/* 핵심 기능 픽토그램 */}
+          {plan.features&&plan.features.length>0&&(
+            <div style={{background:C.white,border:`1px solid ${C.border}`,borderRadius:12,padding:16}}>
+              <div style={{fontSize:12,fontWeight:800,color:C.inkMid,marginBottom:10}}>핵심 기능 ({plan.features.length})</div>
+              <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(140px,1fr))",gap:8}}>
+                {plan.features.map((f,i)=>(
+                  <div key={i} style={{background:C.bg,borderRadius:8,padding:"10px 12px",textAlign:"center"}}>
+                    <div style={{fontSize:20,marginBottom:4}}>{f.icon||"⚡"}</div>
+                    <div style={{fontSize:11,fontWeight:800,color:C.ink}}>{f.title}</div>
+                    <div style={{fontSize:10,color:C.inkMid,marginTop:2}}>{f.description}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* 비교표 */}
+          {plan.comparisonTable&&(
+            <div style={{background:C.white,border:`1px solid ${C.border}`,borderRadius:12,padding:16}}>
+              <div style={{fontSize:12,fontWeight:800,color:C.inkMid,marginBottom:10}}>비교표</div>
+              <table style={{width:"100%",borderCollapse:"collapse",fontSize:11}}>
+                <thead>
+                  <tr style={{background:C.bg}}>
+                    {(plan.comparisonTable.headers||[]).map((h,i)=>(
+                      <th key={i} style={{padding:"8px 10px",textAlign:i===0?"left":"center",fontWeight:700,borderBottom:`1px solid ${C.border}`}}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {(plan.comparisonTable.rows||[]).map((row,i)=>(
+                    <tr key={i}>
+                      {row.map((cell,j)=>(
+                        <td key={j} style={{padding:"6px 10px",textAlign:j===0?"left":"center",borderBottom:`1px solid ${C.border}22`,
+                          fontWeight:j===row.length-1?700:400,color:j===row.length-1?C.rose:C.ink}}>{cell}</td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {/* 슬라이드 목록 */}
+          {plan.slides&&plan.slides.length>0&&(
+            <div style={{background:C.white,border:`1px solid ${C.border}`,borderRadius:12,padding:16}}>
+              <div style={{fontSize:12,fontWeight:800,color:C.inkMid,marginBottom:10}}>슬라이드 구성 ({plan.slides.length}페이지)</div>
+              {plan.slides.map((s,i)=>(
+                <div key={i} onClick={()=>setExpandSlide(expandSlide===i?null:i)}
+                  style={{borderBottom:`1px solid ${C.border}22`,padding:"8px 0",cursor:"pointer"}}>
+                  <div style={{display:"flex",alignItems:"center",gap:8}}>
+                    <span style={{width:24,height:24,borderRadius:6,background:slideTypeColor(s.type)+"22",color:slideTypeColor(s.type),
+                      fontSize:10,fontWeight:900,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>{s.page||i+1}</span>
+                    <span style={{fontSize:9,fontWeight:700,color:slideTypeColor(s.type),background:slideTypeColor(s.type)+"11",padding:"1px 6px",borderRadius:4}}>{s.type}</span>
+                    <span style={{fontSize:12,fontWeight:700,color:C.ink,flex:1}}>{s.title}</span>
+                    <span className="material-symbols-outlined" style={{fontSize:14,color:C.inkLt}}>{expandSlide===i?"expand_less":"expand_more"}</span>
+                  </div>
+                  {expandSlide===i&&(
+                    <div style={{marginTop:8,marginLeft:32,display:"flex",flexDirection:"column",gap:4}}>
+                      {s.copy&&<div style={{fontSize:11,color:C.ink}}><span style={{fontWeight:700,color:C.inkMid}}>카피:</span> {s.copy}</div>}
+                      {s.imageGuide&&<div style={{fontSize:11,color:C.ink}}><span style={{fontWeight:700,color:C.inkMid}}>이미지:</span> {s.imageGuide}</div>}
+                      {s.notes&&<div style={{fontSize:11,color:C.inkMid}}><span style={{fontWeight:700}}>노트:</span> {s.notes}</div>}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* 스펙 */}
+          {plan.specs&&plan.specs.length>0&&(
+            <div style={{background:C.white,border:`1px solid ${C.border}`,borderRadius:12,padding:16}}>
+              <div style={{fontSize:12,fontWeight:800,color:C.inkMid,marginBottom:10}}>스펙표</div>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:4}}>
+                {plan.specs.map((s,i)=>(
+                  <div key={i} style={{display:"flex",padding:"4px 0",fontSize:11,borderBottom:`1px solid ${C.border}22`}}>
+                    <span style={{width:80,color:C.inkMid,fontWeight:600,flexShrink:0}}>{s.label}</span>
+                    <span style={{color:C.ink,fontWeight:700}}>{s.value}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* 경쟁사 분석 결과 */}
+      {tab==="analysis"&&analysis&&(
+        <div style={{display:"flex",flexDirection:"column",gap:12}}>
+          {/* 후킹 카피 추천 */}
+          {analysis.hookCopies&&(
+            <div style={{background:"#fef3c7",border:"1px solid #fde68a",borderRadius:12,padding:16}}>
+              <div style={{fontSize:12,fontWeight:800,color:"#92400e",marginBottom:8}}>추천 후킹 카피</div>
+              {analysis.hookCopies.map((c,i)=>(
+                <div key={i} style={{fontSize:13,fontWeight:700,color:C.ink,padding:"4px 0"}}>{i+1}. {c}</div>
+              ))}
+            </div>
+          )}
+
+          {/* 차별화 포인트 */}
+          {analysis.differentiators&&(
+            <div style={{background:"#f0fdf4",border:"1px solid #bbf7d0",borderRadius:12,padding:16}}>
+              <div style={{fontSize:12,fontWeight:800,color:"#16a34a",marginBottom:8}}>오아 차별화 포인트</div>
+              {analysis.differentiators.map((d,i)=>(
+                <div key={i} style={{fontSize:11,color:C.ink,padding:"3px 0"}}>✅ {d}</div>
+              ))}
+            </div>
+          )}
+
+          {/* 경쟁사별 분석 */}
+          {analysis.competitors&&analysis.competitors.map((comp,i)=>(
+            <div key={i} style={{background:C.white,border:`1px solid ${C.border}`,borderRadius:12,padding:16}}>
+              <div style={{fontSize:13,fontWeight:800,color:C.ink,marginBottom:8}}>{comp.name}</div>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+                <div>
+                  <div style={{fontSize:10,fontWeight:700,color:"#16a34a",marginBottom:4}}>강점</div>
+                  {(comp.strengths||[]).map((s,j)=><div key={j} style={{fontSize:11,color:C.ink,padding:"2px 0"}}>• {s}</div>)}
+                </div>
+                <div>
+                  <div style={{fontSize:10,fontWeight:700,color:"#dc2626",marginBottom:4}}>약점</div>
+                  {(comp.weaknesses||[]).map((w,j)=><div key={j} style={{fontSize:11,color:C.ink,padding:"2px 0"}}>• {w}</div>)}
+                </div>
+              </div>
+            </div>
+          ))}
+
+          {/* 비교표 항목 추천 */}
+          {analysis.comparisonItems&&(
+            <div style={{background:C.white,border:`1px solid ${C.border}`,borderRadius:12,padding:16}}>
+              <div style={{fontSize:12,fontWeight:800,color:C.inkMid,marginBottom:8}}>비교표 추천 항목</div>
+              <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+                {analysis.comparisonItems.map((item,i)=>(
+                  <span key={i} style={{padding:"4px 10px",background:C.bg,borderRadius:20,fontSize:11,fontWeight:600,color:C.ink}}>{item}</span>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* 인사이트 */}
+          {analysis.insights&&(
+            <div style={{background:C.bg,borderRadius:12,padding:16}}>
+              <div style={{fontSize:12,fontWeight:800,color:C.inkMid,marginBottom:6}}>종합 인사이트</div>
+              <div style={{fontSize:12,color:C.ink,lineHeight:1.7}}>{analysis.insights}</div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* 히스토리 */}
+      {tab==="history"&&(
+        <div style={{display:"flex",flexDirection:"column",gap:8}}>
+          {history.length===0&&<div style={{textAlign:"center",padding:40,color:C.inkLt,fontSize:12}}>생성된 기획안이 없어요</div>}
+          {history.map((h,i)=>(
+            <div key={i} onClick={()=>{setPlan(h);setTab("generate");}} style={{background:C.white,border:`1px solid ${C.border}`,borderRadius:10,padding:"12px 14px",cursor:"pointer"}}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                <div>
+                  <div style={{fontSize:13,fontWeight:800,color:C.ink}}>{h.productName}</div>
+                  <div style={{fontSize:11,color:C.rose,fontWeight:600}}>{h.mainCopy}</div>
+                </div>
+                <div style={{fontSize:10,color:C.inkLt}}>{h.createdAt?.slice(0,10)}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // 프로젝트 관리
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -6227,6 +6579,7 @@ export default function OaDashboard(){
     {id:"hypothesis",icon:"psychology",     label:"가설"},
     {id:"insight",   icon:"edit_note",      label:"팀 노트"},
     {id:"projects",  icon:"folder_open",    label:"프로젝트"},
+    {id:"detailplan",icon:"article",        label:"상세기획"},
   ];
   const NAVS_WIP=[
     {id:"keyword",   icon:"search",         label:"키워드"},
@@ -14954,6 +15307,7 @@ export default function OaDashboard(){
           {sec==="hypothesis"  && HypothesisSection}
           {sec==="insight"     && InsightSection}
           {sec==="projects"    && <ProjectSection/>}
+          {sec==="detailplan"  && <DetailPlanSection/>}
           {sec==="coupang"     && CoupangSection}
         </main>
       </div>
