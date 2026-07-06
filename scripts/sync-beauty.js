@@ -8,7 +8,7 @@ const mysql = require('mysql2/promise');
 const SUPA_URL = 'https://lugqeflqusqsyotdiaxg.supabase.co';
 const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx1Z3FlZmxxdXNxc3lvdGRpYXhnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMxOTkzMzksImV4cCI6MjA4ODc3NTMzOX0.ls7CN3iISLM_JcGEaVRV_JDSvm4BFqYMU6m4iBGiRA0';
 
-const BEAUTY_IDS = [44,70,71,72,73,74,75,76,77,78,80,82,200,201,202,203,204,205,206,207,208,209,315];
+const BEAUTY_IDS = ['DRY','STR','MSG','GVN','ETB','ORL','TBS','SCA','MUM'];
 const SYNC_DAYS = 400; // 전년도 비교를 위해 13개월치
 
 async function fetchBeautySales(pool) {
@@ -16,16 +16,16 @@ async function fetchBeautySales(pool) {
   const [rows] = await pool.query(`
     SELECT
       제품명 as name,
-      제품카테고리ID as cat_id,
-      거래처명 as channel,
+      카테고리코드 as cat_id,
+      매출처명 as channel,
       DATE(판매날짜) as date,
       SUM(판매수량) as qty,
       SUM(총매출액) as revenue,
-      SUM(총이익) as profit
+      SUM(총매출이익) as profit
     FROM v_daily_sales_detail
     WHERE 판매날짜 >= DATE_SUB(CURDATE(), INTERVAL ? DAY)
-      AND 제품카테고리ID IN (${placeholders})
-    GROUP BY 제품명, 제품카테고리ID, 거래처명, DATE(판매날짜)
+      AND 카테고리코드 IN (${placeholders})
+    GROUP BY 제품명, 카테고리코드, 매출처명, DATE(판매날짜)
     ORDER BY date DESC
   `, [SYNC_DAYS, ...BEAUTY_IDS]);
   return rows;

@@ -6553,6 +6553,7 @@ export default function OaDashboard(){
     {id:"inf_archive",icon:"photo_library", label:"아카이브"},
     {id:"schedule",  icon:"calendar_month", label:"스케줄"},
     {id:"creative",  icon:"palette",        label:"소재"},
+    {id:"hypothesis",icon:"psychology",     label:"가설"},
     {id:"insight",   icon:"edit_note",      label:"팀 노트"},
     {id:"projects",  icon:"folder_open",    label:"프로젝트"},
   ];
@@ -10861,6 +10862,146 @@ export default function OaDashboard(){
 
   // 📝 팀 노트
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  const HypothesisSection = (()=>{
+    const [hypoRows, setHypoRows] = useState([]);
+    const [hypoLoading, setHypoLoading] = useState(true);
+    const [hypoGenerating, setHypoGenerating] = useState(false);
+    const [hypoMsg, setHypoMsg] = useState("");
+    const [hypoFilter, setHypoFilter] = useState("전체"); // 전체 | 원인분석 | 마케팅액션
+
+    async function loadHypos(){
+      setHypoLoading(true);
+      try{
+        const r = await fetch("/api/hypothesis?action=list");
+        const d = await r.json();
+        setHypoRows(Array.isArray(d.rows)?d.rows:[]);
+      }catch(e){ setHypoMsg("불러오기 실패: "+e.message); }
+      setHypoLoading(false);
+    }
+    useEffect(()=>{ loadHypos(); },[]);
+
+    async function generateHypos(force){
+      setHypoGenerating(true); setHypoMsg("");
+      try{
+        const r = await fetch(`/api/hypothesis?action=generate${force?"&force=1":""}`);
+        const d = await r.json();
+        if(d.error) setHypoMsg("생성 실패: "+d.error);
+        else if(d.skipped) setHypoMsg("오늘 가설이 이미 있어요. 다시 만들려면 '재생성'을 눌러주세요.");
+        else { setHypoMsg(`가설 ${d.count}개 생성 완료`); await loadHypos(); }
+      }catch(e){ setHypoMsg("생성 실패: "+e.message); }
+      setHypoGenerating(false);
+    }
+
+    async function setHypoStatus(id, status){
+      setHypoRows(rows=>rows.map(r=>r.id===id?{...r,status}:r));
+      try{
+        await fetch("/api/hypothesis",{method:"PATCH",
+          headers:{"Content-Type":"application/json"},
+          body:JSON.stringify({id,status})});
+      }catch(e){}
+    }
+
+    const HYPO_TYPE_COLORS = {원인분석:"#0891b2", 마케팅액션:"#7c3aed"};
+    const HYPO_PRI = {high:{label:"높음",color:C.rose}, mid:{label:"중간",color:"#f59e0b"}, low:{label:"낮음",color:C.inkLt}};
+    const HYPO_STATUS = {open:{label:"검증 전",color:C.inkMid}, confirmed:{label:"검증됨",color:"#059669"}, rejected:{label:"기각",color:C.inkLt}};
+
+    const filtered = hypoRows.filter(r=>hypoFilter==="전체"||r.type===hypoFilter);
+    const byDate = {};
+    filtered.forEach(r=>{ (byDate[r.date]=byDate[r.date]||[]).push(r); });
+    const dates = Object.keys(byDate).sort((a,b)=>b.localeCompare(a));
+
+    return(
+    <div style={{display:"flex",flexDirection:"column",gap:14}}>
+      {/* 헤더 */}
+      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:8}}>
+        <div>
+          <div style={{fontSize:16,fontWeight:900,color:C.ink}}>판매 가설</div>
+          <div style={{fontSize:11,color:C.inkMid,marginTop:2}}>매일 판매 데이터를 분석해 원인/액션 가설을 만들어요</div>
+        </div>
+        <div style={{display:"flex",gap:6}}>
+          <button onClick={()=>generateHypos(false)} disabled={hypoGenerating}
+            style={{fontSize:11,fontWeight:800,padding:"8px 14px",borderRadius:8,border:"none",
+              background:hypoGenerating?C.border:C.rose,color:hypoGenerating?C.inkMid:"#fff",
+              cursor:hypoGenerating?"default":"pointer",fontFamily:"inherit"}}>
+            {hypoGenerating?"생성 중...":"오늘 가설 생성"}
+          </button>
+          <button onClick={()=>generateHypos(true)} disabled={hypoGenerating}
+            style={{fontSize:11,fontWeight:700,padding:"8px 14px",borderRadius:8,
+              border:`1px solid ${C.border}`,background:"#fff",color:C.inkMid,
+              cursor:hypoGenerating?"default":"pointer",fontFamily:"inherit"}}>
+            재생성
+          </button>
+        </div>
+      </div>
+
+      {hypoMsg&&(
+        <div style={{fontSize:12,fontWeight:700,color:C.inkMid,background:C.cream,
+          padding:"8px 12px",borderRadius:8,border:`1px solid ${C.border}`}}>{hypoMsg}</div>
+      )}
+
+      {/* 필터 */}
+      <div style={{display:"flex",gap:6}}>
+        {["전체","원인분석","마케팅액션"].map(f=>(
+          <button key={f} onClick={()=>setHypoFilter(f)}
+            style={{fontSize:11,padding:"5px 12px",borderRadius:20,fontFamily:"inherit",cursor:"pointer",
+              border:`1px solid ${hypoFilter===f?C.rose:C.border}`,
+              background:hypoFilter===f?C.rose:"#fff",
+              color:hypoFilter===f?"#fff":C.inkMid,
+              fontWeight:hypoFilter===f?800:600}}>{f}</button>
+        ))}
+      </div>
+
+      {hypoLoading&&<div style={{fontSize:12,color:C.inkMid,padding:20,textAlign:"center"}}>불러오는 중...</div>}
+      {!hypoLoading&&dates.length===0&&(
+        <div style={{fontSize:12,color:C.inkMid,padding:30,textAlign:"center",
+          background:"#fff",borderRadius:12,border:`1px solid ${C.border}`}}>
+          아직 가설이 없어요. "오늘 가설 생성"을 눌러보세요.
+        </div>
+      )}
+
+      {/* 날짜별 카드 */}
+      {dates.map(date=>(
+        <div key={date} style={{display:"flex",flexDirection:"column",gap:8}}>
+          <div style={{fontSize:12,fontWeight:800,color:C.ink,marginTop:4}}>{date}</div>
+          {byDate[date].map(h=>{
+            const tc = HYPO_TYPE_COLORS[h.type]||C.inkMid;
+            const pri = HYPO_PRI[h.priority]||HYPO_PRI.mid;
+            const st = HYPO_STATUS[h.status]||HYPO_STATUS.open;
+            return(
+            <div key={h.id} style={{background:"#fff",borderRadius:12,padding:"12px 14px",
+              border:`1px solid ${C.border}`,opacity:h.status==="rejected"?0.55:1}}>
+              <div style={{display:"flex",alignItems:"center",gap:6,flexWrap:"wrap",marginBottom:6}}>
+                <span style={{fontSize:10,fontWeight:800,color:tc,background:`${tc}14`,
+                  padding:"2px 8px",borderRadius:10}}>{h.type}</span>
+                <span style={{fontSize:10,fontWeight:800,color:pri.color,background:`${pri.color}14`,
+                  padding:"2px 8px",borderRadius:10}}>우선순위 {pri.label}</span>
+                <span style={{fontSize:10,fontWeight:700,color:st.color}}>{st.label}</span>
+                {h.product&&<span style={{fontSize:11,fontWeight:800,color:C.ink,marginLeft:"auto"}}>{h.product}</span>}
+              </div>
+              <div style={{fontSize:13,color:C.ink,lineHeight:1.5}}>{h.hypothesis}</div>
+              {h.evidence&&(
+                <div style={{fontSize:11,color:C.inkMid,marginTop:6,background:C.cream,
+                  padding:"6px 10px",borderRadius:8}}>근거: {h.evidence}</div>
+              )}
+              {h.status==="open"&&(
+                <div style={{display:"flex",gap:6,marginTop:8}}>
+                  <button onClick={()=>setHypoStatus(h.id,"confirmed")}
+                    style={{fontSize:10,fontWeight:700,padding:"4px 10px",borderRadius:6,
+                      border:"1px solid #05966933",background:"#05966910",color:"#059669",
+                      cursor:"pointer",fontFamily:"inherit"}}>검증됨</button>
+                  <button onClick={()=>setHypoStatus(h.id,"rejected")}
+                    style={{fontSize:10,fontWeight:700,padding:"4px 10px",borderRadius:6,
+                      border:`1px solid ${C.border}`,background:"#fff",color:C.inkMid,
+                      cursor:"pointer",fontFamily:"inherit"}}>기각</button>
+                </div>
+              )}
+            </div>);
+          })}
+        </div>
+      ))}
+    </div>);
+  })();
+
   const InsightSection = (()=>{
     const MEMBERS = ["소리","영서","경은","지수"];
     const CATS = ["공통","공지","요청","기획","인사이트"];
@@ -14175,6 +14316,7 @@ export default function OaDashboard(){
           {sec==="market"      && KeywordSection}
           {sec==="review"      && ReviewSection}
           {sec==="naver_review" && <NaverReviewSection/>}
+          {sec==="hypothesis"  && HypothesisSection}
           {sec==="insight"     && InsightSection}
           {sec==="projects"    && <ProjectSection/>}
           {sec==="coupang"     && CoupangSection}

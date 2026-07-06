@@ -1,5 +1,15 @@
 {
   "framework": "nextjs",
   "buildCommand": "npm run build",
-  "outputDirectory": ".next"
+  "outputDirectory": ".next",
+  "crons": [
+    {
+      "path": "/api/sync-products?secret=${ERP_SYNC_SECRET}",
+      "schedule": "7 0 * * *"
+    },
+    {
+      "path": "/api/hypothesis?action=generate",
+      "schedule": "23 23 * * *"
+    }
+  ]
 }
