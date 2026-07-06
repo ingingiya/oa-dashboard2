@@ -11,7 +11,10 @@ const sH = {
   'Content-Type': 'application/json',
 };
 
-// Supabase beauty_sales에서 최근 14일 데이터 조회 (매일 MySQL→Supabase 동기화됨)
+// 이미용 카테고리 코드 (드라이기, 고데기, 안마기, 갈바닉, 전동칫솔, 구강세정기, 칫솔살균기, 체중계, 화장거울)
+const BEAUTY_CODES = ['DRY','STR','MSG','GVN','ETB','ORL','TBS','SCA','MUM'];
+
+// Supabase beauty_sales에서 최근 14일 이미용 데이터 조회 (매일 MySQL→Supabase 동기화됨)
 // Vercel에서 MySQL 직접 접속이 차단되어 있어 동기화 테이블 사용
 async function fetchSalesData() {
   const kstNow = new Date(Date.now() + 9 * 3600 * 1000);
@@ -25,7 +28,7 @@ async function fetchSalesData() {
   const PAGE = 1000;
   for (let offset = 0; offset < 50000; offset += PAGE) {
     const res = await fetch(
-      `${SUPA_URL}/rest/v1/beauty_sales?select=name,channel,date,qty,revenue&date=gte.${from14}&order=date.desc`,
+      `${SUPA_URL}/rest/v1/beauty_sales?select=name,channel,date,qty,revenue&date=gte.${from14}&cat_id=in.(${BEAUTY_CODES.join(',')})&order=date.desc`,
       { headers: { ...sH, Range: `${offset}-${offset + PAGE - 1}` }, cache: 'no-store' }
     );
     if (!res.ok) throw new Error(`판매 데이터 조회 실패: ${await res.text()}`);
