@@ -92,6 +92,43 @@ async function fetchSalesData() {
   return { trend, channelShift, yesterday };
 }
 
+// 쿠팡·지그재그 실판매 (네이버웍스 메일 파일 → channel_daily_sales 동기화)
+// ERP의 쿠팡/지그재그 수치는 일괄 발주라 실제 소비자 판매와 다름
+async function fetchRealChannelSales() {
+  const kstNow = new Date(Date.now() + 9 * 3600 * 1000);
+  const dstr = (d) => new Date(kstNow.getTime() - d * 86400000).toISOString().split('T')[0];
+  const from14 = dstr(14);
+  const from7 = dstr(7);
+
+  const kw = ['드라이', '고데기', '갈바닉', '거울', '소닉플로우', '에어리'];
+  const orFilter = kw.map(k => `name.ilike.*${k}*`).join(',');
+
+  const all = [];
+  const PAGE = 1000;
+  for (let offset = 0; offset < 20000; offset += PAGE) {
+    const res = await fetch(
+      `${SUPA_URL}/rest/v1/channel_daily_sales?select=channel,name,date,qty&date=gte.${from14}&or=(${encodeURIComponent(orFilter)})`,
+      { headers: { ...sH, Range: `${offset}-${offset + PAGE - 1}` }, cache: 'no-store' }
+    );
+    if (!res.ok) return []; // 테이블 없거나 오류 시 조용히 스킵
+    const page = await res.json();
+    all.push(...page);
+    if (page.length < PAGE) break;
+  }
+
+  const byKey = {};
+  for (const r of all) {
+    const k = `${r.channel}|${r.name}`;
+    const o = byKey[k] = byKey[k] || { channel: r.channel, name: r.name, this_week: 0, last_week: 0 };
+    if (r.date >= from7) o.this_week += Number(r.qty) || 0;
+    else o.last_week += Number(r.qty) || 0;
+  }
+  return Object.values(byKey)
+    .filter(o => o.this_week + o.last_week >= 3)
+    .sort((a, b) => Math.abs(b.this_week - b.last_week) - Math.abs(a.this_week - a.last_week))
+    .slice(0, 25);
+}
+
 // 과거 검증 결과 (피드백 루프용)
 async function fetchPastVerdicts() {
   const res = await fetch(
@@ -102,7 +139,7 @@ async function fetchPastVerdicts() {
   return Array.isArray(rows) ? rows : [];
 }
 
-async function generateHypotheses(salesData, pastVerdicts) {
+async function generateHypotheses(salesData, pastVerdicts, realChannel) {
   const ANTHROPIC_KEY = process.env.ANTHROPIC_API_KEY;
   if (!ANTHROPIC_KEY) throw new Error('ANTHROPIC_API_KEY 환경변수가 없어요');
 
@@ -133,6 +170,9 @@ ${shiftText}
 ## 어제 판매 (채널별)
 ${yesterdayText}
 
+## 쿠팡·지그재그 실판매 (실제 소비자 판매, 주간 수량)
+${realChannel.length ? realChannel.map(o => `${o.name} [${o.channel}]: 지난주 ${o.last_week}개 → 이번주 ${o.this_week}개`).join('\n') : '(데이터 없음)'}
+
 ## 과거 가설 검증 결과 (참고 — 맞았던 패턴은 발전시키고, 틀렸던 유형의 가설은 피하세요)
 ${feedbackText}
 
@@ -146,7 +186,7 @@ ${feedbackText}
 - 원인분석 가설 3개 + 마케팅액션 가설 3개, 총 6개
 - 반드시 위 데이터의 실제 숫자를 evidence에 인용
 - 4주 추이에서 지속 상승/하락 vs 일시 변동을 구분하고, 채널 이동 신호를 활용
-- 주의: 쿠팡·지그재그 수치는 플랫폼의 일괄 발주(사입)가 섞여 있어 하루에 몰려 잡힐 수 있음. 이 채널의 급등을 실제 소비자 수요 증가로 단정하지 말고, 발주 가능성을 함께 언급할 것
+- 주의: 위 판매 추이/어제 판매(ERP)의 쿠팡·지그재그 수치는 플랫폼 일괄 발주(사입)라 하루에 몰려 잡힘. 쿠팡·지그재그 판단은 반드시 "쿠팡·지그재그 실판매" 섹션 수치를 기준으로 할 것 (실판매 데이터 없으면 발주 가능성을 언급)
 - 변동폭이 큰 제품 위주로
 - 한국어로 작성`;
 
@@ -342,8 +382,10 @@ export async function GET(request) {
         });
       }
 
-      const [salesData, pastVerdicts] = await Promise.all([fetchSalesData(), fetchPastVerdicts()]);
-      const hypotheses = await generateHypotheses(salesData, pastVerdicts);
+      const [salesData, pastVerdicts, realChannel] = await Promise.all([
+        fetchSalesData(), fetchPastVerdicts(), fetchRealChannelSales(),
+      ]);
+      const hypotheses = await generateHypotheses(salesData, pastVerdicts, realChannel);
 
       const rows = hypotheses.map(h => ({
         date: today,
