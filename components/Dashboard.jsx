@@ -5403,6 +5403,7 @@ export default function OaDashboard(){
 
   // 목표 메모 (Supabase 팀 공유)
   const [metaGoal, setMetaGoal]         = useSyncState("oa_meta_goal_v7", "");
+  const [monthlyTarget, setMonthlyTarget] = useSyncState("oa_monthly_target_v1", 0); // 이번 달 목표 매출 (원)
   const [metaGoalEditing, setMetaGoalEditing] = useState(false);
   const [metaGoalInput, setMetaGoalInput]     = useState("");
 
@@ -6689,6 +6690,52 @@ export default function OaDashboard(){
           ))}
         </div>
       )}
+
+      {/* ── 월 매출 목표 진척률 ── */}
+      {homeSales&&(()=>{
+        const now=new Date();
+        const elapsed=now.getDate();
+        const daysInMonth=new Date(now.getFullYear(),now.getMonth()+1,0).getDate();
+        const forecast=elapsed>0?Math.round(homeSales.month/elapsed*daysInMonth):0;
+        const pct=monthlyTarget>0?Math.round(homeSales.month/monthlyTarget*100):0;
+        const fPct=monthlyTarget>0?Math.round(forecast/monthlyTarget*100):0;
+        const fmt=(v)=>v>=100000000?(v/100000000).toFixed(1)+"억":v>=10000?Math.round(v/10000).toLocaleString()+"만":v.toLocaleString()+"원";
+        const fColor=fPct>=100?C.good:fPct>=85?"#d97706":"#dc2626";
+        const editTarget=()=>{
+          const cur=monthlyTarget>0?String(Math.round(monthlyTarget/10000)):"";
+          const inp=window.prompt("이번 달 목표 매출 (만원 단위)",cur);
+          if(inp===null)return;
+          const n=Number(String(inp).replace(/[^\d]/g,""));
+          if(!isNaN(n))setMonthlyTarget(n*10000);
+        };
+        if(!monthlyTarget)return(
+          <div onClick={editTarget} style={{background:C.white,border:`1px dashed ${C.border}`,borderRadius:10,padding:"12px 14px",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+            <div style={{fontSize:11,color:C.inkMid,fontWeight:600}}>🎯 월 매출 목표를 설정하면 진척률과 월말 예측을 보여드려요</div>
+            <span style={{fontSize:11,color:C.gold,fontWeight:800}}>설정</span>
+          </div>
+        );
+        return(
+          <div style={{background:C.white,border:`1px solid ${C.border}`,borderRadius:10,padding:"12px 14px"}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+              <div style={{fontSize:10,color:C.inkMid,fontWeight:600}}>🎯 이번 달 목표 {fmt(monthlyTarget)}</div>
+              <button onClick={editTarget} style={{background:"none",border:"none",fontSize:10,color:C.inkLt,cursor:"pointer",fontFamily:"inherit",padding:0}}>수정</button>
+            </div>
+            <div style={{display:"flex",alignItems:"baseline",gap:8,marginTop:4}}>
+              <span style={{fontSize:18,fontWeight:900,color:C.ink}}>{pct}%</span>
+              <span style={{fontSize:11,color:C.inkMid}}>{fmt(homeSales.month)} / {fmt(monthlyTarget)}</span>
+            </div>
+            <div style={{height:8,background:C.cream,borderRadius:4,marginTop:6,overflow:"hidden",position:"relative"}}>
+              <div style={{width:`${Math.min(pct,100)}%`,height:"100%",background:pct>=100?C.good:C.gold,borderRadius:4}}/>
+              {/* 오늘 기준 페이스 마커 */}
+              <div style={{position:"absolute",top:0,left:`${Math.min(Math.round(elapsed/daysInMonth*100),100)}%`,width:2,height:"100%",background:C.inkLt,opacity:0.6}}/>
+            </div>
+            <div style={{fontSize:11,marginTop:6,color:C.inkMid}}>
+              현재 페이스 월말 착지 <span style={{fontWeight:800,color:fColor}}>{fmt(forecast)} ({fPct}%)</span>
+              {fPct<100&&<span style={{color:C.inkLt}}> · 목표까지 일평균 {fmt(Math.ceil((monthlyTarget-homeSales.month)/Math.max(daysInMonth-elapsed,1)))} 필요</span>}
+            </div>
+          </div>
+        );
+      })()}
 
       {/* ── 광고비 소진 ── */}
       {homeAdSpend&&(
