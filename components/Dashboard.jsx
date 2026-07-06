@@ -11111,6 +11111,12 @@ export default function OaDashboard(){
                 <div style={{fontSize:11,color:C.inkMid,marginTop:6,background:C.cream,
                   padding:"6px 10px",borderRadius:8}}>근거: {h.evidence}</div>
               )}
+              {(h.expected_impact||h.how_to_verify)&&(
+                <div style={{fontSize:11,color:C.inkMid,marginTop:6,display:"flex",flexDirection:"column",gap:3}}>
+                  {h.expected_impact&&<div>📈 <b style={{color:C.ink}}>예상 효과</b> — {h.expected_impact}</div>}
+                  {h.how_to_verify&&<div>🔬 <b style={{color:C.ink}}>검증 방법</b> — {h.how_to_verify}</div>}
+                </div>
+              )}
               {h.status==="open"&&h.auto_verdict&&(()=>{
                 const av = {confirm:{label:"🤖 AI 제안: 검증",color:"#059669"},
                   reject:{label:"🤖 AI 제안: 기각",color:C.rose},

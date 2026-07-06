@@ -14,21 +14,22 @@ const sH = {
 // 이미용 카테고리 코드 (드라이기, 고데기, 갈바닉, 화장거울)
 const BEAUTY_CODES = ['DRY','STR','GVN','MUM'];
 
-// Supabase beauty_sales에서 최근 14일 이미용 데이터 조회 (매일 MySQL→Supabase 동기화됨)
+// Supabase beauty_sales에서 최근 28일 이미용 데이터 조회 (매일 MySQL→Supabase 동기화됨)
 // Vercel에서 MySQL 직접 접속이 차단되어 있어 동기화 테이블 사용
 async function fetchSalesData() {
   const kstNow = new Date(Date.now() + 9 * 3600 * 1000);
   const dstr = (d) => new Date(kstNow.getTime() - d * 86400000).toISOString().split('T')[0];
-  const from14 = dstr(14);
+  const from28 = dstr(28);
   const from7 = dstr(7);
+  const from14 = dstr(14);
   const yesterdayDate = dstr(1);
 
-  // 페이지네이션으로 14일치 전체 조회
+  // 페이지네이션으로 28일치 전체 조회
   const all = [];
   const PAGE = 1000;
   for (let offset = 0; offset < 50000; offset += PAGE) {
     const res = await fetch(
-      `${SUPA_URL}/rest/v1/beauty_sales?select=name,channel,date,qty,revenue&date=gte.${from14}&cat_id=in.(${BEAUTY_CODES.join(',')})&order=date.desc`,
+      `${SUPA_URL}/rest/v1/beauty_sales?select=name,channel,date,qty,revenue&date=gte.${from28}&cat_id=in.(${BEAUTY_CODES.join(',')})&order=date.desc`,
       { headers: { ...sH, Range: `${offset}-${offset + PAGE - 1}` }, cache: 'no-store' }
     );
     if (!res.ok) throw new Error(`판매 데이터 조회 실패: ${await res.text()}`);
@@ -37,23 +38,42 @@ async function fetchSalesData() {
     if (page.length < PAGE) break;
   }
 
-  // 전주 vs 이번주 제품별 집계
+  // 주차 인덱스 (0=이번주, 1=지난주, 2, 3)
+  const weekIdx = (date) => {
+    if (date >= from7) return 0;
+    if (date >= from14) return 1;
+    if (date >= dstr(21)) return 2;
+    return 3;
+  };
+
+  // 4주 주별 제품 집계
   const byProduct = {};
   for (const r of all) {
     const p = byProduct[r.name] = byProduct[r.name] ||
-      { name: r.name, this_week: 0, last_week: 0, this_revenue: 0, last_revenue: 0 };
-    if (r.date >= from7) {
-      p.this_week += Number(r.qty) || 0;
-      p.this_revenue += Number(r.revenue) || 0;
-    } else {
-      p.last_week += Number(r.qty) || 0;
-      p.last_revenue += Number(r.revenue) || 0;
-    }
+      { name: r.name, w: [0, 0, 0, 0], rev: [0, 0, 0, 0] };
+    const wi = weekIdx(r.date);
+    p.w[wi] += Number(r.qty) || 0;
+    p.rev[wi] += Number(r.revenue) || 0;
   }
   const trend = Object.values(byProduct)
-    .filter(p => p.this_week > 0 || p.last_week > 0)
+    .filter(p => p.w.some(q => q > 0))
+    .sort((a, b) => Math.abs(b.w[0] - b.w[1]) - Math.abs(a.w[0] - a.w[1]))
+    .slice(0, 25);
+
+  // 채널 이동 감지: 제품×채널 이번주 vs 지난주
+  const byPC = {};
+  for (const r of all) {
+    if (r.date < from14) continue;
+    const key = `${r.name}|${r.channel || '기타'}`;
+    const c = byPC[key] = byPC[key] ||
+      { name: r.name, channel: r.channel || '기타', this_week: 0, last_week: 0 };
+    if (r.date >= from7) c.this_week += Number(r.qty) || 0;
+    else c.last_week += Number(r.qty) || 0;
+  }
+  const channelShift = Object.values(byPC)
+    .filter(c => c.this_week + c.last_week >= 3 && c.this_week !== c.last_week)
     .sort((a, b) => Math.abs(b.this_week - b.last_week) - Math.abs(a.this_week - a.last_week))
-    .slice(0, 30);
+    .slice(0, 20);
 
   // 어제 제품×채널별 집계
   const byChannel = {};
@@ -67,40 +87,65 @@ async function fetchSalesData() {
   }
   const yesterday = Object.values(byChannel)
     .sort((a, b) => b.revenue - a.revenue)
-    .slice(0, 30);
+    .slice(0, 25);
 
-  return { trend, yesterday };
+  return { trend, channelShift, yesterday };
 }
 
-async function generateHypotheses(salesData) {
+// 과거 검증 결과 (피드백 루프용)
+async function fetchPastVerdicts() {
+  const res = await fetch(
+    `${SUPA_URL}/rest/v1/daily_hypotheses?select=type,product,hypothesis,status&status=in.(confirmed,rejected)&order=date.desc&limit=10`,
+    { headers: sH, cache: 'no-store' }
+  );
+  const rows = await res.json();
+  return Array.isArray(rows) ? rows : [];
+}
+
+async function generateHypotheses(salesData, pastVerdicts) {
   const ANTHROPIC_KEY = process.env.ANTHROPIC_API_KEY;
   if (!ANTHROPIC_KEY) throw new Error('ANTHROPIC_API_KEY 환경변수가 없어요');
 
   const fmt = (n) => Math.round(Number(n) / 10000);
   const trendText = salesData.trend.map(r =>
-    `${r.name}: 지난주 ${r.last_week}개(${fmt(r.last_revenue)}만원) → 이번주 ${r.this_week}개(${fmt(r.this_revenue)}만원)`
+    `${r.name}: 3주전 ${r.w[3]}개 → 2주전 ${r.w[2]}개 → 지난주 ${r.w[1]}개(${fmt(r.rev[1])}만원) → 이번주 ${r.w[0]}개(${fmt(r.rev[0])}만원)`
+  ).join('\n');
+  const shiftText = salesData.channelShift.map(c =>
+    `${c.name} [${c.channel}]: 지난주 ${c.last_week}개 → 이번주 ${c.this_week}개`
   ).join('\n');
   const yesterdayText = salesData.yesterday.map(r =>
     `${r.name} [${r.channel}]: ${r.qty}개, ${fmt(r.revenue)}만원`
   ).join('\n');
+  const feedbackText = pastVerdicts.length
+    ? pastVerdicts.map(v =>
+        `[${v.status === 'confirmed' ? '맞았음' : '틀렸음'}] (${v.type}) ${v.product}: ${v.hypothesis}`
+      ).join('\n')
+    : '(아직 없음)';
 
   const prompt = `당신은 OA 뷰티(이미용 브랜드)의 판매 데이터 분석가입니다. 아래 데이터를 보고 가설을 만드세요.
 
-## 주간 판매 변화 (전주 vs 이번주, 변동 큰 순)
+## 4주 판매 추이 (제품별 주간 수량, 변동 큰 순)
 ${trendText}
+
+## 채널 이동 (제품×채널 주간 수량 변화)
+${shiftText}
 
 ## 어제 판매 (채널별)
 ${yesterdayText}
 
+## 과거 가설 검증 결과 (참고 — 맞았던 패턴은 발전시키고, 틀렸던 유형의 가설은 피하세요)
+${feedbackText}
+
 ## 출력 형식 (반드시 JSON 배열만, 다른 텍스트 없이)
 [
-  {"type":"원인분석","product":"제품명","hypothesis":"판매 변동의 원인 가설 (1-2문장)","evidence":"근거가 된 숫자","priority":"high|mid|low"},
-  {"type":"마케팅액션","product":"제품명","hypothesis":"다음에 시도해볼 마케팅/광고 액션 가설 (1-2문장)","evidence":"근거가 된 숫자","priority":"high|mid|low"}
+  {"type":"원인분석","product":"제품명","hypothesis":"판매 변동의 원인 가설 (1-2문장)","evidence":"근거가 된 숫자","priority":"high|mid|low","expected_impact":"가설이 맞다면 예상되는 효과/리스크 1문장 (숫자 포함)","how_to_verify":"이 가설을 확인하는 구체적 방법 1문장"},
+  {"type":"마케팅액션","product":"제품명","hypothesis":"다음에 시도해볼 마케팅/광고 액션 가설 (1-2문장)","evidence":"근거가 된 숫자","priority":"high|mid|low","expected_impact":"실행 시 기대 효과 1문장 (숫자 포함)","how_to_verify":"성공 여부를 판단할 지표/방법 1문장"}
 ]
 
 ## 규칙
 - 원인분석 가설 3개 + 마케팅액션 가설 3개, 총 6개
 - 반드시 위 데이터의 실제 숫자를 evidence에 인용
+- 4주 추이에서 지속 상승/하락 vs 일시 변동을 구분하고, 채널 이동 신호를 활용
 - 변동폭이 큰 제품 위주로
 - 한국어로 작성`;
 
@@ -129,7 +174,8 @@ async function sendTelegramBriefing(today, hypotheses) {
     const items = hypotheses.filter(h => h.type === type);
     if (!items.length) return '';
     return `\n${emoji} <b>${type}</b>\n` + items.map(h =>
-      `${pri[h.priority] || '🟡'} <b>${h.product}</b>\n${h.hypothesis}\n<i>근거: ${h.evidence}</i>`
+      `${pri[h.priority] || '🟡'} <b>${h.product}</b>\n${h.hypothesis}\n<i>근거: ${h.evidence}</i>` +
+      (h.expected_impact ? `\n📈 ${h.expected_impact}` : '')
     ).join('\n\n');
   };
 
@@ -289,8 +335,8 @@ export async function GET(request) {
         }
       }
 
-      const salesData = await fetchSalesData();
-      const hypotheses = await generateHypotheses(salesData);
+      const [salesData, pastVerdicts] = await Promise.all([fetchSalesData(), fetchPastVerdicts()]);
+      const hypotheses = await generateHypotheses(salesData, pastVerdicts);
 
       const rows = hypotheses.map(h => ({
         date: today,
@@ -299,6 +345,8 @@ export async function GET(request) {
         hypothesis: h.hypothesis || '',
         evidence: h.evidence || '',
         priority: h.priority || 'mid',
+        expected_impact: h.expected_impact || '',
+        how_to_verify: h.how_to_verify || '',
         status: 'open',
       }));
 
