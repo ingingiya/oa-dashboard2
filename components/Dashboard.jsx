@@ -2216,22 +2216,13 @@ function SchModalComp({mode, initial, onSave, onClose}){
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// 네이버 광고 섹션
+// 네이버 광고 섹션 (API 기반 — ad_campaigns 테이블, 이미용만)
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// 1일/7일/14일/30일 슬롯 → DB id: 1/2/3/4
-const PERIODS = [
-  {key:"1",  label:"1일",  id:1},
-  {key:"7",  label:"7일",  id:2},
-  {key:"14", label:"14일", id:3},
-  {key:"30", label:"30일", id:4},
-];
 
 function NaverSection() {
-  // 단일 슬롯 — 날짜 범위 선택기로 기간 필터
-  const [adData, setAdData] = useState({rows:[],filename:"",dateRange:"",uploadedAt:""});
+  const [allRows, setAllRows] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [uploading, setUploading] = useState(false);
-  const [groupBy, setGroupBy] = useState("adgroup");
+  const [groupBy, setGroupBy] = useState("campaign");
   const [sortCol, setSortCol] = useState("cost");
   const [sortAsc, setSortAsc] = useState(false);
   const [search, setSearch]   = useState("");
@@ -2239,27 +2230,32 @@ function NaverSection() {
   const [quickFilter, setQuickFilter] = useState("all");
   const [fixList, setFixList] = useState({});
   const [showFix, setShowFix] = useState(false);
-  const [fixAddInput, setFixAddInput] = useState({label:"", checked_at:new Date().toLocaleDateString("ko-KR"), memo:""});
-  const [fixDateAdd, setFixDateAdd] = useState({}); // {label: "YYYY-MM-DD"} — 날짜 추가 입력 중인 항목
-  const [fixMemoEdit, setFixMemoEdit] = useState({}); // {label: true} — 메모 편집 중인 항목
+  const [fixAddInput, setFixAddInput] = useState({label:"", checked_at:new Date().toISOString().slice(0,10), memo:""});
+  const [fixDateAdd, setFixDateAdd] = useState({});
+  const [fixMemoEdit, setFixMemoEdit] = useState({});
   const [dateFilter, setDateFilter] = useState({from:"",to:""});
   const [compareDateFilter, setCompareDateFilter] = useState({from:"",to:""});
   const [showCompare, setShowCompare] = useState(false);
+  const [days, setDays] = useState(14);
 
   const SURL = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const SKEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
   const sh = {"apikey":SKEY,"Authorization":`Bearer ${SKEY}`,"Content-Type":"application/json"};
 
+  const BEAUTY_KW = ["이미용"];
+
   useEffect(()=>{
     async function load() {
       try {
+        const cutoff = new Date(Date.now()-days*86400000).toISOString().split("T")[0];
         const [r1, fixRes] = await Promise.all([
-          fetch(`${SURL}/rest/v1/naver_ads_cache?id=eq.1&select=filename,rows,date_range,uploaded_at`, {headers:sh}),
+          fetch(`${SURL}/rest/v1/ad_campaigns?date=gte.${cutoff}&order=date.desc&limit=5000`, {headers:sh}),
           fetch(`${SURL}/rest/v1/naver_ads_fixlist?select=*`, {headers:sh}),
         ]);
         if(r1.ok) {
-          const d = await r1.json();
-          if(d[0]?.rows?.length) setAdData({rows:d[0].rows, filename:d[0].filename||"", dateRange:d[0].date_range||"", uploadedAt:d[0].uploaded_at||""});
+          const data = await r1.json();
+          const filtered = data.filter(r=> BEAUTY_KW.some(k=> (r.campaign_name||"").includes(k)));
+          setAllRows(filtered);
         }
         if(fixRes.ok) {
           const data = await fixRes.json();
@@ -2271,8 +2267,7 @@ function NaverSection() {
       setLoading(false);
     }
     load();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  },[]);
+  },[days]);
 
   const fmtN = v => Number(v||0).toLocaleString();
   const fmtW = v => {
@@ -2328,147 +2323,60 @@ function NaverSection() {
       {method:"PATCH", headers:sh, body:JSON.stringify({checked_at:updated})});
   }
 
-  function parseNaverCSV(text) {
-    // RFC4180 파서 — "1,234" 같은 따옴표 안 쉼표 정확히 처리
-    const parseLine = line => {
-      const res=[]; let cur="", inQ=false;
-      for(let i=0;i<line.length;i++){
-        const c=line[i];
-        if(c==='"'){ if(inQ&&line[i+1]==='"'){cur+='"';i++;}else inQ=!inQ; }
-        else if(c===','&&!inQ){ res.push(cur.trim()); cur=""; }
-        else cur+=c;
-      }
-      res.push(cur.trim());
-      return res;
-    };
-    const lines = text.replace(/^\uFEFF/,"").replace(/\r/g,"").split("\n").filter(l=>l.trim());
-    if(lines.length < 3) return { rows:[], dateRange:"" };
-    // 1행 타이틀에서 날짜 범위 추출
-    const titleLine = lines[0].replace(/"/g,"");
-    const dateMatch = titleLine.match(/(\d{4}[./\-]\d{1,2}[./\-]\d{1,2})\.?\s*~\s*(\d{4}[./\-]\d{1,2}[./\-]\d{1,2})\.?/);
-    const dateRange = dateMatch ? `${dateMatch[1]} ~ ${dateMatch[2]}` : "";
-    const headers = parseLine(lines[1]);
-    const KEEP_COLS = ["일","일별","날짜","일자","보고 시작일","캠페인","광고그룹","검색어","키워드","노출수","클릭수","총비용",
-      "총 전환수","총 전환매출액(원)","구매완료 전환수","구매완료 전환매출액(원)"];
-    const rows = lines.slice(2).map(line=>{
-      const vals = parseLine(line);
-      const o = {};
-      headers.forEach((h,i)=>{ o[h] = vals[i]||""; });
-      const slim = {};
-      KEEP_COLS.forEach(k=>{ if(o[k]!==undefined) slim[k]=o[k]; });
-      return slim;
-    }).filter(r=>r["캠페인"] && r["캠페인"].includes("이미용"));
-    return { rows, dateRange };
-  }
-
-  function onUpload(e) {
-    const file = e.target.files[0];
-    if(!file) return;
-    e.target.value = "";
-    const name = file.name;
-    const readerUtf8 = new FileReader();
-    readerUtf8.onload = async ev => {
-      const text = ev.target.result;
-      const hasKorean = /[\uAC00-\uD7A3]/.test(text);
-      const doSave = async (finalText) => {
-        setUploading(true);
-        try {
-          const { rows: parsed, dateRange: dr } = parseNaverCSV(finalText);
-          if(!parsed.length) { alert(`파싱된 데이터가 없습니다.\n파일: ${name}`); return; }
-          const uploadedAt = new Date().toISOString();
-          setAdData({rows:parsed, filename:name, dateRange:dr, uploadedAt});
-          setDateFilter({from:"",to:""});
-          const res = await fetch(`${SURL}/rest/v1/naver_ads_cache`,{
-            method:"POST",
-            headers:{...sh, Prefer:"resolution=merge-duplicates"},
-            body: JSON.stringify({id:1, filename:name, rows:parsed, date_range:dr, uploaded_at:uploadedAt}),
-          });
-          if(!res.ok) alert("저장 실패: "+(await res.text()));
-        } finally { setUploading(false); }
-      };
-      if(hasKorean) { await doSave(text); }
-      else {
-        const readerEuc = new FileReader();
-        readerEuc.onload = async ev2 => { await doSave(ev2.target.result); };
-        readerEuc.readAsText(file, "euc-kr");
-      }
-    };
-    readerUtf8.readAsText(file, "utf-8");
-  }
-
-  // 그룹 키
-  const groupKey = r => groupBy==="campaign" ? r["캠페인"] : groupBy==="adgroup" ? r["광고그룹"] : (r["검색어"] || r["키워드"]);
-
-  const allActiveRows = adData.rows || [];
-  // 날짜 컬럼 정규화 헬퍼 (YYYY-MM-DD)
-  const getRowDate = r => {
-    const raw = r["일"] || r["일별"] || r["날짜"] || r["일자"] || r["보고 시작일"] || "";
-    if(!raw || raw==="-") return "";
-    const s = String(raw).trim();
-    if(/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
-    const m = s.match(/^(\d{4})[.\s\/]+(\d{1,2})[.\s\/]+(\d{1,2})/);
-    if(m) return `${m[1]}-${m[2].padStart(2,"0")}-${m[3].padStart(2,"0")}`;
-    return "";
-  };
-  // 날짜 컬럼 추출 (있으면)
+  // 날짜 목록
   const availableDates = (() => {
     const set = new Set();
-    allActiveRows.forEach(r => { const d = getRowDate(r); if(d) set.add(d); });
+    allRows.forEach(r => { if(r.date) set.add(r.date); });
     return [...set].sort();
   })();
   const minDate = availableDates[0] || "";
   const maxDate = availableDates[availableDates.length-1] || "";
+
+  // 날짜 필터 적용
   const activeRows = (() => {
     const {from, to} = dateFilter;
-    if(!from && !to) return allActiveRows;
-    return allActiveRows.filter(r => {
-      const d = getRowDate(r);
-      if(!d) return false;
-      if(from && d < from) return false;
-      if(to && d > to) return false;
+    if(!from && !to) return allRows;
+    return allRows.filter(r => {
+      if(!r.date) return false;
+      if(from && r.date < from) return false;
+      if(to && r.date > to) return false;
       return true;
     });
   })();
   const compareRows = (() => {
     const {from, to} = compareDateFilter;
     if(!showCompare || (!from && !to)) return [];
-    return allActiveRows.filter(r => {
-      const d = getRowDate(r);
-      if(!d) return false;
-      if(from && d < from) return false;
-      if(to && d > to) return false;
+    return allRows.filter(r => {
+      if(!r.date) return false;
+      if(from && r.date < from) return false;
+      if(to && r.date > to) return false;
       return true;
     });
   })();
 
-  // 집계
+  // 집계 (캠페인별 or 날짜별)
   const aggregated = (() => {
     const map = {};
     activeRows.forEach(r => {
-      const key = groupKey(r);
+      const key = groupBy==="campaign" ? r.campaign_name : groupBy==="type" ? r.campaign_type : r.date;
       if(!key) return;
       if(!map[key]) map[key] = {
         label: key,
-        campaign: r["캠페인"],
-        adgroup: r["광고그룹"],
-        imp:0, click:0, cost:0,
-        totalConv:0, totalRevenue:0,
-        buyConv:0, buyRevenue:0,
+        campaign: r.campaign_name,
+        type: r.campaign_type,
+        imp:0, click:0, cost:0, conv:0, convAmt:0,
       };
-      map[key].imp          += Number(r["노출수"])||0;
-      map[key].click        += Number(r["클릭수"])||0;
-      map[key].cost         += Number(r["총비용"])||0;
-      map[key].totalConv    += Number(r["총 전환수"])||0;
-      map[key].totalRevenue += Number(r["총 전환매출액(원)"])||0;
-      map[key].buyConv      += Number(r["구매완료 전환수"])||0;
-      map[key].buyRevenue   += Number(r["구매완료 전환매출액(원)"])||0;
+      map[key].imp     += Number(r.impressions)||0;
+      map[key].click   += Number(r.clicks)||0;
+      map[key].cost    += Number(r.spend)||0;
+      map[key].conv    += Number(r.conversions)||0;
+      map[key].convAmt += Number(r.conv_amount)||0;
     });
     return Object.values(map).map(r=>({
       ...r,
-      ctr:    r.click>0 ? (r.click/r.imp*100).toFixed(2) : "0",
+      ctr:    r.imp>0 ? (r.click/r.imp*100).toFixed(2) : "0",
       cpc:    r.click>0 ? Math.round(r.cost/r.click) : 0,
-      roas:   r.cost>0  ? Math.round(r.buyRevenue/r.cost*100) : 0,  // 구매완료 기준
-      roasTotal: r.cost>0 ? Math.round(r.totalRevenue/r.cost*100) : 0, // 참고용
+      roas:   r.cost>0  ? Math.round(r.convAmt/r.cost*100) : 0,
     }));
   })();
 
@@ -2477,24 +2385,17 @@ function NaverSection() {
     if(!showCompare || !compareRows.length) return {};
     const map = {};
     compareRows.forEach(r => {
-      const key = groupKey(r);
+      const key = groupBy==="campaign" ? r.campaign_name : groupBy==="type" ? r.campaign_type : r.date;
       if(!key) return;
-      if(!map[key]) map[key] = {buyRevenue:0, cost:0};
-      map[key].cost       += Number(r["총비용"])||0;
-      map[key].buyRevenue += Number(r["구매완료 전환매출액(원)"])||0;
+      if(!map[key]) map[key] = {convAmt:0, cost:0};
+      map[key].cost    += Number(r.spend)||0;
+      map[key].convAmt += Number(r.conv_amount)||0;
     });
     const res = {};
     Object.entries(map).forEach(([k,v])=>{
-      res[k] = {cost:v.cost, roas:v.cost>0?Math.round(v.buyRevenue/v.cost*100):0};
+      res[k] = {cost:v.cost, roas:v.cost>0?Math.round(v.convAmt/v.cost*100):0};
     });
     return res;
-  })();
-
-  // 광고비 상위 20% 기준
-  const costThreshold = (() => {
-    if(!aggregated.length) return 0;
-    const sorted = [...aggregated].sort((a,b)=>b.cost-a.cost);
-    return sorted[Math.floor(sorted.length*0.2)]?.cost ?? 0;
   })();
 
   // 필터 + 정렬
@@ -2502,7 +2403,6 @@ function NaverSection() {
     .filter(r => r.cost >= minCost)
     .filter(r => !search || r.label.toLowerCase().includes(search.toLowerCase()))
     .filter(r => {
-      if(quickFilter==="highcost") return r.cost >= costThreshold;
       if(quickFilter==="warn") return r.cost>0 && r.roas < 300;
       return true;
     })
@@ -2511,27 +2411,26 @@ function NaverSection() {
   // 합계
   const total = filtered.reduce((s,r)=>({
     imp:s.imp+r.imp, click:s.click+r.click, cost:s.cost+r.cost,
-    buyConv:s.buyConv+r.buyConv, buyRevenue:s.buyRevenue+r.buyRevenue,
-  }),{imp:0,click:0,cost:0,buyConv:0,buyRevenue:0});
-  const totalRoas = total.cost>0 ? Math.round(total.buyRevenue/total.cost*100) : 0;
+    conv:s.conv+r.conv, convAmt:s.convAmt+r.convAmt,
+  }),{imp:0,click:0,cost:0,conv:0,convAmt:0});
+  const totalRoas = total.cost>0 ? Math.round(total.convAmt/total.cost*100) : 0;
 
   const COLS = [
-    {key:"label",      label:groupBy==="campaign"?"캠페인":groupBy==="adgroup"?"광고그룹":"검색어", align:"left", fmt:v=>v},
-    {key:"imp",        label:"노출",       align:"right", fmt:fmtN},
-    {key:"click",      label:"클릭",       align:"right", fmt:fmtN},
-    {key:"ctr",        label:"CTR%",       align:"right", fmt:v=>v+"%"},
-    {key:"cpc",        label:"CPC",        align:"right", fmt:v=>fmtN(v)+"원"},
-    {key:"cost",       label:"광고비",     align:"right", fmt:fmtW},
-    {key:"buyConv",    label:"구매전환",   align:"right", fmt:fmtN},
-    {key:"buyRevenue", label:"구매매출",   align:"right", fmt:fmtW},
-    {key:"roas",       label:"ROAS(구매)", align:"right", fmt:v=>`${fmtN(v)}%`},
+    {key:"label",   label:groupBy==="campaign"?"캠페인":groupBy==="type"?"유형":"날짜", align:"left", fmt:v=>v},
+    {key:"imp",     label:"노출",     align:"right", fmt:fmtN},
+    {key:"click",   label:"클릭",     align:"right", fmt:fmtN},
+    {key:"ctr",     label:"CTR%",     align:"right", fmt:v=>v+"%"},
+    {key:"cpc",     label:"CPC",      align:"right", fmt:v=>fmtN(v)+"원"},
+    {key:"cost",    label:"광고비",   align:"right", fmt:fmtW},
+    {key:"conv",    label:"전환",     align:"right", fmt:fmtN},
+    {key:"convAmt", label:"전환매출", align:"right", fmt:fmtW},
+    {key:"roas",    label:"ROAS",     align:"right", fmt:v=>`${fmtN(v)}%`},
     ...(showCompare&&compareRows.length?[
-      {key:"_cmp_cost",    label:"비교 광고비",  align:"right", fmt:()=>null},
-      {key:"_cmp_revenue", label:"비교 매출",    align:"right", fmt:()=>null},
-      {key:"_cmp_roas",    label:"비교 ROAS",   align:"right", fmt:()=>null},
-      {key:"_diff",        label:"ROAS 변화",   align:"right", fmt:()=>null},
+      {key:"_cmp_cost", label:"비교 광고비", align:"right", fmt:()=>null},
+      {key:"_cmp_roas", label:"비교 ROAS",  align:"right", fmt:()=>null},
+      {key:"_diff",     label:"ROAS 변화",  align:"right", fmt:()=>null},
     ]:[]),
-    {key:"_fix",       label:"수정",       align:"center", fmt:()=>null},
+    {key:"_fix",    label:"수정",     align:"center", fmt:()=>null},
   ];
 
   function thClick(key) {
@@ -2544,32 +2443,26 @@ function NaverSection() {
 
   if(loading) return <div style={{padding:40,textAlign:"center",color:C.inkLt,fontSize:13}}>불러오는 중...</div>;
 
-
   return (
     <div style={{display:"flex",flexDirection:"column",gap:14}}>
 
       {/* 헤더 */}
       <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:8}}>
         <div>
-          <div style={{fontSize:16,fontWeight:900,color:C.ink}}>📊 네이버 광고 · <span style={{color:"#03C75A"}}>구매완료 ROAS</span></div>
-          <div style={{fontSize:11,color:C.inkLt,marginTop:2}}>CSV 업로드 · 구매완료 전환매출 기준 · <span style={{color:"#f59e0b",fontWeight:700}}>📅 매주 월요일 업로드</span></div>
+          <div style={{fontSize:16,fontWeight:900,color:C.ink}}>📊 네이버 광고 · <span style={{color:"#03C75A"}}>이미용 ROAS</span></div>
+          <div style={{fontSize:11,color:C.inkLt,marginTop:2}}>API 자동 수집 · 매일 오전 9시 동기화{allRows.length>0&&` · ${availableDates[0]} ~ ${availableDates[availableDates.length-1]}`}</div>
         </div>
         <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}>
+          {[7,14,30,90].map(d=>(
+            <button key={d} onClick={()=>setDays(d)} style={{padding:"5px 12px",borderRadius:8,fontSize:11,fontWeight:700,cursor:"pointer",
+              border:`1.5px solid ${days===d?"#03C75A":C.border}`,background:days===d?"#E8FBF0":C.white,color:days===d?"#03C75A":C.inkMid}}>{d}일</button>
+          ))}
           <button onClick={()=>setShowFix(p=>!p)} style={{display:"flex",alignItems:"center",gap:5,padding:"7px 12px",borderRadius:8,background:"#FEF3C7",border:`1.5px solid #F59E0B`,color:"#92400E",fontSize:11,fontWeight:800,cursor:"pointer"}}><span className="material-symbols-outlined" style={{fontSize:14}}>flag</span>수정 체크{Object.keys(fixList).length>0?` ${Object.keys(fixList).length}건`:""}</button>
-          {uploading&&<span style={{fontSize:11,fontWeight:700,color:"#03C75A",display:"flex",alignItems:"center",gap:5}}><span className="material-symbols-outlined" style={{fontSize:14,animation:"spin 1s linear infinite"}}>progress_activity</span>업로드 중...</span>}
-          <label style={{display:"flex",alignItems:"center",gap:6,padding:"7px 12px",borderRadius:8,background:C.white,border:`1.5px solid ${C.border}`,color:uploading?C.inkLt:C.inkMid,fontSize:11,fontWeight:800,cursor:uploading?"not-allowed":"pointer",opacity:uploading?0.5:1}}>
-            <span className="material-symbols-outlined" style={{fontSize:14}}>upload_file</span>
-            CSV 업로드
-            <input type="file" accept=".csv" onChange={onUpload} disabled={uploading} style={{display:"none"}}/>
-          </label>
         </div>
       </div>
 
-      {/* 업로드 파일 정보 */}
-      {adData.filename&&<div style={{fontSize:10,color:C.inkLt}}>📄 {adData.dateRange||adData.filename}{adData.uploadedAt&&` · 업로드: ${new Date(adData.uploadedAt).toLocaleDateString("ko-KR")}`}</div>}
-
       {/* 기간 선택 + 비교 */}
-      {allActiveRows.length > 0 && (
+      {allRows.length > 0 && (
         <div style={{display:"flex",flexDirection:"column",gap:8}}>
           <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
             <span style={{fontSize:11,color:C.inkLt,fontWeight:700}}>조회 기간:</span>
@@ -2577,7 +2470,6 @@ function NaverSection() {
             <span style={{fontSize:11,color:C.inkLt}}>~</span>
             <input type="date" value={dateFilter.to} min={dateFilter.from||minDate||undefined} max={maxDate||undefined} onChange={e=>setDateFilter(p=>({...p,to:e.target.value}))} style={{padding:"4px 8px",borderRadius:7,border:`1.5px solid ${dateFilter.to?"#03C75A":C.border}`,fontSize:11,fontFamily:"inherit",outline:"none"}}/>
             {(dateFilter.from||dateFilter.to)&&<button onClick={()=>setDateFilter({from:"",to:""})} style={{padding:"4px 10px",borderRadius:7,border:`1px solid ${C.border}`,background:"none",color:C.inkMid,fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>전체</button>}
-            {availableDates.length===0&&<span style={{fontSize:10,color:C.inkLt}}>(CSV 재업로드 시 날짜 필터 활성화)</span>}
             <button onClick={()=>{setShowCompare(p=>!p);if(showCompare)setCompareDateFilter({from:"",to:""});}} style={{marginLeft:"auto",padding:"4px 12px",borderRadius:7,border:`1.5px solid ${showCompare?"#7C3AED":C.border}`,background:showCompare?"#F5F3FF":"none",color:showCompare?"#7C3AED":C.inkMid,fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>{showCompare?"비교 닫기":"기간 비교"}</button>
           </div>
           {showCompare&&(
@@ -2593,27 +2485,25 @@ function NaverSection() {
         </div>
       )}
 
-      {allActiveRows.length===0 && (
-        <div style={{background:C.white,border:`2px dashed ${C.border}`,borderRadius:14,
-          padding:"60px 20px",textAlign:"center"}}>
+      {allRows.length===0 && !loading && (
+        <div style={{background:C.white,border:`2px dashed ${C.border}`,borderRadius:14,padding:"60px 20px",textAlign:"center"}}>
           <div style={{fontSize:32,marginBottom:12}}>📂</div>
-          <div style={{fontSize:14,fontWeight:800,color:C.inkMid}}>CSV를 업로드하세요</div>
-          <div style={{fontSize:11,color:C.inkLt,marginTop:6}}>검색어보고서 · 구매완료/장바구니 포함 파일</div>
+          <div style={{fontSize:14,fontWeight:800,color:C.inkMid}}>이미용 광고 데이터 없음</div>
+          <div style={{fontSize:11,color:C.inkLt,marginTop:6}}>API 동기화가 실행되면 자동으로 표시됩니다</div>
         </div>
       )}
 
-      {allActiveRows.length>0 && (
+      {allRows.length>0 && (
         <>
           {/* KPI 배너 */}
           <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:10}}>
             {[
-              {label:"총 광고비",   value:fmtW(total.cost),     color:C.ink},
-              {label:"구매 전환",   value:fmtN(total.buyConv)+"건", color:C.ink},
-              {label:"구매 매출",   value:fmtW(total.buyRevenue), color:C.rose},
-              {label:"ROAS(구매)",  value:totalRoas+"%",          color:roasColor(totalRoas)},
+              {label:"총 광고비",  value:fmtW(total.cost),     color:C.ink},
+              {label:"전환 수",    value:fmtN(total.conv)+"건", color:C.ink},
+              {label:"전환 매출",  value:fmtW(total.convAmt),  color:C.rose},
+              {label:"ROAS",       value:totalRoas+"%",         color:roasColor(totalRoas)},
             ].map(k=>(
-              <div key={k.label} style={{background:C.white,border:`1px solid ${C.border}`,
-                borderRadius:10,padding:"12px 14px"}}>
+              <div key={k.label} style={{background:C.white,border:`1px solid ${C.border}`,borderRadius:10,padding:"12px 14px"}}>
                 <div style={{fontSize:10,color:C.inkLt,fontWeight:700}}>{k.label}</div>
                 <div style={{fontSize:17,fontWeight:900,color:k.color,marginTop:4}}>{k.value}</div>
               </div>
@@ -2635,15 +2525,15 @@ function NaverSection() {
             ))}
           </div>
 
-          {/* 필터 바 */}
+          {/* 그룹 + 검색 */}
           <div style={{display:"flex",gap:8,flexWrap:"wrap",alignItems:"center"}}>
-            {["campaign","adgroup","keyword"].map(g=>(
-              <button key={g} onClick={()=>setGroupBy(g)} style={{
+            {[{k:"campaign",l:"캠페인"},{k:"type",l:"유형"},{k:"date",l:"날짜별"}].map(g=>(
+              <button key={g.k} onClick={()=>setGroupBy(g.k)} style={{
                 padding:"5px 12px",borderRadius:8,fontSize:11,fontWeight:700,cursor:"pointer",
-                border:`1px solid ${groupBy===g?"#03C75A":C.border}`,
-                background:groupBy===g?"#E8FBF0":C.white,
-                color:groupBy===g?"#03C75A":C.inkMid,
-              }}>{g==="campaign"?"캠페인":g==="adgroup"?"광고그룹":"검색어"}</button>
+                border:`1px solid ${groupBy===g.k?"#03C75A":C.border}`,
+                background:groupBy===g.k?"#E8FBF0":C.white,
+                color:groupBy===g.k?"#03C75A":C.inkMid,
+              }}>{g.l}</button>
             ))}
             <input value={search} onChange={e=>setSearch(e.target.value)}
               placeholder="검색..." style={{padding:"5px 10px",borderRadius:8,fontSize:11,
@@ -2678,8 +2568,6 @@ function NaverSection() {
                 <tbody>
                   {filtered.map((r,i)=>{
                     const isFixed = !!fixList[r.label];
-                    const prev = fixList[r.label];
-                    const roasDiff = prev ? r.roas - prev.roas : null;
                     return (
                     <tr key={i} style={{borderBottom:`1px solid ${C.border}22`,
                       background:isFixed?"#FFFBEB":i%2===0?C.white:"#FAFAFA"}}>
@@ -2689,26 +2577,21 @@ function NaverSection() {
                             <button onClick={()=>toggleFix(r)} title={isFixed?"체크 해제":"수정 필요 체크"} style={{
                               padding:"3px 8px",borderRadius:6,fontSize:10,fontWeight:700,cursor:"pointer",
                               border:`1.5px solid ${isFixed?"#F59E0B":C.border}`,
-                              background:isFixed?"#FEF3C7":C.white,
-                              color:isFixed?"#92400E":C.inkMid,
+                              background:isFixed?"#FEF3C7":C.white,color:isFixed?"#92400E":C.inkMid,
                             }}>{isFixed?"✓수정중":"체크"}</button>
                           </td>
                         );
                         if(c.key==="_cmp_cost") {
-                          const prev = prevAggMap[r.label];
-                          return <td key={c.key} style={{padding:"9px 12px",textAlign:"right",fontSize:11,color:C.inkMid}}>{prev?fmtW(prev.cost):<span style={{color:C.inkLt}}>—</span>}</td>;
-                        }
-                        if(c.key==="_cmp_revenue") {
-                          const prev = prevAggMap[r.label];
-                          return <td key={c.key} style={{padding:"9px 12px",textAlign:"right",fontSize:11,color:C.rose}}>{prev?fmtW(prev.buyRevenue):<span style={{color:C.inkLt}}>—</span>}</td>;
+                          const p = prevAggMap[r.label];
+                          return <td key={c.key} style={{padding:"9px 12px",textAlign:"right",fontSize:11,color:C.inkMid}}>{p?fmtW(p.cost):<span style={{color:C.inkLt}}>—</span>}</td>;
                         }
                         if(c.key==="_cmp_roas") {
-                          const prev = prevAggMap[r.label];
-                          return <td key={c.key} style={{padding:"9px 12px",textAlign:"right",fontSize:11,fontWeight:700,color:prev?roasColor(prev.roas):C.inkLt}}>{prev?`${fmtN(prev.roas)}%`:"—"}</td>;
+                          const p = prevAggMap[r.label];
+                          return <td key={c.key} style={{padding:"9px 12px",textAlign:"right",fontSize:11,fontWeight:700,color:p?roasColor(p.roas):C.inkLt}}>{p?`${fmtN(p.roas)}%`:"—"}</td>;
                         }
                         if(c.key==="_diff") {
-                          const prev = prevAggMap[r.label];
-                          const diff = prev ? r.roas - prev.roas : null;
+                          const p = prevAggMap[r.label];
+                          const diff = p ? r.roas - p.roas : null;
                           return (
                             <td key="_diff" style={{padding:"9px 12px",textAlign:"right",fontWeight:800,fontSize:11}}>
                               {diff===null ? <span style={{color:C.inkLt}}>—</span> : (
@@ -2722,7 +2605,7 @@ function NaverSection() {
                         return (
                         <td key={c.key} style={{padding:"9px 12px",textAlign:c.align,
                           fontWeight:c.key==="roas"||c.key==="label"?800:600,
-                          color:c.key==="roas"?roasColor(r.roas):c.key==="buyRevenue"?C.rose:C.ink,
+                          color:c.key==="roas"?roasColor(r.roas):c.key==="convAmt"?C.rose:C.ink,
                           maxWidth:c.key==="label"?220:undefined,
                           overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
                           {c.fmt(r[c.key])}
@@ -2741,13 +2624,13 @@ function NaverSection() {
                     <td/>
                     <td/>
                     <td style={{padding:"9px 12px",textAlign:"right",fontWeight:800,color:C.ink}}>{fmtW(total.cost)}</td>
-                    <td style={{padding:"9px 12px",textAlign:"right",fontWeight:700}}>{fmtN(total.buyConv)}</td>
-                    <td style={{padding:"9px 12px",textAlign:"right",fontWeight:800,color:C.rose}}>{fmtW(total.buyRevenue)}</td>
+                    <td style={{padding:"9px 12px",textAlign:"right",fontWeight:700}}>{fmtN(total.conv)}</td>
+                    <td style={{padding:"9px 12px",textAlign:"right",fontWeight:800,color:C.rose}}>{fmtW(total.convAmt)}</td>
                     <td style={{padding:"9px 12px",textAlign:"right",fontWeight:900,color:roasColor(totalRoas)}}>{fmtN(totalRoas)}%</td>
                     {showCompare&&compareRows.length>0&&(()=>{
-                      const cmpTotal = Object.values(prevAggMap).reduce((acc,p)=>({cost:acc.cost+p.cost,buyRevenue:acc.buyRevenue+p.buyRevenue}),{cost:0,buyRevenue:0});
-                      const cmpRoas = cmpTotal.cost>0?Math.round(cmpTotal.buyRevenue/cmpTotal.cost*100):0;
-                      return(<><td style={{padding:"9px 12px",textAlign:"right",fontWeight:700,fontSize:11,color:C.inkMid}}>{fmtW(cmpTotal.cost)}</td><td style={{padding:"9px 12px",textAlign:"right",fontWeight:700,fontSize:11,color:C.rose}}>{fmtW(cmpTotal.buyRevenue)}</td><td style={{padding:"9px 12px",textAlign:"right",fontWeight:900,fontSize:11,color:roasColor(cmpRoas)}}>{cmpRoas}%</td><td/></>);
+                      const cmpTotal = Object.values(prevAggMap).reduce((acc,p)=>({cost:acc.cost+p.cost}),{cost:0});
+                      const cmpRoas = cmpTotal.cost>0?Math.round(Object.values(prevAggMap).reduce((s,p)=>s+p.roas*p.cost,0)/cmpTotal.cost):0;
+                      return(<><td style={{padding:"9px 12px",textAlign:"right",fontWeight:700,fontSize:11,color:C.inkMid}}>{fmtW(cmpTotal.cost)}</td><td style={{padding:"9px 12px",textAlign:"right",fontWeight:900,fontSize:11,color:roasColor(cmpRoas)}}>{cmpRoas}%</td><td/></>);
                     })()}
                     <td/>
                   </tr>
@@ -2757,138 +2640,95 @@ function NaverSection() {
           </div>
 
           {/* 수정 목록 패널 */}
-          {(Object.keys(fixList).length>0||true) && (
-            <div style={{background:C.white,border:`1.5px solid #F59E0B`,borderRadius:12,overflow:"hidden"}}>
-              <button onClick={()=>setShowFix(p=>!p)} style={{
-                width:"100%",display:"flex",alignItems:"center",justifyContent:"space-between",
-                padding:"11px 16px",background:"#FFFBEB",border:"none",cursor:"pointer",
-              }}>
-                <div style={{fontWeight:800,fontSize:13,color:"#92400E"}}>
-                  ⚠️ 수정 체크 목록 {Object.keys(fixList).length>0?`— ${Object.keys(fixList).length}건`:""}
-                </div>
-                <span className="material-symbols-outlined" style={{fontSize:18,color:"#92400E"}}>
-                  {showFix?"expand_less":"expand_more"}
-                </span>
-              </button>
-              {showFix && (
-                <div style={{padding:"12px 16px",display:"flex",flexDirection:"column",gap:10}}>
-                  {/* 수동 추가 폼 */}
-                  <div style={{background:"#FFFBEB",border:`1px dashed #F59E0B`,borderRadius:8,padding:"10px 14px",display:"flex",flexDirection:"column",gap:8}}>
-                    <div style={{fontSize:11,fontWeight:800,color:"#92400E"}}>+ 항목 추가</div>
-                    <input value={fixAddInput.label} onChange={e=>setFixAddInput(p=>({...p,label:e.target.value}))}
-                      placeholder="항목명 (캠페인/광고그룹/검색어)"
-                      style={{padding:"6px 10px",borderRadius:6,fontSize:11,border:`1px solid ${C.border}`,outline:"none",width:"100%",boxSizing:"border-box",fontFamily:"inherit"}}/>
-                    <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}>
-                      <div style={{display:"flex",alignItems:"center",gap:6}}>
-                        <span style={{fontSize:11,color:C.inkLt,whiteSpace:"nowrap"}}>체크일</span>
-                        <input type="date" value={fixAddInput.checked_at} onChange={e=>setFixAddInput(p=>({...p,checked_at:e.target.value}))}
-                          style={{padding:"4px 8px",borderRadius:6,fontSize:11,border:`1px solid ${C.border}`,outline:"none",fontFamily:"inherit"}}/>
-                      </div>
-                      <input value={fixAddInput.memo} onChange={e=>setFixAddInput(p=>({...p,memo:e.target.value}))}
-                        placeholder="메모"
-                        style={{flex:1,minWidth:120,padding:"6px 10px",borderRadius:6,fontSize:11,border:`1px solid ${C.border}`,outline:"none",fontFamily:"inherit"}}/>
-                      <button onClick={async()=>{
-                        if(!fixAddInput.label.trim()) return;
-                        const item = {label:fixAddInput.label.trim(), cost:0, roas:0, checked_at:fixAddInput.checked_at||new Date().toLocaleDateString("ko-KR"), memo:fixAddInput.memo};
-                        setFixList(p=>({...p,[item.label]:item}));
-                        setFixAddInput({label:"",checked_at:new Date().toLocaleDateString("ko-KR"),memo:""});
-                        await fetch(`${SURL}/rest/v1/naver_ads_fixlist`,{method:"POST",headers:{...sh,Prefer:"resolution=merge-duplicates"},body:JSON.stringify(item)});
-                      }} style={{padding:"6px 14px",borderRadius:6,border:"none",background:"#F59E0B",color:"#fff",fontSize:11,fontWeight:800,cursor:"pointer",fontFamily:"inherit",whiteSpace:"nowrap"}}>추가</button>
-                    </div>
+          <div style={{background:C.white,border:`1.5px solid #F59E0B`,borderRadius:12,overflow:"hidden"}}>
+            <button onClick={()=>setShowFix(p=>!p)} style={{
+              width:"100%",display:"flex",alignItems:"center",justifyContent:"space-between",
+              padding:"11px 16px",background:"#FFFBEB",border:"none",cursor:"pointer",
+            }}>
+              <div style={{fontWeight:800,fontSize:13,color:"#92400E"}}>
+                ⚠️ 수정 체크 목록 {Object.keys(fixList).length>0?`— ${Object.keys(fixList).length}건`:""}
+              </div>
+              <span className="material-symbols-outlined" style={{fontSize:18,color:"#92400E"}}>
+                {showFix?"expand_less":"expand_more"}
+              </span>
+            </button>
+            {showFix && (
+              <div style={{padding:"12px 16px",display:"flex",flexDirection:"column",gap:10}}>
+                <div style={{background:"#FFFBEB",border:`1px dashed #F59E0B`,borderRadius:8,padding:"10px 14px",display:"flex",flexDirection:"column",gap:8}}>
+                  <div style={{fontSize:11,fontWeight:800,color:"#92400E"}}>+ 항목 추가</div>
+                  <input value={fixAddInput.label} onChange={e=>setFixAddInput(p=>({...p,label:e.target.value}))}
+                    placeholder="항목명 (캠페인명)"
+                    style={{padding:"6px 10px",borderRadius:6,fontSize:11,border:`1px solid ${C.border}`,outline:"none",width:"100%",boxSizing:"border-box",fontFamily:"inherit"}}/>
+                  <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}>
+                    <input value={fixAddInput.memo} onChange={e=>setFixAddInput(p=>({...p,memo:e.target.value}))}
+                      placeholder="메모"
+                      style={{flex:1,minWidth:120,padding:"6px 10px",borderRadius:6,fontSize:11,border:`1px solid ${C.border}`,outline:"none",fontFamily:"inherit"}}/>
+                    <button onClick={async()=>{
+                      if(!fixAddInput.label.trim()) return;
+                      const item = {label:fixAddInput.label.trim(), cost:0, roas:0, checked_at:fixAddInput.checked_at||new Date().toLocaleDateString("ko-KR"), memo:fixAddInput.memo};
+                      setFixList(p=>({...p,[item.label]:item}));
+                      setFixAddInput({label:"",checked_at:new Date().toISOString().slice(0,10),memo:""});
+                      await fetch(`${SURL}/rest/v1/naver_ads_fixlist`,{method:"POST",headers:{...sh,Prefer:"resolution=merge-duplicates"},body:JSON.stringify(item)});
+                    }} style={{padding:"6px 14px",borderRadius:6,border:"none",background:"#F59E0B",color:"#fff",fontSize:11,fontWeight:800,cursor:"pointer",fontFamily:"inherit"}}>추가</button>
                   </div>
-                  {Object.values(fixList).map(f=>{
-                    const cur = aggregated.find(a=>a.label===f.label);
-                    const curRoas = cur?.roas ?? null;
-                    const roasDiff = curRoas!==null ? curRoas-f.roas : null;
-                    return (
-                      <div key={f.label} style={{
-                        background:"#FFFDF0",border:`1px solid ${C.border}`,borderRadius:8,padding:"10px 14px",
-                        display:"flex",flexDirection:"column",gap:6,
-                      }}>
-                        <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
-                          <div style={{fontWeight:800,fontSize:12,color:C.ink,flex:1,marginRight:8}}>{f.label}</div>
-                          <button onClick={()=>toggleFix({label:f.label})} style={{
-                            padding:"2px 8px",borderRadius:6,fontSize:10,border:`1px solid ${C.border}`,
-                            background:C.white,color:C.inkMid,cursor:"pointer",flexShrink:0,
-                          }}>해제</button>
-                        </div>
-                        <div style={{display:"flex",gap:16,fontSize:11,flexWrap:"wrap"}}>
-                          <div>
-                            <span style={{color:C.inkLt}}>체크 당시 ROAS </span>
-                            <span style={{fontWeight:700,color:roasColor(f.roas)}}>{f.roas}%</span>
-                          </div>
-                          {curRoas!==null && (
-                            <div>
-                              <span style={{color:C.inkLt}}>현재 ROAS </span>
-                              <span style={{fontWeight:700,color:roasColor(curRoas)}}>{curRoas}%</span>
-                            </div>
-                          )}
-                          <div style={{display:"flex",alignItems:"center",gap:4,flexWrap:"wrap"}}>
-                            <span style={{color:C.inkLt,marginRight:2}}>체크일</span>
-                            {(f.checked_at||"").split("|").filter(Boolean).map(d=>(
-                              <span key={d} style={{display:"inline-flex",alignItems:"center",gap:3,background:"#FEF9C3",border:"1px solid #FDE68A",borderRadius:10,padding:"1px 7px",fontSize:11,fontWeight:600}}>
-                                {d}
-                                <span onClick={()=>removeCheckDate(f.label,d)} style={{cursor:"pointer",color:"#92400E",fontSize:12,lineHeight:1,marginLeft:1}}>×</span>
-                              </span>
-                            ))}
-                            {fixDateAdd[f.label]!==undefined ? (
-                              <span style={{display:"inline-flex",alignItems:"center",gap:4}}>
-                                <input type="date" value={fixDateAdd[f.label]||""} onChange={e=>setFixDateAdd(p=>({...p,[f.label]:e.target.value}))}
-                                  style={{fontSize:11,padding:"1px 6px",borderRadius:6,border:`1px solid ${C.border}`,outline:"none"}}/>
-                                <button onClick={()=>addCheckDate(f.label,fixDateAdd[f.label])}
-                                  style={{padding:"1px 8px",borderRadius:6,border:"none",background:"#03C75A",color:"#fff",fontSize:11,fontWeight:700,cursor:"pointer"}}>확인</button>
-                                <button onClick={()=>setFixDateAdd(p=>{const n={...p};delete n[f.label];return n;})}
-                                  style={{padding:"1px 6px",borderRadius:6,border:`1px solid ${C.border}`,background:C.white,fontSize:11,cursor:"pointer"}}>취소</button>
-                              </span>
-                            ) : (
-                              <button onClick={()=>setFixDateAdd(p=>({...p,[f.label]:new Date().toISOString().slice(0,10)}))}
-                                style={{padding:"1px 7px",borderRadius:10,border:`1px solid #FDE68A`,background:"#FFFBEB",fontSize:11,fontWeight:700,cursor:"pointer",color:"#92400E"}}>+ 날짜</button>
-                            )}
-                          </div>
-                        </div>
-                        {fixMemoEdit[f.label] ? (
-                          <div style={{display:"flex",gap:4}}>
-                            <input
-                              autoFocus
-                              value={f.memo||""}
-                              onChange={e=>updateMemo(f.label, e.target.value)}
-                              onBlur={()=>setFixMemoEdit(p=>{const n={...p};delete n[f.label];return n;})}
-                              placeholder="메모 (수정 내용, 조치사항...)"
-                              style={{flex:1,padding:"6px 10px",borderRadius:6,fontSize:11,border:`1.5px solid #F59E0B`,
-                                outline:"none",background:"#fff",boxSizing:"border-box"}}
-                            />
-                          </div>
-                        ) : (
-                          <div onClick={()=>setFixMemoEdit(p=>({...p,[f.label]:true}))}
-                            style={{minHeight:30,padding:"6px 10px",borderRadius:6,fontSize:11,border:`1px solid ${C.border}`,
-                              background:"#fff",cursor:"text",display:"flex",flexWrap:"wrap",alignItems:"center",gap:4}}>
-                            {f.memo ? (
-                              f.memo.split(/(\[[^\]]+\])/).map((part,i)=>
-                                /^\[\d{4}-\d{2}-\d{2}\]$/.test(part) ? (
-                                  <span key={i} style={{background:"#FEF9C3",border:"1px solid #FDE68A",borderRadius:10,padding:"1px 7px",fontSize:11,fontWeight:600,color:"#92400E"}}>
-                                    {part.slice(1,-1)}
-                                  </span>
-                                ) : (
-                                  <span key={i} style={{color:C.inkMid,whiteSpace:"pre-wrap"}}>{part}</span>
-                                )
-                              )
-                            ) : (
-                              <span style={{color:C.inkLt}}>메모 (수정 내용, 조치사항...)</span>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
                 </div>
-              )}
-            </div>
-          )}
+                {Object.values(fixList).map(f=>{
+                  const cur = aggregated.find(a=>a.label===f.label);
+                  const curRoas = cur?.roas ?? null;
+                  return (
+                    <div key={f.label} style={{background:"#FFFDF0",border:`1px solid ${C.border}`,borderRadius:8,padding:"10px 14px",display:"flex",flexDirection:"column",gap:6}}>
+                      <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
+                        <div style={{fontWeight:800,fontSize:12,color:C.ink,flex:1,marginRight:8}}>{f.label}</div>
+                        <button onClick={()=>toggleFix({label:f.label})} style={{padding:"2px 8px",borderRadius:6,fontSize:10,border:`1px solid ${C.border}`,background:C.white,color:C.inkMid,cursor:"pointer",flexShrink:0}}>해제</button>
+                      </div>
+                      <div style={{display:"flex",gap:16,fontSize:11,flexWrap:"wrap"}}>
+                        <div><span style={{color:C.inkLt}}>체크 당시 ROAS </span><span style={{fontWeight:700,color:roasColor(f.roas)}}>{f.roas}%</span></div>
+                        {curRoas!==null && <div><span style={{color:C.inkLt}}>현재 ROAS </span><span style={{fontWeight:700,color:roasColor(curRoas)}}>{curRoas}%</span></div>}
+                        <div style={{display:"flex",alignItems:"center",gap:4,flexWrap:"wrap"}}>
+                          <span style={{color:C.inkLt,marginRight:2}}>체크일</span>
+                          {(f.checked_at||"").split("|").filter(Boolean).map(d=>(
+                            <span key={d} style={{display:"inline-flex",alignItems:"center",gap:3,background:"#FEF9C3",border:"1px solid #FDE68A",borderRadius:10,padding:"1px 7px",fontSize:11,fontWeight:600}}>
+                              {d}<span onClick={()=>removeCheckDate(f.label,d)} style={{cursor:"pointer",color:"#92400E",fontSize:12,lineHeight:1,marginLeft:1}}>×</span>
+                            </span>
+                          ))}
+                          {fixDateAdd[f.label]!==undefined ? (
+                            <span style={{display:"inline-flex",alignItems:"center",gap:4}}>
+                              <input type="date" value={fixDateAdd[f.label]||""} onChange={e=>setFixDateAdd(p=>({...p,[f.label]:e.target.value}))} style={{fontSize:11,padding:"1px 6px",borderRadius:6,border:`1px solid ${C.border}`,outline:"none"}}/>
+                              <button onClick={()=>addCheckDate(f.label,fixDateAdd[f.label])} style={{padding:"1px 8px",borderRadius:6,border:"none",background:"#03C75A",color:"#fff",fontSize:11,fontWeight:700,cursor:"pointer"}}>확인</button>
+                              <button onClick={()=>setFixDateAdd(p=>{const n={...p};delete n[f.label];return n;})} style={{padding:"1px 6px",borderRadius:6,border:`1px solid ${C.border}`,background:C.white,fontSize:11,cursor:"pointer"}}>취소</button>
+                            </span>
+                          ) : (
+                            <button onClick={()=>setFixDateAdd(p=>({...p,[f.label]:new Date().toISOString().slice(0,10)}))} style={{padding:"1px 7px",borderRadius:10,border:`1px solid #FDE68A`,background:"#FFFBEB",fontSize:11,fontWeight:700,cursor:"pointer",color:"#92400E"}}>+ 날짜</button>
+                          )}
+                        </div>
+                      </div>
+                      {fixMemoEdit[f.label] ? (
+                        <input autoFocus value={f.memo||""} onChange={e=>updateMemo(f.label, e.target.value)}
+                          onBlur={()=>setFixMemoEdit(p=>{const n={...p};delete n[f.label];return n;})}
+                          placeholder="메모 (수정 내용, 조치사항...)"
+                          style={{padding:"6px 10px",borderRadius:6,fontSize:11,border:`1.5px solid #F59E0B`,outline:"none",background:"#fff",boxSizing:"border-box"}}/>
+                      ) : (
+                        <div onClick={()=>setFixMemoEdit(p=>({...p,[f.label]:true}))}
+                          style={{minHeight:30,padding:"6px 10px",borderRadius:6,fontSize:11,border:`1px solid ${C.border}`,background:"#fff",cursor:"text",display:"flex",flexWrap:"wrap",alignItems:"center",gap:4}}>
+                          {f.memo ? f.memo.split(/(\[[^\]]+\])/).map((part,i)=>
+                            /^\[\d{4}-\d{2}-\d{2}\]$/.test(part) ? (
+                              <span key={i} style={{background:"#FEF9C3",border:"1px solid #FDE68A",borderRadius:10,padding:"1px 7px",fontSize:11,fontWeight:600,color:"#92400E"}}>{part.slice(1,-1)}</span>
+                            ) : (<span key={i} style={{color:C.inkMid,whiteSpace:"pre-wrap"}}>{part}</span>)
+                          ) : (<span style={{color:C.inkLt}}>메모 (수정 내용, 조치사항...)</span>)}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
         </>
       )}
     </div>
   );
 }
+
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // 프로젝트 관리
@@ -5566,6 +5406,16 @@ export default function OaDashboard(){
     await setSetting("oa_deleted_ads_v7", val).catch(()=>{});
   },[deletedAds]);
   const [adImages, setAdImages]       = useState([]);
+  // 메타 API에서 가져온 소재 썸네일 {광고명: url} — 수동 업로드(adImages)와 분리 저장
+  const [metaThumbs, setMetaThumbs]   = useState({});
+  const matchMetaThumb = (name) => {
+    if(!name) return null;
+    if(metaThumbs[name]) return {url:metaThumbs[name], name};
+    const norm = s=>s.toLowerCase().replace(/[\s_\-\.]+/g,"");
+    const nn = norm(name);
+    const k = Object.keys(metaThumbs).find(t=>{const nt=norm(t);return nt.includes(nn)||nn.includes(nt);});
+    return k ? {url:metaThumbs[k], name:k} : null;
+  };
   const [imgUploading, setImgUploading] = useState(false);
   const [imgError, setImgError]       = useState("");
   const [hoverImg, setHoverImg]       = useState(null);
@@ -5675,7 +5525,14 @@ export default function OaDashboard(){
   },[agentMsgs]);
 
   useEffect(() => {
-    getAdImages().then(imgs => { if (imgs?.length) setAdImages(imgs); }).catch(() => {});
+    getAdImages().then(imgs => {
+      if (!imgs?.length) return;
+      // 예전에 adImages에 섞여 들어간 메타 자동수집 항목 제거 (수동 업로드만 유지)
+      const manual = imgs.filter(i => i.source !== "meta");
+      setAdImages(manual);
+      if (manual.length !== imgs.length) saveAdImagesMeta(manual).catch(() => {});
+    }).catch(() => {});
+    getSetting("oa_meta_thumbs_v1").then(v => { if (v && typeof v === "object") setMetaThumbs(v); }).catch(() => {});
   }, []);
 
   // ── 데이터 에이전트 컨텍스트 빌더 ────────────────
@@ -7141,23 +6998,21 @@ export default function OaDashboard(){
                   color:C.bad,fontFamily:"inherit"}}>
                 전체삭제
               </button>}
+              {Object.keys(metaThumbs).length>0&&<span style={{fontSize:10,color:C.sage,fontWeight:700}}>
+                <MI n="cloud_done" size={12}/> 메타 소재 {Object.keys(metaThumbs).length}개 연결됨
+              </span>}
               <button disabled={imgUploading} onClick={async()=>{
                 setImgUploading(true); setImgError("");
                 try{
                   const res=await fetch("/api/meta-thumbs");
                   const data=await res.json();
                   if(data.error) throw new Error(data.error);
-                  const existing=new Set(adImages.map(x=>x.name));
-                  const added=Object.entries(data.thumbs||{})
-                    .filter(([n])=>!existing.has(n))
-                    .map(([n,u])=>({id:Date.now()+Math.random(),name:n,url:u,source:"meta"}));
-                  if(added.length){
-                    const next=[...adImages,...added];
-                    setAdImages(next);
-                    await saveAdImagesMeta(next);
-                  }else{
-                    setImgError("새로 가져올 소재가 없어요");
-                  }
+                  const thumbs=data.thumbs||{};
+                  if(!Object.keys(thumbs).length) throw new Error("가져온 소재가 없어요");
+                  // 수동 업로드(adImages)와 섞지 않고 별도 저장 — 성과 화면 매칭에만 사용
+                  const merged={...metaThumbs,...thumbs};
+                  setMetaThumbs(merged);
+                  await setSetting("oa_meta_thumbs_v1", merged).catch(()=>{});
                 }catch(e){ setImgError(e.message||"메타 가져오기 실패"); }
                 setImgUploading(false);
               }}
@@ -7420,7 +7275,7 @@ export default function OaDashboard(){
                     </div>
                     <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
                       {topAds.map((c,i)=>{
-                        const thumb = adImages.find(img=>img.name&&c.name&&(c.name.includes(img.name)||img.name.includes(c.name)));
+                        const thumb = adImages.find(img=>img.name&&c.name&&(c.name.includes(img.name)||img.name.includes(c.name)))||matchMetaThumb(c.name);
                         const adMargin = campTab==="conversion"?getAdMargin(c.name,c.campaign,margins,margin):0;
                         return(
                           <div key={i} style={{
@@ -7839,7 +7694,7 @@ export default function OaDashboard(){
                               {/* 광고명 + 뱃지들 */}
                               <td style={{padding:"10px 8px",maxWidth:220}}>
                                 <div style={{display:"flex",alignItems:"center",gap:4,marginBottom:3}}>
-                                  {(()=>{const thumb=adImages.find(img=>img.name&&c.name&&(c.name.includes(img.name)||img.name.includes(c.name)));return thumb?<ThumbPreview url={thumb.url} name={thumb.name}/>:null;})()}
+                                  {(()=>{const thumb=adImages.find(img=>img.name&&c.name&&(c.name.includes(img.name)||img.name.includes(c.name)))||matchMetaThumb(c.name);return thumb?<ThumbPreview url={thumb.url} name={thumb.name}/>:null;})()}
                                   <span style={{fontWeight:700,color:C.ink,fontSize:11,wordBreak:"break-all"}}>{c.name}</span>
                                 </div>
                                 <div style={{display:"flex",flexWrap:"wrap",gap:3}}>
@@ -8013,7 +7868,7 @@ export default function OaDashboard(){
                                 <MI n="image" size={11}/> 소재별 성과 TOP {adList.length}
                               </div>
                               {adList.map(([name,v])=>{
-                                const thumb=adImages.find(img=>img.name&&name&&(name.includes(img.name)||img.name.includes(name)));
+                                const thumb=adImages.find(img=>img.name&&name&&(name.includes(img.name)||img.name.includes(name)))||matchMetaThumb(name);
                                 const cr=v.spend>0&&v.convValue>0?Math.round((v.convValue/v.spend)*100):null;
                                 return(
                                   <div key={name} style={{display:"flex",alignItems:"center",gap:10,padding:"6px 10px",
@@ -9827,16 +9682,17 @@ export default function OaDashboard(){
 
     // 광고명으로 업로드된 이미지 매칭 (공백·언더스코어·특수문자 정규화)
     function findThumb(adName) {
-      if (!adName || !adImages?.length) return "";
+      if (!adName) return "";
       const norm = s => s.toLowerCase().replace(/[\s_\-\.]+/g, "");
       const normAd = norm(adName);
-      // 1순위: 정규화 후 포함 관계
-      const img = adImages.find(img => {
+      // 1순위: 수동 업로드 소재 (정규화 후 포함 관계)
+      const img = (adImages||[]).find(img => {
         if (!img.name) return false;
         const normImg = norm(img.name);
         return normAd.includes(normImg) || normImg.includes(normAd);
       });
-      return img?.url || "";
+      // 2순위: 메타 API 자동수집 썸네일
+      return img?.url || matchMetaThumb(adName)?.url || "";
     }
 
     function saveGoodAds() {
