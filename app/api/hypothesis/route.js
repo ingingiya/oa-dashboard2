@@ -240,6 +240,39 @@ async function fetchPromotions() {
   } catch { return []; }
 }
 
+// 네이버 데이터랩 검색 트렌드 (최근 8주, 주간 상대지수). 실패 시 null → 프롬프트에서 생략
+// 주의: developers.naver.com 앱에 "데이터랩(검색어트렌드)" API 권한 필요
+async function fetchSearchTrend() {
+  try {
+    const cid = process.env.NAVER_CLIENT_ID, csec = process.env.NAVER_CLIENT_SECRET;
+    if (!cid || !csec) return null;
+    const kstNow = new Date(Date.now() + 9 * 3600 * 1000);
+    const dstr = (d) => new Date(kstNow.getTime() - d * 86400000).toISOString().split('T')[0];
+    const res = await fetch('https://openapi.naver.com/v1/datalab/search', {
+      method: 'POST',
+      headers: { 'X-Naver-Client-Id': cid, 'X-Naver-Client-Secret': csec, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        startDate: dstr(56), endDate: dstr(1), timeUnit: 'week',
+        keywordGroups: [
+          { groupName: '드라이기', keywords: ['드라이기', '헤어드라이어'] },
+          { groupName: '미니드라이기', keywords: ['미니드라이기', '휴대용드라이기'] },
+          { groupName: '고데기', keywords: ['고데기', '매직기'] },
+          { groupName: '갈바닉', keywords: ['갈바닉', '갈바닉마사지기'] },
+          { groupName: '화장거울', keywords: ['화장거울', 'LED거울'] },
+        ],
+      }),
+      cache: 'no-store',
+    });
+    if (!res.ok) return null;
+    const j = await res.json();
+    if (!Array.isArray(j.results)) return null;
+    return j.results.map(g => ({
+      group: g.title,
+      weeks: (g.data || []).map(d => ({ week: d.period, ratio: d.ratio })),
+    }));
+  } catch { return null; }
+}
+
 // 과거 검증 결과 (피드백 루프용)
 async function fetchPastVerdicts() {
   const res = await fetch(
@@ -250,7 +283,7 @@ async function fetchPastVerdicts() {
   return Array.isArray(rows) ? rows : [];
 }
 
-async function generateHypotheses(salesData, pastVerdicts, realChannel, metaSpend, promotions) {
+async function generateHypotheses(salesData, pastVerdicts, realChannel, metaSpend, promotions, searchTrend) {
   const ANTHROPIC_KEY = process.env.ANTHROPIC_API_KEY;
   if (!ANTHROPIC_KEY) throw new Error('ANTHROPIC_API_KEY 환경변수가 없어요');
 
@@ -291,6 +324,19 @@ async function generateHypotheses(salesData, pastVerdicts, realChannel, metaSpen
       }).join('\n')
     : '(데이터 없음)';
 
+  // 검색 트렌드 (주간 상대지수 → 추이 + 전주 대비 변화율)
+  let trendSearchText = '(데이터 없음)';
+  if (Array.isArray(searchTrend) && searchTrend.length) {
+    trendSearchText = searchTrend.map(g => {
+      const ws = g.weeks.slice(-8);
+      const line = ws.map(w => Math.round(w.ratio)).join(' → ');
+      const n = ws.length;
+      const wow = n >= 2 && ws[n - 2].ratio > 0
+        ? Math.round((ws[n - 1].ratio - ws[n - 2].ratio) / ws[n - 2].ratio * 100) : null;
+      return `${g.group}: ${line}${wow !== null ? ` (전주 대비 ${wow > 0 ? '+' : ''}${wow}%)` : ''}`;
+    }).join('\n');
+  }
+
   const prompt = `당신은 OA 뷰티(이미용 브랜드)의 판매 데이터 분석가입니다. 아래 데이터를 보고 가설을 만드세요.
 
 ## 4주 판매 추이 (제품별 주간 수량, 변동 큰 순)
@@ -311,6 +357,9 @@ ${adText}
 ## 프로모션 일정 (진행중 · 최근 종료 · 예정)
 ${promoText}
 
+## 네이버 검색 트렌드 (카테고리별 주간 상대지수, 최근 8주 — 시장 수요 신호)
+${trendSearchText}
+
 ## 과거 가설 검증 결과 (참고 — 맞았던 패턴은 발전시키고, 틀렸던 유형의 가설은 피하세요)
 ${feedbackText}
 
@@ -326,6 +375,7 @@ ${feedbackText}
 - expected_impact는 반드시 구체적 수치 예측 (개수/만원/%), how_to_verify는 반드시 판정 기준+기한을 포함
 - 마케팅액션의 hypothesis에는 ①②③ 실행 스텝을 포함
 - 4주 추이에서 지속 상승/하락 vs 일시 변동을 구분하고, 채널 이동 신호를 활용
+- 검색 트렌드가 있으면 시장 수요(검색)와 우리 판매의 괴리를 활용 (예: 검색 늘었는데 판매 감소 → 경쟁사에 뺏김 / 검색 자체 감소 → 시장 계절성)
 - 주의: 위 판매 추이/어제 판매(ERP)의 쿠팡·지그재그 수치는 플랫폼 일괄 발주(사입)라 하루에 몰려 잡힘. 쿠팡·지그재그 판단은 반드시 "쿠팡·지그재그 실판매" 섹션 수치를 기준으로 할 것 (실판매 데이터 없으면 발주 가능성을 언급)
 - 변동폭이 큰 제품 위주로
 - 한국어로 작성`;
@@ -604,10 +654,10 @@ export async function GET(request) {
         });
       }
 
-      const [salesData, pastVerdicts, realChannel, metaSpend, promotions] = await Promise.all([
-        fetchSalesData(), fetchPastVerdicts(), fetchRealChannelSales(), fetchMetaSpend(), fetchPromotions(),
+      const [salesData, pastVerdicts, realChannel, metaSpend, promotions, searchTrend] = await Promise.all([
+        fetchSalesData(), fetchPastVerdicts(), fetchRealChannelSales(), fetchMetaSpend(), fetchPromotions(), fetchSearchTrend(),
       ]);
-      const hypotheses = await generateHypotheses(salesData, pastVerdicts, realChannel, metaSpend, promotions);
+      const hypotheses = await generateHypotheses(salesData, pastVerdicts, realChannel, metaSpend, promotions, searchTrend);
 
       const rows = hypotheses.map(h => ({
         date: today,
