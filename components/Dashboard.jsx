@@ -11145,6 +11145,59 @@ export default function OaDashboard(){
     const [hypoGenerating, setHypoGenerating] = useState(false);
     const [hypoMsg, setHypoMsg] = useState("");
     const [hypoFilter, setHypoFilter] = useState("전체"); // 전체 | 원인분석 | 마케팅액션
+    const [hypoTab, setHypoTab] = useState("가설"); // 가설 | 실판매
+    const [realLoading, setRealLoading] = useState(false);
+    const [realGroups, setRealGroups] = useState(null);
+
+    const REAL_GROUP_DEF = [["소닉플로우",["소닉플로우"]],["갈바닉",["갈바닉"]],["화장거울",["거울"]],["고데기",["고데기"]],["드라이기",["드라이","에어리"]]];
+    const matchRealGroup = n=>{ const s=String(n||""); for(const [gr,kws] of REAL_GROUP_DEF){ if(kws.some(k=>s.includes(k))) return gr; } return null; };
+
+    async function loadReal(){
+      setRealLoading(true);
+      try{
+        const SURL = process.env.NEXT_PUBLIC_SUPABASE_URL;
+        const SKEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+        const sHd = {apikey:SKEY, Authorization:`Bearer ${SKEY}`};
+        const kst = ()=>new Date(Date.now()+9*3600*1000);
+        const d28 = kst(); d28.setDate(d28.getDate()-28);
+        const from = d28.toISOString().slice(0,10);
+        const fetchAll = async url=>{
+          let out=[], o=0;
+          while(true){
+            const r = await fetch(url,{headers:{...sHd,Range:`${o}-${o+999}`}});
+            const d = await r.json();
+            if(!Array.isArray(d)) break;
+            out = out.concat(d);
+            if(d.length<1000) break;
+            o += 1000;
+          }
+          return out;
+        };
+        const [real, erp] = await Promise.all([
+          fetchAll(`${SURL}/rest/v1/channel_daily_sales?date=gte.${from}&select=channel,name,date,qty&order=date.asc`),
+          fetchAll(`${SURL}/rest/v1/beauty_sales?date=gte.${from}&channel=in.(${encodeURIComponent("쿠팡,지그재그")})&cat_id=in.(DRY,STR,GVN,MUM)&select=channel,name,date,qty&order=date.asc`),
+        ]);
+        const today = kst().toISOString().slice(0,10);
+        const dayDiff = d=>Math.floor((new Date(today)-new Date(d))/86400000);
+        const g = {};
+        const ensure = k=>g[k]=g[k]||{cpThis:0,cpLast:0,zzThis:0,zzLast:0,cpReal28:0,cpReal7:0,erpThis:0,erp28:0};
+        real.forEach(r=>{
+          const gr = matchRealGroup(r.name); if(!gr) return;
+          const o = ensure(gr), dd = dayDiff(r.date), q = +r.qty||0;
+          if(r.channel==="쿠팡"){ o.cpReal28+=q; if(dd<7){o.cpReal7+=q;o.cpThis+=q;} else if(dd<14) o.cpLast+=q; }
+          else { if(dd<7) o.zzThis+=q; else if(dd<14) o.zzLast+=q; }
+        });
+        erp.forEach(r=>{
+          if(r.channel!=="쿠팡") return;
+          const gr = matchRealGroup(r.name); if(!gr) return;
+          const o = ensure(gr), dd = dayDiff(r.date), q = +r.qty||0;
+          o.erp28+=q; if(dd<7) o.erpThis+=q;
+        });
+        setRealGroups(g);
+      }catch(e){ setHypoMsg("실판매 로드 실패: "+e.message); }
+      setRealLoading(false);
+    }
+    useEffect(()=>{ if(hypoTab==="실판매"&&!realGroups) loadReal(); },[hypoTab]);
 
     async function loadHypos(){
       setHypoLoading(true);
@@ -11216,6 +11269,65 @@ export default function OaDashboard(){
           padding:"8px 12px",borderRadius:8,border:`1px solid ${C.border}`}}>{hypoMsg}</div>
       )}
 
+      {/* 서브탭 */}
+      <div style={{display:"flex",gap:0,borderBottom:`1px solid ${C.border}`}}>
+        {["가설","실판매"].map(t=>(
+          <button key={t} onClick={()=>setHypoTab(t)}
+            style={{padding:"8px 14px",background:"none",border:"none",
+              borderBottom:`2px solid ${hypoTab===t?C.rose:"transparent"}`,
+              color:hypoTab===t?C.rose:C.inkMid,fontWeight:hypoTab===t?800:600,
+              fontSize:12,cursor:"pointer",fontFamily:"inherit",marginBottom:-1}}>
+            {t==="가설"?"💡 가설":"📦 쿠팡·지그재그 실판매"}
+          </button>
+        ))}
+      </div>
+
+      {hypoTab==="실판매"&&(()=>{
+        if(realLoading||!realGroups) return <div style={{fontSize:12,color:C.inkMid,padding:20,textAlign:"center"}}>실판매 데이터 불러오는 중...</div>;
+        const rows = Object.entries(realGroups).sort((a,b)=>b[1].cpThis-a[1].cpThis);
+        const pct = (t,l)=>l>0?Math.round((t-l)/l*100):null;
+        const chip = p=>p===null?null:(
+          <span style={{fontSize:10,fontWeight:800,color:p>=0?"#059669":C.rose,marginLeft:4}}>
+            {p>=0?"+":""}{p}%</span>);
+        return(
+        <div style={{display:"flex",flexDirection:"column",gap:10}}>
+          <div style={{fontSize:11,color:C.inkMid,background:C.cream,padding:"8px 12px",borderRadius:8}}>
+            실판매 = 이메일 파일 기준 실제 소비자 판매 (ERP 발주 수치와 별개). 추정재고 = 최근 28일 쿠팡 발주 − 실판매 누적이라 실제 재고와 차이 날 수 있어요.
+          </div>
+          <div style={{background:"#fff",borderRadius:12,border:`1px solid ${C.border}`,padding:"4px 8px",overflowX:"auto"}}>
+            <table style={{width:"100%",borderCollapse:"collapse",fontSize:11}}>
+              <thead><tr>
+                {["제품군","쿠팡 실판매 (주간)","지그재그 실판매 (주간)","쿠팡 발주 (이번주)","쿠팡 추정재고 (28일)","소진 예상"].map(h=>(
+                  <th key={h} style={{padding:"8px",textAlign:"left",fontWeight:700,color:C.inkMid,
+                    borderBottom:`1px solid ${C.border}`,whiteSpace:"nowrap"}}>{h}</th>
+                ))}
+              </tr></thead>
+              <tbody>
+                {rows.map(([gr,o])=>{
+                  const stock = Math.round(o.erp28-o.cpReal28);
+                  const daily = o.cpReal7/7;
+                  const daysLeft = stock>0&&daily>0?Math.round(stock/daily):null;
+                  return(
+                  <tr key={gr} style={{borderBottom:`1px solid ${C.cream}`}}>
+                    <td style={{padding:"8px",fontWeight:800,color:C.ink,whiteSpace:"nowrap"}}>{gr}</td>
+                    <td style={{padding:"8px",whiteSpace:"nowrap"}}>{Math.round(o.cpThis)}개{chip(pct(o.cpThis,o.cpLast))}<span style={{color:C.inkLt}}> (지난주 {Math.round(o.cpLast)})</span></td>
+                    <td style={{padding:"8px",whiteSpace:"nowrap"}}>{Math.round(o.zzThis)}개{chip(pct(o.zzThis,o.zzLast))}<span style={{color:C.inkLt}}> (지난주 {Math.round(o.zzLast)})</span></td>
+                    <td style={{padding:"8px",whiteSpace:"nowrap",color:o.erpThis>o.cpThis*2&&o.erpThis>50?C.rose:C.ink,fontWeight:o.erpThis>o.cpThis*2&&o.erpThis>50?800:400}}>
+                      {Math.round(o.erpThis)}개{o.erpThis>o.cpThis*2&&o.erpThis>50?" ⚠️":""}</td>
+                    <td style={{padding:"8px",whiteSpace:"nowrap"}}>{stock>0?`약 ${stock}개`:"발주분 소진"}</td>
+                    <td style={{padding:"8px",whiteSpace:"nowrap",fontWeight:700,
+                      color:daysLeft===null?C.inkLt:daysLeft<=7?C.rose:daysLeft<=14?"#f59e0b":"#059669"}}>
+                      {daysLeft===null?"—":`약 ${daysLeft}일`}</td>
+                  </tr>);
+                })}
+              </tbody>
+            </table>
+          </div>
+          <div style={{fontSize:10,color:C.inkLt}}>⚠️ = 이번주 발주가 실판매의 2배 초과 (과잉 입고 가능성) · 소진 예상 = 추정재고 ÷ 최근 7일 일평균 실판매</div>
+        </div>);
+      })()}
+
+      {hypoTab==="가설"&&(<>
       {/* 필터 */}
       <div style={{display:"flex",gap:6}}>
         {["전체","원인분석","마케팅액션"].map(f=>(
@@ -11294,6 +11406,7 @@ export default function OaDashboard(){
           })}
         </div>
       ))}
+      </>)}
     </div>);
   })();
 

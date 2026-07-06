@@ -204,6 +204,19 @@ ${feedbackText}
   return JSON.parse(match[0]);
 }
 
+const APP_URL = 'https://oa-dashboard2.vercel.app';
+
+// 텔레그램 인라인 버튼 (✅검증/❌기각 → action=set 링크)
+function hypoButtons(items) {
+  const short = (p) => String(p || '').replace(/^오아/, '').slice(0, 14);
+  return items
+    .filter(h => h.id)
+    .map(h => ([
+      { text: `✅ ${short(h.product)}`, url: `${APP_URL}/api/hypothesis?action=set&id=${h.id}&status=confirmed` },
+      { text: `❌ ${short(h.product)}`, url: `${APP_URL}/api/hypothesis?action=set&id=${h.id}&status=rejected` },
+    ]));
+}
+
 // 텔레그램 아침 브리핑 (실패해도 가설 저장에는 영향 없음)
 async function sendTelegramBriefing(today, hypotheses) {
   const token = process.env.TELEGRAM_BOT_TOKEN;
@@ -222,13 +235,16 @@ async function sendTelegramBriefing(today, hypotheses) {
 
   const text = `📊 <b>오늘의 판매 가설</b> (${today})\n` +
     section('원인분석', '🔍') + '\n' + section('마케팅액션', '💡') +
-    `\n\n👉 대시보드 가설 탭에서 검증/기각 가능`;
+    `\n\n👉 버튼으로 바로 검증/기각하거나 대시보드 가설 탭에서 처리`;
 
   try {
     await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ chat_id: chatId, text, parse_mode: 'HTML' }),
+      body: JSON.stringify({
+        chat_id: chatId, text, parse_mode: 'HTML',
+        reply_markup: { inline_keyboard: hypoButtons(hypotheses) },
+      }),
     });
   } catch (e) {
     console.error('텔레그램 발송 실패:', e.message);
@@ -332,13 +348,16 @@ async function sendVerifyTelegram(results) {
   const icon = { confirm: '✅ 검증 제안', reject: '❌ 기각 제안', unclear: '❓ 불확실' };
   const text = `🤖 <b>가설 자동 검증</b> (7일 경과분)\n\n` + results.map(r =>
     `${icon[r.verdict] || '❓'} <b>${r.product}</b> (${r.date})\n${r.hypothesis}\n<i>${r.note}</i>`
-  ).join('\n\n') + `\n\n👉 대시보드 가설 탭에서 확정해주세요`;
+  ).join('\n\n') + `\n\n👉 버튼으로 바로 확정하거나 대시보드 가설 탭에서 처리`;
 
   try {
     await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ chat_id: chatId, text, parse_mode: 'HTML' }),
+      body: JSON.stringify({
+        chat_id: chatId, text, parse_mode: 'HTML',
+        reply_markup: { inline_keyboard: hypoButtons(results) },
+      }),
     });
   } catch (e) {
     console.error('검증 텔레그램 발송 실패:', e.message);
@@ -401,12 +420,13 @@ export async function GET(request) {
 
       const ins = await fetch(`${SUPA_URL}/rest/v1/daily_hypotheses`, {
         method: 'POST',
-        headers: { ...sH, Prefer: 'return=minimal' },
+        headers: { ...sH, Prefer: 'return=representation' },
         body: JSON.stringify(rows),
       });
       if (!ins.ok) throw new Error(`Supabase 저장 실패: ${await ins.text()}`);
+      const saved = await ins.json();
 
-      await sendTelegramBriefing(today, rows);
+      await sendTelegramBriefing(today, Array.isArray(saved) ? saved : rows);
 
       // 7일 지난 가설 자동 검증 (실패해도 생성 결과에는 영향 없음)
       try {
@@ -417,6 +437,29 @@ export async function GET(request) {
       }
 
       return Response.json({ ok: true, count: rows.length, date: today });
+    }
+
+    // 텔레그램 버튼 → 가설 확정 (HTML 응답)
+    if (action === 'set') {
+      const id = Number(searchParams.get('id'));
+      const status = searchParams.get('status');
+      const page = (title, color) => new Response(
+        `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${title}</title></head>` +
+        `<body style="font-family:-apple-system,sans-serif;display:flex;align-items:center;justify-content:center;height:90vh;margin:0">` +
+        `<div style="text-align:center"><div style="font-size:44px">${color}</div><div style="font-size:18px;font-weight:700;margin-top:12px">${title}</div>` +
+        `<div style="font-size:13px;color:#888;margin-top:8px">이 창은 닫아도 돼요</div></div></body></html>`,
+        { headers: { 'Content-Type': 'text/html; charset=utf-8' } });
+      if (!id || !['confirmed', 'rejected'].includes(status)) return page('잘못된 요청이에요', '⚠️');
+      const res = await fetch(`${SUPA_URL}/rest/v1/daily_hypotheses?id=eq.${id}&select=product`, {
+        method: 'PATCH',
+        headers: { ...sH, Prefer: 'return=representation' },
+        body: JSON.stringify({ status }),
+      });
+      const upd = await res.json().catch(() => []);
+      if (!res.ok || !Array.isArray(upd) || upd.length === 0) return page('가설을 찾을 수 없어요', '⚠️');
+      return page(
+        `${upd[0].product || ''} 가설 ${status === 'confirmed' ? '검증' : '기각'} 처리 완료`,
+        status === 'confirmed' ? '✅' : '❌');
     }
 
     // 수동 검증 트리거

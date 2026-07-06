@@ -18,6 +18,29 @@ KEY = env['NEXT_PUBLIC_SUPABASE_ANON_KEY']
 DAYS = 35
 today = datetime.date.today()
 cutoff = today - datetime.timedelta(days=DAYS)
+yesterday = (today - datetime.timedelta(days=1)).isoformat()
+
+TG_CHAT = '8704535307'
+
+
+def telegram(msg):
+    try:
+        tg = {}
+        with open(os.path.expanduser('~/.claude/channels/telegram/.env')) as f:
+            for line in f:
+                if '=' in line:
+                    k, v = line.strip().split('=', 1)
+                    tg[k] = v.strip('"')
+        token = tg.get('TELEGRAM_BOT_TOKEN')
+        if not token:
+            return
+        req = urllib.request.Request(
+            f'https://api.telegram.org/bot{token}/sendMessage',
+            data=json.dumps({'chat_id': TG_CHAT, 'text': msg}).encode(),
+            headers={'Content-Type': 'application/json'}, method='POST')
+        urllib.request.urlopen(req, timeout=10)
+    except Exception as e:
+        print('텔레그램 알림 실패:', e)
 
 
 def latest(pattern):
@@ -108,6 +131,19 @@ if zz:
 else:
     print('지그재그 파일 없음')
 
+# ── 어제 데이터 존재 여부 체크 (없으면 텔레그램 알림)
+missing = []
+for ch, label in [('쿠팡', cp), ('지그재그', zz)]:
+    if not label:
+        missing.append(f'{ch}: 파일 없음')
+    elif not any(k[0] == ch and k[2] == yesterday for k in rows):
+        missing.append(f'{ch}: 어제({yesterday}) 데이터 없음 — 최신 파일인지 확인 필요')
+if missing:
+    print('경고:', '; '.join(missing))
+    if '--dry-run' not in os.sys.argv:
+        telegram('⚠️ 실판매 동기화 경고\n' + '\n'.join(missing)
+                 + '\n\n네이버웍스 메일 첨부파일을 ~/Downloads에 저장해주세요.')
+
 # ── Supabase 업서트
 data = list(rows.values())
 print(f'업서트 대상: {len(data)}행 ({cutoff} ~ {today})')
@@ -125,6 +161,8 @@ if data and '--dry-run' not in os.sys.argv:
         try:
             urllib.request.urlopen(req)
         except urllib.error.HTTPError as e:
-            print('업서트 실패:', e.read().decode()[:300])
+            err = e.read().decode()[:300]
+            print('업서트 실패:', err)
+            telegram(f'❌ 실판매 동기화 실패 (Supabase 업서트 오류)\n{err}')
             raise
     print('업서트 완료')
