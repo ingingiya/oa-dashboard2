@@ -7808,8 +7808,49 @@ export default function OaDashboard(){
             }
           });
           const weeks=Object.values(weekMap).sort((a,b)=>b.week.localeCompare(a.week));
+          // ── 이번 주 액션 추천 (가이드 기준 자동 적용) ──
+          const actionCard=(()=>{
+            const cur=weeks[0], prev=weeks[1];
+            if(!cur) return null;
+            const curAds=Object.entries(cur.ads||{}).filter(([,v])=>v.spend>0);
+            const scaleUp=curAds.filter(([,v])=>v.spend>=30000&&v.convValue/v.spend>=4)
+              .sort((a,b)=>b[1].convValue/b[1].spend-a[1].convValue/a[1].spend).slice(0,3);
+            const stop=curAds.filter(([,v])=>(v.spend>=30000&&v.purchases===0)||(v.spend>=50000&&v.convValue/v.spend<2))
+              .sort((a,b)=>b[1].spend-a[1].spend).slice(0,5);
+            const curRoas=cur.spend>0?(cur.convValue/cur.spend)*100:0;
+            const prevRoas=prev&&prev.spend>0?(prev.convValue/prev.spend)*100:null;
+            const roasDelta=prevRoas!==null?Math.round(curRoas-prevRoas):null;
+            const spendDelta=prev&&prev.spend>0?Math.round(((cur.spend-prev.spend)/prev.spend)*100):null;
+            if(!scaleUp.length&&!stop.length&&roasDelta===null) return null;
+            const row=(name,v,color,label)=>(
+              <div key={label+name} style={{display:"flex",alignItems:"center",gap:8,padding:"6px 10px",borderRadius:8,background:C.white,border:`1px solid ${color}33`}}>
+                <span style={{fontSize:9,fontWeight:800,color,background:color+"18",padding:"2px 7px",borderRadius:4,flexShrink:0}}>{label}</span>
+                <span style={{flex:1,fontSize:11,fontWeight:700,color:C.ink,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{name}</span>
+                <span style={{fontSize:10,color:C.inkLt,flexShrink:0}}>
+                  {fmtW(v.spend)} · {v.purchases>0?`ROAS ${Math.round((v.convValue/v.spend)*100)}%`:"구매 0"}
+                </span>
+              </div>
+            );
+            return(
+              <div style={{background:"linear-gradient(135deg,#fff5f7,#fff)",border:`1px solid ${C.rose}44`,borderRadius:12,padding:"14px 16px"}}>
+                <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:10}}>
+                  <div style={{fontSize:13,fontWeight:800,color:C.rose}}><MI n="bolt" size={14}/> 이번 주 액션 추천</div>
+                  <div style={{fontSize:10,color:C.inkLt,display:"flex",gap:10}}>
+                    {spendDelta!==null&&<span>지출 {spendDelta>=0?"+":""}{spendDelta}%</span>}
+                    {roasDelta!==null&&<span style={{fontWeight:700,color:roasDelta>=0?C.sage:C.bad}}>ROAS {roasDelta>=0?"▲":"▼"}{Math.abs(roasDelta)}%p</span>}
+                  </div>
+                </div>
+                <div style={{display:"flex",flexDirection:"column",gap:4}}>
+                  {scaleUp.map(([n,v])=>row(n,v,C.sage,"증액"))}
+                  {stop.map(([n,v])=>row(n,v,C.bad,"중단 검토"))}
+                  {!scaleUp.length&&!stop.length&&<div style={{fontSize:11,color:C.inkLt}}>이번 주는 증액/중단 대상 소재가 없어요</div>}
+                </div>
+              </div>
+            );
+          })();
           return(
             <div style={{display:"flex",flexDirection:"column",gap:8}}>
+              {actionCard}
               {weeks.map((w,i)=>{
                 const isOpen=weekOpenKey===w.week;
                 const roas=w.spend>0?Math.round((w.convValue/w.spend)*100):0;
