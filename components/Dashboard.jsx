@@ -7082,7 +7082,7 @@ export default function OaDashboard(){
 
         {/* 탭 */}
         <div style={{display:"flex",gap:6,overflowX:"auto",paddingBottom:2}}>
-          {[{id:"overview",label:<><MI n="trending_up" size={12}/> 추이</>},{id:"campaign",label:<><MI n="campaign" size={12}/> 캠페인</>},{id:"weekly",label:<><MI n="calendar_month" size={12}/> 주별</>},{id:"monthly",label:<><MI n="date_range" size={12}/> 월별</>},{id:"daily",label:<><MI n="calendar_today" size={12}/> 일별</>},{id:"product",label:<><MI n="inventory_2" size={12}/> 제품별</>}].map(t=>(
+          {[{id:"overview",label:<><MI n="trending_up" size={12}/> 추이</>},{id:"campaign",label:<><MI n="campaign" size={12}/> 캠페인</>},{id:"weekly",label:<><MI n="calendar_month" size={12}/> 주별</>},{id:"monthly",label:<><MI n="date_range" size={12}/> 월별</>},{id:"daily",label:<><MI n="calendar_today" size={12}/> 일별</>},{id:"product",label:<><MI n="inventory_2" size={12}/> 제품별</>},{id:"guide",label:<><MI n="menu_book" size={12}/> 가이드</>}].map(t=>(
             <button key={t.id} onClick={()=>setMetaTab(t.id)} style={{
               padding:"6px 16px",borderRadius:8,cursor:"pointer",border:`1px solid ${metaTab===t.id?C.rose:C.border}`,
               background:metaTab===t.id?C.blush:C.white,color:metaTab===t.id?C.rose:C.inkMid,
@@ -8067,6 +8067,98 @@ export default function OaDashboard(){
         })()}
 
         {/* 제품별 탭 */}
+        {/* 가이드 탭 — 소재 제작 가이드 (2026 상반기 95개 소재 분석 기반) */}
+        {metaTab==="guide"&&(()=>{
+          const card={background:C.white,border:`1px solid ${C.border}`,borderRadius:12,padding:"14px 16px"};
+          const h={fontSize:13,fontWeight:800,color:C.ink,marginBottom:10,display:"flex",alignItems:"center",gap:6};
+          const APPEALS=[
+            {name:"상황/라이프스타일",roas:5.56,ex:"\"헬스장 드라이기 아직도 쓰세요?\" — 공감 훅",best:true},
+            {name:"가격/프로모션",roas:4.61,ex:"\"역대급 5만원\" — 구체적 숫자"},
+            {name:"기능/스펙",roas:4.54,ex:"\"컬러까지 완벽한 초경량\""},
+            {name:"협력광고",roas:2.80,ex:"클릭은 높지만 구매 전환 약함"},
+            {name:"기타",roas:1.82,ex:"소구점 불명확"},
+          ];
+          const PRINCIPLES=[
+            {t:"상황 공감 훅으로 시작",d:"\"헬스장에서 아직도…\" 같은 상황 제시가 ROAS 1위 (9~11). 제품 자랑보다 시청자의 불편한 순간부터."},
+            {t:"가격은 구체적 숫자로",d:"\"역대급 5만원\"(ROAS 11.3)처럼 정확한 금액·할인폭 명시. \"특가\", \"세일\" 같은 모호한 표현 금지."},
+            {t:"전환 캠페인만 운영",d:"트래픽 캠페인 ROAS 0.38 vs 전환 5.33 — 14배 차이. 트래픽 목적 광고는 만들지 않기."},
+            {t:"구매 0 소재는 1주 내 중단",d:"지난 상반기 전체 지출의 32%가 구매 0 소재에 소진. 주별 탭에서 \"구매 0\" 빨간 표시 확인 즉시 끄기."},
+            {t:"협력광고는 전환 검증 후 유지",d:"roun.life 협력광고: CTR 6.6%로 최상위였지만 구매 0. 클릭 수에 속지 말고 ROAS로만 판단."},
+          ];
+          const CHECKS=[
+            "첫 3초에 상황/문제 제시 (제품 등장은 그 다음)",
+            "카피에 구체적 숫자 (가격·할인율·무게·시간)",
+            "캠페인 목표 = 전환 (트래픽 X)",
+            "기존 위너 소재와 소구점 겹치지 않게 변주",
+            "게재 1주 후 주별 탭에서 ROAS 확인 → 400%↑ 증액 / 200%↓ 교체 / 구매 0 중단",
+          ];
+          return(
+            <div style={{display:"flex",flexDirection:"column",gap:12}}>
+              <div style={{...card,background:"linear-gradient(135deg,#fff5f7,#fff)"}}>
+                <div style={{fontSize:14,fontWeight:900,color:C.rose}}>📖 소재 제작 가이드</div>
+                <div style={{fontSize:11,color:C.inkMid,marginTop:4}}>2026 상반기 소재 95개 성과 분석 기반 (전체 ROAS 4.05) · 상세 버전은 Figma 가이드 참고</div>
+              </div>
+              <div style={card}>
+                <div style={h}><MI n="emoji_events" size={15}/> 소구 유형별 ROAS — 뭘 만들지 정할 때</div>
+                <div style={{display:"flex",flexDirection:"column",gap:6}}>
+                  {APPEALS.map((a,i)=>(
+                    <div key={a.name} style={{display:"flex",alignItems:"center",gap:10,padding:"8px 10px",borderRadius:8,
+                      background:a.best?C.blush:C.cream,border:a.best?`1px solid ${C.rose}44`:"none"}}>
+                      <div style={{fontSize:12,fontWeight:800,color:a.best?C.rose:C.inkMid,width:18}}>{i+1}</div>
+                      <div style={{flex:1,minWidth:0}}>
+                        <div style={{fontSize:12,fontWeight:700,color:C.ink}}>{a.name}{a.best&&<span style={{fontSize:9,marginLeft:6,color:C.rose,fontWeight:800,background:"#fff",padding:"1px 6px",borderRadius:4}}>추천</span>}</div>
+                        <div style={{fontSize:10,color:C.inkLt,marginTop:1}}>{a.ex}</div>
+                      </div>
+                      <div style={{fontSize:13,fontWeight:900,color:a.roas>=4.5?C.sage:a.roas>=3?C.inkMid:C.bad}}>ROAS {a.roas}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div style={card}>
+                <div style={h}><MI n="rule" size={15}/> 제작 5원칙</div>
+                <div style={{display:"flex",flexDirection:"column",gap:8}}>
+                  {PRINCIPLES.map((p,i)=>(
+                    <div key={i} style={{display:"flex",gap:10,padding:"10px 12px",borderRadius:8,background:C.cream}}>
+                      <div style={{fontSize:14,fontWeight:900,color:C.rose,lineHeight:1.2}}>{String(i+1).padStart(2,"0")}</div>
+                      <div>
+                        <div style={{fontSize:12,fontWeight:800,color:C.ink}}>{p.t}</div>
+                        <div style={{fontSize:11,color:C.inkMid,marginTop:2,lineHeight:1.5}}>{p.d}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div style={card}>
+                <div style={h}><MI n="checklist" size={15}/> 게재 전 체크리스트</div>
+                <div style={{display:"flex",flexDirection:"column",gap:5}}>
+                  {CHECKS.map((c,i)=>(
+                    <div key={i} style={{display:"flex",gap:8,alignItems:"flex-start",fontSize:11,color:C.inkMid,lineHeight:1.5}}>
+                      <MI n="check_box_outline_blank" size={14} style={{color:C.rose,flexShrink:0,marginTop:1}}/>{c}
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div style={card}>
+                <div style={h}><MI n="monitoring" size={15}/> 운영 판단 기준 (주별 탭 색상과 동일)</div>
+                <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+                  <div style={{flex:1,minWidth:140,padding:"10px 12px",borderRadius:8,background:"#f0fdf4",border:"1px solid #86efac66"}}>
+                    <div style={{fontSize:11,fontWeight:800,color:C.sage}}>ROAS 400% 이상</div>
+                    <div style={{fontSize:10,color:C.inkMid,marginTop:2}}>예산 증액 + 변주 소재 제작</div>
+                  </div>
+                  <div style={{flex:1,minWidth:140,padding:"10px 12px",borderRadius:8,background:C.cream}}>
+                    <div style={{fontSize:11,fontWeight:800,color:C.inkMid}}>ROAS 200~400%</div>
+                    <div style={{fontSize:10,color:C.inkMid,marginTop:2}}>유지하며 훅/카피 개선 테스트</div>
+                  </div>
+                  <div style={{flex:1,minWidth:140,padding:"10px 12px",borderRadius:8,background:"#fff5f5",border:`1px solid ${C.bad}44`}}>
+                    <div style={{fontSize:11,fontWeight:800,color:C.bad}}>ROAS 200% 미만 · 구매 0</div>
+                    <div style={{fontSize:10,color:C.inkMid,marginTop:2}}>1주 내 중단 (상반기 낭비 32% 재발 방지)</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          );
+        })()}
+
         {metaTab==="product"&&(()=>{
           if(!hasSheet) return(
             <div style={{textAlign:"center",padding:"40px 0",color:C.inkLt}}>
