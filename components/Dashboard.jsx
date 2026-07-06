@@ -2233,6 +2233,7 @@ function SchModalComp({mode, initial, onSave, onClose}){
 
 function NaverSection() {
   const [allRows, setAllRows] = useState([]);
+  const [salesByDate, setSalesByDate] = useState({});
   const [loading, setLoading] = useState(true);
   const [groupBy, setGroupBy] = useState("campaign");
   const [sortCol, setSortCol] = useState("cost");
@@ -2260,9 +2261,11 @@ function NaverSection() {
       setLoading(true);
       try {
         const cutoff = new Date(Date.now()-days*86400000).toISOString().split("T")[0];
-        const [r1, fixRes] = await Promise.all([
+        const BEAUTY_CATS = "DRY,STR,GVN,ETB,ORL,TBS";
+        const [r1, fixRes, salesRes] = await Promise.all([
           fetch(`${SURL}/rest/v1/ad_campaigns?date=gte.${cutoff}&order=date.desc&limit=10000`, {headers:sh}),
           fetch(`${SURL}/rest/v1/naver_ads_fixlist?select=*`, {headers:sh}),
+          fetch(`${SURL}/rest/v1/beauty_sales?select=date,revenue&date=gte.${cutoff}&cat_id=in.(${BEAUTY_CATS})`, {headers:sh}),
         ]);
         if(cancelled) return;
         if(r1.ok) {
@@ -2275,6 +2278,12 @@ function NaverSection() {
           const map = {};
           data.forEach(r=>{ map[r.label]=r; });
           setFixList(map);
+        }
+        if(salesRes.ok) {
+          const data = await salesRes.json();
+          const byDate = {};
+          data.forEach(r=>{ byDate[r.date] = (byDate[r.date]||0) + (r.revenue||0); });
+          setSalesByDate(byDate);
         }
       } catch(e){ console.error(e); }
       if(!cancelled) setLoading(false);
@@ -2396,20 +2405,35 @@ function NaverSection() {
         label: key,
         campaign: r.campaign_name,
         type: r.campaign_type,
-        imp:0, click:0, cost:0, conv:0, convAmt:0,
+        imp:0, click:0, cost:0, dates: new Set(),
       };
       map[key].imp     += Number(r.impressions)||0;
       map[key].click   += Number(r.clicks)||0;
       map[key].cost    += Number(r.spend)||0;
-      map[key].conv    += Number(r.conversions)||0;
-      map[key].convAmt += Number(r.conv_amount)||0;
+      if(r.date) map[key].dates.add(r.date);
     });
-    return Object.values(map).map(r=>({
-      ...r,
-      ctr:    r.imp>0 ? (r.click/r.imp*100).toFixed(2) : "0",
-      cpc:    r.click>0 ? Math.round(r.cost/r.click) : 0,
-      roas:   r.cost>0  ? Math.round(r.convAmt/r.cost*100) : 0,
-    }));
+    // 실제 매출 합산 (해당 날짜 범위의 beauty_sales)
+    const allDates = new Set();
+    activeRows.filter(filterByLevel).forEach(r=>{ if(r.date) allDates.add(r.date); });
+    const totalSales = [...allDates].reduce((s,d)=>s+(salesByDate[d]||0),0);
+    const totalAdSpend = Object.values(map).reduce((s,r)=>s+r.cost,0);
+
+    return Object.values(map).map(r=>{
+      // 캠페인별 ROAS: 해당 캠페인 날짜 범위의 매출을 광고비 비율로 배분
+      const campSales = [...r.dates].reduce((s,d)=>s+(salesByDate[d]||0),0);
+      const campShare = totalAdSpend>0 ? r.cost/totalAdSpend : 0;
+      const allocatedSales = totalSales * campShare;
+      return {
+        ...r,
+        dates: undefined,
+        salesAmt: groupBy==="date" ? (salesByDate[r.label]||0) : Math.round(allocatedSales),
+        ctr:    r.imp>0 ? (r.click/r.imp*100).toFixed(2) : "0",
+        cpc:    r.click>0 ? Math.round(r.cost/r.click) : 0,
+        roas:   groupBy==="date"
+          ? (r.cost>0 ? Math.round((salesByDate[r.label]||0)/r.cost*100) : 0)
+          : (r.cost>0 ? Math.round(allocatedSales/r.cost*100) : 0),
+      };
+    });
   })();
 
   // 비교 기간 집계
@@ -2419,13 +2443,17 @@ function NaverSection() {
     compareRows.filter(filterByLevel).forEach(r => {
       const key = getGroupKey(r);
       if(!key) return;
-      if(!map[key]) map[key] = {cost:0, convAmt:0};
+      if(!map[key]) map[key] = {cost:0, dates: new Set()};
       map[key].cost    += Number(r.spend)||0;
-      map[key].convAmt += Number(r.conv_amount)||0;
+      if(r.date) map[key].dates.add(r.date);
     });
     const res = {};
     Object.entries(map).forEach(([k,v])=>{
-      res[k] = {cost:v.cost, roas:v.cost>0?Math.round(v.convAmt/v.cost*100):0};
+      const cmpSales = [...v.dates].reduce((s,d)=>s+(salesByDate[d]||0),0);
+      const totalCmpSpend = Object.values(map).reduce((s,x)=>s+x.cost,0);
+      const share = totalCmpSpend>0 ? v.cost/totalCmpSpend : 0;
+      const allCmpSales = [...new Set(Object.values(map).flatMap(x=>[...x.dates]))].reduce((s,d)=>s+(salesByDate[d]||0),0);
+      res[k] = {cost:v.cost, roas:v.cost>0?Math.round(allCmpSales*share/v.cost*100):0};
     });
     return res;
   })();
@@ -2443,11 +2471,11 @@ function NaverSection() {
 
   // 합계
   const total = filtered.reduce((s,r)=>({
-    imp:s.imp+r.imp, click:s.click+r.click, cost:s.cost+r.cost, conv:s.conv+r.conv, convAmt:s.convAmt+r.convAmt,
-  }),{imp:0,click:0,cost:0,conv:0,convAmt:0});
+    imp:s.imp+r.imp, click:s.click+r.click, cost:s.cost+r.cost, salesAmt:s.salesAmt+r.salesAmt,
+  }),{imp:0,click:0,cost:0,salesAmt:0});
   const avgCpc = total.click>0 ? Math.round(total.cost/total.click) : 0;
   const avgCtr = total.imp>0 ? (total.click/total.imp*100).toFixed(2) : "0";
-  const totalRoas = total.cost>0 ? Math.round(total.convAmt/total.cost*100) : 0;
+  const totalRoas = total.cost>0 ? Math.round(total.salesAmt/total.cost*100) : 0;
   const roasColor = v => v>=500?C.good:v>=300?"#CA8A04":C.bad;
 
   const COLS = [
@@ -2457,8 +2485,7 @@ function NaverSection() {
     {key:"ctr",     label:"CTR%",     align:"right", fmt:v=>v+"%"},
     {key:"cpc",     label:"CPC",      align:"right", fmt:v=>fmtN(v)+"원"},
     {key:"cost",    label:"광고비",   align:"right", fmt:fmtW},
-    {key:"conv",    label:"전환",     align:"right", fmt:fmtN},
-    {key:"convAmt", label:"전환매출", align:"right", fmt:fmtW},
+    {key:"salesAmt", label:"실매출",  align:"right", fmt:fmtW},
     {key:"roas",    label:"ROAS",     align:"right", fmt:v=>`${fmtN(v)}%`},
     ...(showCompare&&compareRows.length?[
       {key:"_cmp_cost", label:"비교 광고비", align:"right", fmt:()=>null},
@@ -2532,7 +2559,7 @@ function NaverSection() {
           <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:10}}>
             {[
               {label:"총 광고비",  value:fmtW(total.cost),       color:C.ink},
-              {label:"전환 매출",  value:fmtW(total.convAmt),   color:C.rose},
+              {label:"실 매출",    value:fmtW(total.salesAmt),  color:C.rose},
               {label:"ROAS",       value:totalRoas+"%",          color:roasColor(totalRoas)},
               {label:"평균 CPC",   value:fmtN(avgCpc)+"원",     color:C.ink},
             ].map(k=>(
@@ -2639,7 +2666,7 @@ function NaverSection() {
                         return (
                         <td key={c.key} style={{padding:"9px 12px",textAlign:c.align,
                           fontWeight:c.key==="roas"||c.key==="label"?800:600,
-                          color:c.key==="roas"?roasColor(r.roas):c.key==="convAmt"?C.rose:C.ink,
+                          color:c.key==="roas"?roasColor(r.roas):c.key==="salesAmt"?C.rose:C.ink,
                           maxWidth:c.key==="label"?220:undefined,
                           overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
                           {c.fmt(r[c.key])}
@@ -2658,13 +2685,12 @@ function NaverSection() {
                     <td style={{padding:"9px 12px",textAlign:"right",fontWeight:700}}>{avgCtr}%</td>
                     <td style={{padding:"9px 12px",textAlign:"right",fontWeight:700}}>{fmtN(avgCpc)}원</td>
                     <td style={{padding:"9px 12px",textAlign:"right",fontWeight:800,color:C.ink}}>{fmtW(total.cost)}</td>
-                    <td style={{padding:"9px 12px",textAlign:"right",fontWeight:700}}>{fmtN(total.conv)}</td>
-                    <td style={{padding:"9px 12px",textAlign:"right",fontWeight:800,color:C.rose}}>{fmtW(total.convAmt)}</td>
+                    <td style={{padding:"9px 12px",textAlign:"right",fontWeight:800,color:C.rose}}>{fmtW(total.salesAmt)}</td>
                     <td style={{padding:"9px 12px",textAlign:"right",fontWeight:900,color:roasColor(totalRoas)}}>{fmtN(totalRoas)}%</td>
                     {showCompare&&compareRows.length>0&&(()=>{
-                      const cmpTotal = Object.values(prevAggMap).reduce((acc,p)=>({cost:acc.cost+p.cost,roas:0}),{cost:0});
-                      const cmpConvAmt = Object.values(prevAggMap).reduce((s,p)=>s+(p.roas*p.cost/100),0);
-                      const cmpRoas = cmpTotal.cost>0?Math.round(cmpConvAmt/cmpTotal.cost*100):0;
+                      const cmpTotal = Object.values(prevAggMap).reduce((acc,p)=>({cost:acc.cost+p.cost}),{cost:0});
+                      const cmpWeightedRoas = Object.values(prevAggMap).reduce((s,p)=>s+(p.roas*p.cost),0);
+                      const cmpRoas = cmpTotal.cost>0?Math.round(cmpWeightedRoas/cmpTotal.cost):0;
                       return(<><td style={{padding:"9px 12px",textAlign:"right",fontWeight:700,fontSize:11,color:C.inkMid}}>{fmtW(cmpTotal.cost)}</td><td style={{padding:"9px 12px",textAlign:"right",fontWeight:900,fontSize:11,color:roasColor(cmpRoas)}}>{cmpRoas}%</td><td/></>);
                     })()}
                     <td/>
@@ -7940,6 +7966,10 @@ export default function OaDashboard(){
                 assignee:"", status:"pending",
                 requestedAt:new Date().toISOString().slice(0,10),
               },...(prev||[])]);
+              // 텔레그램 즉시 알림 (실패 무시)
+              fetch("/api/notify-recreate",{method:"POST",headers:{"Content-Type":"application/json"},
+                body:JSON.stringify({adName:name,roas:v.spend>0?String(Math.round((v.convValue/v.spend)*100)):"0",
+                  spend:v.spend,thumbUrl:thumb?.url||"",note:"주별 액션 추천 — 중단 검토/피로 소재 재제작"})}).catch(()=>{});
             };
             const row=(name,v,color,label,canReq)=>(
               <div key={label+name} style={{display:"flex",alignItems:"center",gap:8,padding:"6px 10px",borderRadius:8,background:C.white,border:`1px solid ${color}33`}}>
@@ -10092,6 +10122,10 @@ export default function OaDashboard(){
         requestedAt: new Date().toISOString().slice(0,10),
       };
       setRecreateReqs(prev=>[req,...(prev||[])]);
+      // 텔레그램 즉시 알림 (실패 무시)
+      fetch("/api/notify-recreate",{method:"POST",headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({adName:req.adName,roas:req.roas,spend:req.spend,thumbUrl:req.thumbUrl,
+          note:[req.note,req.assignee?`담당: ${req.assignee}`:""].filter(Boolean).join(" / ")})}).catch(()=>{});
       setReqNote("");
       setReqAssignee("");
       setReqPopover(null);

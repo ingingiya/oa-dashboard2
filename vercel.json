@@ -26,6 +26,10 @@
     {
       "path": "/api/weekly-report",
       "schedule": "30 23 * * 0"
+    },
+    {
+      "path": "/api/daily-alert",
+      "schedule": "40 23 * * *"
     }
   ]
 }
