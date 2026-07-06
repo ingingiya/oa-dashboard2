@@ -1893,6 +1893,18 @@ function extractAdsetStartDate(adsetName) {
   return null;
 }
 
+// 광고명 → 소구 유형 자동 분류 (2026 상반기 95개 소재 분석 기반 키워드)
+const APPEAL_COLORS = {"상황/라이프스타일":"#86A789","가격/프로모션":"#E8A0A8","기능/스펙":"#8FA8C8","협력":"#C9A86A","기타":"#B0AAA4"};
+function classifyAppeal(name){
+  const s=(name||"").toLowerCase();
+  if(!s) return "기타";
+  if(/협력|협찬|파트너|roun|\.life|크리에이터|앰버서더/.test(s)) return "협력";
+  if(/\d+\s*(원|만원|%)|할인|특가|세일|프로모션|행사|품절|역대급|최저가|쿠폰|딜\b|혜택|증정|사은품|초특가|와우/.test(s)) return "가격/프로모션";
+  if(/헬스장|아직도|쓰세요|안씁|안 씁|출근|퇴근|여행|자취|기숙사|캠핑|출장|운동|아침|저녁|일상|후기|리뷰|비포|애프터|전후|언니|남친|여친|엄마|선물|브이로그|국룰|요즘|이제/.test(s)) return "상황/라이프스타일";
+  if(/초경량|경량|무게|음이온|속건|바람|모터|스펙|한뼘|사이즈|접이|폴더|무선|급속|온도|풍량|저소음|소음|미니|컬러|그램|\d+g\b|\d+mm|쿨링|세라믹|코팅/.test(s)) return "기능/스펙";
+  return "기타";
+}
+
 // 메타 컬럼 매핑 — 실제 광고관리자 내보내기 기준
 function mapMetaRow(row){
   // 원본 컬럼명 그대로 접근하는 헬퍼
@@ -7992,7 +8004,8 @@ export default function OaDashboard(){
                                     <div style={{flex:1,minWidth:0}}>
                                       <div style={{fontSize:11,fontWeight:700,color:C.ink,
                                         overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{name}</div>
-                                      <div style={{fontSize:10,color:C.inkLt,display:"flex",gap:8,marginTop:2}}>
+                                      <div style={{fontSize:10,color:C.inkLt,display:"flex",gap:8,marginTop:2,alignItems:"center"}}>
+                                        {(()=>{const ap=classifyAppeal(name);return <span style={{fontSize:8.5,fontWeight:800,color:"#fff",background:APPEAL_COLORS[ap],padding:"1px 6px",borderRadius:4}}>{ap}</span>;})()}
                                         {v.purchases>0&&<span style={{color:C.sage,fontWeight:700}}>{v.purchases}건</span>}
                                         {cr!==null&&<span style={{fontWeight:700,color:cr>=400?C.sage:cr<200?C.bad:C.inkMid}}>ROAS {cr}%</span>}
                                         {cr===null&&v.spend>0&&<span style={{color:C.bad,fontWeight:700}}>구매 0</span>}
@@ -8185,9 +8198,19 @@ export default function OaDashboard(){
             {name:"상황/라이프스타일",roas:5.56,ex:"\"헬스장 드라이기 아직도 쓰세요?\" — 공감 훅",best:true},
             {name:"가격/프로모션",roas:4.61,ex:"\"역대급 5만원\" — 구체적 숫자"},
             {name:"기능/스펙",roas:4.54,ex:"\"컬러까지 완벽한 초경량\""},
-            {name:"협력광고",roas:2.80,ex:"클릭은 높지만 구매 전환 약함"},
+            {name:"협력",roas:2.80,ex:"클릭은 높지만 구매 전환 약함"},
             {name:"기타",roas:1.82,ex:"소구점 불명확"},
           ];
+          // 현재 시트 데이터로 소구 유형별 실시간 집계 (광고명 키워드 자동 분류)
+          const live={};
+          metaForChart.forEach(r=>{
+            if(!r.adName||!r.spend) return;
+            const b=classifyAppeal(r.adName);
+            if(!live[b]) live[b]={spend:0,convValue:0,ads:new Set()};
+            live[b].spend+=(r.spend||0);
+            live[b].convValue+=(r.convValue||0);
+            live[b].ads.add(r.adName);
+          });
           const PRINCIPLES=[
             {t:"상황 공감 훅으로 시작",d:"\"헬스장에서 아직도…\" 같은 상황 제시가 ROAS 1위 (9~11). 제품 자랑보다 시청자의 불편한 순간부터."},
             {t:"가격은 구체적 숫자로",d:"\"역대급 5만원\"(ROAS 11.3)처럼 정확한 금액·할인폭 명시. \"특가\", \"세일\" 같은 모호한 표현 금지."},
@@ -8219,10 +8242,25 @@ export default function OaDashboard(){
                         <div style={{fontSize:12,fontWeight:700,color:C.ink}}>{a.name}{a.best&&<span style={{fontSize:9,marginLeft:6,color:C.rose,fontWeight:800,background:"#fff",padding:"1px 6px",borderRadius:4}}>추천</span>}</div>
                         <div style={{fontSize:10,color:C.inkLt,marginTop:1}}>{a.ex}</div>
                       </div>
-                      <div style={{fontSize:13,fontWeight:900,color:a.roas>=4.5?C.sage:a.roas>=3?C.inkMid:C.bad}}>ROAS {a.roas}</div>
+                      {(()=>{
+                        const lv=live[a.name];
+                        if(!lv||!lv.spend) return null;
+                        const lr=(lv.convValue/lv.spend);
+                        return(
+                          <div style={{textAlign:"right",marginRight:10}}>
+                            <div style={{fontSize:11,fontWeight:800,color:lr>=4?C.sage:lr>=2?C.inkMid:C.bad}}>현재 {lr.toFixed(2)}</div>
+                            <div style={{fontSize:9,color:C.inkLt}}>{lv.ads.size}개 소재</div>
+                          </div>
+                        );
+                      })()}
+                      <div style={{textAlign:"right"}}>
+                        <div style={{fontSize:13,fontWeight:900,color:a.roas>=4.5?C.sage:a.roas>=3?C.inkMid:C.bad}}>{a.roas}</div>
+                        <div style={{fontSize:9,color:C.inkLt}}>상반기</div>
+                      </div>
                     </div>
                   ))}
                 </div>
+                <div style={{fontSize:9,color:C.inkLt,marginTop:8}}>"현재" = 연결된 시트 데이터 기준, 광고명 키워드 자동 분류 · "상반기" = 2026 상반기 95개 소재 분석</div>
               </div>
               <div style={card}>
                 <div style={h}><MI n="rule" size={15}/> 제작 5원칙</div>

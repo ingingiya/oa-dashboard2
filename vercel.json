@@ -16,8 +16,16 @@
       "schedule": "17 0 * * *"
     },
     {
+      "path": "/api/sync-naver-ads?secret=${ERP_SYNC_SECRET}",
+      "schedule": "22 0 * * *"
+    },
+    {
       "path": "/api/hypothesis?action=generate",
       "schedule": "23 23 * * *"
+    },
+    {
+      "path": "/api/weekly-report",
+      "schedule": "30 23 * * 0"
     }
   ]
 }
