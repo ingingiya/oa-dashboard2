@@ -2960,7 +2960,7 @@ function DetailPlanSection() {
               {plan.designTone&&<span>디자인: {plan.designTone}</span>}
             </div>
             <button onClick={async()=>{
-              const fileKey = prompt("피그마 파일 키 또는 URL을 입력하세요","FrFw1cLuSagJ72RbIZLXF1");
+              const fileKey = prompt("피그마 파일 키 또는 URL을 입력하세요","N9wx4lQdN7UwQW1xYY0bIa");
               if(!fileKey) return;
               const key = fileKey.includes("figma.com") ? fileKey.match(/\/(design|slides|board)\/([^/]+)/)?.[2]||fileKey : fileKey;
               try {
