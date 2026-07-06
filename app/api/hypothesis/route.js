@@ -118,6 +118,36 @@ ${yesterdayText}
   return JSON.parse(match[0]);
 }
 
+// 텔레그램 아침 브리핑 (실패해도 가설 저장에는 영향 없음)
+async function sendTelegramBriefing(today, hypotheses) {
+  const token = process.env.TELEGRAM_BOT_TOKEN;
+  const chatId = process.env.TELEGRAM_CHAT_ID;
+  if (!token || !chatId) return;
+
+  const pri = { high: '🔴', mid: '🟡', low: '🟢' };
+  const section = (type, emoji) => {
+    const items = hypotheses.filter(h => h.type === type);
+    if (!items.length) return '';
+    return `\n${emoji} <b>${type}</b>\n` + items.map(h =>
+      `${pri[h.priority] || '🟡'} <b>${h.product}</b>\n${h.hypothesis}\n<i>근거: ${h.evidence}</i>`
+    ).join('\n\n');
+  };
+
+  const text = `📊 <b>오늘의 판매 가설</b> (${today})\n` +
+    section('원인분석', '🔍') + '\n' + section('마케팅액션', '💡') +
+    `\n\n👉 대시보드 가설 탭에서 검증/기각 가능`;
+
+  try {
+    await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ chat_id: chatId, text, parse_mode: 'HTML' }),
+    });
+  } catch (e) {
+    console.error('텔레그램 발송 실패:', e.message);
+  }
+}
+
 export async function GET(request) {
   const { searchParams } = new URL(request.url);
   const action = searchParams.get('action') || 'list';
@@ -168,6 +198,8 @@ export async function GET(request) {
         body: JSON.stringify(rows),
       });
       if (!ins.ok) throw new Error(`Supabase 저장 실패: ${await ins.text()}`);
+
+      await sendTelegramBriefing(today, rows);
 
       return Response.json({ ok: true, count: rows.length, date: today });
     }
