@@ -21,7 +21,7 @@
     },
     {
       "path": "/api/hypothesis?action=generate",
-      "schedule": "23 23 * * *"
+      "schedule": "10 0 * * *"
     },
     {
       "path": "/api/weekly-report",
