@@ -1,7 +1,6 @@
 export const dynamic = 'force-dynamic';
-export const maxDuration = 60; // MySQL 조회 + AI 생성에 시간 필요
+export const maxDuration = 60; // 데이터 조회 + AI 생성에 시간 필요
 
-import mysql from 'mysql2/promise';
 import Anthropic from '@anthropic-ai/sdk';
 
 const SUPA_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -12,57 +11,60 @@ const sH = {
   'Content-Type': 'application/json',
 };
 
-// 이미용 카테고리 코드 (드라이기, 고데기, 안마기, 전동칫솔, 구강세정기, 칫솔살균기, 체중계 등)
-const BEAUTY_CATEGORY_IDS = ['DRY','STR','MSG','GVN','ETB','ORL','TBS','SCA','MUM'];
+// Supabase beauty_sales에서 최근 14일 데이터 조회 (매일 MySQL→Supabase 동기화됨)
+// Vercel에서 MySQL 직접 접속이 차단되어 있어 동기화 테이블 사용
+async function fetchSalesData() {
+  const kstNow = new Date(Date.now() + 9 * 3600 * 1000);
+  const dstr = (d) => new Date(kstNow.getTime() - d * 86400000).toISOString().split('T')[0];
+  const from14 = dstr(14);
+  const from7 = dstr(7);
+  const yesterdayDate = dstr(1);
 
-function getPool() {
-  return mysql.createPool({
-    host: process.env.MYSQL_HOST,
-    port: Number(process.env.MYSQL_PORT) || 3306,
-    user: process.env.MYSQL_USER,
-    password: process.env.MYSQL_PASS,
-    database: process.env.MYSQL_DB,
-    waitForConnections: true,
-    connectionLimit: 5,
-  });
-}
+  // 페이지네이션으로 14일치 전체 조회
+  const all = [];
+  const PAGE = 1000;
+  for (let offset = 0; offset < 50000; offset += PAGE) {
+    const res = await fetch(
+      `${SUPA_URL}/rest/v1/beauty_sales?select=name,channel,date,qty,revenue&date=gte.${from14}&order=date.desc`,
+      { headers: { ...sH, Range: `${offset}-${offset + PAGE - 1}` }, cache: 'no-store' }
+    );
+    if (!res.ok) throw new Error(`판매 데이터 조회 실패: ${await res.text()}`);
+    const page = await res.json();
+    all.push(...page);
+    if (page.length < PAGE) break;
+  }
 
-async function fetchSalesData(pool) {
-  const placeholders = BEAUTY_CATEGORY_IDS.map(() => '?').join(',');
+  // 전주 vs 이번주 제품별 집계
+  const byProduct = {};
+  for (const r of all) {
+    const p = byProduct[r.name] = byProduct[r.name] ||
+      { name: r.name, this_week: 0, last_week: 0, this_revenue: 0, last_revenue: 0 };
+    if (r.date >= from7) {
+      p.this_week += Number(r.qty) || 0;
+      p.this_revenue += Number(r.revenue) || 0;
+    } else {
+      p.last_week += Number(r.qty) || 0;
+      p.last_revenue += Number(r.revenue) || 0;
+    }
+  }
+  const trend = Object.values(byProduct)
+    .filter(p => p.this_week > 0 || p.last_week > 0)
+    .sort((a, b) => Math.abs(b.this_week - b.last_week) - Math.abs(a.this_week - a.last_week))
+    .slice(0, 30);
 
-  // 전주 vs 이번주 급등/급락
-  const [trend] = await pool.query(`
-    SELECT
-      제품명 as name,
-      SUM(CASE WHEN 판매날짜 >= DATE_SUB(CURDATE(), INTERVAL 7 DAY) THEN 판매수량 ELSE 0 END) as this_week,
-      SUM(CASE WHEN 판매날짜 >= DATE_SUB(CURDATE(), INTERVAL 14 DAY)
-                AND 판매날짜 < DATE_SUB(CURDATE(), INTERVAL 7 DAY) THEN 판매수량 ELSE 0 END) as last_week,
-      SUM(CASE WHEN 판매날짜 >= DATE_SUB(CURDATE(), INTERVAL 7 DAY) THEN 총매출액 ELSE 0 END) as this_revenue,
-      SUM(CASE WHEN 판매날짜 >= DATE_SUB(CURDATE(), INTERVAL 14 DAY)
-                AND 판매날짜 < DATE_SUB(CURDATE(), INTERVAL 7 DAY) THEN 총매출액 ELSE 0 END) as last_revenue
-    FROM v_daily_sales_detail
-    WHERE 판매날짜 >= DATE_SUB(CURDATE(), INTERVAL 14 DAY)
-      AND 카테고리코드 IN (${placeholders})
-    GROUP BY 제품명
-    HAVING this_week > 0 OR last_week > 0
-    ORDER BY ABS(this_week - last_week) DESC
-    LIMIT 30
-  `, [...BEAUTY_CATEGORY_IDS]);
-
-  // 어제 일별 판매 (채널별 포함)
-  const [yesterday] = await pool.query(`
-    SELECT
-      제품명 as name,
-      매출처명 as channel,
-      SUM(판매수량) as qty,
-      SUM(총매출액) as revenue
-    FROM v_daily_sales_detail
-    WHERE DATE(판매날짜) = DATE_SUB(CURDATE(), INTERVAL 1 DAY)
-      AND 카테고리코드 IN (${placeholders})
-    GROUP BY 제품명, 매출처명
-    ORDER BY revenue DESC
-    LIMIT 30
-  `, [...BEAUTY_CATEGORY_IDS]);
+  // 어제 제품×채널별 집계
+  const byChannel = {};
+  for (const r of all) {
+    if (r.date !== yesterdayDate) continue;
+    const key = `${r.name}|${r.channel}`;
+    const c = byChannel[key] = byChannel[key] ||
+      { name: r.name, channel: r.channel || '기타', qty: 0, revenue: 0 };
+    c.qty += Number(r.qty) || 0;
+    c.revenue += Number(r.revenue) || 0;
+  }
+  const yesterday = Object.values(byChannel)
+    .sort((a, b) => b.revenue - a.revenue)
+    .slice(0, 30);
 
   return { trend, yesterday };
 }
@@ -144,15 +146,7 @@ export async function GET(request) {
         }
       }
 
-      let pool;
-      let salesData;
-      try {
-        pool = getPool();
-        salesData = await fetchSalesData(pool);
-      } finally {
-        if (pool) await pool.end().catch(() => {});
-      }
-
+      const salesData = await fetchSalesData();
       const hypotheses = await generateHypotheses(salesData);
 
       const rows = hypotheses.map(h => ({
