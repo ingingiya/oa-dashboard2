@@ -8470,6 +8470,7 @@ export default function OaDashboard(){
 
         {/* 행사 탭 — 행사 기간별 광고 성과 */}
         {metaTab==="events"&&(()=>{
+          const fmtW=n=>n>=10000?`₩${Math.round(n/10000).toLocaleString()}만`:`₩${Math.round(n).toLocaleString()}`;
           const today=new Date().toISOString().slice(0,10);
           const events=[...(promoEvents||[])].sort((a,b)=>(b.start||"").localeCompare(a.start||""));
           const isActive=e=>e.start<=today&&today<=e.end;
