@@ -7141,6 +7141,31 @@ export default function OaDashboard(){
                   color:C.bad,fontFamily:"inherit"}}>
                 전체삭제
               </button>}
+              <button disabled={imgUploading} onClick={async()=>{
+                setImgUploading(true); setImgError("");
+                try{
+                  const res=await fetch("/api/meta-thumbs");
+                  const data=await res.json();
+                  if(data.error) throw new Error(data.error);
+                  const existing=new Set(adImages.map(x=>x.name));
+                  const added=Object.entries(data.thumbs||{})
+                    .filter(([n])=>!existing.has(n))
+                    .map(([n,u])=>({id:Date.now()+Math.random(),name:n,url:u,source:"meta"}));
+                  if(added.length){
+                    const next=[...adImages,...added];
+                    setAdImages(next);
+                    await saveAdImagesMeta(next);
+                  }else{
+                    setImgError("새로 가져올 소재가 없어요");
+                  }
+                }catch(e){ setImgError(e.message||"메타 가져오기 실패"); }
+                setImgUploading(false);
+              }}
+                style={{fontSize:11,fontWeight:600,padding:"5px 12px",borderRadius:8,
+                  border:`1px solid ${C.rose}44`,background:C.blush,cursor:"pointer",
+                  color:C.rose,fontFamily:"inherit",opacity:imgUploading?0.5:1}}>
+                <MI n="sync" size={12}/> 메타에서 자동 가져오기
+              </button>
               <button onClick={()=>fileInputRef.current?.click()}
                 style={{fontSize:11,fontWeight:600,padding:"5px 14px",borderRadius:8,
                   border:`1px solid ${C.border}`,background:C.white,cursor:"pointer",
@@ -7910,7 +7935,7 @@ export default function OaDashboard(){
             const dd=new Date(r.date); const day=dd.getDay();
             const mon=new Date(dd); mon.setDate(dd.getDate()-(day===0?6:day-1));
             const wk=`${mon.getFullYear()}-${String(mon.getMonth()+1).padStart(2,"0")}-${String(mon.getDate()).padStart(2,"0")}`;
-            if(!weekMap[wk]) weekMap[wk]={week:wk,spend:0,purchases:0,convValue:0,camps:{}};
+            if(!weekMap[wk]) weekMap[wk]={week:wk,spend:0,purchases:0,convValue:0,camps:{},ads:{}};
             weekMap[wk].spend+=(r.spend||0);
             weekMap[wk].purchases+=(r.purchases||0);
             weekMap[wk].convValue+=(r.convValue||0);
@@ -7919,6 +7944,13 @@ export default function OaDashboard(){
             weekMap[wk].camps[r.campaign].purchases+=(r.purchases||0);
             weekMap[wk].camps[r.campaign].convValue+=(r.convValue||0);
             weekMap[wk].camps[r.campaign].clicks+=(r.clicks||0);
+            if(r.adName){
+              if(!weekMap[wk].ads[r.adName]) weekMap[wk].ads[r.adName]={spend:0,purchases:0,convValue:0,clicks:0};
+              weekMap[wk].ads[r.adName].spend+=(r.spend||0);
+              weekMap[wk].ads[r.adName].purchases+=(r.purchases||0);
+              weekMap[wk].ads[r.adName].convValue+=(r.convValue||0);
+              weekMap[wk].ads[r.adName].clicks+=(r.clicks||0);
+            }
           });
           const weeks=Object.values(weekMap).sort((a,b)=>b.week.localeCompare(a.week));
           return(
@@ -7971,6 +8003,44 @@ export default function OaDashboard(){
                             </div>
                           );
                         })}
+                        {(()=>{
+                          const adList=Object.entries(w.ads||{}).filter(([,v])=>v.spend>0)
+                            .sort((a,b)=>b[1].spend-a[1].spend).slice(0,10);
+                          if(!adList.length) return null;
+                          return(
+                            <>
+                              <div style={{fontSize:10,fontWeight:800,color:C.inkLt,marginTop:8,padding:"0 2px",letterSpacing:0.3}}>
+                                <MI n="image" size={11}/> 소재별 성과 TOP {adList.length}
+                              </div>
+                              {adList.map(([name,v])=>{
+                                const thumb=adImages.find(img=>img.name&&name&&(name.includes(img.name)||img.name.includes(name)));
+                                const cr=v.spend>0&&v.convValue>0?Math.round((v.convValue/v.spend)*100):null;
+                                return(
+                                  <div key={name} style={{display:"flex",alignItems:"center",gap:10,padding:"6px 10px",
+                                    borderRadius:8,background:C.white,border:`1px solid ${C.border}`}}>
+                                    {thumb
+                                      ?<ThumbPreview url={thumb.url} name={thumb.name}/>
+                                      :<div style={{width:56,height:56,borderRadius:8,background:C.cream,flexShrink:0,
+                                          display:"flex",alignItems:"center",justifyContent:"center"}}>
+                                          <MI n="image" size={18} style={{color:C.inkLt}}/>
+                                        </div>}
+                                    <div style={{flex:1,minWidth:0}}>
+                                      <div style={{fontSize:11,fontWeight:700,color:C.ink,
+                                        overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{name}</div>
+                                      <div style={{fontSize:10,color:C.inkLt,display:"flex",gap:8,marginTop:2}}>
+                                        {v.purchases>0&&<span style={{color:C.sage,fontWeight:700}}>{v.purchases}건</span>}
+                                        {cr!==null&&<span style={{fontWeight:700,color:cr>=400?C.sage:cr<200?C.bad:C.inkMid}}>ROAS {cr}%</span>}
+                                        {cr===null&&v.spend>0&&<span style={{color:C.bad,fontWeight:700}}>구매 0</span>}
+                                        {v.clicks>0&&<span>{v.clicks.toLocaleString()} 클릭</span>}
+                                      </div>
+                                    </div>
+                                    <div style={{fontSize:13,fontWeight:800,color:C.ink,marginLeft:8}}>{fmtW(v.spend)}</div>
+                                  </div>
+                                );
+                              })}
+                            </>
+                          );
+                        })()}
                       </div>
                     )}
                   </div>

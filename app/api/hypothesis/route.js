@@ -2,6 +2,7 @@ export const dynamic = 'force-dynamic';
 export const maxDuration = 60; // MySQL 조회 + AI 생성에 시간 필요
 
 import mysql from 'mysql2/promise';
+import Anthropic from '@anthropic-ai/sdk';
 
 const SUPA_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const SUPA_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
@@ -58,7 +59,7 @@ async function fetchSalesData(pool) {
     FROM v_daily_sales_detail
     WHERE DATE(판매날짜) = DATE_SUB(CURDATE(), INTERVAL 1 DAY)
       AND 카테고리코드 IN (${placeholders})
-    GROUP BY 제품명, 거래처명
+    GROUP BY 제품명, 매출처명
     ORDER BY revenue DESC
     LIMIT 30
   `, [...BEAUTY_CATEGORY_IDS]);
@@ -67,8 +68,8 @@ async function fetchSalesData(pool) {
 }
 
 async function generateHypotheses(salesData) {
-  const GROQ_KEY = process.env.GROQ_API_KEY;
-  if (!GROQ_KEY) throw new Error('GROQ_API_KEY 환경변수가 없어요');
+  const ANTHROPIC_KEY = process.env.ANTHROPIC_API_KEY;
+  if (!ANTHROPIC_KEY) throw new Error('ANTHROPIC_API_KEY 환경변수가 없어요');
 
   const fmt = (n) => Math.round(Number(n) / 10000);
   const trendText = salesData.trend.map(r =>
@@ -98,23 +99,13 @@ ${yesterdayText}
 - 변동폭이 큰 제품 위주로
 - 한국어로 작성`;
 
-  const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${GROQ_KEY}`,
-    },
-    body: JSON.stringify({
-      model: 'llama-3.3-70b-versatile',
-      messages: [{ role: 'user', content: prompt }],
-      max_tokens: 2000,
-      temperature: 0.4,
-    }),
+  const client = new Anthropic({ apiKey: ANTHROPIC_KEY });
+  const msg = await client.messages.create({
+    model: 'claude-opus-4-6',
+    max_tokens: 4000,
+    messages: [{ role: 'user', content: prompt }],
   });
-
-  if (!res.ok) throw new Error(`Groq 오류: ${await res.text()}`);
-  const data = await res.json();
-  const raw = data.choices?.[0]?.message?.content || '[]';
+  const raw = msg.content.find(b => b.type === 'text')?.text || '[]';
 
   // JSON 배열 부분만 추출
   const match = raw.match(/\[[\s\S]*\]/);
