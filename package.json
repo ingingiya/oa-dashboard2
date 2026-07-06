@@ -12,6 +12,7 @@
     "@elevenlabs/elevenlabs-js": "^2.49.1",
     "@supabase/ssr": "^0.10.2",
     "@supabase/supabase-js": "^2.105.1",
+    "bcryptjs": "^3.0.3",
     "html2canvas": "^1.4.1",
     "mysql2": "^3.22.0",
     "next": "14.2.3",
