@@ -10841,6 +10841,7 @@ export default function OaDashboard(){
     const [hypoTab, setHypoTab] = useState("가설"); // 가설 | 실판매
     const [realLoading, setRealLoading] = useState(false);
     const [realGroups, setRealGroups] = useState(null);
+    const [realProds, setRealProds] = useState([]);
 
     const REAL_GROUP_DEF = [["소닉플로우",["소닉플로우"]],["갈바닉",["갈바닉"]],["화장거울",["거울"]],["고데기",["고데기"]],["드라이기",["드라이","에어리"]]];
     const matchRealGroup = n=>{ const s=String(n||""); for(const [gr,kws] of REAL_GROUP_DEF){ if(kws.some(k=>s.includes(k))) return gr; } return null; };
@@ -10874,12 +10875,18 @@ export default function OaDashboard(){
         const dayDiff = d=>Math.floor((new Date(today)-new Date(d))/86400000);
         const g = {};
         const ensure = k=>g[k]=g[k]||{cpThis:0,cpLast:0,zzThis:0,zzLast:0,cpReal28:0,cpReal7:0,erpThis:0,erp28:0,unitQty:0,unitRev:0,ad7:0,adPrev:0};
+        const prods = {}; // 제품 단위 (채널|제품명)
         real.forEach(r=>{
+          const dd = dayDiff(r.date), q = +r.qty||0;
+          const pk = `${r.channel}|${r.name}`;
+          const p = prods[pk] = prods[pk]||{channel:r.channel,name:r.name,thisW:0,lastW:0,q28:0};
+          p.q28+=q; if(dd<7) p.thisW+=q; else if(dd<14) p.lastW+=q;
           const gr = matchRealGroup(r.name); if(!gr) return;
-          const o = ensure(gr), dd = dayDiff(r.date), q = +r.qty||0;
+          const o = ensure(gr);
           if(r.channel==="쿠팡"){ o.cpReal28+=q; if(dd<7){o.cpReal7+=q;o.cpThis+=q;} else if(dd<14) o.cpLast+=q; }
           else { if(dd<7) o.zzThis+=q; else if(dd<14) o.zzLast+=q; }
         });
+        setRealProds(Object.values(prods).sort((a,b)=>b.thisW-a.thisW||b.q28-a.q28));
         erp.forEach(r=>{
           const gr = matchRealGroup(r.name); if(!gr) return;
           const o = ensure(gr), dd = dayDiff(r.date), q = +r.qty||0;
@@ -11007,6 +11014,36 @@ export default function OaDashboard(){
           <div style={{fontSize:11,color:C.inkMid,background:C.cream,padding:"8px 12px",borderRadius:8}}>
             실판매 = 이메일 파일 기준 실제 소비자 판매 (ERP 발주 수치와 별개). 추정재고 = 최근 28일 쿠팡 발주 − 실판매 누적이라 실제 재고와 차이 날 수 있어요.
           </div>
+
+          {/* 제품별 실판매 */}
+          <div style={{fontSize:12,fontWeight:800,color:C.ink}}>제품별 실판매</div>
+          <div style={{background:"#fff",borderRadius:12,border:`1px solid ${C.border}`,padding:"4px 8px",overflowX:"auto"}}>
+            <table style={{width:"100%",borderCollapse:"collapse",fontSize:11}}>
+              <thead><tr>
+                {["채널","제품명","이번주","지난주","28일 누적"].map(h=>(
+                  <th key={h} style={{padding:"8px",textAlign:"left",fontWeight:700,color:C.inkMid,
+                    borderBottom:`1px solid ${C.border}`,whiteSpace:"nowrap"}}>{h}</th>
+                ))}
+              </tr></thead>
+              <tbody>
+                {realProds.map(p=>(
+                  <tr key={`${p.channel}|${p.name}`} style={{borderBottom:`1px solid ${C.cream}`}}>
+                    <td style={{padding:"6px 8px",whiteSpace:"nowrap"}}>
+                      <span style={{fontSize:10,fontWeight:800,padding:"2px 8px",borderRadius:10,
+                        color:p.channel==="쿠팡"?"#b45309":"#be185d",
+                        background:p.channel==="쿠팡"?"#fef3c7":"#fce7f3"}}>{p.channel}</span></td>
+                    <td style={{padding:"6px 8px",fontWeight:700,color:C.ink}}>{p.name}</td>
+                    <td style={{padding:"6px 8px",whiteSpace:"nowrap",fontWeight:800}}>{Math.round(p.thisW)}개{chip(pct(p.thisW,p.lastW))}</td>
+                    <td style={{padding:"6px 8px",whiteSpace:"nowrap",color:C.inkMid}}>{Math.round(p.lastW)}개</td>
+                    <td style={{padding:"6px 8px",whiteSpace:"nowrap",color:C.inkMid}}>{Math.round(p.q28)}개</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {/* 제품군 요약 (재고·광고 효율) */}
+          <div style={{fontSize:12,fontWeight:800,color:C.ink,marginTop:4}}>제품군 요약 — 재고·광고 효율</div>
           <div style={{background:"#fff",borderRadius:12,border:`1px solid ${C.border}`,padding:"4px 8px",overflowX:"auto"}}>
             <table style={{width:"100%",borderCollapse:"collapse",fontSize:11}}>
               <thead><tr>
