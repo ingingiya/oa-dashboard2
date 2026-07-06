@@ -10868,12 +10868,12 @@ export default function OaDashboard(){
         };
         const [real, erp] = await Promise.all([
           fetchAll(`${SURL}/rest/v1/channel_daily_sales?date=gte.${from}&select=channel,name,date,qty&order=date.asc`),
-          fetchAll(`${SURL}/rest/v1/beauty_sales?date=gte.${from}&channel=in.(${encodeURIComponent("쿠팡,지그재그")})&cat_id=in.(DRY,STR,GVN,MUM)&select=channel,name,date,qty&order=date.asc`),
+          fetchAll(`${SURL}/rest/v1/beauty_sales?date=gte.${from}&cat_id=in.(DRY,STR,GVN,MUM)&select=channel,name,date,qty,revenue&order=date.asc`),
         ]);
         const today = kst().toISOString().slice(0,10);
         const dayDiff = d=>Math.floor((new Date(today)-new Date(d))/86400000);
         const g = {};
-        const ensure = k=>g[k]=g[k]||{cpThis:0,cpLast:0,zzThis:0,zzLast:0,cpReal28:0,cpReal7:0,erpThis:0,erp28:0};
+        const ensure = k=>g[k]=g[k]||{cpThis:0,cpLast:0,zzThis:0,zzLast:0,cpReal28:0,cpReal7:0,erpThis:0,erp28:0,unitQty:0,unitRev:0,ad7:0,adPrev:0};
         real.forEach(r=>{
           const gr = matchRealGroup(r.name); if(!gr) return;
           const o = ensure(gr), dd = dayDiff(r.date), q = +r.qty||0;
@@ -10881,11 +10881,31 @@ export default function OaDashboard(){
           else { if(dd<7) o.zzThis+=q; else if(dd<14) o.zzLast+=q; }
         });
         erp.forEach(r=>{
-          if(r.channel!=="쿠팡") return;
           const gr = matchRealGroup(r.name); if(!gr) return;
           const o = ensure(gr), dd = dayDiff(r.date), q = +r.qty||0;
+          // 평균 단가는 전 채널 ERP 기준 (28일)
+          if(q>0&&Number(r.revenue)>0){ o.unitQty+=q; o.unitRev+=Number(r.revenue); }
+          if(r.channel!=="쿠팡") return;
           o.erp28+=q; if(dd<7) o.erpThis+=q;
         });
+        // 메타 광고비 (구글 시트) — 광고명/캠페인명 키워드 매칭으로 제품군 배분
+        try{
+          const url = await getSetting("oa_conv_sheet_url_v1");
+          if(url){
+            const res = await fetch(`/api/sheet?url=${encodeURIComponent(url)}`);
+            if(res.ok){
+              const rows = parseCSV(await res.text()).map(mapMetaRow);
+              rows.forEach(r=>{
+                if(!r.date||!r.spend) return;
+                const dd = dayDiff(r.date);
+                if(dd<0||dd>=14) return;
+                const gr = matchRealGroup(`${r.campaign||""} ${r.adName||""}`);
+                if(!gr||!g[gr]) return;
+                if(dd<7) g[gr].ad7+=r.spend; else g[gr].adPrev+=r.spend;
+              });
+            }
+          }
+        }catch(e){}
         setRealGroups(g);
       }catch(e){ setHypoMsg("실판매 로드 실패: "+e.message); }
       setRealLoading(false);
@@ -10990,7 +11010,7 @@ export default function OaDashboard(){
           <div style={{background:"#fff",borderRadius:12,border:`1px solid ${C.border}`,padding:"4px 8px",overflowX:"auto"}}>
             <table style={{width:"100%",borderCollapse:"collapse",fontSize:11}}>
               <thead><tr>
-                {["제품군","쿠팡 실판매 (주간)","지그재그 실판매 (주간)","쿠팡 발주 (이번주)","쿠팡 추정재고 (28일)","소진 예상"].map(h=>(
+                {["제품군","쿠팡 실판매 (주간)","지그재그 실판매 (주간)","쿠팡 발주 (이번주)","쿠팡 추정재고 (28일)","소진 예상","메타 광고비 (주간)","실판매 ROAS"].map(h=>(
                   <th key={h} style={{padding:"8px",textAlign:"left",fontWeight:700,color:C.inkMid,
                     borderBottom:`1px solid ${C.border}`,whiteSpace:"nowrap"}}>{h}</th>
                 ))}
@@ -11011,16 +11031,47 @@ export default function OaDashboard(){
                     <td style={{padding:"8px",whiteSpace:"nowrap",fontWeight:700,
                       color:daysLeft===null?C.inkLt:daysLeft<=7?C.rose:daysLeft<=14?"#f59e0b":"#059669"}}>
                       {daysLeft===null?"—":`약 ${daysLeft}일`}</td>
+                    <td style={{padding:"8px",whiteSpace:"nowrap"}}>
+                      {o.ad7>0?<>₩{Math.round(o.ad7/10000).toLocaleString()}만{chip(pct(o.ad7,o.adPrev))}</>:<span style={{color:C.inkLt}}>—</span>}</td>
+                    <td style={{padding:"8px",whiteSpace:"nowrap",fontWeight:800,
+                      color:(()=>{const unit=o.unitQty>0?o.unitRev/o.unitQty:0;const roas=o.ad7>0&&unit>0?(o.cpThis+o.zzThis)*unit/o.ad7:null;
+                        return roas===null?C.inkLt:roas>=3?"#059669":roas>=1.5?"#f59e0b":C.rose;})()}}>
+                      {(()=>{const unit=o.unitQty>0?o.unitRev/o.unitQty:0;const roas=o.ad7>0&&unit>0?(o.cpThis+o.zzThis)*unit/o.ad7:null;
+                        return roas===null?"—":`${roas.toFixed(1)}x`;})()}</td>
                   </tr>);
                 })}
               </tbody>
             </table>
           </div>
-          <div style={{fontSize:10,color:C.inkLt}}>⚠️ = 이번주 발주가 실판매의 2배 초과 (과잉 입고 가능성) · 소진 예상 = 추정재고 ÷ 최근 7일 일평균 실판매</div>
+          <div style={{fontSize:10,color:C.inkLt}}>⚠️ = 이번주 발주가 실판매의 2배 초과 (과잉 입고 가능성) · 소진 예상 = 추정재고 ÷ 최근 7일 일평균 실판매 · 실판매 ROAS = (쿠팡+지그재그 주간 실판매 × ERP 평균단가) ÷ 메타 주간 광고비 — ERP 발주 기준보다 실제 효율에 가까워요</div>
         </div>);
       })()}
 
       {hypoTab==="가설"&&(<>
+      {/* 적중률 카드 */}
+      {(()=>{
+        const decided = hypoRows.filter(r=>r.status==="confirmed"||r.status==="rejected");
+        if(decided.length<3) return null;
+        const stat = rows=>{
+          const n = rows.length, c = rows.filter(r=>r.status==="confirmed").length;
+          return n>0?{pct:Math.round(c/n*100),n}:null;
+        };
+        const cards = [["전체",stat(decided)],["원인분석",stat(decided.filter(r=>r.type==="원인분석"))],["마케팅액션",stat(decided.filter(r=>r.type==="마케팅액션"))]]
+          .filter(([,s])=>s&&s.n>0);
+        return(
+        <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+          {cards.map(([label,s])=>{
+            const col = s.pct>=60?"#059669":s.pct>=40?"#f59e0b":C.rose;
+            return(
+            <div key={label} style={{flex:"1 1 100px",background:"#fff",borderRadius:12,
+              border:`1px solid ${C.border}`,padding:"10px 14px"}}>
+              <div style={{fontSize:10,fontWeight:700,color:C.inkMid}}>{label} 적중률</div>
+              <div style={{fontSize:20,fontWeight:900,color:col,marginTop:2}}>{s.pct}%</div>
+              <div style={{fontSize:10,color:C.inkLt}}>검증 {s.n}건 기준</div>
+            </div>);
+          })}
+        </div>);
+      })()}
       {/* 필터 */}
       <div style={{display:"flex",gap:6}}>
         {["전체","원인분석","마케팅액션"].map(f=>(

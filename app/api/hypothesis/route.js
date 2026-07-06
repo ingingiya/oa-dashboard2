@@ -206,6 +206,57 @@ ${feedbackText}
 
 const APP_URL = 'https://oa-dashboard2.vercel.app';
 
+// 쿠팡 추정재고 (28일 발주 누적 − 실판매 누적) → 소진 임박 제품군 알림
+const STOCK_GROUPS = [['소닉플로우',['소닉플로우']],['갈바닉',['갈바닉']],['화장거울',['거울']],['고데기',['고데기']],['드라이기',['드라이','에어리']]];
+const stockGroup = (n) => {
+  const s = String(n || '');
+  for (const [g, kws] of STOCK_GROUPS) if (kws.some(k => s.includes(k))) return g;
+  return null;
+};
+
+async function computeStockAlerts() {
+  const kstNow = new Date(Date.now() + 9 * 3600 * 1000);
+  const from28 = new Date(kstNow.getTime() - 28 * 86400000).toISOString().split('T')[0];
+  const from7 = new Date(kstNow.getTime() - 7 * 86400000).toISOString().split('T')[0];
+
+  const fetchAll = async (url) => {
+    const all = [];
+    for (let o = 0; o < 30000; o += 1000) {
+      const r = await fetch(url, { headers: { ...sH, Range: `${o}-${o + 999}` }, cache: 'no-store' });
+      if (!r.ok) return all;
+      const page = await r.json();
+      all.push(...page);
+      if (page.length < 1000) break;
+    }
+    return all;
+  };
+  const [erp, real] = await Promise.all([
+    fetchAll(`${SUPA_URL}/rest/v1/beauty_sales?select=name,date,qty&date=gte.${from28}&channel=eq.${encodeURIComponent('쿠팡')}&cat_id=in.(${BEAUTY_CODES.join(',')})`),
+    fetchAll(`${SUPA_URL}/rest/v1/channel_daily_sales?select=name,date,qty&date=gte.${from28}&channel=eq.${encodeURIComponent('쿠팡')}`),
+  ]);
+  if (!real.length) return []; // 실판매 데이터 없으면 판단 불가
+
+  const g = {};
+  const ensure = (k) => g[k] = g[k] || { erp28: 0, real28: 0, real7: 0 };
+  for (const r of erp) { const gr = stockGroup(r.name); if (gr) ensure(gr).erp28 += Number(r.qty) || 0; }
+  for (const r of real) {
+    const gr = stockGroup(r.name); if (!gr) continue;
+    const o = ensure(gr), q = Number(r.qty) || 0;
+    o.real28 += q;
+    if (r.date >= from7) o.real7 += q;
+  }
+  const alerts = [];
+  for (const [gr, o] of Object.entries(g)) {
+    const stock = Math.round(o.erp28 - o.real28);
+    const daily = o.real7 / 7;
+    if (stock > 0 && daily > 0) {
+      const days = Math.round(stock / daily);
+      if (days <= 7) alerts.push(`⚠️ ${gr}: 추정재고 약 ${stock}개, ${days}일 후 소진 예상 — 재발주 검토`);
+    }
+  }
+  return alerts;
+}
+
 // 텔레그램 인라인 버튼 (✅검증/❌기각 → action=set 링크)
 function hypoButtons(items) {
   const short = (p) => String(p || '').replace(/^오아/, '').slice(0, 14);
@@ -233,8 +284,14 @@ async function sendTelegramBriefing(today, hypotheses) {
     ).join('\n\n');
   };
 
+  let stockText = '';
+  try {
+    const alerts = await computeStockAlerts();
+    if (alerts.length) stockText = `\n\n📦 <b>쿠팡 재고 알림</b>\n${alerts.join('\n')}`;
+  } catch (e) { console.error('재고 알림 실패:', e.message); }
+
   const text = `📊 <b>오늘의 판매 가설</b> (${today})\n` +
-    section('원인분석', '🔍') + '\n' + section('마케팅액션', '💡') +
+    section('원인분석', '🔍') + '\n' + section('마케팅액션', '💡') + stockText +
     `\n\n👉 버튼으로 바로 검증/기각하거나 대시보드 가설 탭에서 처리`;
 
   try {

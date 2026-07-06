@@ -59,6 +59,47 @@ const normalizeDate = v => {
 
 const fmtW = n => n >= 10000 ? `${Math.round(n / 10000).toLocaleString()}만원` : `${Math.round(n).toLocaleString()}원`;
 
+// 쿠팡·지그재그 실판매 주간 비교 (channel_daily_sales, 제품군 단위)
+const REAL_GROUPS = [["소닉플로우", ["소닉플로우"]], ["갈바닉", ["갈바닉"]], ["화장거울", ["거울"]], ["고데기", ["고데기"]], ["드라이기", ["드라이", "에어리"]]];
+async function realSalesLines() {
+  try {
+    const kstNow = new Date(Date.now() + 9 * 3600 * 1000);
+    const from14 = new Date(kstNow.getTime() - 14 * 86400000).toISOString().split("T")[0];
+    const from7 = new Date(kstNow.getTime() - 7 * 86400000).toISOString().split("T")[0];
+    const all = [];
+    for (let o = 0; o < 20000; o += 1000) {
+      const r = await fetch(`${SUPA_URL}/rest/v1/channel_daily_sales?select=channel,name,date,qty&date=gte.${from14}`, {
+        headers: { apikey: SUPA_KEY, Authorization: `Bearer ${SUPA_KEY}`, Range: `${o}-${o + 999}` }, cache: "no-store",
+      });
+      if (!r.ok) return [];
+      const page = await r.json();
+      all.push(...page);
+      if (page.length < 1000) break;
+    }
+    if (!all.length) return [];
+    const g = {}; // channel -> group -> {t,l}
+    for (const r of all) {
+      const gr = REAL_GROUPS.find(([, kws]) => kws.some(k => String(r.name || "").includes(k)))?.[0];
+      if (!gr) continue;
+      const c = g[r.channel] = g[r.channel] || {};
+      const o = c[gr] = c[gr] || { t: 0, l: 0 };
+      if (r.date >= from7) o.t += Number(r.qty) || 0; else o.l += Number(r.qty) || 0;
+    }
+    const lines = ["", "📦 쿠팡·지그재그 실판매 (주간, 실제 소비자 판매)"];
+    for (const [ch, groups] of Object.entries(g)) {
+      const parts = Object.entries(groups)
+        .sort((a, b) => b[1].t - a[1].t)
+        .filter(([, o]) => o.t + o.l >= 5)
+        .map(([gr, o]) => {
+          const p = o.l > 0 ? Math.round((o.t - o.l) / o.l * 100) : null;
+          return `${gr} ${Math.round(o.t)}개${p !== null ? ` (${p >= 0 ? "+" : ""}${p}%)` : ""}`;
+        });
+      if (parts.length) lines.push(`· ${ch}: ${parts.join(" · ")}`);
+    }
+    return lines.length > 2 ? lines : [];
+  } catch { return []; }
+}
+
 export async function GET() {
   const botToken = process.env.TELEGRAM_BOT_TOKEN;
   const chatId = process.env.TELEGRAM_CHAT_ID;
@@ -182,6 +223,7 @@ export async function GET() {
     lines.push(``);
     lines.push(`증액/중단 대상 소재 없음 — 안정 운영 중`);
   }
+  lines.push(...await realSalesLines());
   lines.push(``);
   lines.push(`상세 👉 oa-dashboard2.vercel.app (메타광고 → 주별)`);
 
