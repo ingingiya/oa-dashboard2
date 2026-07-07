@@ -34,10 +34,6 @@
     {
       "path": "/api/monthly-review",
       "schedule": "0 1 1 * *"
-    },
-    {
-      "path": "/api/coupang-monitor?secret=${ERP_SYNC_SECRET}",
-      "schedule": "30 0 * * *"
     }
   ]
 }
