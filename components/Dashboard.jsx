@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, Fragment } from "react";
 import { getSetting, setSetting, getAdImages, saveAdImagesMeta, uploadAdImage, uploadSettleFile, getBeautyRealSales } from "../lib/useSupabase";
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -7206,6 +7206,7 @@ export default function OaDashboard(){
     {id:"naver",     icon:"ads_click",      label:"네이버광고"},
     {id:"meta",      icon:"campaign",       label:"메타광고"},
     {id:"stock",     icon:"inventory",      label:"재고"},
+    {id:"ads11st",   icon:"trending_up",    label:"11번가광고"},
     {id:"inf_archive",icon:"photo_library", label:"아카이브"},
     {id:"schedule",  icon:"calendar_month", label:"스케줄"},
     {id:"creative",  icon:"palette",        label:"소재"},
@@ -7733,6 +7734,148 @@ export default function OaDashboard(){
             </table>
           </div>
           <div style={{fontSize:10,color:C.inkLt,marginTop:8}}>기준: 재고일수 &lt; max(14일, 리드타임) = 품절 임박 · ≥60일 = 재고 여유 · 광고비/ROAS는 제품명에 마진 키워드가 포함된 소재 합계. ERP 재고·쿠팡 판매는 아침 7시 동기화</div>
+        </div>
+      </div>
+    );
+  })();
+
+  // ── 11번가 광고 (포커스클릭): 제품별 월 광고비 × 마진 손익 + 키워드 순위/입찰 규칙 ──
+  const Ads11stSection=(()=>{
+    const [f11,setF11]=useState(null);      // oa_11st_focus_v1
+    const [rules11,setRules11]=useState({});
+    const [rulesDirty,setRulesDirty]=useState(false);
+    const [rulesSaving,setRulesSaving]=useState(false);
+    const [open11,setOpen11]=useState(null);
+    const [q11,setQ11]=useState("");
+    const [act11,setAct11]=useState(false);
+    useEffect(()=>{
+      if(sec!=="ads11st"||f11!==null) return;
+      const SURL=process.env.NEXT_PUBLIC_SUPABASE_URL, SKEY=process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+      const sh={apikey:SKEY,Authorization:`Bearer ${SKEY}`};
+      Promise.all([
+        fetch(`${SURL}/rest/v1/settings?key=eq.oa_11st_focus_v1&select=value`,{headers:sh}).then(r=>r.json()).catch(()=>[]),
+        fetch(`${SURL}/rest/v1/settings?key=eq.oa_11st_bid_rules_v1&select=value`,{headers:sh}).then(r=>r.json()).catch(()=>[]),
+      ]).then(([f,r])=>{
+        setF11(f?.[0]?.value||{products:[]});
+        setRules11(r?.[0]?.value?.rules||{});
+      }).catch(()=>setF11({products:[]}));
+    },[sec]);
+    const saveRules=async()=>{
+      setRulesSaving(true);
+      const SURL=process.env.NEXT_PUBLIC_SUPABASE_URL, SKEY=process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+      await fetch(`${SURL}/rest/v1/settings?on_conflict=key`,{method:"POST",
+        headers:{apikey:SKEY,Authorization:`Bearer ${SKEY}`,"Content-Type":"application/json",Prefer:"resolution=merge-duplicates"},
+        body:JSON.stringify({key:"oa_11st_bid_rules_v1",value:{rules:rules11,updated:new Date().toISOString()}})}).catch(()=>{});
+      setRulesDirty(false); setRulesSaving(false);
+    };
+    const setRule=(k,field,v)=>{
+      setRules11(r=>({...r,[k]:{...(r[k]||{}),[field]:v===""?null:Number(v)}}));
+      setRulesDirty(true);
+    };
+    const fmtW=n=>`${Math.round(n).toLocaleString()}원`;
+    const card={background:C.white,border:`1px solid ${C.border}`,borderRadius:12,padding:"14px 16px"};
+    if(f11===null) return <Card><div style={{fontSize:11,color:C.inkLt,padding:"20px 0",textAlign:"center"}}>11번가 광고 데이터 로딩 중…</div></Card>;
+    const prods=(f11.products||[]).map(p=>{
+      const profit=p.profit30!==undefined&&p.profit30!==null?p.profit30
+        :(p.marginWon!=null?Math.round(p.marginWon*(p.conv30||0)-(p.spend30||0)):null);
+      let act=null;
+      if((p.spend30||0)>0&&(p.conv30||0)===0) act={t:"전환 0 — OFF/감액",bg:"#fef2f2",bd:"#fecaca",fg:"#b91c1c",lv:0};
+      else if(profit!==null&&profit<0) act={t:"적자 — 입찰 하향",bg:"#fffbeb",bd:"#fde68a",fg:"#92400e",lv:1};
+      else if(profit!==null&&profit>0&&(p.roas30||0)>=800) act={t:"흑자+고ROAS — 증액 후보",bg:"#f0fdf4",bd:"#bbf7d0",fg:"#15803d",lv:2};
+      return {...p,profit,act};
+    }).sort((a,b)=>(b.spend30||0)-(a.spend30||0));
+    const totSpend=prods.reduce((s,p)=>s+(p.spend30||0),0);
+    const totProfit=prods.reduce((s,p)=>s+(p.profit||0),0);
+    const zeroSpend=prods.filter(p=>p.act&&p.act.lv===0).reduce((s,p)=>s+(p.spend30||0),0);
+    const nLoss=prods.filter(p=>p.profit!==null&&p.profit<0).length;
+    const qq=q11.trim().replace(/\s/g,"");
+    const shown=prods.filter(p=>(!qq||(p.name||"").replace(/\s/g,"").includes(qq))&&(!act11||p.act));
+    return(
+      <div style={{display:"flex",flexDirection:"column",gap:14}}>
+        <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+          {[["월 광고비",fmtW(totSpend),C.ink,"#fff"],["월손익 (마진 매칭분)",`${totProfit>=0?"+":""}${fmtW(totProfit)}`,totProfit>=0?"#15803d":"#b91c1c",totProfit>=0?"#f0fdf4":"#fef2f2"],
+            ["전환 0 지출",fmtW(zeroSpend),"#b91c1c","#fef2f2"],["적자 제품",`${nLoss}개`,"#92400e","#fffbeb"]].map(([l,v,fg,bg])=>(
+            <div key={l} style={{flex:1,minWidth:130,background:bg,border:`1px solid ${C.border}`,borderRadius:12,padding:"12px 14px"}}>
+              <div style={{fontSize:10,fontWeight:700,color:C.inkLt}}>{l}</div>
+              <div style={{fontSize:19,fontWeight:800,color:fg}}>{v}</div>
+            </div>
+          ))}
+        </div>
+        <div style={card}>
+          <CardTitle title={`11번가 포커스클릭 — ${f11.group||"이미용"} (${prods.length}) · 최근 30일`}
+            sub={`수집일 ${f11.date||"—"} · 개당마진 = ERP 90일 매출이익 · 월손익 = 개당마진×전환수−광고비 · 수집은 로컬 스크립트(크롬 로그인 필요)`}/>
+          <div style={{display:"flex",gap:8,alignItems:"center",marginBottom:10,flexWrap:"wrap"}}>
+            <input value={q11} onChange={e=>setQ11(e.target.value)} placeholder="제품명 검색"
+              style={{padding:"6px 10px",border:`1px solid ${C.border}`,borderRadius:8,fontSize:11,color:C.ink,outline:"none",width:180}}/>
+            <button onClick={()=>setAct11(v=>!v)}
+              style={{padding:"6px 12px",border:`1px solid ${act11?C.rose:C.border}`,borderRadius:99,fontSize:10,fontWeight:700,
+                background:act11?"#fff1f2":C.white,color:act11?"#be123c":C.inkMid,cursor:"pointer"}}>액션 필요만</button>
+            {rulesDirty&&<button onClick={saveRules} disabled={rulesSaving}
+              style={{padding:"6px 12px",border:"none",borderRadius:99,fontSize:10,fontWeight:700,background:C.rose,color:"#fff",cursor:"pointer"}}>
+              {rulesSaving?"저장 중…":"입찰 규칙 저장"}</button>}
+          </div>
+          <div style={{overflowX:"auto"}}>
+            <table style={{width:"100%",borderCollapse:"collapse",fontSize:11}}>
+              <thead>
+                <tr style={{borderBottom:`2px solid ${C.border}`,color:C.inkLt,fontSize:10}}>
+                  {["제품","상태","30일 광고비","전환","전환금액","ROAS","개당마진","월손익","액션"].map(h=>
+                    <th key={h} style={{padding:"6px 8px",textAlign:h==="제품"||h==="액션"||h==="상태"?"left":"right",fontWeight:700,whiteSpace:"nowrap"}}>{h}</th>)}
+                </tr>
+              </thead>
+              <tbody>
+                {shown.map(p=>{
+                  const isOpen=open11===p.pid;
+                  return(
+                  <Fragment key={p.pid}>
+                    <tr onClick={()=>setOpen11(isOpen?null:p.pid)} style={{borderBottom:`1px solid ${C.border}`,cursor:"pointer",background:isOpen?"#faf9f7":"transparent"}}>
+                      <td style={{padding:"8px",fontWeight:700,color:C.ink,maxWidth:240,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}} title={p.name}>
+                        <span style={{fontSize:9,color:C.inkLt,marginRight:4}}>{isOpen?"▼":"▶"}</span>{p.name}</td>
+                      <td style={{padding:"8px",color:p.status==="운영중"?C.inkMid:C.inkLt,whiteSpace:"nowrap"}}>{p.status}</td>
+                      <td style={{padding:"8px",textAlign:"right",fontWeight:700,color:C.ink}}>{fmtW(p.spend30||0)}</td>
+                      <td style={{padding:"8px",textAlign:"right",color:C.inkMid}}>{p.conv30||0}</td>
+                      <td style={{padding:"8px",textAlign:"right",color:C.inkMid}}>{fmtW(p.convValue30||0)}</td>
+                      <td style={{padding:"8px",textAlign:"right",fontWeight:700,color:p.roas30===null||p.roas30===undefined?C.inkLt:p.roas30>=400?"#15803d":p.roas30>=200?C.inkMid:"#b91c1c"}}>{p.roas30!=null?`${p.roas30}%`:"—"}</td>
+                      <td style={{padding:"8px",textAlign:"right",color:p.marginWon!=null?C.inkMid:C.inkLt}}>{p.marginWon!=null?fmtW(p.marginWon):"—"}</td>
+                      <td style={{padding:"8px",textAlign:"right",fontWeight:800,color:p.profit===null?C.inkLt:p.profit>=0?"#15803d":"#b91c1c"}}>{p.profit!==null?`${p.profit>=0?"+":""}${fmtW(p.profit)}`:"—"}</td>
+                      <td style={{padding:"8px"}}>{p.act?<span style={{fontSize:10,fontWeight:700,padding:"3px 9px",borderRadius:99,background:p.act.bg,border:`1px solid ${p.act.bd}`,color:p.act.fg,whiteSpace:"nowrap"}}>{p.act.t}</span>:<span style={{color:C.inkLt}}>—</span>}</td>
+                    </tr>
+                    {isOpen&&(
+                      <tr><td colSpan={9} style={{padding:"4px 8px 12px 24px",background:"#faf9f7"}}>
+                        {(p.keywords||[]).length===0?<div style={{fontSize:10,color:C.inkLt,padding:"8px 0"}}>키워드 데이터 없음 — 로컬 수집 스크립트 재실행 필요</div>:(
+                        <table style={{width:"100%",borderCollapse:"collapse",fontSize:10}}>
+                          <thead><tr style={{color:C.inkLt}}>
+                            {["키워드","입찰가","현재순위","평균순위","노출","클릭","목표순위","최대입찰가"].map(h=>
+                              <th key={h} style={{padding:"4px 6px",textAlign:h==="키워드"?"left":"right",fontWeight:700}}>{h}</th>)}
+                          </tr></thead>
+                          <tbody>
+                            {[...(p.keywords||[])].sort((a,b)=>(b.imps||0)-(a.imps||0)).slice(0,40).map(k=>{
+                              const rk=`${p.pid}|${k.kw}`; const rule=rules11[rk]||{};
+                              return(
+                              <tr key={k.kw} style={{borderBottom:`1px solid ${C.border}55`}}>
+                                <td style={{padding:"4px 6px",fontWeight:600,color:C.ink}}>{k.kw}<span style={{color:C.inkLt,marginLeft:4}}>{k.status!=="운영중"&&k.status?`(${k.status})`:""}</span></td>
+                                <td style={{padding:"4px 6px",textAlign:"right",color:C.inkMid}}>{k.bid!=null?`${Number(k.bid).toLocaleString()}원`:"—"}</td>
+                                <td style={{padding:"4px 6px",textAlign:"right",fontWeight:700,color:C.ink}}>{k.rank||"—"}</td>
+                                <td style={{padding:"4px 6px",textAlign:"right",color:C.inkMid}}>{k.avgRank!=null?k.avgRank:"—"}</td>
+                                <td style={{padding:"4px 6px",textAlign:"right",color:C.inkMid}}>{(k.imps||0).toLocaleString()}</td>
+                                <td style={{padding:"4px 6px",textAlign:"right",color:C.inkMid}}>{k.clicks||0}</td>
+                                <td style={{padding:"4px 6px",textAlign:"right"}} onClick={e=>e.stopPropagation()}>
+                                  <input type="number" value={rule.target??""} onChange={e=>setRule(rk,"target",e.target.value)} placeholder="—"
+                                    style={{width:44,padding:"2px 4px",border:`1px solid ${C.border}`,borderRadius:6,fontSize:10,textAlign:"right",outline:"none"}}/></td>
+                                <td style={{padding:"4px 6px",textAlign:"right"}} onClick={e=>e.stopPropagation()}>
+                                  <input type="number" value={rule.maxBid??""} onChange={e=>setRule(rk,"maxBid",e.target.value)} placeholder="—" step={10}
+                                    style={{width:60,padding:"2px 4px",border:`1px solid ${C.border}`,borderRadius:6,fontSize:10,textAlign:"right",outline:"none"}}/></td>
+                              </tr>);})}
+                          </tbody>
+                        </table>)}
+                        <div style={{fontSize:9,color:C.inkLt,marginTop:6}}>노출수 상위 40개 표시 · 목표순위/최대입찰가를 입력하고 저장하면 자동 입찰 조정 스크립트가 이 규칙을 따름</div>
+                      </td></tr>
+                    )}
+                  </Fragment>);
+                })}
+                {shown.length===0&&<tr><td colSpan={9} style={{padding:"20px",textAlign:"center",color:C.inkLt}}>데이터 없음 — 로컬에서 scripts/11st-focus-monitor.py 실행 필요</td></tr>}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
     );
@@ -16448,6 +16591,7 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
           {sec==="home"        && <HomeSection/>}
           {sec==="meta"        && MetaSection}
           {sec==="stock"       && StockSection}
+          {sec==="ads11st"     && Ads11stSection}
           {sec==="inf_archive" && <InfluencerArchiveSection/>}
           {sec==="schedule"    && ScheduleSection}
           {sec==="erp"         && <ErpSection/>}
