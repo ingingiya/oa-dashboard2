@@ -3017,29 +3017,71 @@ function DetailPlanSection() {
             </div>
           )}
 
-          {/* 슬라이드 목록 */}
+          {/* 슬라이드 뷰어 */}
           {plan.slides&&plan.slides.length>0&&(
-            <div style={{background:C.white,border:`1px solid ${C.border}`,borderRadius:12,padding:16}}>
-              <div style={{fontSize:12,fontWeight:800,color:C.inkMid,marginBottom:10}}>슬라이드 구성 ({plan.slides.length}페이지)</div>
-              {plan.slides.map((s,i)=>(
-                <div key={i} onClick={()=>setExpandSlide(expandSlide===i?null:i)}
-                  style={{borderBottom:`1px solid ${C.border}22`,padding:"8px 0",cursor:"pointer"}}>
+            <div style={{background:C.white,border:`1px solid ${C.border}`,borderRadius:12,overflow:"hidden"}}>
+              {/* 헤더 + 네비게이션 */}
+              <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"10px 16px",borderBottom:`1px solid ${C.border}`,background:C.bg}}>
+                <div style={{fontSize:12,fontWeight:800,color:C.inkMid}}>슬라이드 {(expandSlide||0)+1} / {plan.slides.length}</div>
+                <div style={{display:"flex",gap:4,alignItems:"center"}}>
+                  <button onClick={()=>setExpandSlide(Math.max(0,(expandSlide||0)-1))} disabled={!expandSlide} style={{width:28,height:28,border:`1px solid ${C.border}`,borderRadius:6,background:C.white,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",opacity:expandSlide?1:0.3}}>
+                    <span className="material-symbols-outlined" style={{fontSize:16}}>chevron_left</span>
+                  </button>
+                  <button onClick={()=>setExpandSlide(Math.min(plan.slides.length-1,(expandSlide||0)+1))} disabled={(expandSlide||0)>=plan.slides.length-1} style={{width:28,height:28,border:`1px solid ${C.border}`,borderRadius:6,background:C.white,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",opacity:(expandSlide||0)<plan.slides.length-1?1:0.3}}>
+                    <span className="material-symbols-outlined" style={{fontSize:16}}>chevron_right</span>
+                  </button>
+                  <button onClick={()=>{
+                    const w=window.open("","_blank");
+                    const slides=plan.slides.map((s,i)=>`
+                      <div style="page-break-after:always;padding:60px;min-height:90vh;display:flex;flex-direction:column;justify-content:center;position:relative">
+                        <div style="position:absolute;top:30px;left:60px;font-size:11px;color:#999;font-weight:700">p${s.page||i+1} · ${s.type}</div>
+                        <div style="font-size:28px;font-weight:900;color:#16202e;margin-bottom:16px">${s.title||""}</div>
+                        ${s.copy?`<div style="font-size:18px;color:#333;line-height:1.7;margin-bottom:20px">${s.copy}</div>`:""}
+                        ${s.imageGuide?`<div style="background:#f5f5f0;border:2px dashed #ddd;border-radius:12px;padding:30px;text-align:center;color:#888;font-size:14px;margin-bottom:16px">📷 ${s.imageGuide}</div>`:""}
+                        ${s.notes?`<div style="font-size:12px;color:#888;border-top:1px solid #eee;padding-top:12px;margin-top:auto">💡 ${s.notes}</div>`:""}
+                      </div>`).join("");
+                    w.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>${plan.productName||""} 기획안</title>
+                      <style>@import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css');
+                      *{margin:0;padding:0;box-sizing:border-box}body{font-family:Pretendard Variable,sans-serif;background:#fff}
+                      @media print{div{page-break-inside:avoid}}</style></head><body>${slides}</body></html>`);
+                    w.document.close();
+                  }} style={{padding:"4px 10px",border:`1px solid ${C.border}`,borderRadius:6,background:C.white,fontSize:10,fontWeight:700,cursor:"pointer",color:C.inkMid,fontFamily:"inherit"}}>
+                    PDF 저장
+                  </button>
+                </div>
+              </div>
+              {/* 현재 슬라이드 */}
+              {(()=>{
+                const s = plan.slides[expandSlide||0];
+                if(!s) return null;
+                const tc = slideTypeColor(s.type);
+                return (
+                <div style={{padding:"40px",minHeight:300,display:"flex",flexDirection:"column",gap:16}}>
                   <div style={{display:"flex",alignItems:"center",gap:8}}>
-                    <span style={{width:24,height:24,borderRadius:6,background:slideTypeColor(s.type)+"22",color:slideTypeColor(s.type),
-                      fontSize:10,fontWeight:900,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>{s.page||i+1}</span>
-                    <span style={{fontSize:9,fontWeight:700,color:slideTypeColor(s.type),background:slideTypeColor(s.type)+"11",padding:"1px 6px",borderRadius:4}}>{s.type}</span>
-                    <span style={{fontSize:12,fontWeight:700,color:C.ink,flex:1}}>{s.title}</span>
-                    <span className="material-symbols-outlined" style={{fontSize:14,color:C.inkLt}}>{expandSlide===i?"expand_less":"expand_more"}</span>
+                    <span style={{fontSize:11,fontWeight:800,color:tc,background:tc+"15",padding:"2px 8px",borderRadius:6}}>p{s.page||((expandSlide||0)+1)}</span>
+                    <span style={{fontSize:11,fontWeight:700,color:tc}}>{s.type}</span>
                   </div>
-                  {expandSlide===i&&(
-                    <div style={{marginTop:8,marginLeft:32,display:"flex",flexDirection:"column",gap:4}}>
-                      {s.copy&&<div style={{fontSize:11,color:C.ink}}><span style={{fontWeight:700,color:C.inkMid}}>카피:</span> {s.copy}</div>}
-                      {s.imageGuide&&<div style={{fontSize:11,color:C.ink}}><span style={{fontWeight:700,color:C.inkMid}}>이미지:</span> {s.imageGuide}</div>}
-                      {s.notes&&<div style={{fontSize:11,color:C.inkMid}}><span style={{fontWeight:700}}>노트:</span> {s.notes}</div>}
+                  <div style={{fontSize:22,fontWeight:900,color:C.ink,lineHeight:1.4}}>{s.title}</div>
+                  {s.copy&&<div style={{fontSize:15,color:"#333",lineHeight:1.8,whiteSpace:"pre-wrap"}}>{s.copy}</div>}
+                  {s.imageGuide&&(
+                    <div style={{background:"#f8f8f5",border:"2px dashed #e0e0d8",borderRadius:12,padding:"30px 20px",textAlign:"center"}}>
+                      <div style={{fontSize:24,marginBottom:8}}>📷</div>
+                      <div style={{fontSize:13,color:"#888",fontWeight:600}}>{s.imageGuide}</div>
                     </div>
                   )}
-                </div>
-              ))}
+                  {s.notes&&<div style={{fontSize:12,color:C.inkMid,borderTop:`1px solid ${C.border}`,paddingTop:12,marginTop:"auto"}}>💡 {s.notes}</div>}
+                </div>);
+              })()}
+              {/* 썸네일 네비게이션 */}
+              <div style={{display:"flex",gap:4,padding:"10px 16px",borderTop:`1px solid ${C.border}`,background:C.bg,overflowX:"auto"}}>
+                {plan.slides.map((s,i)=>(
+                  <button key={i} onClick={()=>setExpandSlide(i)} style={{
+                    minWidth:36,height:28,borderRadius:4,border:`1.5px solid ${(expandSlide||0)===i?C.rose:C.border}`,
+                    background:(expandSlide||0)===i?C.rose+"15":C.white,color:(expandSlide||0)===i?C.rose:C.inkLt,
+                    fontSize:9,fontWeight:800,cursor:"pointer",flexShrink:0,
+                  }}>{s.page||i+1}</button>
+                ))}
+              </div>
             </div>
           )}
 
@@ -10513,6 +10555,14 @@ export default function OaDashboard(){
       fetch("/api/notify-recreate",{method:"POST",headers:{"Content-Type":"application/json"},
         body:JSON.stringify({adName:req.adName,roas:req.roas,spend:req.spend,thumbUrl:req.thumbUrl,
           note:[req.note,req.assignee?`담당: ${req.assignee}`:""].filter(Boolean).join(" / ")})}).catch(()=>{});
+      // 피그마 코멘트 전송 (실패 무시)
+      fetch("/api/figma-export",{method:"POST",headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({fileKey:"N9wx4lQdN7UwQW1xYY0bIa",plan:{
+          productName:`🔄 재제작 요청: ${req.adName}`,
+          mainCopy:`ROAS ${req.roas}% · 광고비 ${Math.round(req.spend/10000)}만원`,
+          subCopy:[req.assignee?`담당: ${req.assignee}`:"",req.note].filter(Boolean).join(" · "),
+          slides:[{page:1,type:"request",title:req.adName,copy:`캠페인: ${req.campaign}\n광고세트: ${req.adset}\nCTR: ${req.ctr}% · ROAS: ${req.roas}%\n광고비: ${Math.round(req.spend).toLocaleString()}원`,notes:req.note}],
+        }})}).catch(()=>{});
       setReqNote("");
       setReqAssignee("");
       setReqPopover(null);
