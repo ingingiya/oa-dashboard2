@@ -2241,6 +2241,7 @@ function AdSchedulePanel({C, getSetting}) {
   const [schList, setSchList] = useState([]);
   const [loading, setLoading] = useState(true);
   const [toggling, setToggling] = useState({});
+  const [treeOpen, setTreeOpen] = useState(false);
   const [expandCamp, setExpandCamp] = useState(null);
   const [expandAdset, setExpandAdset] = useState(null);
   const [newSch, setNewSch] = useState({targetId:"",targetName:"",targetType:"campaign",action:"on",datetime:"",budget:""});
@@ -2394,7 +2395,13 @@ function AdSchedulePanel({C, getSetting}) {
     </div>
   );
   const SchBtn = ({id,name,type}) => (
-    <button onClick={(e)=>{e.stopPropagation();setNewSch({targetId:id,targetName:name,targetType:type,action:"on",datetime:""});}}
+    <button onClick={(e)=>{
+      e.stopPropagation();
+      setNewSch(p=>({...p,targetId:id,targetName:name,targetType:type}));
+      setRepeatTarget(id);
+      setPromoTarget(id);
+      document.getElementById("__sch_form")?.scrollIntoView({behavior:"smooth",block:"start"});
+    }}
       style={{padding:"3px 8px",borderRadius:6,border:`1px solid ${C.border}`,background:C.white,fontSize:9,fontWeight:700,cursor:"pointer",color:C.inkMid}}>
       예약
     </button>
@@ -2415,15 +2422,15 @@ function AdSchedulePanel({C, getSetting}) {
 
     {/* 캠페인 트리 (접기 가능) */}
     <div style={{background:C.white,border:`1px solid ${C.border}`,borderRadius:12,overflow:"hidden"}}>
-      <button onClick={()=>setToggling(p=>({...p,__tree:!p.__tree}))}
+      <button onClick={()=>setTreeOpen(p=>!p)}
         style={{width:"100%",display:"flex",alignItems:"center",justifyContent:"space-between",padding:"10px 14px",
           border:"none",background:C.bg,cursor:"pointer",fontFamily:"inherit"}}>
         <span style={{fontSize:12,fontWeight:800,color:C.ink}}>광고 소재 ({filteredCamps.length}개 캠페인)</span>
-        <span className="material-symbols-outlined" style={{fontSize:16,color:C.inkLt}}>{toggling.__tree?"expand_less":"expand_more"}</span>
+        <span className="material-symbols-outlined" style={{fontSize:16,color:C.inkLt}}>{treeOpen?"expand_less":"expand_more"}</span>
       </button>
-      {filteredCamps.length===0&&toggling.__tree&&<div style={{padding:20,fontSize:11,color:C.inkLt,textAlign:"center"}}>캠페인 없음</div>}
-      {!toggling.__tree&&<div style={{fontSize:10,color:C.inkLt,padding:"6px 14px"}}>펼치기를 눌러 캠페인 목록을 확인하세요</div>}
-      {toggling.__tree&&filteredCamps.map(c=>(
+      {filteredCamps.length===0&&treeOpen&&<div style={{padding:20,fontSize:11,color:C.inkLt,textAlign:"center"}}>캠페인 없음</div>}
+      {!treeOpen&&<div style={{fontSize:10,color:C.inkLt,padding:"6px 14px"}}>펼치기를 눌러 캠페인 목록을 확인하세요</div>}
+      {treeOpen&&filteredCamps.map(c=>(
         <div key={c.id}>
           {/* 캠페인 행 */}
           <div onClick={()=>loadAdsets(c.id)}
@@ -2477,6 +2484,8 @@ function AdSchedulePanel({C, getSetting}) {
     </div>
 
     {/* 스케줄 추가 — 3탭 */}
+    <div id="__sch_form"/>
+    {newSch.targetId&&<div style={{fontSize:11,fontWeight:800,color:C.rose,padding:"4px 0"}}>선택: {newSch.targetName} ({newSch.targetType})</div>}
     <div style={{background:C.white,border:`1px solid ${C.border}`,borderRadius:12,overflow:"hidden"}}>
       <div style={{display:"flex",borderBottom:`1px solid ${C.border}`}}>
         {[{id:"once",label:"1회 예약"},{id:"repeat",label:"요일 반복"},{id:"promo",label:"행사 연동"}].map(t=>(
@@ -2490,14 +2499,11 @@ function AdSchedulePanel({C, getSetting}) {
         {/* 1회 예약 */}
         {schTab==="once"&&(
           <div style={{display:"flex",flexDirection:"column",gap:8}}>
+            {!newSch.targetId&&<div style={{fontSize:11,color:C.inkLt,padding:8,textAlign:"center",background:C.bg,borderRadius:8}}>위 캠페인 목록에서 "예약" 버튼을 눌러 대상을 선택하세요</div>}
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
               <div>
-                <label style={{fontSize:10,fontWeight:700,color:C.inkMid}}>캠페인/광고세트</label>
-                <select value={newSch.targetId} onChange={e=>{const c=camps.find(x=>x.id===e.target.value);setNewSch(p=>({...p,targetId:e.target.value,targetName:c?.name||""}));}}
-                  style={{width:"100%",padding:"6px 8px",border:`1px solid ${C.border}`,borderRadius:6,fontSize:11,fontFamily:"inherit",marginTop:4}}>
-                  <option value="">선택</option>
-                  {filteredCamps.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}
-                </select>
+                <label style={{fontSize:10,fontWeight:700,color:C.inkMid}}>대상</label>
+                <div style={{fontSize:12,fontWeight:700,color:newSch.targetId?C.ink:C.inkLt,marginTop:4,padding:"6px 8px",background:C.bg,borderRadius:6}}>{newSch.targetName||"미선택"}</div>
               </div>
               <div>
                 <label style={{fontSize:10,fontWeight:700,color:C.inkMid}}>액션</label>
@@ -7152,6 +7158,7 @@ export default function OaDashboard(){
     {id:"erp",       icon:"storage",        label:"ERP"},
     {id:"naver",     icon:"ads_click",      label:"네이버광고"},
     {id:"meta",      icon:"campaign",       label:"메타광고"},
+    {id:"stock",     icon:"inventory",      label:"재고"},
     {id:"inf_archive",icon:"photo_library", label:"아카이브"},
     {id:"schedule",  icon:"calendar_month", label:"스케줄"},
     {id:"creative",  icon:"palette",        label:"소재"},
@@ -7558,6 +7565,89 @@ export default function OaDashboard(){
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   // 📣 메타광고
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  // ── 재고 섹션 (최상위 탭): 광고 제품 × 재고 소진일수 × 광고 액션 (품절 임박=감액, 과잉=증액 소진) ──
+  const StockSection=(()=>{
+    const fmtW=n=>n>=10000?`₩${Math.round(n/10000).toLocaleString()}만`:`₩${Math.round(n).toLocaleString()}`;
+    const card={background:C.white,border:`1px solid ${C.border}`,borderRadius:12,padding:"14px 16px"};
+    const from7=new Date(Date.now()-7*86400000).toISOString().slice(0,10);
+    const from14=new Date(Date.now()-14*86400000).toISOString().slice(0,10);
+    const items=(margins||[]).filter(m=>m.keyword).map(m=>{
+      const kw=m.keyword;
+      const stocks=stockLite.filter(s=>s.name&&s.name.includes(kw));
+      const qty=stocks.reduce((a,s)=>a+(Number(s.stock_qty)||0),0);
+      const incoming=stocks.reduce((a,s)=>a+(Number(s.order_pending)||0)+(Number(s.production_qty)||0)+(Number(s.transport_qty)||0)+(Number(s.ship_qty)||0),0);
+      const lead=Math.max(0,...stocks.map(s=>Number(s.lead_days)||0));
+      const sold=realSales.filter(r=>r.date>=from14&&((r.name&&r.name.includes(kw))||(r.category&&r.category.includes(kw))))
+        .reduce((a,r)=>a+(Number(r.qty)||0),0);
+      const daily=sold/14;
+      const days=daily>0?Math.round(qty/daily):null;
+      const daysInc=daily>0?Math.round((qty+incoming)/daily):null;
+      let spend7=0,conv7=0; const ads=new Set();
+      (metaForChart||[]).forEach(r=>{
+        if(r.date>=from7&&r.adName&&r.adName.includes(kw)&&(r.spend||0)>0){spend7+=r.spend||0;conv7+=r.convValue||0;ads.add(r.adName);}
+      });
+      const roas7=spend7>0?Math.round(conv7/spend7*100):null;
+      const threshold=Math.max(14,lead); // 리드타임보다 재고일수가 짧으면 발주해도 늦음
+      let act=null;
+      if(days!==null&&days<threshold&&spend7>0) act={t:"품절 임박 — 광고 감액/중단 검토",bg:"#fef2f2",bd:"#fecaca",fg:"#b91c1c",lv:0};
+      else if(days!==null&&days<threshold) act={t:incoming>0?"품절 임박 — 입고 대기 중":"품절 임박 — 발주/입고 확인",bg:"#fef2f2",bd:"#fecaca",fg:"#b91c1c",lv:0};
+      else if(days!==null&&days<threshold+16) act={t:"주의 — 발주 시점 점검",bg:"#fffbeb",bd:"#fde68a",fg:"#92400e",lv:1};
+      else if(days!==null&&days>=60&&roas7!==null&&roas7>=400) act={t:"재고 여유 + ROAS 좋음 → 증액 소진",bg:"#f0fdf4",bd:"#bbf7d0",fg:"#15803d",lv:2};
+      else if(days!==null&&days>=60&&spend7===0) act={t:"과잉재고 — 광고 밀어주기 후보",bg:"#f0f9ff",bd:"#bae6fd",fg:"#0369a1",lv:2};
+      return {kw,qty,incoming,lead,daily,days,daysInc,spend7,roas7,adCount:ads.size,act,noStock:stocks.length===0};
+    }).filter(it=>!it.noStock||it.spend7>0)
+      .sort((a,b)=>(a.days??9999)-(b.days??9999));
+    const nCrit=items.filter(i=>i.act&&i.act.lv===0).length;
+    const nWarn=items.filter(i=>i.act&&i.act.lv===1).length;
+    const nPush=items.filter(i=>i.act&&i.act.lv===2).length;
+    if(!stockLite.length) return <Card><div style={{fontSize:11,color:C.inkLt,padding:"20px 0",textAlign:"center"}}>재고 데이터 로딩 중이거나 beauty_stock이 비어 있어요 (아침 7시 ERP 동기화)</div></Card>;
+    return(
+      <div style={{display:"flex",flexDirection:"column",gap:14}}>
+        <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+          {[["품절 임박",nCrit,"#b91c1c","#fef2f2"],["발주 점검",nWarn,"#92400e","#fffbeb"],["증액/밀어주기 후보",nPush,"#0369a1","#f0f9ff"]].map(([l,n,fg,bg])=>(
+            <div key={l} style={{flex:1,minWidth:120,background:bg,border:`1px solid ${C.border}`,borderRadius:12,padding:"12px 14px"}}>
+              <div style={{fontSize:10,fontWeight:700,color:fg}}>{l}</div>
+              <div style={{fontSize:22,fontWeight:800,color:fg}}>{n}<span style={{fontSize:11,fontWeight:600}}> 제품</span></div>
+            </div>
+          ))}
+        </div>
+        <div style={card}>
+          <CardTitle title="광고 제품 재고 현황" sub="재고일수 = 현 재고 ÷ 최근 14일 실판매 일평균 (쿠팡/지그재그/스마트스토어) · 광고비는 최근 7일"/>
+          <div style={{overflowX:"auto"}}>
+            <table style={{width:"100%",borderCollapse:"collapse",fontSize:11}}>
+              <thead>
+                <tr style={{borderBottom:`2px solid ${C.border}`,color:C.inkLt,fontSize:10}}>
+                  {["제품","재고","입고 대기","일판매","재고일수","입고 포함","7일 광고비","ROAS","액션"].map(h=>
+                    <th key={h} style={{padding:"6px 8px",textAlign:h==="제품"||h==="액션"?"left":"right",fontWeight:700,whiteSpace:"nowrap"}}>{h}</th>)}
+                </tr>
+              </thead>
+              <tbody>
+                {items.map(it=>{
+                  const dayColor=it.days===null?C.inkLt:it.days<Math.max(14,it.lead)?"#b91c1c":it.days<Math.max(14,it.lead)+16?"#b45309":C.ink;
+                  return(
+                    <tr key={it.kw} style={{borderBottom:`1px solid ${C.border}`}}>
+                      <td style={{padding:"8px",fontWeight:700,color:C.ink,whiteSpace:"nowrap"}}>{it.kw}{it.lead>0&&<span style={{fontSize:9,color:C.inkLt,fontWeight:600}}> 리드 {it.lead}일</span>}</td>
+                      <td style={{padding:"8px",textAlign:"right",fontWeight:700,color:C.ink}}>{it.qty.toLocaleString()}</td>
+                      <td style={{padding:"8px",textAlign:"right",color:it.incoming>0?"#0369a1":C.inkLt}}>{it.incoming>0?`+${it.incoming.toLocaleString()}`:"—"}</td>
+                      <td style={{padding:"8px",textAlign:"right",color:C.inkMid}}>{it.daily>0?it.daily.toFixed(1):"—"}</td>
+                      <td style={{padding:"8px",textAlign:"right",fontWeight:800,color:dayColor}}>{it.days!==null?`${it.days}일`:"—"}</td>
+                      <td style={{padding:"8px",textAlign:"right",color:C.inkMid}}>{it.daysInc!==null&&it.incoming>0?`${it.daysInc}일`:"—"}</td>
+                      <td style={{padding:"8px",textAlign:"right",color:it.spend7>0?C.ink:C.inkLt}}>{it.spend7>0?fmtW(it.spend7):"—"}</td>
+                      <td style={{padding:"8px",textAlign:"right",fontWeight:700,color:it.roas7===null?C.inkLt:it.roas7>=400?"#15803d":it.roas7>=200?C.inkMid:"#b91c1c"}}>{it.roas7!==null?`${it.roas7}%`:"—"}</td>
+                      <td style={{padding:"8px"}}>{it.act?<span style={{fontSize:10,fontWeight:700,padding:"3px 9px",borderRadius:99,background:it.act.bg,border:`1px solid ${it.act.bd}`,color:it.act.fg,whiteSpace:"nowrap"}}>{it.act.t}</span>:<span style={{color:C.inkLt}}>—</span>}</td>
+                    </tr>
+                  );
+                })}
+                {items.length===0&&<tr><td colSpan={9} style={{padding:"20px",textAlign:"center",color:C.inkLt}}>margins 키워드와 매칭되는 재고/판매 데이터 없음 — 캠페인 탭에서 제품 키워드(마진) 등록 필요</td></tr>}
+              </tbody>
+            </table>
+          </div>
+          <div style={{fontSize:10,color:C.inkLt,marginTop:8}}>기준: 재고일수 &lt; max(14일, 리드타임) = 품절 임박 · ≥60일 = 재고 여유. ERP 재고는 아침 7시 동기화, 실판매는 9시대 동기화</div>
+        </div>
+      </div>
+    );
+  })();
+
   const MetaSection=(()=>{
     const d = metaAgg;
     const fmt=n=>n>=10000?`₩${Math.round(n/10000).toLocaleString()}만`:`₩${Math.round(n).toLocaleString()}`;
@@ -7995,7 +8085,7 @@ export default function OaDashboard(){
 
         {/* 탭 */}
         <div style={{display:"flex",gap:6,overflowX:"auto",paddingBottom:2}}>
-          {[{id:"overview",label:<><MI n="trending_up" size={12}/> 추이</>},{id:"campaign",label:<><MI n="campaign" size={12}/> 캠페인</>},{id:"weekly",label:<><MI n="calendar_month" size={12}/> 주별</>},{id:"monthly",label:<><MI n="date_range" size={12}/> 월별</>},{id:"daily",label:<><MI n="calendar_today" size={12}/> 일별</>},{id:"product",label:<><MI n="inventory_2" size={12}/> 제품별</>},{id:"events",label:<><MI n="celebration" size={12}/> 행사{(promoEvents||[]).some(e=>{const t=new Date().toISOString().slice(0,10);return e.start<=t&&t<=e.end;})?" ●":""}</>},{id:"stock",label:<><MI n="inventory" size={12}/> 재고</>},{id:"copybank",label:<><MI n="format_quote" size={12}/> 카피뱅크</>},{id:"guide",label:<><MI n="menu_book" size={12}/> 가이드</>},{id:"adschedule",label:<><MI n="schedule" size={12}/> 광고 스케줄</>}].map(t=>(
+          {[{id:"overview",label:<><MI n="trending_up" size={12}/> 추이</>},{id:"campaign",label:<><MI n="campaign" size={12}/> 캠페인</>},{id:"weekly",label:<><MI n="calendar_month" size={12}/> 주별</>},{id:"monthly",label:<><MI n="date_range" size={12}/> 월별</>},{id:"daily",label:<><MI n="calendar_today" size={12}/> 일별</>},{id:"product",label:<><MI n="inventory_2" size={12}/> 제품별</>},{id:"events",label:<><MI n="celebration" size={12}/> 행사{(promoEvents||[]).some(e=>{const t=new Date().toISOString().slice(0,10);return e.start<=t&&t<=e.end;})?" ●":""}</>},{id:"copybank",label:<><MI n="format_quote" size={12}/> 카피뱅크</>},{id:"guide",label:<><MI n="menu_book" size={12}/> 가이드</>},{id:"adschedule",label:<><MI n="schedule" size={12}/> 광고 스케줄</>}].map(t=>(
             <button key={t.id} onClick={()=>setMetaTab(t.id)} style={{
               padding:"6px 16px",borderRadius:8,cursor:"pointer",border:`1px solid ${metaTab===t.id?C.rose:C.border}`,
               background:metaTab===t.id?C.blush:C.white,color:metaTab===t.id?C.rose:C.inkMid,
@@ -9233,89 +9323,6 @@ export default function OaDashboard(){
                   </div>
                 );
               })}
-            </div>
-          );
-        })()}
-
-        {/* 재고 탭 — 광고 제품 × 재고 소진일수 × 광고 액션 (품절 임박=감액, 과잉=증액 소진) */}
-        {metaTab==="stock"&&(()=>{
-          const fmtW=n=>n>=10000?`₩${Math.round(n/10000).toLocaleString()}만`:`₩${Math.round(n).toLocaleString()}`;
-          const card={background:C.white,border:`1px solid ${C.border}`,borderRadius:12,padding:"14px 16px"};
-          const from7=new Date(Date.now()-7*86400000).toISOString().slice(0,10);
-          const from14=new Date(Date.now()-14*86400000).toISOString().slice(0,10);
-          const items=(margins||[]).filter(m=>m.keyword).map(m=>{
-            const kw=m.keyword;
-            const stocks=stockLite.filter(s=>s.name&&s.name.includes(kw));
-            const qty=stocks.reduce((a,s)=>a+(Number(s.stock_qty)||0),0);
-            const incoming=stocks.reduce((a,s)=>a+(Number(s.order_pending)||0)+(Number(s.production_qty)||0)+(Number(s.transport_qty)||0)+(Number(s.ship_qty)||0),0);
-            const lead=Math.max(0,...stocks.map(s=>Number(s.lead_days)||0));
-            const sold=realSales.filter(r=>r.date>=from14&&((r.name&&r.name.includes(kw))||(r.category&&r.category.includes(kw))))
-              .reduce((a,r)=>a+(Number(r.qty)||0),0);
-            const daily=sold/14;
-            const days=daily>0?Math.round(qty/daily):null;
-            const daysInc=daily>0?Math.round((qty+incoming)/daily):null;
-            let spend7=0,conv7=0; const ads=new Set();
-            (metaForChart||[]).forEach(r=>{
-              if(r.date>=from7&&r.adName&&r.adName.includes(kw)&&(r.spend||0)>0){spend7+=r.spend||0;conv7+=r.convValue||0;ads.add(r.adName);}
-            });
-            const roas7=spend7>0?Math.round(conv7/spend7*100):null;
-            const threshold=Math.max(14,lead); // 리드타임보다 재고일수가 짧으면 발주해도 늦음
-            let act=null;
-            if(days!==null&&days<threshold&&spend7>0) act={t:"품절 임박 — 광고 감액/중단 검토",bg:"#fef2f2",bd:"#fecaca",fg:"#b91c1c",lv:0};
-            else if(days!==null&&days<threshold) act={t:incoming>0?"품절 임박 — 입고 대기 중":"품절 임박 — 발주/입고 확인",bg:"#fef2f2",bd:"#fecaca",fg:"#b91c1c",lv:0};
-            else if(days!==null&&days<threshold+16) act={t:"주의 — 발주 시점 점검",bg:"#fffbeb",bd:"#fde68a",fg:"#92400e",lv:1};
-            else if(days!==null&&days>=60&&roas7!==null&&roas7>=400) act={t:"재고 여유 + ROAS 좋음 → 증액 소진",bg:"#f0fdf4",bd:"#bbf7d0",fg:"#15803d",lv:2};
-            else if(days!==null&&days>=60&&spend7===0) act={t:"과잉재고 — 광고 밀어주기 후보",bg:"#f0f9ff",bd:"#bae6fd",fg:"#0369a1",lv:2};
-            return {kw,qty,incoming,lead,daily,days,daysInc,spend7,roas7,adCount:ads.size,act,noStock:stocks.length===0};
-          }).filter(it=>!it.noStock||it.spend7>0)
-            .sort((a,b)=>(a.days??9999)-(b.days??9999));
-          const nCrit=items.filter(i=>i.act&&i.act.lv===0).length;
-          const nWarn=items.filter(i=>i.act&&i.act.lv===1).length;
-          const nPush=items.filter(i=>i.act&&i.act.lv===2).length;
-          if(!stockLite.length) return <Card><div style={{fontSize:11,color:C.inkLt,padding:"20px 0",textAlign:"center"}}>재고 데이터 로딩 중이거나 beauty_stock이 비어 있어요 (아침 7시 ERP 동기화)</div></Card>;
-          return(
-            <div style={{display:"flex",flexDirection:"column",gap:14}}>
-              <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
-                {[["품절 임박",nCrit,"#b91c1c","#fef2f2"],["발주 점검",nWarn,"#92400e","#fffbeb"],["증액/밀어주기 후보",nPush,"#0369a1","#f0f9ff"]].map(([l,n,fg,bg])=>(
-                  <div key={l} style={{flex:1,minWidth:120,background:bg,border:`1px solid ${C.border}`,borderRadius:12,padding:"12px 14px"}}>
-                    <div style={{fontSize:10,fontWeight:700,color:fg}}>{l}</div>
-                    <div style={{fontSize:22,fontWeight:800,color:fg}}>{n}<span style={{fontSize:11,fontWeight:600}}> 제품</span></div>
-                  </div>
-                ))}
-              </div>
-              <div style={card}>
-                <CardTitle title="광고 제품 재고 현황" sub="재고일수 = 현 재고 ÷ 최근 14일 실판매 일평균 (쿠팡/지그재그/스마트스토어) · 광고비는 최근 7일"/>
-                <div style={{overflowX:"auto"}}>
-                  <table style={{width:"100%",borderCollapse:"collapse",fontSize:11}}>
-                    <thead>
-                      <tr style={{borderBottom:`2px solid ${C.border}`,color:C.inkLt,fontSize:10}}>
-                        {["제품","재고","입고 대기","일판매","재고일수","입고 포함","7일 광고비","ROAS","액션"].map(h=>
-                          <th key={h} style={{padding:"6px 8px",textAlign:h==="제품"||h==="액션"?"left":"right",fontWeight:700,whiteSpace:"nowrap"}}>{h}</th>)}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {items.map(it=>{
-                        const dayColor=it.days===null?C.inkLt:it.days<Math.max(14,it.lead)?"#b91c1c":it.days<Math.max(14,it.lead)+16?"#b45309":C.ink;
-                        return(
-                          <tr key={it.kw} style={{borderBottom:`1px solid ${C.border}`}}>
-                            <td style={{padding:"8px",fontWeight:700,color:C.ink,whiteSpace:"nowrap"}}>{it.kw}{it.lead>0&&<span style={{fontSize:9,color:C.inkLt,fontWeight:600}}> 리드 {it.lead}일</span>}</td>
-                            <td style={{padding:"8px",textAlign:"right",fontWeight:700,color:C.ink}}>{it.qty.toLocaleString()}</td>
-                            <td style={{padding:"8px",textAlign:"right",color:it.incoming>0?"#0369a1":C.inkLt}}>{it.incoming>0?`+${it.incoming.toLocaleString()}`:"—"}</td>
-                            <td style={{padding:"8px",textAlign:"right",color:C.inkMid}}>{it.daily>0?it.daily.toFixed(1):"—"}</td>
-                            <td style={{padding:"8px",textAlign:"right",fontWeight:800,color:dayColor}}>{it.days!==null?`${it.days}일`:"—"}</td>
-                            <td style={{padding:"8px",textAlign:"right",color:C.inkMid}}>{it.daysInc!==null&&it.incoming>0?`${it.daysInc}일`:"—"}</td>
-                            <td style={{padding:"8px",textAlign:"right",color:it.spend7>0?C.ink:C.inkLt}}>{it.spend7>0?fmtW(it.spend7):"—"}</td>
-                            <td style={{padding:"8px",textAlign:"right",fontWeight:700,color:it.roas7===null?C.inkLt:it.roas7>=400?"#15803d":it.roas7>=200?C.inkMid:"#b91c1c"}}>{it.roas7!==null?`${it.roas7}%`:"—"}</td>
-                            <td style={{padding:"8px"}}>{it.act?<span style={{fontSize:10,fontWeight:700,padding:"3px 9px",borderRadius:99,background:it.act.bg,border:`1px solid ${it.act.bd}`,color:it.act.fg,whiteSpace:"nowrap"}}>{it.act.t}</span>:<span style={{color:C.inkLt}}>—</span>}</td>
-                          </tr>
-                        );
-                      })}
-                      {items.length===0&&<tr><td colSpan={9} style={{padding:"20px",textAlign:"center",color:C.inkLt}}>margins 키워드와 매칭되는 재고/판매 데이터 없음 — 캠페인 탭에서 제품 키워드(마진) 등록 필요</td></tr>}
-                    </tbody>
-                  </table>
-                </div>
-                <div style={{fontSize:10,color:C.inkLt,marginTop:8}}>기준: 재고일수 &lt; max(14일, 리드타임) = 품절 임박 · ≥60일 = 재고 여유. ERP 재고는 아침 7시 동기화, 실판매는 9시대 동기화</div>
-              </div>
             </div>
           );
         })()}
@@ -16338,6 +16345,7 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
         <main className="oa-main">
           {sec==="home"        && <HomeSection/>}
           {sec==="meta"        && MetaSection}
+          {sec==="stock"       && StockSection}
           {sec==="inf_archive" && <InfluencerArchiveSection/>}
           {sec==="schedule"    && ScheduleSection}
           {sec==="erp"         && <ErpSection/>}
