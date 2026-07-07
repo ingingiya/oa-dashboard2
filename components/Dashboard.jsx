@@ -69,6 +69,9 @@ const C = {
   bg:"#F4F4F5",
 };
 
+// 팀원 (담당자 지정용)
+const TEAM_MEMBERS = ["지원","경은","지수","소리","영서"];
+
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // Material Symbol Icon helper
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -11978,6 +11981,15 @@ export default function OaDashboard(){
       }catch(e){}
     }
 
+    async function setHypoField(id, patch){ // {memo} 또는 {assignee}
+      setHypoRows(rows=>rows.map(r=>r.id===id?{...r,...patch}:r));
+      try{
+        await fetch("/api/hypothesis",{method:"PATCH",
+          headers:{"Content-Type":"application/json"},
+          body:JSON.stringify({id,...patch})});
+      }catch(e){}
+    }
+
     const HYPO_TYPE_COLORS = {원인분석:"#0891b2", 마케팅액션:"#7c3aed"};
     const HYPO_PRI = {high:{label:"높음",color:C.rose}, mid:{label:"중간",color:"#f59e0b"}, low:{label:"낮음",color:C.inkLt}};
     const HYPO_STATUS = {open:{label:"검증 전",color:C.inkMid}, confirmed:{label:"검증됨",color:"#059669"}, rejected:{label:"기각",color:C.inkLt}};
@@ -12226,6 +12238,28 @@ export default function OaDashboard(){
                   )}
                 </div>
               )}
+              {/* 담당자 지정 + 메모 */}
+              <div style={{display:"flex",alignItems:"center",gap:4,flexWrap:"wrap",marginTop:8,paddingTop:8,borderTop:`1px dashed ${C.border}`}}>
+                <span style={{fontSize:10,color:C.inkLt,fontWeight:700,marginRight:2}}>담당</span>
+                {TEAM_MEMBERS.map(m=>(
+                  <button key={m} onClick={()=>setHypoField(h.id,{assignee:h.assignee===m?"":m})}
+                    style={{fontSize:10,fontWeight:h.assignee===m?800:600,padding:"3px 9px",borderRadius:10,
+                      border:`1px solid ${h.assignee===m?C.rose:C.border}`,
+                      background:h.assignee===m?C.rose:"#fff",color:h.assignee===m?"#fff":C.inkMid,
+                      cursor:"pointer",fontFamily:"inherit"}}>{m}</button>
+                ))}
+                <button onClick={()=>{
+                    const v=window.prompt("메모",h.memo||"");
+                    if(v!==null)setHypoField(h.id,{memo:v});
+                  }}
+                  style={{fontSize:10,fontWeight:700,padding:"3px 9px",borderRadius:10,marginLeft:"auto",
+                    border:`1px solid ${C.border}`,background:"#fff",color:C.inkMid,
+                    cursor:"pointer",fontFamily:"inherit"}}>{h.memo?"✏️ 메모 수정":"📝 메모"}</button>
+              </div>
+              {h.memo&&(
+                <div style={{fontSize:11,color:C.ink,marginTop:6,background:"#fffbeb",
+                  border:"1px solid #fde68a",padding:"6px 10px",borderRadius:8,whiteSpace:"pre-wrap"}}>📝 {h.memo}</div>
+              )}
             </div>);
           })}
         </div>
@@ -12235,7 +12269,7 @@ export default function OaDashboard(){
   })();
 
   const InsightSection = (()=>{
-    const MEMBERS = ["소리","영서","경은","지수"];
+    const MEMBERS = TEAM_MEMBERS;
     const CATS = ["공통","공지","요청","기획","인사이트"];
     const CAT_COLORS = {공통:C.inkMid,공지:C.rose,요청:"#f59e0b",기획:"#7c3aed",인사이트:"#0891b2"};
     const [noteTab, setNoteTab] = useState("board"); // board | meeting

@@ -735,8 +735,10 @@ export async function GET(request) {
 // 가설 상태 변경 (검증완료/기각)
 export async function PATCH(request) {
   try {
-    const { id, status, executed } = await request.json();
-    if (!id || (!status && executed === undefined)) return Response.json({ error: 'id + status 또는 executed 필요' }, { status: 400 });
+    const { id, status, executed, memo, assignee } = await request.json();
+    if (!id || (!status && executed === undefined && memo === undefined && assignee === undefined)) {
+      return Response.json({ error: 'id + status/executed/memo/assignee 필요' }, { status: 400 });
+    }
 
     const body = {};
     if (status) body.status = status;
@@ -744,6 +746,8 @@ export async function PATCH(request) {
       body.executed = !!executed;
       body.executed_at = executed ? new Date(Date.now() + 9 * 3600 * 1000).toISOString().split('T')[0] : null;
     }
+    if (memo !== undefined) body.memo = String(memo).slice(0, 500);
+    if (assignee !== undefined) body.assignee = String(assignee).slice(0, 50);
     const res = await fetch(`${SUPA_URL}/rest/v1/daily_hypotheses?id=eq.${Number(id)}`, {
       method: 'PATCH',
       headers: { ...sH, Prefer: 'return=minimal' },
