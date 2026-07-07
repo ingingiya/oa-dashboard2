@@ -38,10 +38,6 @@
     {
       "path": "/api/coupang-monitor?secret=${ERP_SYNC_SECRET}",
       "schedule": "30 0 * * *"
-    },
-    {
-      "path": "/api/sync-smartstore?secret=${ERP_SYNC_SECRET}",
-      "schedule": "25 0 * * *"
     }
   ]
 }

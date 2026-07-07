@@ -2,7 +2,8 @@ export const dynamic = 'force-dynamic';
 export const maxDuration = 300;
 
 // 스마트스토어 실판매 동기화: 네이버 커머스 API 결제 주문 → channel_daily_sales 업서트
-// 크론: 매일 00:25 UTC (09:25 KST), ?days=N 으로 백필 가능 (기본 3일)
+// 주의: 커머스 API IP 화이트리스트 때문에 Vercel에서는 GW.IP_NOT_ALLOWED로 실패 —
+// 실제 동기화는 로컬 crontab(scripts/sync-smartstore.mjs, 매일 9:25)이 담당. 이 라우트는 허용 IP에서의 수동 실행용.
 
 import bcrypt from 'bcryptjs';
 
@@ -115,6 +116,8 @@ export async function GET(req) {
       const day = dstr(d);
       await idsForDay(token, day, 'DISPATCHED', ids);
       await idsForDay(token, day, 'PAYED', ids);
+      // 구매확정되면 마지막 변경이 PURCHASE_DECIDED로 바뀌어 위 두 조회에서 사라짐 → 함께 수집
+      await idsForDay(token, day, 'PURCHASE_DECIDED', ids);
       await sleep(300);
     }
 
