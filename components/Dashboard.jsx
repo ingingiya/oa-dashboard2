@@ -730,6 +730,55 @@ function InfluencerArchiveSection() {
         </div>
       </div>
 
+      {/* 월별 업로드 일정 요약 (컨택중 기준) */}
+      {(()=>{
+        const active = items.filter(x=>x.status==="컨택중");
+        if(!active.length) return null;
+        const byMonth = {};
+        active.forEach(x=>{
+          const k = x.uploadDate ? x.uploadDate.slice(0,7) : "일정미정";
+          (byMonth[k]=byMonth[k]||[]).push(x);
+        });
+        const keys = Object.keys(byMonth).sort((a,b)=>a==="일정미정"?1:b==="일정미정"?-1:a.localeCompare(b));
+        const toggleShip = (p)=>{
+          const done = !p.shippingDone;
+          setArchive(items.map(x=>x.id===p.id?{...x,shippingDone:done,shippingDate:done?new Date().toISOString().slice(0,10):""}:x));
+        };
+        return (
+          <div style={{background:C.white,border:`1px solid ${C.border}`,borderRadius:12,padding:"14px 16px",display:"flex",flexDirection:"column",gap:10}}>
+            <div style={{fontSize:13,fontWeight:800,color:C.ink}}>📅 월별 업로드 예정 <span style={{fontSize:11,fontWeight:600,color:C.inkMid}}>(컨택중 {active.length}건 · 칩 클릭 = 발송 체크)</span></div>
+            {keys.map(k=>{
+              const list = byMonth[k];
+              const shipped = list.filter(x=>x.shippingDone).length;
+              const prodCnt = {};
+              list.forEach(x=>(x.products&&x.products.length?x.products:["제품미정"]).forEach(pr=>{prodCnt[pr]=(prodCnt[pr]||0)+1;}));
+              const label = k==="일정미정" ? "일정미정" : `${Number(k.slice(0,4))!==new Date().getFullYear()?k.slice(0,4)+"년 ":""}${Number(k.slice(5,7))}월`;
+              return (
+                <div key={k} style={{borderTop:`1px solid #f3f4f6`,paddingTop:8,display:"flex",flexDirection:"column",gap:6}}>
+                  <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
+                    <span style={{fontSize:12,fontWeight:800,color:C.ink}}>{label} · {list.length}건</span>
+                    <span style={{fontSize:10,fontWeight:700,padding:"1px 8px",borderRadius:10,background:shipped===list.length?"#dcfce7":"#fef9c3",color:shipped===list.length?"#16a34a":"#854d0e"}}>발송 {shipped}/{list.length}</span>
+                    {Object.entries(prodCnt).map(([pr,c])=>(
+                      <span key={pr} style={{fontSize:10,background:"#f0fdf4",color:"#16a34a",padding:"1px 8px",borderRadius:10,fontWeight:700}}>📦 {pr} {c}</span>
+                    ))}
+                  </div>
+                  <div style={{display:"flex",gap:4,flexWrap:"wrap"}}>
+                    {list.map(p=>(
+                      <span key={p.id} onClick={()=>toggleShip(p)} title={p.shippingDone?`발송완료 ${p.shippingDate||""}`:"미발송 — 클릭하면 발송 체크"}
+                        style={{fontSize:10,padding:"2px 8px",borderRadius:10,cursor:"pointer",fontWeight:700,
+                          background:p.shippingDone?"#dcfce7":"#f3f4f6",color:p.shippingDone?"#16a34a":C.inkMid,
+                          border:`1px solid ${p.shippingDone?"#bbf7d0":C.border}`}}>
+                        {p.shippingDone?"✅":"📮"} {p.account||p.name||"(이름없음)"}{p.uploadDate?` ${Number(p.uploadDate.slice(8,10))}일`:""}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        );
+      })()}
+
       {/* 필터 바 */}
       <div style={{display:"flex",flexDirection:"column",gap:6}}>
         <div style={{display:"flex",gap:8,flexWrap:"wrap",alignItems:"center"}}>
@@ -2440,7 +2489,7 @@ function AdSchedulePanel({C, getSetting}) {
             <StatusDot status={c.status}/>
             <div style={{flex:1,minWidth:0}}>
               <div style={{fontSize:12,fontWeight:700,color:C.ink,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{c.name}</div>
-              <div style={{fontSize:9,color:C.inkMid}}>{c.objective}</div>
+              <div style={{fontSize:9,color:C.inkMid}}>{c.objective}{c.daily_budget?` · 일예산 ${Math.round(c.daily_budget).toLocaleString()}원`:""}</div>
             </div>
             <SchBtn id={c.id} name={c.name} type="campaign"/>
             <ToggleBtn id={c.id} status={c.status}/>
@@ -2457,6 +2506,7 @@ function AdSchedulePanel({C, getSetting}) {
                 <Thumb src={as.thumb}/>
                 <div style={{flex:1,minWidth:0}}>
                   <div style={{fontSize:11,fontWeight:600,color:C.ink,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{as.name}</div>
+                  {as.daily_budget&&<div style={{fontSize:9,color:C.inkMid}}>일예산 {Math.round(as.daily_budget).toLocaleString()}원</div>}
                 </div>
                 <SchBtn id={as.id} name={`${c.name} > ${as.name}`} type="adset"/>
                 <ToggleBtn id={as.id} status={as.status}/>
@@ -6097,7 +6147,7 @@ export default function OaDashboard(){
     const from=new Date(Date.now()-45*86400000).toISOString().slice(0,10);
     getBeautyRealSales(from).then(setRealSales).catch(()=>{});
     const SURL=process.env.NEXT_PUBLIC_SUPABASE_URL, SKEY=process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-    fetch(`${SURL}/rest/v1/beauty_stock?select=name,stock_qty,order_pending,production_qty,transport_qty,ship_qty,lead_days`,{
+    fetch(`${SURL}/rest/v1/beauty_stock?select=name,stock_qty,order_pending`,{
       headers:{apikey:SKEY,Authorization:`Bearer ${SKEY}`}
     }).then(r=>r.json()).then(d=>setStockLite(Array.isArray(d)?d:[])).catch(()=>{});
   },[]);
@@ -7565,42 +7615,73 @@ export default function OaDashboard(){
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   // 📣 메타광고
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  // ── 재고 섹션 (최상위 탭): 광고 제품 × 재고 소진일수 × 광고 액션 (품절 임박=감액, 과잉=증액 소진) ──
+  // ── 재고 섹션 (최상위 탭): 이미용 전제품 재고 × 판매 속도(ERP+쿠팡 7일 평균) × 광고 액션 ──
   const StockSection=(()=>{
+    const [stRows,setStRows]=useState(null);
+    const [stQuery,setStQuery]=useState("");
+    const [stOnlyAct,setStOnlyAct]=useState(false);
+    useEffect(()=>{
+      if(sec!=="stock"||stRows!==null) return;
+      const SURL=process.env.NEXT_PUBLIC_SUPABASE_URL, SKEY=process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+      const sh={apikey:SKEY,Authorization:`Bearer ${SKEY}`};
+      Promise.all([
+        fetch(`${SURL}/rest/v1/beauty_stock?select=name,stock_qty,order_pending,production_qty,ship_qty,transport_qty,lead_days&order=name.asc`,{headers:sh}).then(r=>r.json()),
+        fetch(`${SURL}/rest/v1/coupang_avg?select=sku_name,avg_7d,coupang_stock`,{headers:sh}).then(r=>r.json()).catch(()=>[]),
+        fetch(`${SURL}/rest/v1/rpc/get_7d_avg_ex_coupang`,{method:"POST",headers:{...sh,"Content-Type":"application/json"},body:"{}"}).then(r=>r.json()).catch(()=>[]),
+        fetch(`${SURL}/rest/v1/beauty_incoming?select=name,arrival_date,qty&order=arrival_date.asc`,{headers:sh}).then(r=>r.json()).catch(()=>[]),
+      ]).then(([stock,coupang,sales,incoming])=>{
+        const coupangMap={};
+        (Array.isArray(coupang)?coupang:[]).forEach(c=>{coupangMap[(c.sku_name||"").replace(/\s/g,"")]={avg7:c.avg_7d||0,cStock:c.coupang_stock||0};});
+        const salesMap={};
+        (Array.isArray(sales)?sales:[]).forEach(s=>{salesMap[(s.name||"").replace(/\s/g,"")]=Number(s.total_qty)||0;});
+        const todayStr=new Date().toISOString().slice(0,10);
+        const incomingMap={};
+        (Array.isArray(incoming)?incoming:[]).filter(i=>i.arrival_date>=todayStr).forEach(i=>{
+          const k=(i.name||"").replace(/\s/g,"").toLowerCase();
+          if(!incomingMap[k]||i.arrival_date<incomingMap[k].arrival_date) incomingMap[k]={arrival_date:i.arrival_date,qty:i.qty};
+        });
+        const rows=(Array.isArray(stock)?stock:[]).map(r=>{
+          const key=(r.name||"").replace(/\s/g,"");
+          const cp=coupangMap[key]||{avg7:0,cStock:0};
+          const erpAvg7=(salesMap[key]||0)/7;
+          const daily=erpAvg7+(cp.avg7||0);
+          const qty=Number(r.stock_qty)||0;
+          const incomingQty=(Number(r.order_pending)||0)+(Number(r.production_qty)||0)+(Number(r.transport_qty)||0)+(Number(r.ship_qty)||0);
+          const days=daily>0?Math.floor(qty/daily):null;
+          const daysInc=daily>0?Math.floor((qty+incomingQty)/daily):null;
+          const incKey=key.toLowerCase();
+          const inc=incomingMap[incKey]||Object.entries(incomingMap).find(([k])=>incKey.startsWith(k)||k.startsWith(incKey))?.[1]||null;
+          return {name:r.name,qty,cStock:cp.cStock||0,incoming:incomingQty,lead:Number(r.lead_days)||0,daily,days,daysInc,incDate:inc?.arrival_date||null,incQty:inc?.qty||null};
+        });
+        setStRows(rows);
+      }).catch(()=>setStRows([]));
+    },[sec]);
     const fmtW=n=>n>=10000?`₩${Math.round(n/10000).toLocaleString()}만`:`₩${Math.round(n).toLocaleString()}`;
     const card={background:C.white,border:`1px solid ${C.border}`,borderRadius:12,padding:"14px 16px"};
     const from7=new Date(Date.now()-7*86400000).toISOString().slice(0,10);
-    const from14=new Date(Date.now()-14*86400000).toISOString().slice(0,10);
-    const items=(margins||[]).filter(m=>m.keyword).map(m=>{
-      const kw=m.keyword;
-      const stocks=stockLite.filter(s=>s.name&&s.name.includes(kw));
-      const qty=stocks.reduce((a,s)=>a+(Number(s.stock_qty)||0),0);
-      const incoming=stocks.reduce((a,s)=>a+(Number(s.order_pending)||0)+(Number(s.production_qty)||0)+(Number(s.transport_qty)||0)+(Number(s.ship_qty)||0),0);
-      const lead=Math.max(0,...stocks.map(s=>Number(s.lead_days)||0));
-      const sold=realSales.filter(r=>r.date>=from14&&((r.name&&r.name.includes(kw))||(r.category&&r.category.includes(kw))))
-        .reduce((a,r)=>a+(Number(r.qty)||0),0);
-      const daily=sold/14;
-      const days=daily>0?Math.round(qty/daily):null;
-      const daysInc=daily>0?Math.round((qty+incoming)/daily):null;
-      let spend7=0,conv7=0; const ads=new Set();
-      (metaForChart||[]).forEach(r=>{
-        if(r.date>=from7&&r.adName&&r.adName.includes(kw)&&(r.spend||0)>0){spend7+=r.spend||0;conv7+=r.convValue||0;ads.add(r.adName);}
+    const kws=(margins||[]).map(m=>m.keyword).filter(Boolean);
+    const items=(stRows||[]).map(r=>{
+      const kw=kws.find(k=>r.name&&r.name.includes(k))||null;
+      let spend7=0,conv7=0;
+      if(kw)(metaForChart||[]).forEach(x=>{
+        if(x.date>=from7&&x.adName&&x.adName.includes(kw)&&(x.spend||0)>0){spend7+=x.spend||0;conv7+=x.convValue||0;}
       });
       const roas7=spend7>0?Math.round(conv7/spend7*100):null;
-      const threshold=Math.max(14,lead); // 리드타임보다 재고일수가 짧으면 발주해도 늦음
+      const threshold=Math.max(14,r.lead); // 리드타임보다 재고일수가 짧으면 발주해도 늦음
       let act=null;
-      if(days!==null&&days<threshold&&spend7>0) act={t:"품절 임박 — 광고 감액/중단 검토",bg:"#fef2f2",bd:"#fecaca",fg:"#b91c1c",lv:0};
-      else if(days!==null&&days<threshold) act={t:incoming>0?"품절 임박 — 입고 대기 중":"품절 임박 — 발주/입고 확인",bg:"#fef2f2",bd:"#fecaca",fg:"#b91c1c",lv:0};
-      else if(days!==null&&days<threshold+16) act={t:"주의 — 발주 시점 점검",bg:"#fffbeb",bd:"#fde68a",fg:"#92400e",lv:1};
-      else if(days!==null&&days>=60&&roas7!==null&&roas7>=400) act={t:"재고 여유 + ROAS 좋음 → 증액 소진",bg:"#f0fdf4",bd:"#bbf7d0",fg:"#15803d",lv:2};
-      else if(days!==null&&days>=60&&spend7===0) act={t:"과잉재고 — 광고 밀어주기 후보",bg:"#f0f9ff",bd:"#bae6fd",fg:"#0369a1",lv:2};
-      return {kw,qty,incoming,lead,daily,days,daysInc,spend7,roas7,adCount:ads.size,act,noStock:stocks.length===0};
-    }).filter(it=>!it.noStock||it.spend7>0)
-      .sort((a,b)=>(a.days??9999)-(b.days??9999));
+      if(r.days!==null&&r.days<threshold&&spend7>0) act={t:"품절 임박 — 광고 감액/중단 검토",bg:"#fef2f2",bd:"#fecaca",fg:"#b91c1c",lv:0};
+      else if(r.days!==null&&r.days<threshold) act={t:r.incoming>0?"품절 임박 — 입고 대기 중":"품절 임박 — 발주/입고 확인",bg:"#fef2f2",bd:"#fecaca",fg:"#b91c1c",lv:0};
+      else if(r.days!==null&&r.days<threshold+16) act={t:"주의 — 발주 시점 점검",bg:"#fffbeb",bd:"#fde68a",fg:"#92400e",lv:1};
+      else if(r.days!==null&&r.days>=60&&roas7!==null&&roas7>=400) act={t:"재고 여유 + ROAS 좋음 → 증액 소진",bg:"#f0fdf4",bd:"#bbf7d0",fg:"#15803d",lv:2};
+      else if(r.days!==null&&r.days>=60&&spend7===0) act={t:"과잉재고 — 광고 밀어주기 후보",bg:"#f0f9ff",bd:"#bae6fd",fg:"#0369a1",lv:2};
+      return {...r,spend7,roas7,act,threshold};
+    }).sort((a,b)=>(a.days??9999)-(b.days??9999));
     const nCrit=items.filter(i=>i.act&&i.act.lv===0).length;
     const nWarn=items.filter(i=>i.act&&i.act.lv===1).length;
     const nPush=items.filter(i=>i.act&&i.act.lv===2).length;
-    if(!stockLite.length) return <Card><div style={{fontSize:11,color:C.inkLt,padding:"20px 0",textAlign:"center"}}>재고 데이터 로딩 중이거나 beauty_stock이 비어 있어요 (아침 7시 ERP 동기화)</div></Card>;
+    const q=stQuery.trim().replace(/\s/g,"");
+    const shown=items.filter(i=>(!q||(i.name||"").replace(/\s/g,"").includes(q))&&(!stOnlyAct||i.act));
+    if(stRows===null) return <Card><div style={{fontSize:11,color:C.inkLt,padding:"20px 0",textAlign:"center"}}>재고 데이터 로딩 중…</div></Card>;
     return(
       <div style={{display:"flex",flexDirection:"column",gap:14}}>
         <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
@@ -7612,23 +7693,32 @@ export default function OaDashboard(){
           ))}
         </div>
         <div style={card}>
-          <CardTitle title="광고 제품 재고 현황" sub="재고일수 = 현 재고 ÷ 최근 14일 실판매 일평균 (쿠팡/지그재그/스마트스토어) · 광고비는 최근 7일"/>
+          <CardTitle title={`이미용 전제품 재고 (${items.length})`} sub="일판매 = 최근 7일 ERP 출고+쿠팡 판매 평균 · 재고일수 = 창고재고 ÷ 일판매 · 광고비는 최근 7일 메타"/>
+          <div style={{display:"flex",gap:8,alignItems:"center",marginBottom:10,flexWrap:"wrap"}}>
+            <input value={stQuery} onChange={e=>setStQuery(e.target.value)} placeholder="제품명 검색"
+              style={{padding:"6px 10px",border:`1px solid ${C.border}`,borderRadius:8,fontSize:11,color:C.ink,outline:"none",width:180}}/>
+            <button onClick={()=>setStOnlyAct(v=>!v)}
+              style={{padding:"6px 12px",border:`1px solid ${stOnlyAct?C.rose:C.border}`,borderRadius:99,fontSize:10,fontWeight:700,
+                background:stOnlyAct?"#fff1f2":C.white,color:stOnlyAct?"#be123c":C.inkMid,cursor:"pointer"}}>액션 필요만</button>
+          </div>
           <div style={{overflowX:"auto"}}>
             <table style={{width:"100%",borderCollapse:"collapse",fontSize:11}}>
               <thead>
                 <tr style={{borderBottom:`2px solid ${C.border}`,color:C.inkLt,fontSize:10}}>
-                  {["제품","재고","입고 대기","일판매","재고일수","입고 포함","7일 광고비","ROAS","액션"].map(h=>
+                  {["제품","창고재고","쿠팡재고","입고 대기","입고 예정","일판매","재고일수","입고 포함","7일 광고비","ROAS","액션"].map(h=>
                     <th key={h} style={{padding:"6px 8px",textAlign:h==="제품"||h==="액션"?"left":"right",fontWeight:700,whiteSpace:"nowrap"}}>{h}</th>)}
                 </tr>
               </thead>
               <tbody>
-                {items.map(it=>{
-                  const dayColor=it.days===null?C.inkLt:it.days<Math.max(14,it.lead)?"#b91c1c":it.days<Math.max(14,it.lead)+16?"#b45309":C.ink;
+                {shown.map(it=>{
+                  const dayColor=it.days===null?C.inkLt:it.days<it.threshold?"#b91c1c":it.days<it.threshold+16?"#b45309":C.ink;
                   return(
-                    <tr key={it.kw} style={{borderBottom:`1px solid ${C.border}`}}>
-                      <td style={{padding:"8px",fontWeight:700,color:C.ink,whiteSpace:"nowrap"}}>{it.kw}{it.lead>0&&<span style={{fontSize:9,color:C.inkLt,fontWeight:600}}> 리드 {it.lead}일</span>}</td>
+                    <tr key={it.name} style={{borderBottom:`1px solid ${C.border}`}}>
+                      <td style={{padding:"8px",fontWeight:700,color:C.ink,maxWidth:220,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}} title={it.name}>{it.name}{it.lead>0&&<span style={{fontSize:9,color:C.inkLt,fontWeight:600}}> 리드 {it.lead}일</span>}</td>
                       <td style={{padding:"8px",textAlign:"right",fontWeight:700,color:C.ink}}>{it.qty.toLocaleString()}</td>
+                      <td style={{padding:"8px",textAlign:"right",color:it.cStock>0?C.inkMid:C.inkLt}}>{it.cStock>0?it.cStock.toLocaleString():"—"}</td>
                       <td style={{padding:"8px",textAlign:"right",color:it.incoming>0?"#0369a1":C.inkLt}}>{it.incoming>0?`+${it.incoming.toLocaleString()}`:"—"}</td>
+                      <td style={{padding:"8px",textAlign:"right",color:it.incDate?"#0369a1":C.inkLt,whiteSpace:"nowrap"}}>{it.incDate?`${it.incDate.slice(5).replace("-","/")}${it.incQty?` +${Number(it.incQty).toLocaleString()}`:""}`:"—"}</td>
                       <td style={{padding:"8px",textAlign:"right",color:C.inkMid}}>{it.daily>0?it.daily.toFixed(1):"—"}</td>
                       <td style={{padding:"8px",textAlign:"right",fontWeight:800,color:dayColor}}>{it.days!==null?`${it.days}일`:"—"}</td>
                       <td style={{padding:"8px",textAlign:"right",color:C.inkMid}}>{it.daysInc!==null&&it.incoming>0?`${it.daysInc}일`:"—"}</td>
@@ -7638,11 +7728,11 @@ export default function OaDashboard(){
                     </tr>
                   );
                 })}
-                {items.length===0&&<tr><td colSpan={9} style={{padding:"20px",textAlign:"center",color:C.inkLt}}>margins 키워드와 매칭되는 재고/판매 데이터 없음 — 캠페인 탭에서 제품 키워드(마진) 등록 필요</td></tr>}
+                {shown.length===0&&<tr><td colSpan={11} style={{padding:"20px",textAlign:"center",color:C.inkLt}}>표시할 제품 없음 — beauty_stock 동기화(아침 7시) 확인</td></tr>}
               </tbody>
             </table>
           </div>
-          <div style={{fontSize:10,color:C.inkLt,marginTop:8}}>기준: 재고일수 &lt; max(14일, 리드타임) = 품절 임박 · ≥60일 = 재고 여유. ERP 재고는 아침 7시 동기화, 실판매는 9시대 동기화</div>
+          <div style={{fontSize:10,color:C.inkLt,marginTop:8}}>기준: 재고일수 &lt; max(14일, 리드타임) = 품절 임박 · ≥60일 = 재고 여유 · 광고비/ROAS는 제품명에 마진 키워드가 포함된 소재 합계. ERP 재고·쿠팡 판매는 아침 7시 동기화</div>
         </div>
       </div>
     );
@@ -9199,10 +9289,18 @@ export default function OaDashboard(){
           };
           const deleteEvent=id=>{ if(window.confirm("이 행사를 삭제할까요?")) setPromoEvents(prev=>(prev||[]).filter(e=>e.id!==id)); };
           // 기간 성과 계산
-          const periodStats=(start,end)=>{
-            const s={spend:0,purchases:0,convValue:0,ads:{}};
+          const periodStats=(start,end,productKw)=>{
+            const s={spend:0,purchases:0,convValue:0,ads:{},matchedAds:0,totalAds:0};
+            const kws = productKw ? productKw.split(",").map(k=>k.trim().toLowerCase()).filter(Boolean) : [];
             (metaForChart||[]).forEach(r=>{
               if(!r.date||r.date<start||r.date>end) return;
+              s.totalAds++;
+              // 제품명 매칭: 광고명/캠페인명/광고세트명에 제품 키워드가 포함되면 매칭
+              if(kws.length) {
+                const txt = [r.adName,r.campaign,r.adset].join(" ").toLowerCase();
+                if(!kws.some(k=>txt.includes(k))) return;
+              }
+              s.matchedAds++;
               s.spend+=r.spend||0; s.purchases+=r.purchases||0; s.convValue+=r.convValue||0;
               if(r.adName){const a=s.ads[r.adName]=s.ads[r.adName]||{spend:0,convValue:0,purchases:0};
                 a.spend+=r.spend||0; a.convValue+=r.convValue||0; a.purchases+=r.purchases||0;}
@@ -9229,6 +9327,8 @@ export default function OaDashboard(){
                     <span style={{alignSelf:"center",fontSize:11,color:C.inkLt}}>~</span>
                     <input type="date" style={inputSt} value={eventForm.end} onChange={e=>setEventForm(f=>({...f,end:e.target.value}))}/>
                   </div>
+                  <input style={inputSt} placeholder="제품명 (예: 소닉플로우, 에어리소닉) — 광고 자동 매칭" value={eventForm.product||""}
+                    onChange={e=>setEventForm(f=>({...f,product:e.target.value}))}/>
                   <input style={inputSt} placeholder="메모 (선택 — 할인율, 채널, 목표 등)" value={eventForm.memo||""}
                     onChange={e=>setEventForm(f=>({...f,memo:e.target.value}))}/>
                   <div style={{display:"flex",gap:6,justifyContent:"flex-end"}}>
@@ -9249,11 +9349,11 @@ export default function OaDashboard(){
                 const past=ev.end<today, upcoming=ev.start>today;
                 let body=null;
                 if(open){
-                  const cur=periodStats(ev.start,ev.end);
+                  const cur=periodStats(ev.start,ev.end,ev.product);
                   const lenDays=Math.round((new Date(ev.end)-new Date(ev.start))/86400000)+1;
                   const prevEnd=new Date(new Date(ev.start).getTime()-86400000).toISOString().slice(0,10);
                   const prevStart=new Date(new Date(ev.start).getTime()-lenDays*86400000).toISOString().slice(0,10);
-                  const prev=periodStats(prevStart,prevEnd);
+                  const prev=periodStats(prevStart,prevEnd,ev.product);
                   const roas=cur.spend>0?Math.round((cur.convValue/cur.spend)*100):0;
                   const prevRoas=prev.spend>0?Math.round((prev.convValue/prev.spend)*100):0;
                   const pct=(a,b)=>b>0?Math.round(((a-b)/b)*100):null;
@@ -9269,6 +9369,7 @@ export default function OaDashboard(){
                     .sort((a,b)=>b[1].spend-a[1].spend).slice(0,5);
                   body=(
                     <div style={{borderTop:`1px solid ${C.border}`,padding:"12px 14px",display:"flex",flexDirection:"column",gap:10}}>
+                      {ev.product&&<div style={{fontSize:10,color:C.rose,fontWeight:700}}>🔗 제품 매칭: {ev.product} · 광고 {cur.matchedAds}건 / {cur.totalAds}건</div>}
                       <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
                         {stat("광고비",fmtW(cur.spend),delta(cur.spend,prev.spend))}
                         {stat("구매",`${cur.purchases}건`,delta(cur.purchases,prev.purchases))}
@@ -9309,6 +9410,7 @@ export default function OaDashboard(){
                         background:active?"linear-gradient(135deg,#fff5f7,#fff)":"transparent"}}>
                       <div style={{display:"flex",alignItems:"center",gap:10,minWidth:0}}>
                         <div style={{fontSize:13,fontWeight:800,color:active?C.rose:C.ink,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{ev.name}</div>
+                        {ev.product&&<span style={{fontSize:9,fontWeight:700,color:"#7c3aed",background:"#f5f3ff",padding:"2px 8px",borderRadius:20,flexShrink:0}}>{ev.product}</span>}
                         {active&&<span style={{fontSize:9,fontWeight:800,color:C.rose,background:C.blush,padding:"2px 8px",borderRadius:20,flexShrink:0}}>진행 중</span>}
                         {upcoming&&<span style={{fontSize:9,fontWeight:700,color:"#0284c7",background:"#e0f2fe",padding:"2px 8px",borderRadius:20,flexShrink:0}}>예정</span>}
                         {past&&<span style={{fontSize:9,fontWeight:700,color:C.inkLt,background:C.cream,padding:"2px 8px",borderRadius:20,flexShrink:0}}>종료</span>}
