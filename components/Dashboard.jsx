@@ -6379,6 +6379,10 @@ export default function OaDashboard(){
   const [metaBackfill, setMetaBackfill] = useState([]);
   // 행사 일정: [{id,name,start,end,memo}]
   const [promoEvents, setPromoEvents] = useSyncState("oa_events_v1", []);
+  // 카피뱅크: scripts/copy-bank.py가 저장한 리뷰/문의 분석 (읽기 전용)
+  const [copyBank] = useSyncState("oa_copy_bank_v1", null);
+  const [cbScope, setCbScope] = useState("beauty"); // beauty | all
+  const [cbProd, setCbProd] = useState(null);
   const [eventForm, setEventForm] = useState(null); // null | {name,start,end,memo}
   const [eventOpenId, setEventOpenId] = useState(null);
   // 원클릭 광고 끄기 상태: {광고명: "loading"|"paused"|"error"}
@@ -7459,7 +7463,7 @@ export default function OaDashboard(){
 
         {/* 탭 */}
         <div style={{display:"flex",gap:6,overflowX:"auto",paddingBottom:2}}>
-          {[{id:"overview",label:<><MI n="trending_up" size={12}/> 추이</>},{id:"campaign",label:<><MI n="campaign" size={12}/> 캠페인</>},{id:"weekly",label:<><MI n="calendar_month" size={12}/> 주별</>},{id:"monthly",label:<><MI n="date_range" size={12}/> 월별</>},{id:"daily",label:<><MI n="calendar_today" size={12}/> 일별</>},{id:"product",label:<><MI n="inventory_2" size={12}/> 제품별</>},{id:"events",label:<><MI n="celebration" size={12}/> 행사{(promoEvents||[]).some(e=>{const t=new Date().toISOString().slice(0,10);return e.start<=t&&t<=e.end;})?" ●":""}</>},{id:"guide",label:<><MI n="menu_book" size={12}/> 가이드</>}].map(t=>(
+          {[{id:"overview",label:<><MI n="trending_up" size={12}/> 추이</>},{id:"campaign",label:<><MI n="campaign" size={12}/> 캠페인</>},{id:"weekly",label:<><MI n="calendar_month" size={12}/> 주별</>},{id:"monthly",label:<><MI n="date_range" size={12}/> 월별</>},{id:"daily",label:<><MI n="calendar_today" size={12}/> 일별</>},{id:"product",label:<><MI n="inventory_2" size={12}/> 제품별</>},{id:"events",label:<><MI n="celebration" size={12}/> 행사{(promoEvents||[]).some(e=>{const t=new Date().toISOString().slice(0,10);return e.start<=t&&t<=e.end;})?" ●":""}</>},{id:"copybank",label:<><MI n="format_quote" size={12}/> 카피뱅크</>},{id:"guide",label:<><MI n="menu_book" size={12}/> 가이드</>}].map(t=>(
             <button key={t.id} onClick={()=>setMetaTab(t.id)} style={{
               padding:"6px 16px",borderRadius:8,cursor:"pointer",border:`1px solid ${metaTab===t.id?C.rose:C.border}`,
               background:metaTab===t.id?C.blush:C.white,color:metaTab===t.id?C.rose:C.inkMid,
@@ -8697,6 +8701,123 @@ export default function OaDashboard(){
                   </div>
                 );
               })}
+            </div>
+          );
+        })()}
+
+        {/* 카피뱅크 탭 — 리뷰/문의 기반 카피 소스 (scripts/copy-bank.py → oa_copy_bank_v1) */}
+        {metaTab==="copybank"&&(()=>{
+          const card={background:C.white,border:`1px solid ${C.border}`,borderRadius:12,padding:"14px 16px"};
+          const cb=copyBank||{};
+          const qna=cbScope==="beauty"?(cb._qna_beauty||null):(cb._qna||null);
+          const products=Object.keys(cb).filter(k=>!k.startsWith("_"));
+          if(!copyBank||(!cb._qna&&!cb._qna_beauty&&products.length===0)) return(
+            <Card>
+              <div style={{textAlign:"center",padding:"30px 0",color:C.inkLt}}>
+                <div style={{marginBottom:8}}><MI n="format_quote" size={32}/></div>
+                <div style={{fontSize:12,fontWeight:700,color:C.inkMid}}>카피뱅크 데이터 없음</div>
+                <div style={{fontSize:11,marginTop:6}}>로컬에서 <code>python3 scripts/copy-bank.py</code> 실행 → 문의 분석 / 리뷰 엑셀(~/Downloads) 있으면 제품별 카피 소스까지 생성</div>
+              </div>
+            </Card>
+          );
+          const chip=(bg,fg,txt)=><span style={{fontSize:9,fontWeight:800,padding:"2px 7px",borderRadius:99,background:bg,color:fg,whiteSpace:"nowrap"}}>{txt}</span>;
+          return(
+            <div style={{display:"flex",flexDirection:"column",gap:14}}>
+              {/* 망설임 TOP */}
+              <div style={card}>
+                <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:10,flexWrap:"wrap",gap:8}}>
+                  <div style={{fontSize:13,fontWeight:800,color:C.ink,display:"flex",alignItems:"center",gap:6}}>
+                    <MI n="psychology_alt" size={15}/> 구매 망설임 TOP → 선제 반박 카피
+                    {qna&&<span style={{fontSize:10,fontWeight:600,color:C.inkLt}}>최근 {qna.months}개월 문의 {(qna.total||0).toLocaleString()}건 분석</span>}
+                  </div>
+                  <div style={{display:"flex",gap:4}}>
+                    {[["beauty","이미용"],["all","전체"]].map(([v,l])=>(
+                      <button key={v} onClick={()=>setCbScope(v)} style={{padding:"4px 12px",borderRadius:8,cursor:"pointer",fontSize:10,fontWeight:700,fontFamily:"inherit",
+                        border:`1px solid ${cbScope===v?C.rose:C.border}`,background:cbScope===v?C.blush:C.white,color:cbScope===v?C.rose:C.inkMid}}>{l}</button>
+                    ))}
+                  </div>
+                </div>
+                {!qna&&<div style={{fontSize:11,color:C.inkLt,padding:"10px 0"}}>{cbScope==="beauty"?"이미용 분석 없음 — scripts/copy-bank.py --beauty 실행":"전체 분석 없음 — scripts/copy-bank.py 실행"}</div>}
+                {qna&&(
+                  <div style={{display:"flex",flexDirection:"column",gap:8}}>
+                    {(qna.hesitations||[]).map((h,i)=>(
+                      <div key={i} style={{border:`1px solid ${C.border}`,borderRadius:10,padding:"10px 12px"}}>
+                        <div style={{display:"flex",alignItems:"flex-start",gap:8}}>
+                          <span style={{fontSize:11,fontWeight:800,color:C.rose,flexShrink:0}}>{i+1}</span>
+                          <div style={{flex:1,minWidth:0}}>
+                            <div style={{fontSize:11.5,fontWeight:700,color:C.ink,lineHeight:1.5}}>{h.question}</div>
+                            <div style={{display:"flex",gap:5,marginTop:4,flexWrap:"wrap"}}>
+                              {chip("#fef2f2","#b91c1c",`약 ${h.count||"?"}회`)}
+                              {h.product&&chip(C.bgSoft||"#f8fafc",C.inkLt,h.product.length>40?h.product.slice(0,40)+"…":h.product)}
+                            </div>
+                            <div style={{marginTop:6,fontSize:11,color:"#0369a1",background:"#f0f9ff",border:"1px solid #bae6fd",borderRadius:8,padding:"7px 10px",lineHeight:1.55}}>
+                              <b>대응 카피:</b> {h.counter}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+              {/* 미충족 니즈 → 소재 아이디어 */}
+              {qna&&(qna.unmet_needs||[]).length>0&&(
+                <div style={card}>
+                  <div style={{fontSize:13,fontWeight:800,color:C.ink,marginBottom:10,display:"flex",alignItems:"center",gap:6}}>
+                    <MI n="lightbulb" size={15}/> 미충족 니즈 → 소재 아이디어
+                  </div>
+                  <div style={{display:"flex",flexDirection:"column",gap:6}}>
+                    {qna.unmet_needs.map((u,i)=>(
+                      <div key={i} style={{fontSize:11,lineHeight:1.6,padding:"8px 10px",borderRadius:8,background:"#fffbeb",border:"1px solid #fde68a"}}>
+                        <div style={{color:"#92400e"}}>{u.need}</div>
+                        <div style={{fontWeight:700,color:C.ink,marginTop:2}}>→ {u.idea}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {/* 제품별 카피 소스 (리뷰 분석) */}
+              <div style={card}>
+                <div style={{fontSize:13,fontWeight:800,color:C.ink,marginBottom:10,display:"flex",alignItems:"center",gap:6}}>
+                  <MI n="reviews" size={15}/> 제품별 카피 소스 <span style={{fontSize:10,fontWeight:600,color:C.inkLt}}>리뷰 verbatim/훅 — 리뷰 엑셀 분석분</span>
+                </div>
+                {products.length===0&&(
+                  <div style={{fontSize:11,color:C.inkLt}}>아직 없음 — 스마트스토어 리뷰관리 → 엑셀 다운로드 → ~/Downloads 저장 후 <code>python3 scripts/copy-bank.py</code> 실행하면 자동 추가</div>
+                )}
+                {products.length>0&&(
+                  <>
+                    <div style={{display:"flex",gap:5,flexWrap:"wrap",marginBottom:10}}>
+                      {products.map(p=>(
+                        <button key={p} onClick={()=>setCbProd(cbProd===p?null:p)} style={{padding:"4px 12px",borderRadius:8,cursor:"pointer",fontSize:10,fontWeight:700,fontFamily:"inherit",
+                          border:`1px solid ${cbProd===p?C.rose:C.border}`,background:cbProd===p?C.blush:C.white,color:cbProd===p?C.rose:C.inkMid}}>
+                          {p.length>24?p.slice(0,24)+"…":p} <span style={{fontWeight:600,opacity:.6}}>{cb[p]?.total||0}</span>
+                        </button>
+                      ))}
+                    </div>
+                    {cbProd&&cb[cbProd]&&(()=>{
+                      const b=cb[cbProd];
+                      const sec=(title,items,render)=>items&&items.length>0&&(
+                        <div style={{marginBottom:12}}>
+                          <div style={{fontSize:11,fontWeight:800,color:C.ink,marginBottom:5}}>{title}</div>
+                          <div style={{display:"flex",flexDirection:"column",gap:4}}>{items.map(render)}</div>
+                        </div>
+                      );
+                      const li=(txt,i)=><div key={i} style={{fontSize:11,color:C.inkMid,lineHeight:1.55}}>{txt}</div>;
+                      return(
+                        <div style={{borderTop:`1px solid ${C.border}`,paddingTop:12}}>
+                          {sec("고객 표현 그대로 (verbatim)",b.verbatims,(v,i)=>li(<><b style={{color:C.ink}}>"{v.text}"</b> — {v.why}</>,i))}
+                          {sec("구매/사용 상황",b.situations,(s,i)=>li(<>{s.scene} — "{s.quote}"</>,i))}
+                          {sec("구매 트리거",b.triggers,(t,i)=>li(<>{t.trigger} (약 {t.count||"?"}회)</>,i))}
+                          {sec("갈아타기",b.switching,(s,i)=>li(<>{s.from} → 오아: {s.reason}</>,i))}
+                          {sec("불만 → 선제 반박",b.objections,(o,i)=>li(<>{o.complaint} → <b style={{color:"#0369a1"}}>{o.counter}</b></>,i))}
+                          {sec("훅 후보 10",b.hooks,(h,i)=>li(<><span style={{fontSize:9,fontWeight:800,padding:"1px 6px",borderRadius:99,background:C.blush,color:C.rose,marginRight:5}}>{h.appeal||"?"}</span>{h.hook}</>,i))}
+                        </div>
+                      );
+                    })()}
+                  </>
+                )}
+              </div>
+              <div style={{fontSize:10,color:C.inkLt}}>갱신: 로컬에서 <code>python3 scripts/copy-bank.py</code> (전체 문의) / <code>--beauty</code> (이미용만) — 리뷰 엑셀 있으면 제품별 분석 포함</div>
             </div>
           );
         })()}

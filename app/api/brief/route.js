@@ -18,6 +18,24 @@ export async function POST(request) {
   // 상위 성과 소재 [{adName, appeal, roas, spend}] (대시보드에서 전달)
   const topAds = Array.isArray(body?.topAds) ? body.topAds.slice(0, 8) : [];
 
+  // 카피뱅크: 상품 문의 기반 망설임 (scripts/copy-bank.py → oa_copy_bank_v1) — 실패해도 무시
+  let hesitations = [];
+  try {
+    const supaUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const supaKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+    if (supaUrl && supaKey) {
+      const r = await fetch(`${supaUrl}/rest/v1/settings?key=eq.oa_copy_bank_v1&select=value`,
+        { headers: { apikey: supaKey, Authorization: `Bearer ${supaKey}` } });
+      const rows = await r.json();
+      const cb = rows?.[0]?.value || {};
+      const all = (cb._qna_beauty?.hesitations || cb._qna?.hesitations || []);
+      // 광고명과 제품이 겹치는 망설임 우선, 없으면 상위 6개
+      const tokens = adName.split(/[\s_\-·/]+/).filter(t => t.length >= 2);
+      const rel = all.filter(h => tokens.some(t => (h.product || '').includes(t)));
+      hesitations = (rel.length ? rel : all).slice(0, 6);
+    }
+  } catch { /* 카피뱅크 없어도 브리프는 생성 */ }
+
   const prompt = `당신은 이미용 가전(드라이기·고데기·갈바닉·화장거울) 브랜드 "오아"의 메타(페이스북/인스타) 광고 소재 기획자입니다.
 
 아래 부진 소재를 대체할 새 소재 브리프를 작성해주세요.
@@ -31,7 +49,10 @@ ${note ? `- 메모: ${note}` : ''}
 ## 최근 성과 좋은 소재 (참고 패턴)
 ${topAds.length ? topAds.map(a => `- ${a.adName} (${a.appeal || '?'}, ROAS ${a.roas}%, 지출 ${Math.round((a.spend || 0) / 10000)}만원)`).join('\n') : '- (데이터 없음)'}
 
-## 소재 제작 5원칙
+${hesitations.length ? `## 고객 구매 망설임 (최근 6개월 실제 상품 문의 분석 — 선제 대응하면 전환 상승)
+${hesitations.map(h => `- ${h.question} (약 ${h.count || '?'}회) → 대응: ${h.counter || ''}`).join('\n')}
+
+` : ''}## 소재 제작 5원칙
 1. 첫 1초 훅이 전부 — 스크롤 멈추게 하는 비주얼/카피
 2. 제품보다 상황 — 사용 맥락(출근 준비, 여행, 습한 날)을 먼저 보여주기
 3. 소구 하나만 — 한 소재에 한 메시지
