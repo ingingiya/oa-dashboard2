@@ -7637,7 +7637,10 @@ export default function OaDashboard(){
           const k=(i.name||"").replace(/\s/g,"").toLowerCase();
           if(!incomingMap[k]||i.arrival_date<incomingMap[k].arrival_date) incomingMap[k]={arrival_date:i.arrival_date,qty:i.qty};
         });
-        const rows=(Array.isArray(stock)?stock:[]).map(r=>{
+        // 부속품 제외: 본품은 '-' 없거나 마지막 세그먼트가 색상/채널명 (부속품은 -충전케이블, -제품박스 등)
+        const MAIN_SUFFIX=new Set(["그레이","네이비","레드","메탈그레이","베이지","블랙","블루","아이보리","옐로우","퍼플","핑크","화이트","온라인","카카오","리테일","리테일(노브랜드)","브랜드온"]);
+        const isMain=n=>{const s=(n||"").split("-");return s.length===1||MAIN_SUFFIX.has(s[s.length-1]);};
+        const rows=(Array.isArray(stock)?stock:[]).filter(r=>isMain(r.name)).map(r=>{
           const key=(r.name||"").replace(/\s/g,"");
           const cp=coupangMap[key]||{avg7:0,cStock:0};
           const erpAvg7=(salesMap[key]||0)/7;
