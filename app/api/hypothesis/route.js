@@ -735,9 +735,10 @@ export async function GET(request) {
 // 가설 상태 변경 (검증완료/기각)
 export async function PATCH(request) {
   try {
-    const { id, status, executed, memo, assignee } = await request.json();
-    if (!id || (!status && executed === undefined && memo === undefined && assignee === undefined)) {
-      return Response.json({ error: 'id + status/executed/memo/assignee 필요' }, { status: 400 });
+    const { id, status, executed, memo, assignee, executed_at, due_date } = await request.json();
+    if (!id || (!status && executed === undefined && memo === undefined && assignee === undefined
+      && executed_at === undefined && due_date === undefined)) {
+      return Response.json({ error: 'id + 변경 필드 필요' }, { status: 400 });
     }
 
     const body = {};
@@ -746,6 +747,11 @@ export async function PATCH(request) {
       body.executed = !!executed;
       body.executed_at = executed ? new Date(Date.now() + 9 * 3600 * 1000).toISOString().split('T')[0] : null;
     }
+    if (executed_at !== undefined) { // 실행날짜 직접 지정 (YYYY-MM-DD 또는 null)
+      body.executed_at = executed_at || null;
+      body.executed = !!executed_at;
+    }
+    if (due_date !== undefined) body.due_date = due_date || null;
     if (memo !== undefined) body.memo = String(memo).slice(0, 500);
     if (assignee !== undefined) body.assignee = String(assignee).slice(0, 50);
     const res = await fetch(`${SUPA_URL}/rest/v1/daily_hypotheses?id=eq.${Number(id)}`, {

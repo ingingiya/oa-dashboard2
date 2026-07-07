@@ -12256,6 +12256,37 @@ export default function OaDashboard(){
                     border:`1px solid ${C.border}`,background:"#fff",color:C.inkMid,
                     cursor:"pointer",fontFamily:"inherit"}}>{h.memo?"✏️ 메모 수정":"📝 메모"}</button>
               </div>
+              {/* 실행날짜 + 마감기한 */}
+              <div style={{display:"flex",alignItems:"center",gap:10,flexWrap:"wrap",marginTop:6}}>
+                <label style={{display:"flex",alignItems:"center",gap:4,fontSize:10,color:C.inkLt,fontWeight:700}}>
+                  🚀 실행일
+                  <input type="date" value={h.executed_at||""}
+                    onChange={e=>setHypoField(h.id,{executed_at:e.target.value||null,executed:!!e.target.value})}
+                    style={{fontSize:10,padding:"2px 4px",borderRadius:6,border:`1px solid ${C.border}`,
+                      fontFamily:"inherit",color:h.executed_at?C.ink:C.inkLt,outline:"none"}}/>
+                </label>
+                {(()=>{
+                  const today=new Date(Date.now()+9*3600*1000).toISOString().slice(0,10);
+                  const overdue=h.due_date&&!h.executed&&h.due_date<today&&h.status==="open";
+                  const dday=h.due_date?Math.round((new Date(h.due_date)-new Date(today))/86400000):null;
+                  return(
+                  <label style={{display:"flex",alignItems:"center",gap:4,fontSize:10,fontWeight:700,
+                    color:overdue?"#dc2626":C.inkLt}}>
+                    ⏰ 마감
+                    <input type="date" value={h.due_date||""}
+                      onChange={e=>setHypoField(h.id,{due_date:e.target.value||null})}
+                      style={{fontSize:10,padding:"2px 4px",borderRadius:6,
+                        border:`1px solid ${overdue?"#fecaca":C.border}`,
+                        background:overdue?"#fef2f2":"#fff",
+                        fontFamily:"inherit",color:overdue?"#dc2626":h.due_date?C.ink:C.inkLt,outline:"none"}}/>
+                    {h.due_date&&!h.executed&&h.status==="open"&&(
+                      <span style={{fontWeight:800,color:overdue?"#dc2626":dday<=2?"#ea580c":C.inkLt}}>
+                        {overdue?`${-dday}일 지남`:dday===0?"오늘 마감":`D-${dday}`}
+                      </span>
+                    )}
+                  </label>);
+                })()}
+              </div>
               {h.memo&&(
                 <div style={{fontSize:11,color:C.ink,marginTop:6,background:"#fffbeb",
                   border:"1px solid #fde68a",padding:"6px 10px",borderRadius:8,whiteSpace:"pre-wrap"}}>📝 {h.memo}</div>
