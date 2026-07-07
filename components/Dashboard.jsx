@@ -740,13 +740,9 @@ function InfluencerArchiveSection() {
           (byMonth[k]=byMonth[k]||[]).push(x);
         });
         const keys = Object.keys(byMonth).sort((a,b)=>a==="일정미정"?1:b==="일정미정"?-1:a.localeCompare(b));
-        const toggleShip = (p)=>{
-          const done = !p.shippingDone;
-          setArchive(items.map(x=>x.id===p.id?{...x,shippingDone:done,shippingDate:done?new Date().toISOString().slice(0,10):""}:x));
-        };
         return (
-          <div style={{background:C.white,border:`1px solid ${C.border}`,borderRadius:12,padding:"14px 16px",display:"flex",flexDirection:"column",gap:10}}>
-            <div style={{fontSize:13,fontWeight:800,color:C.ink}}>📅 월별 업로드 예정 <span style={{fontSize:11,fontWeight:600,color:C.inkMid}}>(컨택중 {active.length}건 · 칩 클릭 = 발송 체크)</span></div>
+          <div style={{background:C.white,border:`1px solid ${C.border}`,borderRadius:12,padding:"14px 16px",display:"flex",flexDirection:"column",gap:8}}>
+            <div style={{fontSize:13,fontWeight:800,color:C.ink}}>📅 월별 업로드 예정 <span style={{fontSize:11,fontWeight:600,color:C.inkMid}}>(컨택중 {active.length}건)</span></div>
             {keys.map(k=>{
               const list = byMonth[k];
               const shipped = list.filter(x=>x.shippingDone).length;
@@ -754,24 +750,12 @@ function InfluencerArchiveSection() {
               list.forEach(x=>(x.products&&x.products.length?x.products:["제품미정"]).forEach(pr=>{prodCnt[pr]=(prodCnt[pr]||0)+1;}));
               const label = k==="일정미정" ? "일정미정" : `${Number(k.slice(0,4))!==new Date().getFullYear()?k.slice(0,4)+"년 ":""}${Number(k.slice(5,7))}월`;
               return (
-                <div key={k} style={{borderTop:`1px solid #f3f4f6`,paddingTop:8,display:"flex",flexDirection:"column",gap:6}}>
-                  <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
-                    <span style={{fontSize:12,fontWeight:800,color:C.ink}}>{label} · {list.length}건</span>
-                    <span style={{fontSize:10,fontWeight:700,padding:"1px 8px",borderRadius:10,background:shipped===list.length?"#dcfce7":"#fef9c3",color:shipped===list.length?"#16a34a":"#854d0e"}}>발송 {shipped}/{list.length}</span>
-                    {Object.entries(prodCnt).map(([pr,c])=>(
-                      <span key={pr} style={{fontSize:10,background:"#f0fdf4",color:"#16a34a",padding:"1px 8px",borderRadius:10,fontWeight:700}}>📦 {pr} {c}</span>
-                    ))}
-                  </div>
-                  <div style={{display:"flex",gap:4,flexWrap:"wrap"}}>
-                    {list.map(p=>(
-                      <span key={p.id} onClick={()=>toggleShip(p)} title={p.shippingDone?`발송완료 ${p.shippingDate||""}`:"미발송 — 클릭하면 발송 체크"}
-                        style={{fontSize:10,padding:"2px 8px",borderRadius:10,cursor:"pointer",fontWeight:700,
-                          background:p.shippingDone?"#dcfce7":"#f3f4f6",color:p.shippingDone?"#16a34a":C.inkMid,
-                          border:`1px solid ${p.shippingDone?"#bbf7d0":C.border}`}}>
-                        {p.shippingDone?"✅":"📮"} {p.account||p.name||"(이름없음)"}{p.uploadDate?` ${Number(p.uploadDate.slice(8,10))}일`:""}
-                      </span>
-                    ))}
-                  </div>
+                <div key={k} style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap",borderTop:`1px solid #f3f4f6`,paddingTop:8}}>
+                  <span style={{fontSize:12,fontWeight:800,color:C.ink}}>{label} · {list.length}건</span>
+                  <span style={{fontSize:10,fontWeight:700,padding:"1px 8px",borderRadius:10,background:shipped===list.length?"#dcfce7":"#fef9c3",color:shipped===list.length?"#16a34a":"#854d0e"}}>발송 {shipped}/{list.length}</span>
+                  {Object.entries(prodCnt).map(([pr,c])=>(
+                    <span key={pr} style={{fontSize:10,background:"#f0fdf4",color:"#16a34a",padding:"1px 8px",borderRadius:10,fontWeight:700}}>📦 {pr} {c}</span>
+                  ))}
                 </div>
               );
             })}
@@ -2717,12 +2701,25 @@ function AdSchedulePanel({C, getSetting}) {
                 ))}
               </div>
             </div>
-            {selectedPromo&&(
+            {selectedPromo&&(()=>{
+              // 현재 선택된 대상의 예산
+              const tgt = promoAdsetId ? promoAdsets2.find(a=>a.id===promoAdsetId) : camps.find(c=>c.id===promoTarget);
+              const curBudget = tgt?.daily_budget ? Math.round(Number(tgt.daily_budget)) : null;
+              return(
               <>
+                {curBudget&&(
+                  <div style={{background:"#eff6ff",border:"1px solid #93c5fd",borderRadius:8,padding:"8px 12px",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+                    <span style={{fontSize:11,fontWeight:700,color:"#2563eb"}}>현재 일예산: {curBudget.toLocaleString()}원</span>
+                    <button onClick={()=>setPromoBudget(p=>({...p,after:String(curBudget)}))}
+                      style={{fontSize:10,fontWeight:700,padding:"3px 10px",borderRadius:6,border:"1px solid #93c5fd",background:"#fff",color:"#2563eb",cursor:"pointer",fontFamily:"inherit"}}>
+                      행사 후 예산에 적용
+                    </button>
+                  </div>
+                )}
                 <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8}}>
                   <div>
                     <label style={{fontSize:10,fontWeight:700,color:C.inkMid}}>행사 전 예산</label>
-                    <input type="number" value={promoBudget.before} onChange={e=>setPromoBudget(p=>({...p,before:e.target.value}))} placeholder="30000"
+                    <input type="number" value={promoBudget.before} onChange={e=>setPromoBudget(p=>({...p,before:e.target.value}))} placeholder={curBudget?String(curBudget):"30000"}
                       style={{width:"100%",padding:"6px 8px",border:`1px solid ${C.border}`,borderRadius:6,fontSize:11,fontFamily:"inherit",marginTop:4,boxSizing:"border-box"}}/>
                   </div>
                   <div>
@@ -2731,8 +2728,8 @@ function AdSchedulePanel({C, getSetting}) {
                       style={{width:"100%",padding:"6px 8px",border:`1px solid #16a34a`,borderRadius:6,fontSize:11,fontFamily:"inherit",marginTop:4,boxSizing:"border-box"}}/>
                   </div>
                   <div>
-                    <label style={{fontSize:10,fontWeight:700,color:C.inkMid}}>행사 후 예산</label>
-                    <input type="number" value={promoBudget.after} onChange={e=>setPromoBudget(p=>({...p,after:e.target.value}))} placeholder="30000"
+                    <label style={{fontSize:10,fontWeight:700,color:C.inkMid}}>행사 후 예산 (복구)</label>
+                    <input type="number" value={promoBudget.after} onChange={e=>setPromoBudget(p=>({...p,after:e.target.value}))} placeholder={curBudget?String(curBudget):"30000"}
                       style={{width:"100%",padding:"6px 8px",border:`1px solid ${C.border}`,borderRadius:6,fontSize:11,fontFamily:"inherit",marginTop:4,boxSizing:"border-box"}}/>
                   </div>
                 </div>
@@ -2770,8 +2767,8 @@ function AdSchedulePanel({C, getSetting}) {
                 }} style={{padding:"8px",background:"#16a34a",color:"#fff",border:"none",borderRadius:8,fontSize:12,fontWeight:800,cursor:"pointer",fontFamily:"inherit"}}>
                   행사 연동 스케줄 생성
                 </button>
-              </>
-            )}
+              </>);
+            })()}
           </div>
         )}
       </div>
