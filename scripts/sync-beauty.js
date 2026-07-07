@@ -18,7 +18,7 @@ async function fetchBeautySales(pool) {
       제품명 as name,
       카테고리코드 as cat_id,
       매출처명 as channel,
-      DATE(판매날짜) as date,
+      DATE_FORMAT(판매날짜, '%Y-%m-%d') as date,
       SUM(판매수량) as qty,
       SUM(총매출액) as revenue,
       SUM(총매출이익) as profit
@@ -37,9 +37,9 @@ async function upsertToSupabase(rows) {
   for (let i = 0; i < rows.length; i += BATCH) {
     const batch = rows.slice(i, i + BATCH).map(r => ({
       name: r.name,
-      cat_id: Number(r.cat_id),
+      cat_id: r.cat_id, // 'DRY','STR' 등 문자열 코드 (Number 변환 시 null 오염됐었음)
       channel: r.channel || '',
-      date: r.date instanceof Date ? r.date.toISOString().split('T')[0] : String(r.date),
+      date: String(r.date),
       qty: Number(r.qty) || 0,
       revenue: Number(r.revenue) || 0,
       profit: Number(r.profit) || 0,

@@ -19,10 +19,64 @@ async function listCampaigns() {
 // 광고세트 목록 조회
 async function listAdsets(campaignId) {
   const token = process.env.META_ACCESS_TOKEN;
-  const res = await fetch(`${META_API}/${campaignId}/adsets?fields=id,name,status,daily_budget&limit=50&access_token=${token}`);
+  const res = await fetch(`${META_API}/${campaignId}/adsets?fields=id,name,status,daily_budget&limit=100&access_token=${token}`);
   if (!res.ok) throw new Error(await res.text());
   const data = await res.json();
   return data.data || [];
+}
+
+// 광고 목록 조회 (썸네일 포함)
+async function listAds(adsetId) {
+  const token = process.env.META_ACCESS_TOKEN;
+  const res = await fetch(`${META_API}/${adsetId}/ads?fields=id,name,status,creative{id,title,body,thumbnail_url,image_url,object_story_spec}&limit=100&access_token=${token}`);
+  if (!res.ok) throw new Error(await res.text());
+  const data = await res.json();
+  return (data.data || []).map(ad => ({
+    ...ad,
+    thumb: ad.creative?.thumbnail_url || ad.creative?.image_url || null,
+    creativeTitle: ad.creative?.title || '',
+    creativeBody: ad.creative?.body || '',
+  }));
+}
+
+// 광고세트별 대표 썸네일 (첫 번째 광고의 이미지)
+async function getAdsetThumbs(campaignId) {
+  const token = process.env.META_ACCESS_TOKEN;
+  const res = await fetch(`${META_API}/${campaignId}/ads?fields=adset_id,creative{thumbnail_url,image_url}&limit=200&access_token=${token}`);
+  if (!res.ok) return {};
+  const data = await res.json();
+  const map = {};
+  (data.data || []).forEach(ad => {
+    const asId = ad.adset_id;
+    if (!map[asId]) map[asId] = ad.creative?.thumbnail_url || ad.creative?.image_url || null;
+  });
+  return map;
+}
+
+// 텔레그램 알림
+async function sendTelegram(text) {
+  const token = process.env.TELEGRAM_BOT_TOKEN;
+  const chatId = process.env.TELEGRAM_CHAT_ID;
+  if (!token || !chatId) return;
+  try {
+    await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ chat_id: chatId, text, parse_mode: 'HTML' }),
+    });
+  } catch {}
+}
+
+// 예산 변경 (Meta API는 센트 단위 — 원화는 그대로)
+async function updateBudget(id, dailyBudget) {
+  const token = process.env.META_ACCESS_TOKEN;
+  const res = await fetch(`${META_API}/${id}?access_token=${token}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ daily_budget: String(dailyBudget) }),
+  });
+  if (!res.ok) throw new Error(`예산 변경 실패 (${id}): ${await res.text()}`);
+  return res.json();
 }
 
 // 캠페인/광고세트 상태 변경
@@ -53,8 +107,16 @@ export async function GET(req) {
     if (action === 'adsets') {
       const campaignId = searchParams.get('campaignId');
       if (!campaignId) return Response.json({ error: 'campaignId 필요' }, { status: 400 });
-      const adsets = await listAdsets(campaignId);
-      return Response.json({ ok: true, adsets });
+      const [adsets, thumbs] = await Promise.all([listAdsets(campaignId), getAdsetThumbs(campaignId)]);
+      const withThumbs = adsets.map(as => ({ ...as, thumb: thumbs[as.id] || null }));
+      return Response.json({ ok: true, adsets: withThumbs });
+    }
+
+    if (action === 'ads') {
+      const adsetId = searchParams.get('adsetId');
+      if (!adsetId) return Response.json({ error: 'adsetId 필요' }, { status: 400 });
+      const ads = await listAds(adsetId);
+      return Response.json({ ok: true, ads });
     }
 
     // 크론: 스케줄 체크 후 자동 on/off
@@ -82,7 +144,13 @@ export async function GET(req) {
         const schTime = sch.datetime; // YYYY-MM-DDTHH:MM
         if (schTime <= nowStr) {
           try {
-            await updateStatus(sch.targetId, sch.action === 'on' ? 'ACTIVE' : 'PAUSED');
+            if (sch.action === 'budget' && sch.budget) {
+              await updateBudget(sch.targetId, sch.budget);
+              await sendTelegram(`💰 <b>메타 예산 스케줄 실행</b>\n\n<b>${sch.targetName || sch.targetId}</b>\n일예산: ${Math.round(sch.budget).toLocaleString()}원\n예약: ${sch.datetime?.replace('T', ' ')}`);
+            } else {
+              await updateStatus(sch.targetId, sch.action === 'on' ? 'ACTIVE' : 'PAUSED');
+              await sendTelegram(`🔔 <b>메타 광고 스케줄 실행</b>\n\n${sch.action === 'on' ? '▶️ 켜기' : '⏸ 끄기'}: <b>${sch.targetName || sch.targetId}</b>\n예약: ${sch.datetime?.replace('T', ' ')}`);
+            }
             results.push({ id: sch.id, targetId: sch.targetId, action: sch.action, success: true });
             updated.push({ ...sch, executed: true, executedAt: now.toISOString() });
           } catch (e) {
@@ -116,12 +184,21 @@ export async function GET(req) {
 export async function POST(req) {
   try {
     const body = await req.json();
-    const { action, targetId, targetName, datetime, schedules } = body;
+    const { action, targetId, targetName, datetime, schedules, budget } = body;
 
     // 즉시 on/off
     if (action === 'on' || action === 'off') {
       if (!targetId) return Response.json({ error: 'targetId 필요' }, { status: 400 });
       const result = await updateStatus(targetId, action === 'on' ? 'ACTIVE' : 'PAUSED');
+      await sendTelegram(`🔔 <b>메타 광고 ${action === 'on' ? '켜기' : '끄기'}</b>\n\n${action === 'on' ? '▶️' : '⏸'} <b>${targetName || targetId}</b>\n수동 실행 · ${new Date(Date.now() + 9*3600000).toISOString().slice(0,16).replace('T',' ')}`);
+      return Response.json({ ok: true, result });
+    }
+
+    // 예산 변경
+    if (action === 'budget') {
+      if (!targetId || !budget) return Response.json({ error: 'targetId, budget 필요' }, { status: 400 });
+      const result = await updateBudget(targetId, budget);
+      await sendTelegram(`💰 <b>메타 광고 예산 변경</b>\n\n<b>${targetName || targetId}</b>\n일예산: ${Math.round(budget/1).toLocaleString()}원\n${new Date(Date.now() + 9*3600000).toISOString().slice(0,16).replace('T',' ')}`);
       return Response.json({ ok: true, result });
     }
 

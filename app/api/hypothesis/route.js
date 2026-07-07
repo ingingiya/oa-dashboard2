@@ -765,3 +765,18 @@ export async function PATCH(request) {
     return Response.json({ error: e.message }, { status: 500 });
   }
 }
+
+export async function DELETE(request) {
+  try {
+    const { id } = await request.json();
+    if (!id) return Response.json({ error: 'id 필요' }, { status: 400 });
+    const res = await fetch(`${SUPA_URL}/rest/v1/daily_hypotheses?id=eq.${Number(id)}`, {
+      method: 'DELETE',
+      headers: sH,
+    });
+    if (!res.ok) throw new Error(await res.text());
+    return Response.json({ ok: true });
+  } catch (e) {
+    return Response.json({ error: e.message }, { status: 500 });
+  }
+}

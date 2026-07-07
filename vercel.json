@@ -37,7 +37,7 @@
     },
     {
       "path": "/api/meta-schedule?action=cron&secret=${ERP_SYNC_SECRET}",
-      "schedule": "3 * * * *"
+      "schedule": "0 0 * * *"
     }
   ]
 }
