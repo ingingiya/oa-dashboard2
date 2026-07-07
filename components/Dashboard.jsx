@@ -7466,7 +7466,7 @@ export default function OaDashboard(){
 
         {/* 탭 */}
         <div style={{display:"flex",gap:6,overflowX:"auto",paddingBottom:2}}>
-          {[{id:"overview",label:<><MI n="trending_up" size={12}/> 추이</>},{id:"campaign",label:<><MI n="campaign" size={12}/> 캠페인</>},{id:"weekly",label:<><MI n="calendar_month" size={12}/> 주별</>},{id:"monthly",label:<><MI n="date_range" size={12}/> 월별</>},{id:"daily",label:<><MI n="calendar_today" size={12}/> 일별</>},{id:"product",label:<><MI n="inventory_2" size={12}/> 제품별</>},{id:"events",label:<><MI n="celebration" size={12}/> 행사{(promoEvents||[]).some(e=>{const t=new Date().toISOString().slice(0,10);return e.start<=t&&t<=e.end;})?" ●":""}</>},{id:"copybank",label:<><MI n="format_quote" size={12}/> 카피뱅크</>},{id:"guide",label:<><MI n="menu_book" size={12}/> 가이드</>}].map(t=>(
+          {[{id:"overview",label:<><MI n="trending_up" size={12}/> 추이</>},{id:"campaign",label:<><MI n="campaign" size={12}/> 캠페인</>},{id:"weekly",label:<><MI n="calendar_month" size={12}/> 주별</>},{id:"monthly",label:<><MI n="date_range" size={12}/> 월별</>},{id:"daily",label:<><MI n="calendar_today" size={12}/> 일별</>},{id:"product",label:<><MI n="inventory_2" size={12}/> 제품별</>},{id:"events",label:<><MI n="celebration" size={12}/> 행사{(promoEvents||[]).some(e=>{const t=new Date().toISOString().slice(0,10);return e.start<=t&&t<=e.end;})?" ●":""}</>},{id:"copybank",label:<><MI n="format_quote" size={12}/> 카피뱅크</>},{id:"guide",label:<><MI n="menu_book" size={12}/> 가이드</>},{id:"adschedule",label:<><MI n="schedule" size={12}/> 광고 스케줄</>}].map(t=>(
             <button key={t.id} onClick={()=>setMetaTab(t.id)} style={{
               padding:"6px 16px",borderRadius:8,cursor:"pointer",border:`1px solid ${metaTab===t.id?C.rose:C.border}`,
               background:metaTab===t.id?C.blush:C.white,color:metaTab===t.id?C.rose:C.inkMid,
@@ -9348,6 +9348,143 @@ export default function OaDashboard(){
             <Btn onClick={()=>{setMargin(+marginInput||30000);setMarginModal(false);}} style={{width:"100%"}}>💾 저장</Btn>
           </Modal>
         )}
+
+        {/* 광고 스케줄 탭 */}
+        {metaTab==="adschedule"&&(()=>{
+          const [camps, setCamps] = useState([]);
+          const [schList, setSchList] = useState([]);
+          const [schLoading, setSchLoading] = useState(true);
+          const [toggling, setToggling] = useState({});
+          const [newSch, setNewSch] = useState({targetId:"",targetName:"",action:"on",datetime:""});
+
+          useEffect(()=>{
+            Promise.all([
+              fetch("/api/meta-schedule?action=campaigns").then(r=>r.json()),
+              getSetting("meta_schedules"),
+            ]).then(([campData, saved])=>{
+              if(campData.ok) setCamps(campData.campaigns||[]);
+              if(Array.isArray(saved)) setSchList(saved);
+              setSchLoading(false);
+            }).catch(()=>setSchLoading(false));
+          },[]);
+
+          const toggle = async (id, action) => {
+            setToggling(p=>({...p,[id]:true}));
+            try {
+              const res = await fetch("/api/meta-schedule",{method:"POST",headers:{"Content-Type":"application/json"},
+                body:JSON.stringify({action,targetId:id})});
+              const data = await res.json();
+              if(data.ok) {
+                setCamps(prev=>prev.map(c=>c.id===id?{...c,status:action==="on"?"ACTIVE":"PAUSED"}:c));
+              } else alert(data.error||"실패");
+            } catch(e) { alert(e.message); }
+            setToggling(p=>({...p,[id]:false}));
+          };
+
+          const addSchedule = async () => {
+            if(!newSch.targetId||!newSch.datetime) return alert("캠페인과 시간을 선택하세요");
+            const camp = camps.find(c=>c.id===newSch.targetId);
+            const item = {...newSch, id:Date.now()+"", targetName:camp?.name||newSch.targetId, executed:false};
+            const next = [...schList, item];
+            setSchList(next);
+            await fetch("/api/meta-schedule",{method:"POST",headers:{"Content-Type":"application/json"},
+              body:JSON.stringify({action:"save_schedules",schedules:next})});
+            setNewSch({targetId:"",targetName:"",action:"on",datetime:""});
+          };
+
+          const removeSch = async (id) => {
+            const next = schList.filter(s=>s.id!==id);
+            setSchList(next);
+            await fetch("/api/meta-schedule",{method:"POST",headers:{"Content-Type":"application/json"},
+              body:JSON.stringify({action:"save_schedules",schedules:next})});
+          };
+
+          if(schLoading) return <div style={{padding:40,textAlign:"center",color:C.inkLt,fontSize:13}}>로딩 중...</div>;
+
+          return (
+          <div style={{display:"flex",flexDirection:"column",gap:14}}>
+            {/* 캠페인 ON/OFF */}
+            <div style={{background:C.white,border:`1px solid ${C.border}`,borderRadius:12,padding:16}}>
+              <div style={{fontSize:13,fontWeight:800,color:C.ink,marginBottom:12}}>캠페인 ON/OFF</div>
+              {camps.length===0&&<div style={{fontSize:11,color:C.inkLt}}>캠페인 없음</div>}
+              {camps.map(c=>(
+                <div key={c.id} style={{display:"flex",alignItems:"center",gap:10,padding:"8px 0",borderBottom:`1px solid ${C.border}22`}}>
+                  <div style={{width:8,height:8,borderRadius:"50%",background:c.status==="ACTIVE"?"#16a34a":"#dc2626",flexShrink:0}}/>
+                  <div style={{flex:1,minWidth:0}}>
+                    <div style={{fontSize:12,fontWeight:700,color:C.ink,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{c.name}</div>
+                    <div style={{fontSize:10,color:C.inkMid}}>{c.objective} · {c.status}</div>
+                  </div>
+                  <button onClick={()=>toggle(c.id, c.status==="ACTIVE"?"off":"on")}
+                    disabled={toggling[c.id]}
+                    style={{padding:"5px 14px",borderRadius:8,border:"none",fontSize:10,fontWeight:800,cursor:"pointer",
+                      background:c.status==="ACTIVE"?"#fef2f2":"#f0fdf4",
+                      color:c.status==="ACTIVE"?"#dc2626":"#16a34a",
+                      opacity:toggling[c.id]?0.5:1}}>
+                    {toggling[c.id]?"...":(c.status==="ACTIVE"?"끄기":"켜기")}
+                  </button>
+                </div>
+              ))}
+            </div>
+
+            {/* 스케줄 추가 */}
+            <div style={{background:C.white,border:`1px solid ${C.border}`,borderRadius:12,padding:16}}>
+              <div style={{fontSize:13,fontWeight:800,color:C.ink,marginBottom:12}}>스케줄 예약</div>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+                <div>
+                  <label style={{fontSize:10,fontWeight:700,color:C.inkMid}}>캠페인</label>
+                  <select value={newSch.targetId} onChange={e=>setNewSch(p=>({...p,targetId:e.target.value}))}
+                    style={{width:"100%",padding:"6px 8px",border:`1px solid ${C.border}`,borderRadius:6,fontSize:11,fontFamily:"inherit",marginTop:4}}>
+                    <option value="">선택</option>
+                    {camps.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label style={{fontSize:10,fontWeight:700,color:C.inkMid}}>액션</label>
+                  <select value={newSch.action} onChange={e=>setNewSch(p=>({...p,action:e.target.value}))}
+                    style={{width:"100%",padding:"6px 8px",border:`1px solid ${C.border}`,borderRadius:6,fontSize:11,fontFamily:"inherit",marginTop:4}}>
+                    <option value="on">켜기</option>
+                    <option value="off">끄기</option>
+                  </select>
+                </div>
+                <div style={{gridColumn:"span 2"}}>
+                  <label style={{fontSize:10,fontWeight:700,color:C.inkMid}}>예약 시간</label>
+                  <input type="datetime-local" value={newSch.datetime} onChange={e=>setNewSch(p=>({...p,datetime:e.target.value}))}
+                    style={{width:"100%",padding:"6px 8px",border:`1px solid ${C.border}`,borderRadius:6,fontSize:11,fontFamily:"inherit",marginTop:4,boxSizing:"border-box"}}/>
+                </div>
+              </div>
+              <button onClick={addSchedule} style={{marginTop:10,width:"100%",padding:"8px",background:C.rose,color:"#fff",border:"none",borderRadius:8,fontSize:12,fontWeight:800,cursor:"pointer",fontFamily:"inherit"}}>
+                스케줄 추가
+              </button>
+            </div>
+
+            {/* 예약 목록 */}
+            <div style={{background:C.white,border:`1px solid ${C.border}`,borderRadius:12,padding:16}}>
+              <div style={{fontSize:13,fontWeight:800,color:C.ink,marginBottom:12}}>예약 목록 ({schList.filter(s=>!s.executed).length}건)</div>
+              {schList.filter(s=>!s.executed).length===0&&<div style={{fontSize:11,color:C.inkLt}}>예약된 스케줄 없음</div>}
+              {schList.filter(s=>!s.executed).map(s=>(
+                <div key={s.id} style={{display:"flex",alignItems:"center",gap:8,padding:"6px 0",borderBottom:`1px solid ${C.border}22`}}>
+                  <span style={{fontSize:16,fontWeight:900,color:s.action==="on"?"#16a34a":"#dc2626"}}>{s.action==="on"?"▶":"⏸"}</span>
+                  <div style={{flex:1}}>
+                    <div style={{fontSize:11,fontWeight:700,color:C.ink}}>{s.targetName}</div>
+                    <div style={{fontSize:10,color:C.inkMid}}>{s.datetime?.replace("T"," ")}</div>
+                  </div>
+                  <button onClick={()=>removeSch(s.id)} style={{border:"none",background:"#fef2f2",color:"#dc2626",padding:"3px 8px",borderRadius:6,fontSize:10,fontWeight:700,cursor:"pointer"}}>삭제</button>
+                </div>
+              ))}
+              {schList.filter(s=>s.executed).length>0&&(
+                <div style={{marginTop:10}}>
+                  <div style={{fontSize:10,fontWeight:700,color:C.inkLt,marginBottom:6}}>실행 완료</div>
+                  {schList.filter(s=>s.executed).slice(0,5).map(s=>(
+                    <div key={s.id} style={{fontSize:10,color:C.inkLt,padding:"3px 0"}}>
+                      ✅ {s.targetName} · {s.action==="on"?"켜기":"끄기"} · {s.datetime?.replace("T"," ")}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>);
+        })()}
+
       </div>
     );
   })();
