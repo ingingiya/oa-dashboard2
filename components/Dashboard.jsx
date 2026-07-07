@@ -2413,17 +2413,17 @@ function AdSchedulePanel({C, getSetting}) {
       <span style={{fontSize:10,color:C.inkLt}}>{filteredCamps.length}개 캠페인</span>
     </div>
 
-    {/* 캠페인 트리 (토글) */}
+    {/* 캠페인 트리 (접기 가능) */}
     <div style={{background:C.white,border:`1px solid ${C.border}`,borderRadius:12,overflow:"hidden"}}>
-      <button onClick={()=>setShowAll(p=>typeof p==="boolean"?p:!p)||setExpandCamp(v=>v?"__toggle__":null)}
+      <button onClick={()=>setToggling(p=>({...p,__tree:!p.__tree}))}
         style={{width:"100%",display:"flex",alignItems:"center",justifyContent:"space-between",padding:"10px 14px",
           border:"none",background:C.bg,cursor:"pointer",fontFamily:"inherit"}}>
-        <span style={{fontSize:12,fontWeight:800,color:C.ink}}>광고 소재 ({filteredCamps.length})</span>
-        <span className="material-symbols-outlined" style={{fontSize:16,color:C.inkLt}}>{expandCamp?"expand_less":"expand_more"}</span>
+        <span style={{fontSize:12,fontWeight:800,color:C.ink}}>광고 소재 ({filteredCamps.length}개 캠페인)</span>
+        <span className="material-symbols-outlined" style={{fontSize:16,color:C.inkLt}}>{toggling.__tree?"expand_less":"expand_more"}</span>
       </button>
-      {!expandCamp&&<div style={{height:0,overflow:"hidden"}}/>}
-      {filteredCamps.length===0&&expandCamp&&<div style={{padding:20,fontSize:11,color:C.inkLt,textAlign:"center"}}>캠페인 없음</div>}
-      {filteredCamps.map(c=>(
+      {filteredCamps.length===0&&toggling.__tree&&<div style={{padding:20,fontSize:11,color:C.inkLt,textAlign:"center"}}>캠페인 없음</div>}
+      {!toggling.__tree&&<div style={{fontSize:10,color:C.inkLt,padding:"6px 14px"}}>펼치기를 눌러 캠페인 목록을 확인하세요</div>}
+      {toggling.__tree&&filteredCamps.map(c=>(
         <div key={c.id}>
           {/* 캠페인 행 */}
           <div onClick={()=>loadAdsets(c.id)}
@@ -6091,7 +6091,7 @@ export default function OaDashboard(){
     const from=new Date(Date.now()-45*86400000).toISOString().slice(0,10);
     getBeautyRealSales(from).then(setRealSales).catch(()=>{});
     const SURL=process.env.NEXT_PUBLIC_SUPABASE_URL, SKEY=process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-    fetch(`${SURL}/rest/v1/beauty_stock?select=name,stock_qty,order_pending`,{
+    fetch(`${SURL}/rest/v1/beauty_stock?select=name,stock_qty,order_pending,production_qty,transport_qty,ship_qty,lead_days`,{
       headers:{apikey:SKEY,Authorization:`Bearer ${SKEY}`}
     }).then(r=>r.json()).then(d=>setStockLite(Array.isArray(d)?d:[])).catch(()=>{});
   },[]);
@@ -7995,7 +7995,7 @@ export default function OaDashboard(){
 
         {/* 탭 */}
         <div style={{display:"flex",gap:6,overflowX:"auto",paddingBottom:2}}>
-          {[{id:"overview",label:<><MI n="trending_up" size={12}/> 추이</>},{id:"campaign",label:<><MI n="campaign" size={12}/> 캠페인</>},{id:"weekly",label:<><MI n="calendar_month" size={12}/> 주별</>},{id:"monthly",label:<><MI n="date_range" size={12}/> 월별</>},{id:"daily",label:<><MI n="calendar_today" size={12}/> 일별</>},{id:"product",label:<><MI n="inventory_2" size={12}/> 제품별</>},{id:"events",label:<><MI n="celebration" size={12}/> 행사{(promoEvents||[]).some(e=>{const t=new Date().toISOString().slice(0,10);return e.start<=t&&t<=e.end;})?" ●":""}</>},{id:"copybank",label:<><MI n="format_quote" size={12}/> 카피뱅크</>},{id:"guide",label:<><MI n="menu_book" size={12}/> 가이드</>},{id:"adschedule",label:<><MI n="schedule" size={12}/> 광고 스케줄</>}].map(t=>(
+          {[{id:"overview",label:<><MI n="trending_up" size={12}/> 추이</>},{id:"campaign",label:<><MI n="campaign" size={12}/> 캠페인</>},{id:"weekly",label:<><MI n="calendar_month" size={12}/> 주별</>},{id:"monthly",label:<><MI n="date_range" size={12}/> 월별</>},{id:"daily",label:<><MI n="calendar_today" size={12}/> 일별</>},{id:"product",label:<><MI n="inventory_2" size={12}/> 제품별</>},{id:"events",label:<><MI n="celebration" size={12}/> 행사{(promoEvents||[]).some(e=>{const t=new Date().toISOString().slice(0,10);return e.start<=t&&t<=e.end;})?" ●":""}</>},{id:"stock",label:<><MI n="inventory" size={12}/> 재고</>},{id:"copybank",label:<><MI n="format_quote" size={12}/> 카피뱅크</>},{id:"guide",label:<><MI n="menu_book" size={12}/> 가이드</>},{id:"adschedule",label:<><MI n="schedule" size={12}/> 광고 스케줄</>}].map(t=>(
             <button key={t.id} onClick={()=>setMetaTab(t.id)} style={{
               padding:"6px 16px",borderRadius:8,cursor:"pointer",border:`1px solid ${metaTab===t.id?C.rose:C.border}`,
               background:metaTab===t.id?C.blush:C.white,color:metaTab===t.id?C.rose:C.inkMid,
@@ -9237,6 +9237,89 @@ export default function OaDashboard(){
           );
         })()}
 
+        {/* 재고 탭 — 광고 제품 × 재고 소진일수 × 광고 액션 (품절 임박=감액, 과잉=증액 소진) */}
+        {metaTab==="stock"&&(()=>{
+          const fmtW=n=>n>=10000?`₩${Math.round(n/10000).toLocaleString()}만`:`₩${Math.round(n).toLocaleString()}`;
+          const card={background:C.white,border:`1px solid ${C.border}`,borderRadius:12,padding:"14px 16px"};
+          const from7=new Date(Date.now()-7*86400000).toISOString().slice(0,10);
+          const from14=new Date(Date.now()-14*86400000).toISOString().slice(0,10);
+          const items=(margins||[]).filter(m=>m.keyword).map(m=>{
+            const kw=m.keyword;
+            const stocks=stockLite.filter(s=>s.name&&s.name.includes(kw));
+            const qty=stocks.reduce((a,s)=>a+(Number(s.stock_qty)||0),0);
+            const incoming=stocks.reduce((a,s)=>a+(Number(s.order_pending)||0)+(Number(s.production_qty)||0)+(Number(s.transport_qty)||0)+(Number(s.ship_qty)||0),0);
+            const lead=Math.max(0,...stocks.map(s=>Number(s.lead_days)||0));
+            const sold=realSales.filter(r=>r.date>=from14&&((r.name&&r.name.includes(kw))||(r.category&&r.category.includes(kw))))
+              .reduce((a,r)=>a+(Number(r.qty)||0),0);
+            const daily=sold/14;
+            const days=daily>0?Math.round(qty/daily):null;
+            const daysInc=daily>0?Math.round((qty+incoming)/daily):null;
+            let spend7=0,conv7=0; const ads=new Set();
+            (metaForChart||[]).forEach(r=>{
+              if(r.date>=from7&&r.adName&&r.adName.includes(kw)&&(r.spend||0)>0){spend7+=r.spend||0;conv7+=r.convValue||0;ads.add(r.adName);}
+            });
+            const roas7=spend7>0?Math.round(conv7/spend7*100):null;
+            const threshold=Math.max(14,lead); // 리드타임보다 재고일수가 짧으면 발주해도 늦음
+            let act=null;
+            if(days!==null&&days<threshold&&spend7>0) act={t:"품절 임박 — 광고 감액/중단 검토",bg:"#fef2f2",bd:"#fecaca",fg:"#b91c1c",lv:0};
+            else if(days!==null&&days<threshold) act={t:incoming>0?"품절 임박 — 입고 대기 중":"품절 임박 — 발주/입고 확인",bg:"#fef2f2",bd:"#fecaca",fg:"#b91c1c",lv:0};
+            else if(days!==null&&days<threshold+16) act={t:"주의 — 발주 시점 점검",bg:"#fffbeb",bd:"#fde68a",fg:"#92400e",lv:1};
+            else if(days!==null&&days>=60&&roas7!==null&&roas7>=400) act={t:"재고 여유 + ROAS 좋음 → 증액 소진",bg:"#f0fdf4",bd:"#bbf7d0",fg:"#15803d",lv:2};
+            else if(days!==null&&days>=60&&spend7===0) act={t:"과잉재고 — 광고 밀어주기 후보",bg:"#f0f9ff",bd:"#bae6fd",fg:"#0369a1",lv:2};
+            return {kw,qty,incoming,lead,daily,days,daysInc,spend7,roas7,adCount:ads.size,act,noStock:stocks.length===0};
+          }).filter(it=>!it.noStock||it.spend7>0)
+            .sort((a,b)=>(a.days??9999)-(b.days??9999));
+          const nCrit=items.filter(i=>i.act&&i.act.lv===0).length;
+          const nWarn=items.filter(i=>i.act&&i.act.lv===1).length;
+          const nPush=items.filter(i=>i.act&&i.act.lv===2).length;
+          if(!stockLite.length) return <Card><div style={{fontSize:11,color:C.inkLt,padding:"20px 0",textAlign:"center"}}>재고 데이터 로딩 중이거나 beauty_stock이 비어 있어요 (아침 7시 ERP 동기화)</div></Card>;
+          return(
+            <div style={{display:"flex",flexDirection:"column",gap:14}}>
+              <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+                {[["품절 임박",nCrit,"#b91c1c","#fef2f2"],["발주 점검",nWarn,"#92400e","#fffbeb"],["증액/밀어주기 후보",nPush,"#0369a1","#f0f9ff"]].map(([l,n,fg,bg])=>(
+                  <div key={l} style={{flex:1,minWidth:120,background:bg,border:`1px solid ${C.border}`,borderRadius:12,padding:"12px 14px"}}>
+                    <div style={{fontSize:10,fontWeight:700,color:fg}}>{l}</div>
+                    <div style={{fontSize:22,fontWeight:800,color:fg}}>{n}<span style={{fontSize:11,fontWeight:600}}> 제품</span></div>
+                  </div>
+                ))}
+              </div>
+              <div style={card}>
+                <CardTitle title="광고 제품 재고 현황" sub="재고일수 = 현 재고 ÷ 최근 14일 실판매 일평균 (쿠팡/지그재그/스마트스토어) · 광고비는 최근 7일"/>
+                <div style={{overflowX:"auto"}}>
+                  <table style={{width:"100%",borderCollapse:"collapse",fontSize:11}}>
+                    <thead>
+                      <tr style={{borderBottom:`2px solid ${C.border}`,color:C.inkLt,fontSize:10}}>
+                        {["제품","재고","입고 대기","일판매","재고일수","입고 포함","7일 광고비","ROAS","액션"].map(h=>
+                          <th key={h} style={{padding:"6px 8px",textAlign:h==="제품"||h==="액션"?"left":"right",fontWeight:700,whiteSpace:"nowrap"}}>{h}</th>)}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {items.map(it=>{
+                        const dayColor=it.days===null?C.inkLt:it.days<Math.max(14,it.lead)?"#b91c1c":it.days<Math.max(14,it.lead)+16?"#b45309":C.ink;
+                        return(
+                          <tr key={it.kw} style={{borderBottom:`1px solid ${C.border}`}}>
+                            <td style={{padding:"8px",fontWeight:700,color:C.ink,whiteSpace:"nowrap"}}>{it.kw}{it.lead>0&&<span style={{fontSize:9,color:C.inkLt,fontWeight:600}}> 리드 {it.lead}일</span>}</td>
+                            <td style={{padding:"8px",textAlign:"right",fontWeight:700,color:C.ink}}>{it.qty.toLocaleString()}</td>
+                            <td style={{padding:"8px",textAlign:"right",color:it.incoming>0?"#0369a1":C.inkLt}}>{it.incoming>0?`+${it.incoming.toLocaleString()}`:"—"}</td>
+                            <td style={{padding:"8px",textAlign:"right",color:C.inkMid}}>{it.daily>0?it.daily.toFixed(1):"—"}</td>
+                            <td style={{padding:"8px",textAlign:"right",fontWeight:800,color:dayColor}}>{it.days!==null?`${it.days}일`:"—"}</td>
+                            <td style={{padding:"8px",textAlign:"right",color:C.inkMid}}>{it.daysInc!==null&&it.incoming>0?`${it.daysInc}일`:"—"}</td>
+                            <td style={{padding:"8px",textAlign:"right",color:it.spend7>0?C.ink:C.inkLt}}>{it.spend7>0?fmtW(it.spend7):"—"}</td>
+                            <td style={{padding:"8px",textAlign:"right",fontWeight:700,color:it.roas7===null?C.inkLt:it.roas7>=400?"#15803d":it.roas7>=200?C.inkMid:"#b91c1c"}}>{it.roas7!==null?`${it.roas7}%`:"—"}</td>
+                            <td style={{padding:"8px"}}>{it.act?<span style={{fontSize:10,fontWeight:700,padding:"3px 9px",borderRadius:99,background:it.act.bg,border:`1px solid ${it.act.bd}`,color:it.act.fg,whiteSpace:"nowrap"}}>{it.act.t}</span>:<span style={{color:C.inkLt}}>—</span>}</td>
+                          </tr>
+                        );
+                      })}
+                      {items.length===0&&<tr><td colSpan={9} style={{padding:"20px",textAlign:"center",color:C.inkLt}}>margins 키워드와 매칭되는 재고/판매 데이터 없음 — 캠페인 탭에서 제품 키워드(마진) 등록 필요</td></tr>}
+                    </tbody>
+                  </table>
+                </div>
+                <div style={{fontSize:10,color:C.inkLt,marginTop:8}}>기준: 재고일수 &lt; max(14일, 리드타임) = 품절 임박 · ≥60일 = 재고 여유. ERP 재고는 아침 7시 동기화, 실판매는 9시대 동기화</div>
+              </div>
+            </div>
+          );
+        })()}
+
         {/* 카피뱅크 탭 — 리뷰/문의 기반 카피 소스 (scripts/copy-bank.py → oa_copy_bank_v1) */}
         {metaTab==="copybank"&&(()=>{
           const card={background:C.white,border:`1px solid ${C.border}`,borderRadius:12,padding:"14px 16px"};
@@ -9349,7 +9432,45 @@ export default function OaDashboard(){
                   </>
                 )}
               </div>
-              <div style={{fontSize:10,color:C.inkLt}}>갱신: 로컬에서 <code>python3 scripts/copy-bank.py</code> (전체 문의) / <code>--beauty</code> (이미용만) — 리뷰 엑셀 있으면 제품별 분석 포함</div>
+              {/* 히트 카피 기록 + AI 변환 */}
+              <div style={card}>
+                <div style={{fontSize:13,fontWeight:800,color:C.ink,marginBottom:10,display:"flex",alignItems:"center",gap:6}}>
+                  <MI n="auto_awesome" size={15}/> AI 카피 변환
+                </div>
+                <div style={{display:"flex",flexDirection:"column",gap:8}}>
+                  <textarea id="__cb_input" placeholder="기존 카피를 입력하세요 (예: 헬스장 드라이기 아직도 쓰세요?)" rows={2}
+                    style={{width:"100%",padding:"8px 10px",border:`1px solid ${C.border}`,borderRadius:8,fontSize:12,fontFamily:"inherit",outline:"none",resize:"vertical",boxSizing:"border-box"}}/>
+                  <div style={{display:"flex",gap:4,flexWrap:"wrap"}}>
+                    {["감성","기능소구","가격","비교","후기","유머"].map(tone=>(
+                      <button key={tone} onClick={async()=>{
+                        const input=document.getElementById("__cb_input")?.value;
+                        if(!input?.trim()) return alert("카피를 입력하세요");
+                        const el=document.getElementById("__cb_result");
+                        if(el) el.textContent="생성 중...";
+                        try{
+                          const res=await fetch("/api/detail-plan",{method:"POST",headers:{"Content-Type":"application/json"},
+                            body:JSON.stringify({productName:input,mode:"competitor",competitors:"",category:"",
+                              features:`기존 카피: "${input}"\n\n이 카피를 "${tone}" 톤으로 5가지 변형해줘. JSON: {"hookCopies":["변형1","변형2","변형3","변형4","변형5"],"insights":"분석"}`})});
+                          const reader=res.body.getReader();const dec=new TextDecoder();let full="";
+                          while(true){const{done,value}=await reader.read();if(done)break;
+                            const chunk=dec.decode(value);chunk.split("\\n").filter(l=>l.startsWith("data: ")).forEach(l=>{
+                              try{const d=JSON.parse(l.slice(6));if(d.text)full+=d.text;}catch{}});
+                            if(el)el.textContent=full;}
+                          try{const m=full.match(/\{[\s\S]*\}/);const j=JSON.parse(m[0]);
+                            if(el)el.innerHTML=(j.hookCopies||[]).map((c,i)=>`<div style="padding:4px 0;font-size:12px"><b>${i+1}.</b> ${c}</div>`).join("")
+                              +(j.insights?`<div style="margin-top:8px;font-size:11px;color:#666;border-top:1px solid #eee;padding-top:8px">${j.insights}</div>`:"");
+                          }catch{}
+                        }catch(e){if(el)el.textContent="오류: "+e.message;}
+                      }}
+                        style={{padding:"5px 12px",borderRadius:20,fontSize:10,fontWeight:700,cursor:"pointer",
+                          border:`1px solid ${C.border}`,background:C.white,color:C.inkMid,fontFamily:"inherit"}}>
+                        {tone}
+                      </button>
+                    ))}
+                  </div>
+                  <div id="__cb_result" style={{minHeight:40,fontSize:12,color:C.ink,background:C.bg,borderRadius:8,padding:"10px 12px",lineHeight:1.6}}></div>
+                </div>
+              </div>
             </div>
           );
         })()}
@@ -9522,6 +9643,59 @@ export default function OaDashboard(){
                     <div style={{fontSize:11,fontWeight:800,color:C.bad}}>ROAS 200% 미만 · 구매 0</div>
                     <div style={{fontSize:10,color:C.inkMid,marginTop:2}}>1주 내 중단 (상반기 낭비 32% 재발 방지)</div>
                   </div>
+                </div>
+              </div>
+
+              {/* AI 브리프 생성 */}
+              <div style={card}>
+                <div style={{fontSize:13,fontWeight:800,color:C.ink,marginBottom:10,display:"flex",alignItems:"center",gap:6}}>
+                  <MI n="smart_toy" size={15}/> AI 소재 브리프
+                </div>
+                <div style={{display:"flex",flexDirection:"column",gap:8}}>
+                  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+                    <input id="__brief_product" placeholder="제품명 (예: 소닉플로우)"
+                      style={{padding:"6px 10px",border:`1px solid ${C.border}`,borderRadius:8,fontSize:11,fontFamily:"inherit",outline:"none"}}/>
+                    <select id="__brief_goal" style={{padding:"6px 10px",border:`1px solid ${C.border}`,borderRadius:8,fontSize:11,fontFamily:"inherit"}}>
+                      <option value="전환">전환 (구매유도)</option>
+                      <option value="트래픽">트래픽 (유입)</option>
+                      <option value="인지도">인지도 (브랜딩)</option>
+                      <option value="리타겟팅">리타겟팅 (재방문)</option>
+                    </select>
+                  </div>
+                  <input id="__brief_target" placeholder="타겟 (예: 20대 자취녀, 헬스장 다니는 사람)" defaultValue="20-30대 여성"
+                    style={{padding:"6px 10px",border:`1px solid ${C.border}`,borderRadius:8,fontSize:11,fontFamily:"inherit",outline:"none",width:"100%",boxSizing:"border-box"}}/>
+                  <button onClick={async()=>{
+                    const product=document.getElementById("__brief_product")?.value||"";
+                    const goal=document.getElementById("__brief_goal")?.value||"전환";
+                    const target=document.getElementById("__brief_target")?.value||"";
+                    if(!product.trim()) return alert("제품명을 입력하세요");
+                    const el=document.getElementById("__brief_result");
+                    if(el) el.textContent="브리프 생성 중...";
+                    try{
+                      const res=await fetch("/api/detail-plan",{method:"POST",headers:{"Content-Type":"application/json"},
+                        body:JSON.stringify({productName:product,mode:"competitor",competitors:"",category:"메타광고",
+                          features:`오아(OA) 브랜드 "${product}" 메타 광고 소재 브리프를 만들어줘.
+목표: ${goal}, 타겟: ${target}
+JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디어 3개 (상황/라이프스타일, 기능소구, 가격 각 1개)"],"comparisonItems":["시각 콘셉트 가이드 3개"],"insights":"촬영 디렉션 + CTA 가이드"}`})});
+                      const reader=res.body.getReader();const dec=new TextDecoder();let full="";
+                      while(true){const{done,value}=await reader.read();if(done)break;
+                        const chunk=dec.decode(value);chunk.split("\\n").filter(l=>l.startsWith("data: ")).forEach(l=>{
+                          try{const d=JSON.parse(l.slice(6));if(d.text)full+=d.text;}catch{}});
+                        if(el)el.textContent=full;}
+                      try{const m=full.match(/\{[\s\S]*\}/);const j=JSON.parse(m[0]);
+                        if(el)el.innerHTML=[
+                          j.hookCopies?.length?`<div style="margin-bottom:10px"><b style="color:#E8567A">후킹 카피</b>${j.hookCopies.map((c,i)=>`<div style="padding:2px 0">${i+1}. ${c}</div>`).join("")}</div>`:"",
+                          j.differentiators?.length?`<div style="margin-bottom:10px"><b style="color:#2563eb">소재 아이디어</b>${j.differentiators.map(d=>`<div style="padding:2px 0">• ${d}</div>`).join("")}</div>`:"",
+                          j.comparisonItems?.length?`<div style="margin-bottom:10px"><b style="color:#7c3aed">시각 콘셉트</b>${j.comparisonItems.map(d=>`<div style="padding:2px 0">• ${d}</div>`).join("")}</div>`:"",
+                          j.insights?`<div style="border-top:1px solid #eee;padding-top:8px"><b>촬영/CTA</b><div>${j.insights}</div></div>`:"",
+                        ].join("");
+                      }catch{}
+                    }catch(e){if(el)el.textContent="오류: "+e.message;}
+                  }}
+                    style={{padding:"8px",background:C.rose,color:"#fff",border:"none",borderRadius:8,fontSize:12,fontWeight:800,cursor:"pointer",fontFamily:"inherit"}}>
+                    브리프 생성
+                  </button>
+                  <div id="__brief_result" style={{minHeight:40,fontSize:12,color:C.ink,background:C.bg,borderRadius:8,padding:"10px 12px",lineHeight:1.7}}></div>
                 </div>
               </div>
             </div>
