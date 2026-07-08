@@ -726,6 +726,24 @@ function InfluencerArchiveSection() {
           }} style={{padding:"8px 14px",borderRadius:9,border:`1px solid ${C.border}`,background:C.white,color:C.ink,fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
             📦 {Object.keys(seedSelected).length > 0 ? `선택(${Object.keys(seedSelected).length}) 시딩 엑셀` : "전체 시딩 엑셀"}
           </button>
+          <button onClick={()=>{
+            const sel = {};
+            filtered.forEach(p=>{ sel[p.id]=true; });
+            setSeedSelected(sel);
+          }} style={{padding:"8px 12px",borderRadius:9,border:`1px solid ${C.border}`,background:Object.keys(seedSelected).length===filtered.length?"#2563eb":C.white,
+            color:Object.keys(seedSelected).length===filtered.length?"#fff":C.inkMid,fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
+            {Object.keys(seedSelected).length===filtered.length&&filtered.length>0?"✓ 전체 해제":"☐ 전체 선택"}
+          </button>
+          <button onClick={()=>{
+            // 필터된 목록을 CSV로 다운로드
+            const targets = Object.keys(seedSelected).length > 0 ? filtered.filter(x=>seedSelected[x.id]) : filtered;
+            const rows = [["계정","이름","플랫폼","팔로워","카테고리","상태","담당자","협찬비","업로드일","주소","메모"].join(",")];
+            targets.forEach(p=>rows.push([p.account,p.name,p.platform,p.followers,(p.categories||[]).join("/"),p.status,p.assignee,p.dealFee,p.uploadDate,p.address,p.notes?.replace(/,/g," ")].map(v=>`"${v||""}"`).join(",")));
+            const blob = new Blob(["\uFEFF"+rows.join("\n")],{type:"text/csv"});
+            const a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download=`인플루언서_${statusFilter}_${new Date().toISOString().slice(0,10)}.csv`; a.click();
+          }} style={{padding:"8px 12px",borderRadius:9,border:`1px solid ${C.border}`,background:C.white,color:C.inkMid,fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
+            📥 엑셀 다운
+          </button>
           <button onClick={openAdd} style={{padding:"8px 18px",borderRadius:9,border:"none",background:C.rose,color:"#fff",fontSize:13,fontWeight:800,cursor:"pointer",fontFamily:"inherit"}}>+ 추가</button>
         </div>
       </div>
