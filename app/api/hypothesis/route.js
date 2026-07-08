@@ -386,12 +386,24 @@ ${feedbackText}
     max_tokens: 4000,
     messages: [{ role: 'user', content: prompt }],
   });
-  const raw = msg.content.find(b => b.type === 'text')?.text || '[]';
+  let raw = msg.content.find(b => b.type === 'text')?.text || '[]';
+  // 마크다운 코드블록 제거
+  raw = raw.replace(/```json\s*/g, '').replace(/```\s*/g, '');
 
   // JSON 배열 부분만 추출
   const match = raw.match(/\[[\s\S]*\]/);
   if (!match) throw new Error('가설 JSON 파싱 실패: ' + raw.slice(0, 200));
-  return JSON.parse(match[0]);
+  let jsonStr = match[0];
+  // 잘린 JSON 복구 시도
+  try { return JSON.parse(jsonStr); } catch {
+    // 마지막 완전한 객체까지만 파싱
+    const lastComplete = jsonStr.lastIndexOf('}');
+    if (lastComplete > 0) {
+      jsonStr = jsonStr.slice(0, lastComplete + 1) + ']';
+      try { return JSON.parse(jsonStr); } catch {}
+    }
+    throw new Error('가설 JSON 파싱 실패: ' + raw.slice(0, 200));
+  }
 }
 
 const APP_URL = 'https://oa-dashboard2.vercel.app';
