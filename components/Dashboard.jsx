@@ -7278,7 +7278,7 @@ export default function OaDashboard(){
         const found=[];
         [["드라이기",dry],["프리온 고데기",pri]].forEach(([pd,data])=>{
           Object.entries(data?.channels||{}).forEach(([ch,v])=>{
-            if(v?.rank) found.push({channel:ch,product:pd,rank:v.rank});
+            if(v?.rank||v?.adRank) found.push({channel:ch,product:pd,rank:v.rank,adRank:v.adRank||null});
           });
         });
         if(!found.length){ alert("자동 조회 실패 — 잠시 후 다시 시도해 주세요"); return; }
@@ -7351,7 +7351,7 @@ export default function OaDashboard(){
                 <tbody>{CHANNELS.map(ch=>{
                   const logs=logsFor(ch,pd);
                   const latest=logs[0], prev=logs[1];
-                  const delta=latest&&prev?prev.rank-latest.rank:null; // 순위는 낮을수록 좋음
+                  const delta=latest?.rank&&prev?.rank?prev.rank-latest.rank:null; // 순위는 낮을수록 좋음
                   return(
                     <tr key={ch} style={{borderBottom:`1px solid ${C.border}`}}>
                       <td style={{padding:"10px 8px",fontWeight:800,color:C.ink,whiteSpace:"nowrap"}}>
@@ -7359,8 +7359,14 @@ export default function OaDashboard(){
                       </td>
                       <td style={{padding:"10px 8px",textAlign:"center"}}>
                         {latest
-                          ?<span style={{fontSize:15,fontWeight:900,color:latest.rank<=10?C.good:latest.rank<=30?C.warn:C.ink}}>{latest.rank}위
-                            <span style={{fontSize:9,fontWeight:600,color:C.inkLt,marginLeft:4}}>({latest.date.slice(5).replace("-","/")})</span></span>
+                          ?<>
+                            {latest.rank
+                              ?<span style={{fontSize:15,fontWeight:900,color:latest.rank<=10?C.good:latest.rank<=30?C.warn:C.ink}}>{latest.rank}위
+                                <span style={{fontSize:9,fontWeight:600,color:C.inkLt,marginLeft:4}}>({latest.date.slice(5).replace("-","/")})</span></span>
+                              :<span style={{fontSize:10,color:C.inkLt}}>오가닉 순위권 밖</span>}
+                            {latest.adRank&&<div style={{marginTop:3}}><span style={{fontSize:9,fontWeight:800,padding:"2px 7px",borderRadius:20,
+                              background:"#FFF6E8",color:"#B07A1E",border:"1px solid #EFD9AE",whiteSpace:"nowrap"}}>AD 광고 {latest.adRank}위</span></div>}
+                          </>
                           :<span style={{fontSize:10,color:C.inkLt}}>기록 없음</span>}
                       </td>
                       <td style={{padding:"10px 8px",textAlign:"center"}}>
@@ -7376,7 +7382,7 @@ export default function OaDashboard(){
                             <span key={l.id} onClick={()=>delRank(l.id)} title="클릭 시 삭제"
                               style={{fontSize:9,fontWeight:600,padding:"2px 7px",borderRadius:20,cursor:"pointer",
                                 background:C.cream,color:C.inkMid,border:`1px solid ${C.border}`,whiteSpace:"nowrap"}}>
-                              {l.date.slice(5).replace("-","/")} {l.rank}위
+                              {l.date.slice(5).replace("-","/")} {l.rank?`${l.rank}위`:`AD${l.adRank}위`}{l.rank&&l.adRank?` (AD${l.adRank})`:""}
                             </span>
                           ))}
                           {logs.length===0&&<span style={{fontSize:9,color:C.inkLt}}>—</span>}
@@ -7396,6 +7402,7 @@ export default function OaDashboard(){
         ))}
         <div style={{fontSize:10,color:C.inkLt,padding:"0 4px"}}>
           🔄 자동 조회 = 채널 검색 결과 순위 (드라이기/무선 고데기 키워드, 네이버·지그재그·에이블리·무신사) — 쿠팡은 봇 차단으로 수동 기록 (카테고리 베스트에서 확인).
+          순위 = 광고 제외 오가닉. <b style={{color:"#B07A1E"}}>AD 광고 N위</b> = 광고 슬롯 중 오아 광고 위치 (별도 표시).
           실판매 칩 = ERP 위탁 주문 기준 채널 실판매 (사입·B2B 제외), 최근 14일 vs 직전 14일 — 5개 채널 모두 자동 표시.
         </div>
 

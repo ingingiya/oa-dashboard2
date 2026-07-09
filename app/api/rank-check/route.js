@@ -22,19 +22,29 @@ const PRODUCTS = {
   },
 };
 
+// 오가닉 순위 + 광고 슬롯 순위 분리 계산. items: [{brand,title,isAd}]
+function rankOf(p, items) {
+  const out = { rank: null, title: null, adRank: null, adTitle: null, total: 0, adTotal: 0 };
+  for (const it of items) {
+    if (it.isAd) {
+      out.adTotal++;
+      if (out.adRank == null && p.match(it.brand, it.title)) { out.adRank = out.adTotal; out.adTitle = it.title; }
+    } else {
+      out.total++;
+      if (out.rank == null && p.match(it.brand, it.title)) { out.rank = out.total; out.title = it.title; }
+    }
+  }
+  return out;
+}
+
 async function checkMusinsa(p) {
   const url = `https://api.musinsa.com/api2/dp/v1/plp/goods?gf=A&keyword=${encodeURIComponent(p.keyword)}&sortCode=POPULAR&page=1&size=100&caller=SEARCH`;
   const res = await fetch(url, { headers: { "User-Agent": UA } });
   if (!res.ok) throw new Error(`musinsa ${res.status}`);
   const data = await res.json();
-  const list = (data?.data?.list || []).filter(g => !g.isAd); // 광고 제외
-  for (let i = 0; i < list.length; i++) {
-    const g = list[i];
-    if (p.match(g.brandName || g.brand || "", g.goodsName || "")) {
-      return { rank: i + 1, title: g.goodsName, total: list.length };
-    }
-  }
-  return { rank: null, total: list.length };
+  return rankOf(p, (data?.data?.list || []).map(g => ({
+    brand: g.brandName || g.brand || "", title: g.goodsName || "", isAd: !!g.isAd,
+  })));
 }
 
 async function checkZigzag(p) {
@@ -49,13 +59,9 @@ async function checkZigzag(p) {
   if (!res.ok) throw new Error(`zigzag ${res.status}`);
   const data = await res.json();
   if (data.errors) throw new Error(data.errors[0]?.message || "zigzag graphql error");
-  const goods = (data?.data?.search_result?.ui_item_list || []).filter(i => i.title && !i.aid); // 광고 제외
-  for (let i = 0; i < goods.length; i++) {
-    if (p.match(goods[i].shop_name || "", goods[i].title || "")) {
-      return { rank: i + 1, title: goods[i].title, total: goods.length };
-    }
-  }
-  return { rank: null, total: goods.length };
+  return rankOf(p, (data?.data?.search_result?.ui_item_list || []).filter(i => i.title).map(i => ({
+    brand: i.shop_name || "", title: i.title || "", isAd: !!i.aid,
+  })));
 }
 
 async function checkAbly(p) {
@@ -72,16 +78,13 @@ async function checkAbly(p) {
   (function walk(o) {
     if (Array.isArray(o)) return o.forEach(walk);
     if (o && typeof o === "object") {
-      if (typeof o.name === "string" && (o.market_name || o.sno) && !o.ad) goods.push(o); // 광고 제외
+      if (typeof o.name === "string" && (o.market_name || o.sno)) goods.push(o);
       Object.values(o).forEach(walk);
     }
   })(data.components || []);
-  for (let i = 0; i < goods.length; i++) {
-    if (p.match(goods[i].market_name || "", goods[i].name || "")) {
-      return { rank: i + 1, title: goods[i].name, total: goods.length };
-    }
-  }
-  return { rank: null, total: goods.length };
+  return rankOf(p, goods.map(g => ({
+    brand: g.market_name || "", title: g.name || "", isAd: !!g.ad,
+  })));
 }
 
 async function checkNaver(p, origin) {
@@ -89,7 +92,11 @@ async function checkNaver(p, origin) {
   const res = await fetch(`${origin}/api/naver-rank?query=${encodeURIComponent(p.keyword)}&brand=${encodeURIComponent(brand)}`);
   if (!res.ok) throw new Error(`naver ${res.status}`);
   const data = await res.json();
-  return { rank: data.rank, title: data.matchedProduct, total: data.total };
+  // topItems에 isAd 포함 (스크래핑 성공 시) — openapi 폴백은 광고 정보 없음
+  const r = rankOf(p, (data.topItems || []).map(i => ({
+    brand: `${i.brand || ""} ${i.mallName || ""} ${i.maker || ""}`, title: i.title || "", isAd: !!i.isAd,
+  })));
+  return { ...r, rank: data.rank ?? r.rank, title: data.matchedProduct ?? r.title };
 }
 
 export async function GET(request) {
