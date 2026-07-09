@@ -7420,14 +7420,14 @@ export default function OaDashboard(){
           실판매 칩 = ERP 위탁 주문 기준 채널 실판매 (사입·B2B 제외), 최근 14일 vs 직전 14일 — 5개 채널 모두 자동 표시.
         </div>
 
-        {/* ══ 팀 플랜 — 0709 채널배분전략 ══ */}
+        {/* ══ 팀 플랜 — 0709 채널배분전략 (최종) ══ */}
         <Card>
-          <CardTitle title="📋 팀 플랜 — 채널 배분 전략" sub="2026-07-09 기준 · 총재고 98,570개 (원가 22.9억) · 월판매 9,703개 · 배분계획 월마진 1.35억"/>
+          <CardTitle title="📋 팀 플랜 — 재고 소진 · 이익 방어 (최종)" sub="2026-07-09 · 재고 98,570개 (원가 22.9억) · 배분 계획 월 7,801개 · 월 마진 1.35억"/>
           <div style={{display:"flex",flexDirection:"column",gap:8}}>
             {[
-              ["①","쿠팡 = 에어리소닉 베이지 순위싸움","월 1,000개를 무손실 구조(개당 투입 7천원 이내)로 판매 — 순위·유입·재고소진 담당"],
-              ["②","저회전 재고를 고마진 채널로 분산","소닉 핑크·그레이, 에어리 미니 → 지그재그·폐쇄몰·무신사 등 개당이익 2~3배 채널"],
-              ["③","패션앱만으로는 볼륨 부족","지그재그+에이블리+무신사 합쳐 월 700개 수준 → 폐쇄몰 + 홈쇼핑 특판 병행 필수"],
+              ["①","검증 가설 — 쿠팡 베이지 월 1,000개","특가딜 월 3~4회 + 검색광고 월 150만원 × 3개월 → 상위 노출권 진입. 현금 유출은 광고비 450만뿐, 무손실 푸시 기준 3개월 순손익 +1,650만"],
+              ["②","이미 자생 성장 중 — 4월 390 → 6월 658 (+69%)","남은 갭 342개는 딜 3~4회(회당 120~160개)로 메움. 일 33개 이상을 3~4주 유지하면 딜이 끝나도 오가닉이 한 단계 상승"],
+              ["③","저회전 3종에 원가 7.3억이 묶여 있다","소닉 핑크·그레이, 에어리미니 블루 소진 20~34개월 → 패션앱·폐쇄몰·특판 분산으로 12개월 이하 목표"],
             ].map(([n,t,d])=>(
               <div key={n} style={{display:"flex",gap:10,padding:"10px 12px",background:C.cream,borderRadius:10}}>
                 <span style={{fontSize:14,fontWeight:900,color:C.rose}}>{n}</span>
@@ -7440,32 +7440,37 @@ export default function OaDashboard(){
 
         {/* ── SKU 재고 현황 · 역할 ── */}
         <Card>
-          <CardTitle title="📦 SKU 재고 · 역할" sub="회전율 = 월판매 ÷ 재고 · 소진 12개월 초과는 분산 대상"/>
+          <CardTitle title="📦 SKU 재고 · 소진개월" sub="현 판매 속도 월 9,703개 · 소진 12개월 초과(빨강)는 분산 대상"/>
           <div style={{overflowX:"auto"}}>
             <table style={{width:"100%",borderCollapse:"collapse",fontSize:11,minWidth:560}}>
               <thead><tr style={{borderBottom:`2px solid ${C.border}`}}>
-                {["SKU","재고","회전율","역할"].map((h,i)=>(
-                  <th key={i} style={{padding:"8px",textAlign:i===3?"left":"center",color:C.inkLt,fontWeight:700,fontSize:9,whiteSpace:"nowrap"}}>{h}</th>
+                {["SKU","현재고","월판매","소진개월","역할"].map((h,i)=>(
+                  <th key={i} style={{padding:"8px",textAlign:i===4?"left":"center",color:C.inkLt,fontWeight:700,fontSize:9,whiteSpace:"nowrap"}}>{h}</th>
                 ))}
               </tr></thead>
               <tbody>{[
-                ["에어리소닉 베이지","15,462","0.33","쿠팡 주력 — 순위싸움 대표 SKU",false],
-                ["프리온 핑크","10,719","0.31","고데기 주력 (성수기 9~10월)",false],
-                ["에어리소닉 핑크","18,478","0.14","특판 500 + 쿠팡 100 분산",false],
-                ["에어리소닉 화이트","3,981","0.13","쿠팡 보조 150",false],
-                ["소닉 베이지","14,470","0.11","쿠팡 700",false],
-                ["소닉 핑크","12,190","0.05","소진 21.9개월 — 지그재그·폐쇄몰·특판 분산",true],
-                ["에어리 미니 블루","10,472","0.06","소진 20.2개월 — 무신사·특판 분산",true],
-                ["소닉 그레이","12,798","0.03","소진 34.1개월 — 최우선 분산 대상",true],
-              ].map(([sku,stock,turn,role,slow])=>(
+                ["에어리소닉 베이지","15,462","2,801","5.5","쿠팡 순위싸움 대표 SKU",false],
+                ["에어리소닉 핑크","18,478","1,431","12.9","특판 500 분산",false],
+                ["에어리소닉 화이트","3,981","559","7.1","쿠팡 보조",false],
+                ["소닉플로우 베이지","14,470","1,712","8.5","쿠팡 700",false],
+                ["소닉플로우 핑크","12,190","557","21.9","지그재그·폐쇄몰·특판 분산",true],
+                ["소닉플로우 그레이","12,798","375","34.1","최우선 분산 대상",true],
+                ["에어리미니 블루","10,472","519","20.2","무신사·특판 분산",true],
+                ["프리온 고데기 핑크","10,719","1,749","6.1","고데기 주력 (성수기 9~10월)",false],
+              ].map(([sku,stock,qty,mo,role,slow])=>(
                 <tr key={sku} style={{borderBottom:`1px solid ${C.border}`,background:slow?"#FEF6F6":undefined}}>
                   <td style={{padding:"8px",fontWeight:800,color:C.ink,textAlign:"center",whiteSpace:"nowrap"}}>{sku}</td>
                   <td style={{padding:"8px",textAlign:"center",color:C.inkMid}}>{stock}</td>
-                  <td style={{padding:"8px",textAlign:"center",fontWeight:800,color:slow?C.bad:Number(turn)>=0.3?C.good:C.inkMid}}>{turn}</td>
+                  <td style={{padding:"8px",textAlign:"center",color:C.inkMid}}>{qty}</td>
+                  <td style={{padding:"8px",textAlign:"center",fontWeight:800,color:slow?C.bad:Number(mo)<=8?C.good:C.inkMid}}>{mo}</td>
                   <td style={{padding:"8px",color:slow?C.bad:C.inkMid,fontWeight:slow?700:400}}>{role}</td>
                 </tr>
               ))}</tbody>
             </table>
+          </div>
+          <div style={{marginTop:10,padding:"10px 12px",background:C.cream,borderRadius:10,fontSize:11,color:C.inkMid,lineHeight:1.6}}>
+            합계 재고 <b style={{color:C.ink}}>98,570개</b> · 월판매 <b style={{color:C.ink}}>9,703개</b>.
+            빨간 행 = 저회전 3종 (원가 약 <b style={{color:C.bad}}>7.3억</b> 묶임) → 고마진 채널 분산으로 소진 12개월 이하가 배분 전략의 두 번째 축.
           </div>
         </Card>
 
@@ -7480,14 +7485,14 @@ export default function OaDashboard(){
                 ))}
               </tr></thead>
               <tbody>{[
-                ["지그재그","×3.3","380","최고 마진 — 소닉 핑크·그레이 우선 배치"],
-                ["에이블리","×2.7","140","딜 주간 집중"],
-                ["카카오","×2.3","—","월 140 추정 (미확정)"],
-                ["폐쇄몰 (현대이지웰)","×2.0","270","기획전 제안 진행"],
-                ["무신사","×1.9","180","에어리 미니 블루 배치"],
-                ["네이버","×1.8","3,281","이익 엔진 — 가격 절대 안 내림"],
-                ["홈쇼핑 특판","×1.5","1,050","에소핑크 500·소닉핑크 200·그레이 200·미니블루 150"],
-                ["쿠팡","×1.0","2,500","베이지 1,000 + 소닉베이지 700 + 프리온 550 + 화이트 150 + 에소핑크 100"],
+                ["지그재그","×3.33","380","최고 마진 — 소닉 핑크·그레이 우선 배치"],
+                ["에이블리","×2.70","140","딜 주간 집중"],
+                ["카카오선물","×2.31","—","미확정"],
+                ["폐쇄몰 (현대이지웰)","×2.01","270","가격 비노출 — 기획전 제안 진행"],
+                ["무신사","×1.90","180","에어리미니 블루 배치"],
+                ["네이버","×1.81","3,281","이익 엔진 (본진) — 가격 방어, 인하 금지"],
+                ["홈쇼핑 · 특판","×1.48","1,050","대량 소진 엔진 — 저회전 3종 소진 12개월 이하의 관건"],
+                ["쿠팡","×1.00","2,500","순위 엔진 — 베이지 1,000 딜, 마진 내 지원으로 무손실"],
               ].map(([ch,mult,vol,note])=>(
                 <tr key={ch} style={{borderBottom:`1px solid ${C.border}`}}>
                   <td style={{padding:"8px",fontWeight:800,color:C.ink,textAlign:"center",whiteSpace:"nowrap"}}>{ch}</td>
@@ -7499,21 +7504,21 @@ export default function OaDashboard(){
             </table>
           </div>
           <div style={{marginTop:10,padding:"10px 12px",background:C.cream,borderRadius:10,fontSize:11,color:C.inkMid,lineHeight:1.6}}>
-            <b style={{color:C.ink}}>네이버 vs 쿠팡:</b> 네이버 개당이익 19,187원·이익률 45% (90일 이익 1.89억) vs 쿠팡 11,222원·33% (0.72억).
-            네이버 = <b style={{color:C.ink}}>이익 엔진</b> / 쿠팡 = <b style={{color:C.ink}}>순위·유입·재고소진</b>.
-            배분 후에도 소닉 핑크·그레이·미니 블루는 소진 12개월 초과 → <b style={{color:C.ink}}>특판을 더 키워야 함</b>.
+            <b style={{color:C.ink}}>증분 근거:</b> 계획 7,801개 = 평상시 6,445개 + <b style={{color:C.ink}}>증분 1,356개</b> (쿠팡 딜 +331 무손실 지원, 특판 +1,050 대량 견적) — 나머지 채널은 평상시 유지.
+            네이버 개당이익 1.9만원·이익률 45% = <b style={{color:C.ink}}>이익 엔진</b> / 쿠팡 = <b style={{color:C.ink}}>순위 엔진</b>.
+            같은 한 개도 어디서 파느냐로 이익이 최대 3배 차이.
           </div>
         </Card>
 
         {/* ── 쿠팡 베이지 무손실 시나리오 ── */}
         <Card>
-          <CardTitle title="🎯 쿠팡 베이지 월 1,000개 시나리오" sub="개당 마진 1.2만원 = 손해 시작점 · 재고 1년치라 품절 리스크 없음"/>
+          <CardTitle title="🎯 쿠팡 베이지 월 1,000개 — 3개월 검증 실험" sub="개당 마진 1.2만원 · 딜·쿠폰은 정산 차감 (현금 유출은 광고비 450만뿐)"/>
           <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(180px,1fr))",gap:10}}>
             {[
-              ["A 무손실 ★","개당 투입 7천원","월 +500만원","채택",true],
-              ["B 손익분기","개당 투입 1.2만원","월 ±0원","",false],
-              ["C 공격","개당 투입 1.5만원","월 -300만원","",false],
-            ].map(([name,cost,result,tag,pick])=>(
+              ["A 무손실 ★","개당 지원 5,000원","3개월 +1,650만원",true],
+              ["B 손익분기","개당 지원 10,500원","3개월 ±0원",false],
+              ["C 공격","개당 지원 13,000원","3개월 -750만원",false],
+            ].map(([name,cost,result,pick])=>(
               <div key={name} style={{border:`1px solid ${pick?C.rose:C.border}`,borderRadius:12,padding:"12px 14px",background:pick?C.blush:C.white}}>
                 <div style={{fontSize:12,fontWeight:900,color:pick?C.rose:C.ink}}>{name}</div>
                 <div style={{fontSize:11,color:C.inkMid,marginTop:6}}>{cost}</div>
@@ -7522,23 +7527,24 @@ export default function OaDashboard(){
             ))}
           </div>
           <div style={{marginTop:10,padding:"10px 12px",background:C.cream,borderRadius:10,fontSize:11,color:C.inkMid,lineHeight:1.6}}>
-            <b style={{color:C.ink}}>실행 공식:</b> 상시 와우할인 3~4천원/개로 일 10~15개 + 골드박스 월 3~4회 (8천~1만원/개, 회당 120~160개) = 월 1,000개 무손실.
-            일 33개 이상 3~4주 지속 시 카테고리 상위권 진입. 체험단 병행으로 리뷰 확보.
+            <b style={{color:C.ink}}>목표 산식:</b> 평상시 658개 + 딜 증분 342개 (월 3~4회 × 회당 120~160개) = 1,000개.
+            일 33개 이상 3~4주 유지 시 상위 노출권 진입 → 딜이 끝나도 오가닉 한 단계 상승.
+            <b style={{color:C.ink}}> 상시할인 없이 딜만 운영</b>해 네이버 가격비교 노출 최소화. 가설이 틀려도 최대 손실은 광고비 450만으로 한정.
           </div>
           <div style={{marginTop:8,padding:"10px 12px",background:"#FEF0F0",border:`1px solid ${C.bad}33`,borderRadius:10,fontSize:11,color:C.ink,fontWeight:700,lineHeight:1.6}}>
-            ⚠️ 가격 역전 주의: 쿠팡 딜가가 네이버 판매가보다 낮아지면 네이버 이익 엔진이 무너짐 — 쿠팡 딜은 반드시 기간 한정, 네이버 가격은 절대 안 내림.
+            ⚠️ 가격 역전 주의: 쿠팡 딜가가 네이버 판매가보다 낮아지면 네이버 이익 엔진이 무너짐 — 쿠팡 딜은 반드시 기간 한정, 네이버 가격 인하 금지.
           </div>
         </Card>
 
         {/* ── 실행 플랜 ── */}
         <Card>
-          <CardTitle title="🗓 실행 플랜" sub="1주차 → 1개월 → 상시 → 주간 점검"/>
+          <CardTitle title="🗓 실행 플랜 · 승인 요청" sub="3개월 기준 — 현금이 나가는 건 광고비 450만원뿐 (승인 시 1주차 착수)"/>
           <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(220px,1fr))",gap:10}}>
             {[
-              ["1주차","쿠팡 세팅",["로켓 입고 1,000개+ 확보","가격 규칙 고정 (네이버가 > 쿠팡 딜가 방지)","쿠팡 광고 월 150~200만원 시작"]],
-              ["1개월","베이지 1,000개 체제",["상시 와우할인 3~4천원/개 → 일 10~15개","골드박스 월 3~4회 (회당 120~160개)","폐쇄몰 기획전 제안 + 홈쇼핑 특판 견적"]],
-              ["상시","이익 방어 + 재고 분산",["네이버 월 3,000개+ 유지 (가격 안 내림)","소닉 핑크·그레이 → 지그재그·폐쇄몰","에어리 미니 블루 → 무신사"]],
-              ["주간","점검 루틴",["쿠팡 베이지 일판매·순위 확인 (위 랭킹 테이블)","SKU별 소진개월 점검 — 12개월 초과 시 특판 증량"]],
+              ["1주차","쿠팡 세팅",["검색광고 월 150만원 시작 (베이지 집중, 3개월 450만)","로켓 입고 1,000개+ 확보","가격 규칙 고정 (네이버가 > 쿠팡 딜가 방지)"]],
+              ["1개월","베이지 1,000개 체제",["특가딜 월 3~4회 — 개당 지원 5,000원, 회당 120~160개 (3개월 약 1,500만 마진 차감)","현대이지웰 폐쇄몰 기획전 + 홈쇼핑·특판 대량 견적"]],
+              ["상시","이익 방어 + 재고 분산",["네이버 월 3,281개 유지 — 가격 인하 금지","소닉 핑크·그레이 → 지그재그·폐쇄몰","에어리미니 블루 → 무신사"]],
+              ["주간","점검 루틴 (3개월 검증)",["쿠팡 베이지 일판매·순위 주간 추적 (위 랭킹 테이블)","SKU별 소진개월 점검 — 12개월 초과 시 특판 증량"]],
             ].map(([m,t,items])=>(
               <div key={m} style={{border:`1px solid ${C.border}`,borderRadius:12,padding:"12px 14px",background:C.white}}>
                 <div style={{fontSize:12,fontWeight:900,color:C.ink}}>{m} <span style={{fontSize:10,fontWeight:700,color:C.inkMid}}>{t}</span></div>
