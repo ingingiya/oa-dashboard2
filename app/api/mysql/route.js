@@ -144,6 +144,29 @@ export async function GET(request) {
       return Response.json({ rows });
     }
 
+    // 랭킹 탭용 채널별 실판매 (위탁 주문 = 채널 실판매, 사입/B2B 제외)
+    if (action === 'rank_sales') {
+      const [rows] = await pool.query(`
+        SELECT
+          CASE WHEN 매출처명='스마트스토어' THEN '네이버'
+               WHEN 매출처명='쿠팡' THEN '쿠팡'
+               WHEN 매출처명 LIKE '%지그재그%' THEN '지그재그'
+               WHEN 매출처명='에이블리' THEN '에이블리'
+               WHEN 매출처명='무신사' THEN '무신사' END AS channel,
+          CASE WHEN 제품명 LIKE '%프리온%' THEN '프리온 고데기' ELSE '드라이기' END AS product,
+          SUM(CASE WHEN 주문등록일시 >= DATE_SUB(CURDATE(), INTERVAL 14 DAY) THEN 수량 ELSE 0 END) AS cur,
+          SUM(CASE WHEN 주문등록일시 <  DATE_SUB(CURDATE(), INTERVAL 14 DAY) THEN 수량 ELSE 0 END) AS prv
+        FROM v_daily_order_detail
+        WHERE 브랜드='오아'
+          AND CAST(주문유형 AS BINARY) LIKE CAST('위탁%' AS BINARY)
+          AND 주문등록일시 >= DATE_SUB(CURDATE(), INTERVAL 28 DAY)
+          AND (제품명 LIKE '%프리온%' OR 제품명 LIKE '%드라이%' OR 제품명 LIKE '%에어리%' OR 제품명 LIKE '%소닉%')
+        GROUP BY channel, product
+        HAVING channel IS NOT NULL
+      `);
+      return Response.json({ rows });
+    }
+
     // 제품명 검색 (진단용)
     if (action === 'search_product') {
       const keyword = searchParams.get('keyword') || '';

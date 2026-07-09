@@ -6985,30 +6985,18 @@ export default function OaDashboard(){
   const [promoEvents, setPromoEvents] = useSyncState("oa_events_v1", []);
   // 채널 랭킹 트래커: [{id,date,channel,product,rank}] — 랭킹 탭
   const [rankLog, setRankLog] = useSyncState("oa_rank_tracker_v1", []);
-  const [rankReal, setRankReal] = useState(null); // 실판매 14일 요약 {`채널|제품|cur/prv`: qty}
+  const [rankReal, setRankReal] = useState(null); // 실판매 14일 요약 {`채널|제품|cur/prv`: qty} — ERP 위탁주문(사입 제외)
   useEffect(()=>{
     if(sec!=="ranking"||rankReal) return;
-    const SURL=process.env.NEXT_PUBLIC_SUPABASE_URL, SKEY=process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
     (async()=>{
       try{
-        const frm=new Date(Date.now()-28*86400000).toISOString().slice(0,10);
-        let all=[],o=0;
-        for(;;){
-          const r=await fetch(`${SURL}/rest/v1/channel_daily_sales?select=channel,name,date,qty&date=gte.${frm}`,
-            {headers:{apikey:SKEY,Authorization:`Bearer ${SKEY}`,Range:`${o}-${o+999}`}});
-          if(!r.ok) throw new Error("fetch fail");
-          const page=await r.json(); all.push(...page);
-          if(page.length<1000) break; o+=1000;
-        }
-        const now=Date.now(), agg={};
-        all.forEach(r=>{
-          const n=String(r.name||"");
-          const prod = n.includes("프리온") ? "프리온 고데기"
-            : /드라이|에어리|소닉플로우/.test(n) ? "드라이기" : null;
-          if(!prod) return;
-          const ago=Math.floor((now-new Date(r.date))/86400000);
-          const k=`${r.channel}|${prod}|${ago<=14?"cur":"prv"}`;
-          agg[k]=(agg[k]||0)+(Number(r.qty)||0);
+        const r=await fetch("/api/mysql?action=rank_sales");
+        if(!r.ok) throw new Error("fetch fail");
+        const {rows}=await r.json();
+        const agg={};
+        (rows||[]).forEach(row=>{
+          agg[`${row.channel}|${row.product}|cur`]=Number(row.cur)||0;
+          agg[`${row.channel}|${row.product}|prv`]=Number(row.prv)||0;
         });
         setRankReal(agg);
       }catch{ setRankReal({}); }
@@ -7384,7 +7372,7 @@ export default function OaDashboard(){
         ))}
         <div style={{fontSize:10,color:C.inkLt,padding:"0 4px"}}>
           순위 확인처: 네이버 쇼핑 카테고리 랭킹 · 쿠팡 카테고리 베스트 · 지그재그/에이블리 뷰티 랭킹 · 무신사 뷰티 랭킹.
-          실판매 칩은 쿠팡·지그재그만 표시 (일일판매량 엑셀 동기화 데이터, 최근 14일 vs 직전 14일).
+          실판매 칩 = ERP 위탁 주문 기준 채널 실판매 (사입·B2B 제외), 최근 14일 vs 직전 14일 — 5개 채널 모두 자동 표시.
         </div>
       </div>
     );
