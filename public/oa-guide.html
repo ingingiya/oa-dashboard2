@@ -1,0 +1,1220 @@
+<!DOCTYPE html>
+<html lang="ko"><head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OA 온라인영업팀 · 업무 가이드</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<style>
+:root{
+  --ink:#16202e; --sub:#5a6472; --mut:#8b93a0;
+  --paper:#fbfbf9; --card:#ffffff; --line:#e5e4de; --line2:#d3d2ca;
+  --nv:#0b8f56; --nv-bg:#e9f7f0;
+  --cp:#c2410c; --cp-bg:#fdf1ea;
+  --eb:#4f46e5; --eb-bg:#eef0fd;
+  --st:#b91c4b; --st-bg:#fdeef3;
+  --cf:#0369a1; --cf-bg:#e9f4fa;
+  --sys:#64748b; --sys-bg:#f0f2f5;
+  --warn:#9a5b00; --warn-bg:#fdf5e5;
+  --danger:#b3261e; --danger-bg:#fdecea;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:24px}
+body{font-family:"Pretendard Variable",Pretendard,-apple-system,"Malgun Gothic",sans-serif;background:var(--paper);color:var(--ink);font-size:15px;line-height:1.65;letter-spacing:-0.01em}
+.wrap{display:flex;max-width:1240px;margin:0 auto}
+
+/* ── sidebar ── */
+nav{width:236px;flex-shrink:0;position:sticky;top:0;height:100vh;overflow-y:auto;padding:32px 20px 40px 24px;border-right:1px solid var(--line)}
+nav .brand{font-weight:800;font-size:17px;letter-spacing:-0.02em;margin-bottom:2px}
+nav .brand span{color:var(--nv)}
+nav .ver{font-size:11.5px;color:var(--mut);margin-bottom:22px}
+nav a{display:block;padding:6px 10px;margin:1px 0;border-radius:7px;color:var(--sub);text-decoration:none;font-size:13.5px;font-weight:500}
+nav a:hover{background:#f1f0ea;color:var(--ink)}
+nav a.on{background:var(--ink);color:#fff}
+nav .grp{font-size:10.5px;font-weight:700;color:var(--mut);letter-spacing:.08em;margin:18px 0 5px 10px}
+
+/* ── main ── */
+main{flex:1;min-width:0;padding:36px 44px 100px}
+header.top{margin-bottom:34px}
+header.top h1{font-size:29px;font-weight:800;letter-spacing:-0.03em;line-height:1.25}
+header.top p{color:var(--sub);margin-top:8px;max-width:640px}
+.searchbar{margin-top:18px;display:flex;gap:8px;align-items:center}
+.searchbar input{flex:1;max-width:420px;padding:10px 14px;border:1.5px solid var(--line2);border-radius:9px;font:inherit;font-size:14px;background:#fff;outline:none}
+.searchbar input:focus{border-color:var(--ink)}
+.searchbar .hint{font-size:12px;color:var(--mut)}
+
+/* channel chips */
+.chip{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;font-weight:700;padding:2px 9px;border-radius:99px;vertical-align:1px}
+.chip::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor}
+.c-nv{color:var(--nv);background:var(--nv-bg)} .c-cp{color:var(--cp);background:var(--cp-bg)}
+.c-eb{color:var(--eb);background:var(--eb-bg)} .c-st{color:var(--st);background:var(--st-bg)}
+.c-cf{color:var(--cf);background:var(--cf-bg)} .c-sys{color:var(--sys);background:var(--sys-bg)}
+
+/* sections */
+section{margin-bottom:56px;scroll-margin-top:24px}
+section>h2{font-size:21px;font-weight:800;letter-spacing:-0.02em;padding-bottom:10px;border-bottom:2px solid var(--ink);margin-bottom:20px;display:flex;align-items:baseline;gap:10px}
+section>h2 .no{font-size:12px;font-weight:700;color:var(--mut);letter-spacing:.05em}
+h3{font-size:16px;font-weight:700;margin:26px 0 10px;letter-spacing:-0.01em}
+h3:first-of-type{margin-top:0}
+
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:18px 20px;margin-bottom:12px}
+.card h4{font-size:14.5px;font-weight:700;margin-bottom:8px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.card ul{padding-left:19px;margin:6px 0}
+.card li{margin:4px 0}
+.card li::marker{color:var(--mut)}
+.card p{margin:5px 0}
+.card.hidden{display:none}
+mark{background:#ffe9a8;border-radius:3px;padding:0 2px}
+
+.note{border-left:3px solid var(--warn);background:var(--warn-bg);border-radius:0 10px 10px 0;padding:12px 16px;margin:12px 0;font-size:14px}
+.note b{color:var(--warn)}
+.stop{border-left:3px solid var(--danger);background:var(--danger-bg);border-radius:0 10px 10px 0;padding:12px 16px;margin:12px 0;font-size:14px}
+.stop b{color:var(--danger)}
+
+code{font-family:"SF Mono",Consolas,monospace;font-size:12.5px;background:#f0efe9;border:1px solid var(--line);border-radius:5px;padding:1px 6px;color:#333}
+pre{font-family:"SF Mono",Consolas,monospace;font-size:12.5px;background:#1d2733;color:#e8ecf2;border-radius:10px;padding:14px 16px;overflow-x:auto;line-height:1.7;margin:10px 0}
+
+table{width:100%;border-collapse:collapse;font-size:13.5px;margin:10px 0}
+th{text-align:left;font-weight:700;font-size:12px;color:var(--sub);border-bottom:2px solid var(--line2);padding:7px 10px;letter-spacing:.02em}
+td{border-bottom:1px solid var(--line);padding:8px 10px;vertical-align:top}
+tr:last-child td{border-bottom:none}
+
+/* launch timeline */
+.tl{position:relative;margin:6px 0 6px 6px;padding-left:26px}
+.tl::before{content:"";position:absolute;left:6px;top:8px;bottom:8px;width:2px;background:var(--line2)}
+.tl .step{position:relative;padding:0 0 22px}
+.tl .step:last-child{padding-bottom:0}
+.tl .step::before{content:"";position:absolute;left:-26px;top:6px;width:14px;height:14px;border-radius:50%;background:#fff;border:3px solid var(--ink)}
+.tl .step.hl::before{border-color:var(--nv);background:var(--nv)}
+.tl .d{font-size:11px;font-weight:800;color:var(--nv);letter-spacing:.06em}
+.tl .t{font-weight:700;font-size:15px;margin:1px 0 3px}
+.tl .step>p,.tl .step ul{color:var(--sub);font-size:14px}
+.tl .step ul{padding-left:18px;margin-top:4px}
+.tl .step li{margin:3px 0}
+
+/* checklist */
+.ck{list-style:none;padding:0;margin:8px 0}
+.ck li{display:flex;gap:10px;align-items:flex-start;padding:7px 10px;border-radius:8px;margin:2px 0}
+.ck li:hover{background:#f6f5f0}
+.ck input{margin-top:4px;width:15px;height:15px;accent-color:var(--nv);flex-shrink:0;cursor:pointer}
+.ck label{cursor:pointer;flex:1}
+.ck input:checked+label{color:var(--mut);text-decoration:line-through}
+
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media(max-width:1000px){.grid2{grid-template-columns:1fr}}
+@media(max-width:840px){
+  .wrap{flex-direction:column}
+  nav{position:static;width:100%;height:auto;border-right:none;border-bottom:1px solid var(--line);display:flex;flex-wrap:wrap;gap:2px;padding:16px}
+  nav .brand,nav .ver{width:100%}
+  nav .grp{display:none}
+  main{padding:28px 20px 80px}
+}
+.archive{opacity:.62}
+.archive h4::after{content:"종료된 정책";font-size:10.5px;font-weight:700;color:var(--mut);background:var(--sys-bg);padding:2px 8px;border-radius:99px}
+footer{margin-top:60px;padding-top:20px;border-top:1px solid var(--line);font-size:12.5px;color:var(--mut)}
+
+
+#editbtn,#savebtn{font-size:12.5px;font-weight:600;padding:8px 14px;border:1.5px solid #d3d2ca;border-radius:9px;background:#fff;color:#5a6472;cursor:pointer}
+#editbtn:hover,#savebtn:hover{border-color:#16202e;color:#16202e}
+#editbtn.on{background:#16202e;color:#fff;border-color:#16202e}
+#savebtn{background:#0b8f56;color:#fff;border-color:#0b8f56}
+body.editing main{outline:2px dashed #0b8f56;outline-offset:8px}
+body.editing .card:hover,body.editing h2:hover,body.editing h3:hover{background:#f0faf5}
+#editnote{display:none;position:fixed;bottom:16px;left:50%;transform:translateX(-50%);background:#16202e;color:#fff;font-size:12.5px;padding:9px 18px;border-radius:99px;z-index:99;box-shadow:0 4px 14px rgba(0,0,0,.2)}
+body.editing #editnote{display:block}
+</style>
+</head>
+<body class="">
+<div class="wrap">
+
+<nav id="nav">
+  <div class="brand">OA <span>온라인영업</span></div>
+  <div class="ver">업무 가이드 통합본 · 2026.07 재정비</div>
+  <div class="grp">목표</div>
+  <a href="#goal789" class="">★ 7·8·9월 랭킹 목표</a>
+  <div class="grp">기준</div>
+  <a href="#std" class="on">0 · 업무 기준 한 장</a>
+  <div class="grp">프로세스</div>
+  <a href="#launch" class="">1 · 신제품 출시</a>
+  <a href="#daily" class="">2 · 데일리 업무</a>
+  <a href="#order" class="">3 · 발주 &amp; 재고</a>
+  <div class="grp">채널 &amp; 광고</div>
+  <a href="#channel" class="">4 · 채널별 규칙</a>
+  <a href="#ads" class="">5 · 광고 관리</a>
+  <a href="#store" class="">6 · 스토어 관리</a>
+  <div class="grp">운영</div>
+  <a href="#monthly" class="">7 · 월간 업무</a>
+  <a href="#erp" class="">8 · 전산 가이드</a>
+  <a href="#promo" class="">9 · 행사 &amp; 프로모션</a>
+  <a href="#change" class="">10 · 변경 관리</a>
+  <a href="#comm" class="">11 · 소통 &amp; 양식</a>
+  <div class="grp">자동화</div>
+  <a href="#data" class="">12 · 데이터 &amp; 자동화</a>
+</nav>
+
+<main>
+<div id="editnote">편집 모드 — 본문을 클릭해 바로 수정하세요 · 끝나면 ↓ 저장으로 파일 다운로드</div>
+<header class="top">
+  <h1>온라인영업팀 업무 가이드</h1>
+  <p>신제품 출시부터 데일리 운영, 채널·광고·행사 관리까지 — 노션에 흩어져 있던 규칙을 업무 흐름 순서로 통합 재정비한 전체 가이드입니다.</p>
+  <div class="searchbar">
+    <input type="search" id="q" placeholder="규칙 검색 — 예: 크루특가, 위너, 공정위, 마진율">
+    <span class="hint" id="qh"></span>
+    <button id="editbtn" title="본문을 직접 수정할 수 있습니다" class="">✎ 편집</button>
+    <button id="savebtn" title="수정본을 HTML 파일로 다운로드" style="display: none;">↓ 저장</button>
+  </div>
+</header>
+
+<!-- ════════ ★ 7·8·9월 랭킹 목표 ════════ -->
+<section id="goal789">
+<h2><span class="no">★</span>7·8·9월 채널 랭킹 목표 <span class="chip c-st">뷰티팀</span></h2>
+<div class="note"><b>10월까지:</b> 네이버 · 쿠팡 · 에이블리 · 지그재그 · 무신사 5개 채널에서 <b>드라이기 + 프리온 무선 고데기</b> 카테고리 랭킹 상위 노출. 주간 순위는 대시보드 <b>랭킹 탭</b>에 기록.</div>
+
+<h3>리소스 분배 (100%)</h3>
+<table>
+<thead><tr><th>채널</th><th>비중</th><th>7~8월</th><th>9~10월</th></tr></thead>
+<tbody>
+<tr><td><span class="chip c-cp">쿠팡</span></td><td><b>30%</b></td><td>드라이기 CPC·로켓 증액 (네이버와 격차 해소) + 리뷰 이벤트</td><td>프리온 랭킹 방어 + 와우딜</td></tr>
+<tr><td><span class="chip c-nv">네이버</span></td><td><b>20%</b></td><td>드라이기 판매지수 유지 + 리뷰 적립</td><td>프리온 기획전 · 원쁠딜</td></tr>
+<tr><td><span class="chip c-eb">무신사</span></td><td><b>20%</b></td><td>체험단 리뷰 시딩 (리뷰 100개 목표 — 9월 랭킹 반영)</td><td>두 제품 동시 푸시 — 판이 작아 ROI 최고</td></tr>
+<tr><td><span class="chip c-st">지그재그</span></td><td><b>15%</b></td><td>프리온 딜 즉시 재점화 + 드라이기 세트 동반 노출</td><td>프리온 포인트딜 반복</td></tr>
+<tr><td><span class="chip c-st">에이블리</span></td><td><b>15%</b></td><td>고데기 고객에 드라이기 크로스셀</td><td>프리온 브랜드데이</td></tr>
+</tbody>
+</table>
+<div class="note"><b>원칙:</b> 강한 곳(네이버 드라이기, 쿠팡 고데기)은 방어 비용만 — 신규 예산은 구멍(앱 채널 드라이기, 무신사 전체)에 집중. 지그재그·에이블리 랭킹은 <b>최근 판매속도</b> 기반이라 예산을 상시 태우지 말고 <b>딜 주간에 몰아서</b> 소진.</div>
+
+<h3>월별 로드맵</h3>
+<div class="tl">
+<div class="step hl"><div class="d">7월</div><div class="t">베이스라인 + 급한 불</div>
+<ul>
+<li>5개 채널 현재 순위 기록 시작 (대시보드 랭킹 탭, 주 1회)</li>
+<li><b>지그재그·에이블리 프리온 딜 재점화</b> — 실판매 2주새 -59% 급락, 순위 방어 최우선</li>
+<li>무신사 체험단 발주 (리뷰 시딩)</li>
+<li>앱 채널 드라이기는 단독 진입 불가 — 프리온 딜에 세트/추가할인으로 동반 노출</li>
+</ul></div>
+<div class="step"><div class="d">8월</div><div class="t">앱 채널 드라이기 + 고데기 조기 전환</div>
+<ul>
+<li>지그재그·에이블리 격주 딜 사이클로 드라이기 순위 진입</li>
+<li><b>8월 중순부터 고데기 성수기 모드</b> — 쿠팡 프리온 실판매 +39%로 시즌 조기 시동 확인</li>
+<li>프리온 재고 선확보 (성수기 물량)</li>
+</ul></div>
+<div class="step"><div class="d">9월</div><div class="t">프리온 총공세</div>
+<ul>
+<li>전 채널 프리온 딜 집중 — 네이버 기획전·원쁠딜, 쿠팡 와우딜, 앱 포인트딜</li>
+<li>무신사 두 제품 동시 푸시 (7월 심은 리뷰가 랭킹 반영되는 시점)</li>
+</ul></div>
+<div class="step"><div class="d">10월</div><div class="t">랭킹 유지 모드</div>
+<ul>
+<li>순위 유지 광고 + 리뷰 이벤트 지속, 연휴 프로모션</li>
+<li>목표 달성 여부 판정 — 채널×제품 10칸 중 랭킹 진입 개수로 평가</li>
+</ul></div>
+</div>
+
+<div class="card"><h4>데이터 근거 (2026-07-09 기준)</h4>
+<ul>
+<li>ERP 5~7월: 네이버 드라이기 9,883개(최강) · 쿠팡 고데기 카테고리 최강 · <mark>지그재그/에이블리 드라이기 270/80개(구멍)</mark> · 무신사 양쪽 약함(429/498개)</li>
+<li>실판매(사입 제외) 최근 14일: 쿠팡 프리온 250개(<b>+39%↑</b>) · 지그재그 프리온 63개(<b>-59%↓</b>) · 쿠팡 드라이기 887개(보합)</li>
+<li>쿠팡 고데기 내부 1위는 오토고데기40mm-퍼플(253개) — <b>프리온 vs 오토고데기 대표 SKU 결정 필요</b></li>
+</ul></div>
+<div class="stop"><b>지금 액션 3개:</b> ① 지그재그 프리온 딜 일정 확정 ② 무신사 체험단 발주 ③ 쿠팡 고데기 대표 SKU 결정 (프리온 vs 오토고데기)</div>
+</section>
+
+<!-- ════════ 0. 업무 기준 ════════ -->
+<section id="std">
+<h2><span class="no">00</span>업무 기준 — 한 장 요약</h2>
+<div class="note"><b>방법은 자율, 기준은 고정.</b> 실행 절차는 아래 각 장 참조. 기준 이탈 = 보고 의무 · 판단이 애매하면 보고가 정답.</div>
+
+<div class="grid2">
+<div class="card"><h4>매일 유지해야 하는 상태</h4>
+<ul>
+<li><span class="chip c-nv">네이버</span> 가격비교 — <b>자사가 최저가</b> (매일 오전)</li>
+<li>광고 노출 순위: <b>원부형 &gt; 상품형</b> 항상 유지</li>
+<li><span class="chip c-cp">쿠팡</span> <b>위너 유지</b></li>
+<li><b>N배송 — 전 옵션 재고 있음</b></li>
+<li>리뷰 — <b>2점 이하 없음</b></li>
+</ul></div>
+<div class="card"><h4>숫자로 고정된 기준</h4>
+<ul>
+<li>행사 마진율: 기본 <b>30%</b> · 과재고만 <b>20%</b> — 이하 제안 불가</li>
+<li>브랜드형 광고 일예산: <b>3~5만 원</b> — 급증 시 즉시 점검</li>
+<li>발주: <b>화/목 당일 완결</b> · 최소발주일 = 1주 평균 <b>+20일</b></li>
+<li>크루특가 제한: <b>1차 2개 / 2·3차 3개</b> — 무제한 진행 금지</li>
+<li>리뷰 이벤트: 포토리뷰 <b>2,000P</b> · 약 30개 도달 시 종료</li>
+</ul></div>
+</div>
+
+<div class="card"><h4>Meta 광고 운영 규칙 <span class="chip c-st">뷰티팀</span></h4>
+<p style="font-weight:700;font-size:13.5px;margin:4px 0">성과 판단</p>
+<ul>
+<li>Meta 표기 ROAS·전환값 불신 → <b>CPA + 네이버 실매출</b> 교차검증</li>
+<li>캠페인 평균 X → <b>세트 단위</b> 모니터링 · 예산 증액은 하루 <b>20~30%</b> 스텝업까지</li>
+</ul>
+<p style="font-weight:700;font-size:13.5px;margin:10px 0 4px">소재 제작 (새 타겟)</p>
+<ul>
+<li>새 타겟 소재 <b>총 10개 = 행사가 5개 + 기본(상시가) 5개</b></li>
+<li>소재 교체는 <b>피로도 높은 소재만 선별</b> — 전체 갈아엎기 금지 (학습 리셋)</li>
+</ul>
+<p style="font-weight:700;font-size:13.5px;margin:10px 0 4px">행사 시 운영 — 학습기간 보호</p>
+<ul>
+<li>행사 시 세트가 <b>머신러닝 학습기간에 재진입하지 않도록</b> ON/OFF 관리</li>
+<li>OFF 후 <b>7일 이내 재가동 필수</b> — 초과 시 학습 리셋 → 행사↔상시 전환은 7일 내에서만</li>
+<li>ON/OFF는 수동 X → <b>대시보드 예약 기능</b>으로 행사 시작/종료 시각 사전 예약</li>
+</ul>
+<p style="font-weight:700;font-size:13.5px;margin:10px 0 4px">중단 판단</p>
+<ul>
+<li>대시보드 <b>[중단검토]</b> 표시 세트는 OFF — 확인 즉시 처리, 판단 필요 시 보고 후</li>
+</ul></div>
+
+<div class="card"><h4>권한 범위</h4>
+<table>
+<tbody><tr><th>자율 (하고 나서 공유)</th><th>승인 필요 (하기 전에 보고)</th></tr>
+<tr><td>광고 입찰가 조정 (순위 유지 목적)</td><td>신규 캠페인 · 예산 증액 (20~30% 스텝 초과)</td></tr>
+<tr><td>최저가 이탈 직접 해결 (관리 가능 마켓)</td><td>가격·행사가 변경 전반</td></tr>
+<tr><td>기승인 소재 온오프</td><td>신규 소재 컨셉·카피 (금지어 점검 필수)</td></tr>
+<tr><td>조회·분석 전반</td><td>광고 세트 on/off·예산 변경 실행 — <b>"진행" 확인 후에만</b></td></tr>
+<tr><td>대행사 일정 조율·자료 전달</td><td>조건 변경 · 비용 발생 건</td></tr>
+</tbody></table></div>
+
+<div class="grid2">
+<div class="card"><h4>즉시 보고 — 판단하지 말 것</h4>
+<ul>
+<li>최저가 이탈인데 원인 불명 · 폐쇄몰 의심</li>
+<li>광고비 일 지출 급증</li>
+<li>2점 이하 리뷰 · CS 이슈성 문의</li>
+<li>재고 쇼트 임박 (현재고소진일 기준)</li>
+<li>계약·비용·법적 이슈 전부</li>
+</ul></div>
+<div class="card"><h4>보고 방식</h4>
+<ul>
+<li><b>일간</b>: 이상 없으면 생략 · 이상 시 당일 <b>팀장 1:1 웍스</b> — 스크린샷 + 원인 후보 + 조치/제안 한 줄</li>
+<li><b>주간</b>: 주간회의 전 담당 지표 추이 공유</li>
+<li><b>평가 연계</b>: 기획안 80% 이상 이행 + 유지 기준 달성률 반영</li>
+</ul>
+<p style="font-size:12.5px;color:#5a6472;margin-top:8px">담당 배분: 네이버 [&nbsp;&nbsp;] · 쿠팡 [&nbsp;&nbsp;] · 이베이/11번가 [&nbsp;&nbsp;] · 광고 [&nbsp;&nbsp;] · 재고/발주 [&nbsp;&nbsp;]</p></div>
+</div>
+</section>
+
+<!-- ════════ 1. 신제품 출시 ════════ -->
+<section id="launch">
+<h2><span class="no">01</span>신제품 출시 프로세스</h2>
+
+<div class="tl">
+  <div class="step"><div class="d">D-14</div><div class="t">포항 입고 · 예약판매 오픈</div>
+    <p>입고 확정 시 등록 준비 시작. 입고 후 2주간 예약판매로 초기 수요 확보.</p>
+    <ul><li>예약판매일: <b>입고일 전날까지</b> / 배송완료일: <b>입고 당일</b></li>
+    <li>입고가 예정보다 빠르면 판매 시작일 앞당겨 조정 가능</li></ul>
+  </div>
+  <div class="step"><div class="d">D-7</div><div class="t">등록 준비 완료</div>
+    <ul><li>HTML <b>공정위 파일 완성</b> — 이베이·11번가 동일 양식, 공유서버 저장</li>
+    <li><b>키워드 조사</b> → 조회수 상위 키워드로 <b>원부명 확정</b> (원부는 수정이 까다로우므로 초기에 신중히)</li>
+    <li>설명서 작성: <code>K:\03_패키지\1. 오아</code> 참조</li>
+    <li>전자기기: <b>KC 안전인증 + 방통 안전확인 신고증명서</b> 등록</li>
+    <li>원부 생성 시 <b>모델명이 확인되는 인증번호는 제외</b></li>
+    <li>상품정보고시: 소형가전 양식 통일 — <b>모델명/제조국/제조사 필수 기입</b>, HTML 등록 시 <code>&lt;br&gt;</code> 제거</li><li>신제품관련 배너제작&nbsp;</li></ul>
+  </div>
+  <div class="step"><div class="d">D-3 ~ D-1</div><div class="t">채널별 등록</div>
+    <p>네이버 → 이베이/11번가 → 카페24 → 사방넷 순으로 등록. 채널별 세부 규칙은 <a href="#channel">4장</a> 참조.</p>
+  </div>
+  <div class="step"><div class="d">D-1</div><div class="t">입고 전날</div>
+    <p><b>오후 3시 이후</b> 상품에 '내일배송' 딱지 부착.</p>
+  </div>
+  <div class="step hl"><div class="d">D-DAY</div><div class="t">입고 당일 — 필수 절차</div>
+    <ul><li>배송 &gt; 발송 &gt; 발송요청관리 &gt; <b>'발송요청' 버튼 클릭</b> (예약재고 처리)</li>
+    <li>입고 완료 시점에 <b>온라인영업 전략방 팀 공유</b></li></ul>
+  </div>
+  <div class="step"><div class="d">D+</div><div class="t">출시 직후 → 광고 · 특가 · 리뷰</div>
+    <p>아래 체크리스트 순서대로 진행.</p>
+  </div>
+</div>
+
+<h3>출시 직후 체크리스트</h3>
+<div class="card">
+<ul class="ck" data-ck="launch">
+  <li><input type="checkbox" id="k1"><label for="k1"><b>크루특가 시트 작성</b> (등록 즉시)</label></li>
+  <li><input type="checkbox" id="k2"><label for="k2"><b>시크릿특가 리스트 기재</b> (신제품 등록 시 무조건)</label></li>
+  <li><input type="checkbox" id="k3"><label for="k3">병은님에게 <b>대시보드 전달</b></label></li>
+  <li><input type="checkbox" id="k4"><label for="k4">상품형 / 브랜드형 광고 세팅 (<a href="#ads">5장</a>)</label></li>
+  <li><input type="checkbox" id="k5"><label for="k5">브랜드 커넥트 모집</label></li>
+  <li><input type="checkbox" id="k6"><label for="k6">신제품 할인 기간 <b>아침 시간으로 수정</b></label></li>
+  <li><input type="checkbox" id="k7"><label for="k7">전산 이미지 변경: 구매 → 품명 → 이미지만 체크 후 삭제 · 업로드는 <b>일일판매현황</b></label></li>
+  <li><input type="checkbox" id="k8"><label for="k8">리뷰 이벤트 세팅 (아래 규칙)</label></li>
+</ul>
+</div>
+
+<div class="grid2">
+<div class="card"><h4>리뷰 이벤트 규칙</h4>
+<ul><li>포토리뷰 작성 시 네이버포인트 <b>2,000원</b> (실지급 1,850원)</li>
+<li>종료 기준: <b>리뷰 약 30개 도달 시 지급 종료</b></li>
+<li>100자 이상 확인법: 엑셀 <code>=LEN(F2)</code></li></ul></div>
+<div class="card"><h4>추가구성 상품 <span class="chip c-nv">네이버 전용</span></h4>
+<ul><li>동일 제품을 '상품 불러오기'로 연결</li>
+<li><b>네이버에만 등록</b> — 타 채널 등록 금지</li></ul></div>
+</div>
+
+<div class="card"><h4>크루특가 구매 제한 (동일 채널 반복 진행 시)</h4>
+<table><tbody><tr><th>회차</th><th>1인 구매 제한</th></tr>
+<tr><td>1차</td><td><b>2개</b></td></tr>
+<tr><td>2·3차</td><td><b>3개</b></td></tr></tbody></table>
+<p style="font-size:13px;color:var(--sub)">구매 제한 없이 진행하면 구매 불가 사례 발생 가능 → 반드시 회차별 제한 적용.</p></div>
+</section>
+
+<!-- ════════ 2. 데일리 업무 ════════ -->
+<section id="daily">
+<h2><span class="no">02</span>데일리 업무</h2>
+
+<h3>오전 업무</h3>
+<div class="card"><h4>네이버 쇼핑 가격비교 확인 <span class="chip c-nv">네이버</span></h4><ul>
+<li>원부 매칭 대상: 오아스토어 · 11번가 · 옥션 · 지마켓 · 신세계몰 · SSG · 이마트몰 · 롯데온 · H몰 · GS샵 · 홈앤쇼핑 · 롯데홈쇼핑</li>
+<li>매칭 경로: 쇼핑파트너센터 → 브랜드 관리 → 카탈로그 관리 → 일반상품 조회 → <b>모바일 최저가순 정렬</b> → 처리내역 조회로 확인</li>
+<li>⚠️ 카탈로그는 추가 매칭만 가능, <b>매칭된 카탈로그 삭제 불가</b></li>
+<li>특정 사이트가 조회에 안 뜨면 → [비밀특가]/[G]특가 등 <b>상품 연동 코드 미등록</b> → 추가 연동 필요</li>
+</ul></div>
+
+<div class="card"><h4>최저가 이탈 시 대응</h4>
+<ul>
+<li>옥션·G마켓·11번가 등 관리 가능 오픈마켓: <b>메일로 해결&nbsp;</b></li>
+<li>원부매칭 사이트에 쿠폰·할인 부착: <b>온라인 전략방 공유</b></li>
+<li>쿠팡에 쿠폰·할인 부착: <b>온라인 전략방 공유 (10시 · 3시)</b> — 쿠팡은 크롤링되므로 쿠폰 붙은 마켓 먼저 해결 (확인 안 되면 폐쇄몰)</li>
+</ul></div>
+
+<div class="card"><h4>네이버 리뷰 확인 <span class="chip c-nv">네이버</span></h4>
+<ul>
+<li>별점 <b>2점 이하</b> 리뷰 확인</li>
+<li>상단 인기 제품에 한해 → 온라인영업 좋아요 작업방에 4·5점 리뷰 좋아요 요청 (3페이지까지)- 지금은안함&nbsp;</li>
+<li><b>단종 예정 상품은 요청 X</b> — 네이버웍스 재고 메일로 단종 예정 파악</li></ul></div><div class="grid2">
+<div class="card"><h4>판매관리 · 발송기한 초과 확인</h4>
+<ul><li>스마트스토어 / 11번가 / 이베이 대상</li>
+<li>사유: 선물하기 · 취소철회 · 배송문제 → 단순변심 취소는 자동 해결</li></ul></div>
+</div>
+
+<div class="grid2">
+<div class="card"><h4>쇼핑검색 키워드 확인</h4>
+<ul><li>통계 → 판매분석 → <b>검색채널</b>에서 키워드 확인</li>
+<li>행사 있을 때만 [상품성과] 확인</li></ul></div>
+<div class="card"><h4>카페24 주문건 <span class="chip c-cf">카페24</span></h4>
+<ul><li>배송준비중 → 주문처리 → 위탁주문 등록</li>
+<li>3시 이후 송장번호 → 배송송장번호 저장 → 배송중 처리</li>
+<li>민트 ERP: 영업 &gt; 주문 &gt; 위탁 주문 등록</li></ul></div>
+</div>
+
+<h3>오후 업무 (민트전산 4~5시)</h3>
+<div class="card">
+<ul><li><b>주문취합: 3:30 이후</b></li>
+<li>배송 → 발송 → 발송요청관리 → 부자재관리 → 재고 없을 경우 <b>사유 확인</b></li></ul>
+</div>
+</section>
+
+<!-- ════════ 3. 발주 & 재고 ════════ -->
+<section id="order">
+<h2><span class="no">03</span>발주 &amp; 재고 관리</h2>
+
+<div class="stop"><b>발주 프로세스 (변경 공지)</b> — 발주는 <b>화/목 당일 완결</b>. 부자재 요청은 월/수 (오후까지 가능). 월·수 재고 파일 도착 즉시 발주 필요 건 우선 확인 — 파일 지연·휴가 대비해 미리 체크.</div>
+
+<div class="card"><h4>발주 판단 기준</h4>
+<ul>
+<li>신청 요일: <b>월·수 / 화·목</b></li>
+<li>최소발주일 탭 → <b>1주 평균판매량</b> 기준 · 최소발주일 = <b>+20일</b>로 계산</li>
+<li>28일 평균과 1주 평균의 갭이 클 경우: 총매출 파일 발주계획탭 → ALL에서 제품명 검색 후 확인</li>
+<li>실재고 판단은 <b>쿠팡 제외</b>: (재고 + 생산중 개수) ÷ 평균 판매량 = 남은 개월수</li>
+<li>현재고소진일 <b>오름차순</b> 정렬 → 발주번호/예상 쇼트일 전달 · 입고일 타이트한 제품은 별도 전달</li>
+</ul></div>
+
+<div class="card"><h4>풀필먼트 N배송&nbsp;<br></h4>
+<ul>
+<li>매주 <b>월요일 발송 · 금요일 합산</b> (팀 발송분도 금요일 합산)</li>
+<li>계산식: <b>(적재수량 + 기존 아르고재고) ÷ 일평균 판매량 = 판매가능기간</b></li>
+<li>택배박스 여부: <b>오아팀 구글시트로 필수 확인</b></li>
+<li>카톤수량 과다 제품은 2주치만 택배 발송 → 김현유 팀장님에게 파일 + 메시지로 요청</li>
+<li>트럭 = 퀵 · <b>창고이동 시 수령 필수</b></li>
+</ul></div>
+<div class="card"><h4>네이버 풀필먼트N배송 재고 관리 <span class="chip c-nv">네이버</span></h4>
+<ul>
+<li><b>풀필먼트 재고 매일 확인 필수</b> — 옵션 단위 재고 체크</li>
+<li>⚠️ <b>옵션 하나라도 재고 없으면</b> 풀필먼트 N배송 → <b>판매자N배송으로 전환</b> (N배송에서는 옵션 하나만 수정 불가 — 예: 소닉플로우 베이지만 품절이어도 전체 전환)</li>
+<li>아르고 재고 조회: 재고 → 재고조회 → <b>SKU 기준</b> — 제품 옵션마다 SKU명으로 검색</li>
+</ul>
+
+<p style="font-weight:700;font-size:13.5px;margin-top:12px">① 품절 시 —&nbsp;<span style="letter-spacing: -0.15px; font-size: 15px;">풀필먼트 N배송</span><span style="letter-spacing: -0.01em;">&nbsp;→ 판매자N배송 전환</span></p>
+<ul>
+<li>풀필먼트 <b>'설정안함'</b>으로 변경</li>
+<li>재고수량 <b>99,999개</b> 재설정</li>
+<li>배송속성:&nbsp;<span style="font-size: 13.5px; font-weight: 700; letter-spacing: -0.135px;">판매자N배송</span>/ 판매자창고 / 묶음배송 가능 · 택배사 <b>우체국</b></li>
+<li>추가상품 <b>'설정함'</b> · 기본반품택배사 <b>우체국</b>으로 변경</li>
+<li>금액이 추가되는 옵션만 <b>'사용안함'</b> 표시 (전체 옵션 X) → 정상 운영 여부 체크</li>
+</ul>
+
+
+<p style="font-weight:700;font-size:13.5px;margin-top:14px">② 입고 후 — 판매자배송 → N배송 원복</p>
+<ul>
+<li>일반입고 → <b>입고완료일 체크</b> · 입고요청번호 확인 → 추가작업 있으면 이슈 확인, 없으면 정상입고</li>
+<li>상세페이지 내 배송:&nbsp;<span style="font-size: 13.5px; font-weight: 700; letter-spacing: -0.135px;">판매자N배송</span>&nbsp;→ <b>일반배송 또는 오늘출발</b> 선택 (다음 단계 진행 조건)</li>
+<li>풀필먼트 <b>'설정함'</b> → 배송속성 N배송 · 택배사 <b>우체국/한진 고정 (맨윗줄)</b></li>
+</ul>
+
+
+<p style="font-weight:700;font-size:13.5px;margin-top:14px">③ 상세페이지 표기 일치</p>
+<ul>
+<li>배송 방식과 상세페이지 표기를 항상 일치시킬 것 —<b style="letter-spacing: -0.15px;">우체국/한진 고정 (맨윗줄)</b></li>
+</ul>
+
+</div>
+
+
+<div class="card"><h4>부자재 요청 가이드</h4>
+<ul><li>기존 양식 X → <b>전산에 있는 상품명·수량으로 간략히</b> 요청</li>
+<li>리테일 / 카카오 / 색상 분류 제품은 <b>정확하게 구분</b>해서 요청</li></ul></div>
+
+<div class="card"><h4>단종 · 악성 재고</h4>
+<ul><li>단종 재고 네이버 단독 판매 시: 본품 옵션 + <b>추가구매건</b>까지 확인</li>
+<li>악성재고(총 판매일수 1년 초과 등): 부장님 요청 시 발송</li>
+<li>크롤링 금액 인하: 쿠팡 일일판매 공급가 확인 (상시가 갭) — <b>현재고는 공급가 조정 X, 추후 입고분부터 조정 가능</b></li>
+<li>쿠팡에서 잘 나가는 제품은 행사를 자주 안 하는 것이 유리</li></ul></div>
+</section>
+
+<!-- ════════ 4. 채널별 규칙 ════════ -->
+<section id="channel">
+<h2><span class="no">04</span>채널별 등록 · 운영 규칙</h2>
+
+<div class="card"><h4><span class="chip c-nv">네이버 스마트스토어</span> 등록</h4>
+<ul>
+<li>상세설명: <b>Smart Editor One</b> 사용 · 추가 옵션 상품 등록 후 상세설명에 포함</li>
+<li>⚠️ <b>카카오톡 관련 내용 노출 금지</b> (네이버 규정)</li>
+<li>신제품 할인: 기간 설정 X → <b>즉시 가격에서 할인</b></li>
+<li>부분취소 불가 → 전체취소 안내 → 제품에 맞는 포인트 지급으로 안내</li>
+<li>취소철회 시 사방넷 취소하지 않고 <b>개발팀 문의</b> (스마트스토어만) → 신전산 취소승인 여부 확인</li>
+</ul></div>
+
+<div class="card"><h4><span class="chip c-eb">이베이 · 11번가</span> 등록</h4>
+<ul>
+<li>이베이: 상품명 <b>앞의 '오아' 제거</b></li>
+<li>판매자 관리 코드: <b>6글자</b> · 마지막 글자 <b>N(네이버) / O(오픈마켓)</b></li>
+<li>관리 가격 ↔ 실제 판매가 구분 입력 (예: 등록 5,000원 / 실판매 6,000원)</li>
+<li>상표군: <b>소형 전자</b> · 동일 모델 출시년월 = 등록일 기준</li>
+<li>우체국 마감 <b>15:00</b> · 반품/교환 출고지 <b>포항</b> 확인</li>
+<li>묶음배송·배송비 그룹 설정 · 가격비교 사이트 등록 정보 입력</li>
+<li><b>기본 할인가로 등록</b> · 11번가 쿠폰 생성 시 → 11번가 MD 전달</li>
+<li>이베이 발송지연 건 → 정호경님</li>
+</ul></div>
+
+<div class="card"><h4><span class="chip c-cf">Cafe24 자사몰</span> 등록</h4>
+<ul>
+<li>자사몰·오아쇼핑몰 진열/판매 상태 설정</li>
+<li>검색어: 해시태그, <b>띄어쓰기 버전 포함</b> (#클린이워터 / #클린이 워터)</li>
+<li>가격: <b>공급가 0원</b> · 판매가 별도 입력 · 추가 구성 옵션 등록</li>
+<li>교환/반품 정보에 배송호스팅 등록 · 자사몰 설명서 등록 (상품복사→설명서)</li>
+<li>공구 취소건 확인: <code>F</code>로 취소부분 <code>1</code> 잡아서 확인 · 구매확정은 <code>0000</code> 표시</li>
+</ul></div>
+
+<div class="grid2">
+<div class="card"><h4><span class="chip c-sys">사방넷</span> (등록 전용)</h4>
+<ul><li>재고 수량 <b>최소 4자리 = 9,999개</b></li>
+<li>오타 수정: 상세페이지만 받아 HTML 링크 덮어쓰기</li>
+<li>사진 변경: 상세페이지 전체 수정 후 HTML 수정</li>
+<li>이미지 파일은 <b>6번부터 적용 가능</b></li></ul></div>
+<div class="card"><h4><span class="chip c-cp">쿠팡</span> 운영</h4>
+<ul><li>품절 시 입고요청: <b>전략방 / 개인웍스</b></li>
+<li><b>위너 미선정 시 확인 4가지</b>:
+<ul><li>수정 후 24시간 미경과</li><li>삭제·판매중지·블라인드 상태</li><li>중복 등록</li><li>타 업체 결합 → 최저가 아님</li></ul></li></ul></div>
+</div>
+</section>
+
+<!-- ════════ 5. 광고 관리 ════════ -->
+<section id="ads">
+<h2><span class="no">05</span>광고 관리</h2>
+
+<h3><span class="chip c-nv">네이버</span> 검색광고</h3>
+<div class="grid2">
+<div class="card"><h4>상품형 (쇼핑검색광고)</h4>
+<ul><li>메인 이름 <b>50자 이내</b> · 상품 1개만 광고</li>
+<li>키워드 임의 등록 불가 — <b>상품명이 노출 키워드 결정</b></li>
+<li>신제품 입찰가 <b>500원 시작</b> → 크루특가로 리뷰 쌓인 후 인상 검토</li>
+<li>소재등록 → 상품등록 → 입찰가 → <b>다음날 반드시 확인</b></li>
+<li>추가홍보문구: ① 모바일 ② PC</li>
+<li>제외키워드: 오아/오아스토어 — <b>과다 등록 시 품질지수 하락</b> (기본 품질지수 4)</li></ul></div>
+</div>
+
+<div class="grid2">
+<div class="card"><h4>브랜드형</h4>
+<ul><li>새 광고그룹 → 쇼핑몰(스마트스토어) 연결</li>
+<li>하루 예산 <b>3만~5만 원</b> (과금 방지)</li>
+<li>고급옵션 → 검색매체 → 네이버 및 검색포털</li>
+<li><b>노출제한매체 4개</b> 등록: 통합검색 PC/모바일 · 쇼핑 PC/모바일</li>
+<li>비용 급증 시 즉시 의심·점검</li>
+<li>광고그룹명 필수: 예) 오토셋(상품형)/오토셋(원부형)</li></ul></div>
+<div class="card"><h4>브랜드 검색 광고 · 브검페</h4>
+<ul><li>유사 제품군 그룹핑 → 키워드별 입찰가 개별 설정</li>
+<li>한 키워드 최대 5개 업체 노출 — <b>5등 안에만 들면 됨</b> · 키워드당 기본 300원</li>
+<li>브검페 계약: <b>90일(3개월) 단위</b> · 모바일_라이트 썸네일형</li>
+<li>기준조회수 = 키워드 조회수 — 30개 채워도 <b>기준조회수 초과 금지</b></li>
+<li>키워드/소재 등록 후 계약 신청 · 비즈머니 사용 시 <b>지출결의서 작성</b></li>
+<li>배너: 이미지형 리사이징 880×310 ~ 2000×2000 · 썸네일형(급할 때) 정사각형</li></ul></div>
+</div>
+
+<div class="card"><h4>신제품 검색광고 (NOSP)</h4>
+<ul>
+<li>자격: <b>출시 6개월 이내</b> · 제조일자 = 출시 연월 일치 · <b>출시일자 변경 금지</b></li>
+<li>모바일 통합검색만 노출 (PC X) · 검수기간 7일 — 기간 내 상세페이지 하단 첨부</li>
+<li>입찰: <b>D-2 신청</b> · 최저입찰가 = 2구좌 기준 (2명 입찰 시 최저 20만 원)</li>
+<li>소재: 메인 텍스트는 상세페이지에 있어야 하고 검수 후 삭제 · <b>문어체만</b> (구어체 금지) · 사진 노출 순서 고정</li>
+<li>제작 완료 → W 신제품 광고방에 가이드 + 사진 3장 순서대로 업로드 → 파일 압축 발송</li>
+<li>리뉴얼 진행 시: 리뉴얼배너 필수 + 상품정보고시 출시일자 수정 + 수치 증빙 배너 포함</li>
+<li>진행 중 소재 변경: 캠페인 → 오아 → 소재 클릭 → 문구·사진 변경 → <b>이전 소재 OFF / 신규 ON</b> (검토 평균 3시간)</li>
+</ul></div>
+
+<h3><span class="chip c-cp">쿠팡</span> · <span class="chip c-eb">이베이 · 11번가</span> 광고</h3>
+<div class="grid2">
+<div class="card"><h4>쿠팡 광고</h4>
+<ul><li>기존 광고 <b>OFF</b> 후 신규 세팅</li>
+<li>키워드 <b>수동 등록</b> → 수동상품설정 → 권장가 초과 시에만 등록 가능</li>
+<li>자동 운영: 일예산 <b>5만 원</b> · 목표광고수익률 <b>800</b></li>
+<li>광고 확인 시 <b>위너 선정 여부</b> 함께 확인</li></ul></div>
+<div class="card"><h4>이베이 파워클릭 / 키워드</h4>
+<ul><li>키워드(노출보장형): 조회 → 현재 모바일만 진행</li>
+<li>키워드는 메인·연관만 (무선 제품에 유선 등록 X)</li>
+<li><b>대량등록 엑셀 가이드로 등록</b> · 최소입찰 4개 · 최소비용 낙찰</li>
+<li>파워클릭 첫 등록: <b>키워드 연동매체 X · 키워드 검색결과 페이지만 체크</b> (중요)</li>
+<li>새 그룹은 키워드 <b>2개만</b> (초과 시 검수 지연 → 광고비 과다 위험) · 최소비용 90원</li>
+<li>희망순위 15위 내 · 리포트로 전월 대비 효율 비교 · G=A 동일 개수 확인</li></ul></div>
+</div>
+
+<div class="card"><h4>11번가 포커스클릭 (CPC)</h4>
+<ul><li>한 제품당 <b>수동그룹 + 자동그룹 2개</b> 등록</li>
+<li>수동그룹: 키워드별 클릭 비용 개별 설정 / 자동그룹: 키워드 설정 불가, 자동 노출</li>
+<li>매월 말일 광고 집행 상품 점검 · 일부 제품은 플러스만 진행</li></ul></div>
+
+<div class="card"><h4>광고 효율 점검 공통</h4>
+<ul><li>네이버 광고어드민에서 확인 — 전환매출액 ÷ 전환수 계산 시 <b>판매 금액이 맞는지 확인</b></li>
+<li>광고비 = 전환매출액 수준으로 금액 차이 클 때: <b>전환키워드 · 원부환경 확인</b></li>
+<li>광고수익률 동일 + 판매량 동일하면 → <b>제외 키워드 넣은 쪽이 우수</b></li></ul></div>
+
+<div class="card archive"><h4>이베이 리스팅광고 · 추천상품 입찰 · 원쁠딜</h4>
+<p style="font-size:13.5px;color:var(--sub)">종료된 정책 — 재개 시 노션 아카이브 참조. (리스팅광고 30일 VAT포함 13,200원 · 추천상품 5:15 입찰 · 원쁠딜 금요일 제안 등)</p></div>
+</section>
+
+<!-- ════════ 6. 스토어 관리 ════════ -->
+<section id="store">
+<h2><span class="no">06</span>스토어 관리 <span class="chip c-nv">스마트스토어</span></h2>
+
+<div class="grid2">
+<div class="card"><h4>제품 옵션 이벤트가 설정</h4>
+<ul><li>2개 이상 상품코드는 <b>EV로 시작</b> (민트전산 확인)</li>
+<li>옵션 제목에 <b>"2개 이상" · "개" 단어 사용 금지</b> → "1+1"만 가능</li>
+<li>재고 수량 <b>99,999개</b> 고정</li>
+<li>옵션 가격 = 이벤트가 − 원가</li></ul></div>
+<div class="card"><h4>원부 상세페이지 금지 항목</h4>
+<ul><li>별도 구매상품 · 타사 비교 · 이벤트 · 할인상품 · <b>QnA 삽입 금지</b></li>
+<li>상세이미지 교체 시 QnA 붙어 있으면 안 됨 — 바탕화면 복사 후 잘라서 사용</li>
+<li>변경 완료 시 상세이미지·상품정보고시 원복 + 호스팅 덮어쓰기</li></ul></div>
+</div>
+
+<div class="grid2">
+<div class="card"><h4>블로그 리뷰 매칭</h4>
+<ul><li><b>스토어</b>: 관리자 → 문의/리뷰 관리 → 블로그 글 노출 설정</li>
+<li><b>가격비교</b>: 쇼핑파트너센터 → 브랜드 관리 → 카탈로그 조회 → 카탈로그 번호 → 블로그 컨텐츠 조회 → 브랜드커넥트 진행 글 매칭 요청</li></ul></div>
+<div class="card"><h4>시크릿특가 · 라운지쿠폰 · 전체특가</h4>
+<ul><li>오아팀 구글시트 이벤트란 확인 · 가격 원복 시 옵션·사진 삽입</li>
+<li>라운지 쿠폰 셋팅 필수: <code>K:\02_프로모션\...\라운지가입쿠폰</code></li>
+<li>전체특가 판매가 = 로스비용 최저가 기준 (쿠팡 최저가·광고비 조정 연동)</li>
+<li>시크릿특가 → 네이버 <b>확장소재 등록</b> (상품형 상세보기 연결 · 최대 2개)</li></ul></div>
+</div>
+
+<div class="card"><h4>크루특가 운영 (하루 2회)</h4>
+<table>
+<tbody><tr><th>구분</th><th>1회차</th><th>2회차</th></tr>
+<tr><td>진행 시간</td><td>오전 11시</td><td>오후 3시</td></tr>
+<tr><td>사전 세팅</td><td>10:58 (2분 전)</td><td>14:58 (2분 전)</td></tr>
+<tr><td>설정 복구</td><td>12시</td><td>진행 1시간 후</td></tr>
+</tbody></table>
+<ul><li>옵션: 재고 <b>100개</b> · 1인 최대 <b>2개(1차) / 3개(2차~)</b></li>
+<li>판매 완료 후 수량 확인 — 하루 지나도 결과 미작성 시 <b>병은님에게 연락</b></li></ul></div>
+
+<div class="grid2">
+<div class="card"><h4>할인 설정 순서</h4>
+<ul><li>① <b>기본 할인</b> = 메인 할인 (전 구매자 적용)</li>
+<li>② <b>예약 할인</b> = 추가 할인로 입력 — 기본 할인과 중복 적용</li></ul></div>
+<div class="card"><h4>전시 · 연관상품</h4>
+<ul><li>카테고리&amp;메뉴에서 전시 순위·제품 수정 · 전시 카테고리 이미지는 <b>모바일·PC 둘 다</b> 수정</li>
+<li>연관상품 불가 사유: 소카테고리 상이 · 옵션 설정됨 · 추가구성 있음 (<b>민트전산 상품코드 확인 필수</b>)</li>
+<li>공지사항 배너: 기간 2017년~로 설정 후 최하단 이벤트 배너에서 수정</li></ul></div>
+</div>
+</section>
+
+<!-- ════════ 7. 월간 업무 ════════ -->
+<section id="monthly">
+<h2><span class="no">07</span>월간 업무</h2>
+
+<h3>매달 말일</h3>
+<div class="card">
+<ul>
+<li><b>아이템스카우트 키워드 순위 확인</b> → 오아팀 구글시트 [원부환경] 기록</li>
+<li>가격비교 미노출 시: 아이템스카우트에서도 안 뜨면 해당 가격대 설정 검색 → 그래도 없으면 <b>X 표시</b></li>
+<li>구글시트 리스팅 광고 확인: "0" = 3개 사이트 모두 진행 / 공란 = 미진행</li>
+<li><code>Y:\영업지원팀(커머스1)\★대시보드★</code> 자료 열람 · 영업팀 총매출 바탕화면 복사 후 열람 · 업체별 비교 폴더 확인</li>
+<li>11번가 광고 집행 상품 점검</li>
+</ul></div>
+
+<h3>매달 월초 — 오아시트 KPI 총매출 작성</h3>
+<div class="card">
+<table>
+<tbody><tr><th>항목</th><th>출처</th></tr>
+<tr><td>전체매출</td><td>총매출 파일 → 총합계</td></tr>
+<tr><td>재고</td><td>재고 파일 → 총재고금액 (재고 파일은 월/수 수신)</td></tr>
+<tr><td>네이버매출</td><td>총매출 파일 → 커머스 → 네이버 선택</td></tr>
+<tr><td>네이버광고비</td><td>CPC + 브랜드형 + AD부스터 — CPC 파일에서 브랜드 제외 · 브랜드형은 네이버 직접 다운로드 후 필터(18개)</td></tr>
+<tr><td>전환매출</td><td>CPC 전환매출 + 브랜드형 전환매출 + AD부스터 구매완료 전환매출액</td></tr>
+<tr><td>네이버 키워드</td><td>말일~월초 작성된 오아팀시트 키워드</td></tr>
+<tr><td>광고비 (오아&amp;보아르)</td><td><b>메타광고까지만 작성</b> · 지마켓&amp;옥션 AI 비용은 사이트 내 광고 항목별 리포트</td></tr>
+<tr><td>마케팅비용</td><td>PPL 사용 비용 (광고비·키링 제작비 등)</td></tr>
+<tr><td>오아팀샘플</td><td>시딩 비용 (개수/원가/택배비 — 파일 확인)</td></tr>
+</tbody></table></div>
+</section>
+
+<!-- ════════ 8. 전산 가이드 ════════ -->
+<section id="erp">
+<h2><span class="no">08</span>전산 가이드 <span class="chip c-sys">ERP</span></h2><div class="grid2">
+<div class="card"><h4>민트색 전산 — 자주 보는 탭</h4>
+<ul><li><b>구매</b>: 제품(원가 확인 — 구글시트 마진계산기와 대조) · 매입(구매진행탭 = 발주 스케줄, 정확한 건 구글시트 입고일정)</li>
+<li><b>영업</b>: 상품 — ★상품코드(배송코드) · 판매가·행사가 확인</li></ul></div>
+</div>
+
+<div class="card"><h4>샘플 발송 요청법 (체험단·인플루언서 등)</h4>
+<pre>민트색전산 → 영업 &gt; 주문 &gt; 배송주문 &gt; 등록(우상단)
+① 배송지정보: 주소·이름·연락처·우편번호
+② 송장정보 "추가": 발송 제품 검색 + 수량
+③ 메모 "추가": 발송 사유 (예: 인플루언서 ○○ 협찬)
+④ 등록 → 팀장 승인 요청</pre>
+<ul><li>브랜드커넥트 택배건: 발송요청 → <b>팀장님 승인 필요</b> · 선정 시 <b>3시 이전 발송</b>되도록 선정일 3시 전 전산 입력</li></ul></div>
+
+<div class="card"><h4>발주 수정 (발주 완결 후 제품 제외)</h4>
+<pre>전자결재 동일 번호로 등록 → 승인 전 → ERP 발주관리에서 수정 → NEWERP 반영 확인</pre></div>
+</section>
+
+<!-- ════════ 9. 행사 & 프로모션 ════════ -->
+<section id="promo">
+<h2><span class="no">09</span>행사 &amp; 프로모션</h2>
+
+<div class="card"><h4>행사 제안 기준</h4>
+<ul>
+<li>마진율 기본 <b>30%</b> · 과재고일 경우에만 <b>20%</b></li>
+<li>11번가 행사효율: 마진계산기 수식 사용 — 구글탭 수수료는 3~4%여도 <b>부가세 포함 14%로 기입</b></li>
+<li>2개 이상 제품 행사: 수수료·마진은 <b>대표상품 기준</b> 기입 · 초록탭 수식 직접 수정 계산</li>
+</ul></div>
+
+<div class="card"><h4>오늘끝딜 <span class="chip c-nv">네이버</span></h4>
+<ul>
+<li>목표 GMV <b>1,000만 원 초과</b>로 작성</li>
+<li>총매출 파일에서 일평균 판매수 확인 · 네이버 2주 GMV = 판매분석 상품성과 2주치 다운로드 → 결제금액 필터</li>
+<li>카탈로그 아닌 건 상품링크 사용</li>
+<li>세팅 후 <code>dl_todaydeal_cp@navercorp.com</code>으로 연락</li>
+</ul></div>
+
+<div class="card"><h4>11번가 타임딜 <span class="chip c-eb">11번가</span></h4>
+<ul>
+<li>상품관리 → 수정 → <b>행사배너 먼저 세팅</b> → 상품그룹(이미용) → 그룹 빼고 따로 세팅 → 그룹등록 "날짜 타임딜_제품명" → 상품연결 → 상품추가</li>
+<li>연락처·비고: "수수료율 조정 부탁드립니다" 기재 · 근거 URL = 스마트스토어 링크</li>
+<li>CPC 사전 세팅: 입찰가 AI 220~ · 일예산 <b>10~15만 원</b> · 요일·시간 <b>행사기간에만</b> · 노출매체 11번가 내부 · 키워드 4~5개</li>
+<li><b>검수 전 기존 광고 OFF</b> · 모든 세팅 후 상세페이지 이벤트 제거</li>
+<li>종료 후: 판매중지 X → <b>기존 상품 정보 원복</b></li>
+</ul></div>
+
+<div class="card"><h4>공동구매 관리</h4>
+<ul>
+<li>진행 채널: <b>자사몰 전용</b> · 관련 사항 메일로 사전 고지</li>
+<li>샘플: 미진행 시 <b>수거 조건</b>으로 발송</li>
+<li>정산: 사업자는 기존대로 / 프리랜서는 <b>3.3% 공제</b> (1원 단위 절삭)</li>
+<li>시작 최소 10일 전 <b>최저가 확인</b> · 기간 중 매일 퇴근 전 판매수·주문건·송장 발송</li>
+<li>종료 2주 후 정산서 발송 → 확인 후 세금계산서 발행 요청 (말일 발행이면 최소 10일 전 요청)<br>
+<span style="color:var(--sub);font-size:13px">예) 6월초 공구 → 6월말 정산서 → 7/8 발행요청 (발행일 6/30)</span></li>
+</ul></div>
+</section>
+
+<!-- ════════ 10. 변경 관리 ════════ -->
+<section id="change">
+<h2><span class="no">10</span>변경 관리</h2>
+
+<div class="card"><h4>원부명 변경 시 연쇄 체크</h4>
+<ul class="ck" data-ck="rename">
+<li><input type="checkbox" id="r1"><label for="r1">네이버톡톡 (원부형) 변경</label></li>
+<li><input type="checkbox" id="r2"><label for="r2"><b>패키지도 함께 변경</b></label></li>
+<li><input type="checkbox" id="r3"><label for="r3">상세이미지 · 상품정보고시 원복</label></li>
+<li><input type="checkbox" id="r4"><label for="r4">호스팅 덮어쓰기</label></li>
+</ul></div>
+
+<div class="card"><h4>호스팅 전체 변경 절차</h4>
+<ul>
+<li>① 이베이·11번가·사방넷에서 이미지/HTML 호스팅 변경 — <b>HTML만인지 이미지 포함인지 먼저 확인</b></li>
+<li>② 원부(카테고리)도 함께 변경 확인</li>
+<li>③ 오아이미용/구강 단톡방에 완료 안내</li>
+<li>④ 공정위 파일 = 공유서버 저장 (규정 준수 확인 후 업로드)</li>
+<li>⚠️ 오픈마켓은 이미지 직접 변경 금지 — <b>HTML 태그로 이미지 링크만 업데이트</b></li>
+<li>이미지 변경 시 <b>F11</b> → 호스팅 주소 확인 후 수정 · 상세페이지 프로모션은 이베이 이미지호스팅</li>
+<li>배송공지/공지사항 코드: 리뉴얼 코드(<code>ai..</code> 시작) 복사해 기존 코드 대체</li>
+</ul></div>
+
+<div class="card"><h4>바코드 · 모델명 변경 공유 양식</h4>
+<pre>[바코드 &amp; 모델명 변경건]
+대상: (제품명-컬러 · 해당 컬러만인지 명시)
+적용 시점: (예: 내일 입고분부터)
+변경 바코드: 88XXXXXXXXXXX
+변경 모델명: (기존 모델명 + 변경점)
+※ 바코드가 중요한 거래처에 공유 필수</pre></div>
+
+<div class="card"><h4>이베이 HTML 상세 변경 (이미지 호스팅)</h4>
+<ul><li>이베이 상품관리 로그인 → 이미지 호스팅 메뉴 → 링크 순서대로 파일 확인 → 필요한 이미지만 선택 → <b>HTML 태그 복사</b>해 상품 설명에 사용</li></ul></div>
+</section>
+
+<!-- ════════ 11. 소통 & 양식 ════════ -->
+<section id="comm">
+<h2><span class="no">11</span>소통 &amp; 양식</h2>
+
+<div class="grid2">
+<div class="card"><h4>품의서 · 기획안 규칙</h4>
+<ul><li>품의서 합의자: <b>이준원</b> / 참조: 송지원 이신우 이지영 이정우 김승용 전상준</li>
+<li>기획안 결제일 지정: <b>계약금 계약서 작성 전날</b> (주말이면 전주 평일)</li>
+<li>마케팅명 형식: 오아_제품명 (예: 오아_클린이퓨어B) · 단가 = 원가 + 택배비 · 목표수량 X</li>
+<li>시딩 후: 마케팅 SNS관리 → 인스타 아이디 검색 → 게시글 링크 변경 → 저장/승인 (송지원)</li></ul></div>
+<div class="card"><h4>브랜드 커넥트 키워드 챌린지</h4>
+<ul><li>요청 전 직접 검색해 <b>적용 가능 키워드인지 확인</b></li>
+<li>구성: "휴대용" "전기" 등 속성 + 상품명</li>
+<li>카테고리 주의: 예) [전동면도기]는 <b>리빙</b> 카테고리 — 크리에이터 활동 주제를 IT/테크로만 한정하면 리빙 크리에이터 신청 불가</li></ul></div>
+</div>
+<h3>상세기획안 작성 가이드 <span class="chip c-st">뷰티팀</span></h3>
+<div class="card"><h4>기획안 원본 위치</h4>
+<ul>
+<li>피그마 슬라이드: <a href="https://www.figma.com/slides/FrFw1cLuSagJ72RbIZLXF1/%EC%A0%9C%EB%AA%A9-%EC%97%86%EC%9D%8C?t=Van34xQejJZCEBdO-6" target="_blank">오아 에어스트레이트 상세 기획안 (Figma)</a></li>
+<li>표준 템플릿 기준: 에어스트레이트 기획안 (30슬라이드) — 신규 기획안 작성 시 아래 구성 흐름 준용</li>
+</ul></div>
+
+<div class="card"><h4>표준 구성 흐름 (에어스트레이트 기준)</h4>
+<table>
+<tbody><tr><th>블록</th><th>내용</th></tr>
+<tr><td>① 후킹</td><td>핵심 사용성 한 줄 — "닫으면 드라이기, 열면 고데기" (듀얼모드)</td></tr>
+<tr><td>② 브랜드 기술</td><td>TriCare Technology (적외선·음이온·듀오히트 3중 케어) + 감성 카피</td></tr>
+<tr><td>③ 차별화 비교</td><td>일반 고데기 대비 비교표 — "겉만 펴는 열 vs 모발 속까지 닿는 적외선"</td></tr>
+<tr><td>④ 기능 넘버링</td><td>픽토그램 요약 → 1 글로우 레이어 코팅 플레이트 · 2 97,000 RPM 직진풍 · 3 듀얼히트 · 4 적외선 케어 · 5 음이온 케어 (+풍속·온도 모드)</td></tr>
+<tr><td>⑤ 사용 가이드</td><td>모드별 Styling Tip — 드라이/뿌리볼륨/스트레이트/C컬</td></tr>
+<tr><td>⑥ 안전·관리</td><td>자동 대기모드 · NTC 과열 차단 · 자동 필터 청소(역방향 바람 + 탈착 물세척)</td></tr>
+<tr><td>⑦ 마무리</td><td>컬러 옵션 → KC 인증 → 구성품 → 제품정보 → 레퍼런스 톤</td></tr>
+</tbody></table></div>
+
+<div class="grid2">
+<div class="card"><h4>확정 네이밍 프레임워크</h4>
+<ul>
+<li>기술 통칭: <b>TriCare Technology</b> (쓰리케어)</li>
+<li>코팅: <b>글로우 레이어 코팅</b> · 표면: <b>글로우 텍스처</b></li>
+<li>플레이트: <b>무빙 플렉스 설계</b> (실제 플레이트 유동 여부 확인 후 사용)</li>
+<li>모드: <b>2-in-1 모드</b> (열판 OFF 선택)</li>
+<li>주요 수치: 97,000 RPM BLDC · 7.0 m/s · 음이온 500만/cm³ · 풍속 3단 · 온도 4단(60·80·100·140℃)+냉풍</li>
+</ul></div>
+<div class="card"><h4>카피 컴플라이언스</h4>
+<ul>
+<li><b>금지어</b>: 입증 · 안전한 · 재생 · 치료 · 침투 · 보호 · 방지 · 유일 · 최초 · 국내없다</li>
+<li><b>권장 표현</b>: 설계 · 돕는 · ~처럼 · 줄여주는 · 부담↓ · 케어 · 흔치 않은</li>
+<li>"테프론" 사용 불가 (Chemours 라이선스 필요) · "나노 패브릭"은 경쟁사 시그니처 용어 — 금지</li>
+<li>"국내 유일/한국에 없다" 금지 → "일반 고데기엔 흔치 않은 / 적외선까지 더한"으로</li>
+<li>경쟁사 제품 이미지 사용 금지 — 전 비주얼 OA 제품 재촬영</li>
+<li>효과 표현에는 개인차 고지 병기: "모발 상태 및 사용 환경에 따라 개인차가 있을 수 있습니다"</li>
+</ul></div>
+</div>
+
+<div class="note"><b>현재 기획안 검수 포인트</b> — 초안에 금지어가 일부 포함되어 있음: "수분<b>보호</b>케어"(슬라이드 10), "머리뜯김<b>방지</b>"(9), "정전기 <b>방지</b>"(18). 권장 치환 예: 수분보호케어 → <b>수분 케어</b>, 머리뜯김 방지 → <b>머리뜯김 부담↓</b> 또는 <b>뜯김 줄이는 설계</b>, 정전기 방지 → <b>정전기 케어</b> / <b>날림 없이</b>. 등록 전 전체 카피 금지어 일괄 점검 필요.</div>
+
+
+<div class="card"><h4>행사 일정 공유 메일 양식</h4>
+<pre>받는사람: 채널1팀 / 영업팀(커머스2) / 쿠팡팀 / 고객지원본부 / 채널2팀
+참조: 온라인영업팀 / 최우진
+
+제목: [온라인 영업팀] 행사 일정 공유의 건 (행사명-제품명)
+
+안녕하세요, 온라인 영업팀 ○○○입니다.
+행사 일정 확정되어 공유드리니 업무에 참고 부탁드립니다.
+
+● 행사명 (예: 네이버 원쁠딜)
+ · 일정: MM/DD HH:00 ~ MM/DD HH:59
+ · 제품: ○○○
+ · 행사가 ○○,○○○원 + NPAY 지급 ○,○○○원
+
+감사합니다.</pre></div>
+
+<div class="card"><h4>발주·생산 급건 요청 문구 예시</h4>
+<pre>발주번호 XXXXXXXXX
+생산완료 여부 확인 요청드리며, 빠른 입고가 필요하여
+인스펙션 및 물류 스케줄 빠르게 잡아주시기 바랍니다.
+스케줄 나오는 대로 공유 부탁드립니다.</pre>
+<p style="font-size:13px;color:var(--sub)">배선사 스케줄 공유 시 M/V · CLS · ETD · ETA · 포항 예상 입고일 형식 유지.</p></div>
+
+<div class="note"><b>보안 안내</b> — 기존 노션 원본에 광고 계정 로그인 정보가 평문 기재되어 있었습니다. 본 가이드에서는 제외했으며, 원본에서도 삭제 후 팀 비밀번호 관리 도구로 이관을 권장합니다. 고객 개인정보가 포함된 CS 예시 역시 실명·연락처를 제거한 형태로만 보관하세요.</div>
+</section>
+
+<!-- ════════ 12. 데이터 & 자동화 ════════ -->
+<section id="data">
+<h2><span class="no">12</span>데이터 &amp; 자동화 <span class="chip c-sys">DB · MCP</span></h2>
+
+<h3>OA MySQL — 판매 데이터 조회</h3>
+<div class="card"><h4>핵심 뷰: <code>v_daily_sales_detail</code></h4>
+<ul>
+<li>주요 컬럼: <code>판매날짜</code> <code>품목명</code> <code>제품명</code> <code>브랜드명</code> <code>매출처명</code> <code>판매수량</code> <code>총매출액</code> <code>총매출이익</code></li>
+<li>제품명은 <b>전산 등록명 기준</b>으로 매칭: 소닉플로우 → <code>오아소닉플로우</code> · 에어리소닉 → <code>오아에어리소닉드라이기</code> · 에어리미니 → <code>오아에어리미니</code></li>
+<li>애매할 땐 <code>LIKE '%소닉플로우%'</code> 식 fuzzy 매칭으로 먼저 등록명 확인</li>
+</ul>
+<pre>-- 월별 판매 추이 (표준 집계 패턴)
+SELECT DATE_FORMAT(판매날짜,'%Y-%m') AS 월, 품목명,
+       SUM(판매수량) AS 판매수량, SUM(총매출액) AS 매출액
+FROM v_daily_sales_detail
+WHERE 품목명 IN ('오아소닉플로우','오아에어리소닉드라이기','오아에어리미니')
+GROUP BY 월, 품목명 ORDER BY 월;
+
+-- 채널 3분류 (스마트스토어 / 쿠팡 / 기타)
+CASE WHEN 매출처명='스마트스토어' THEN '스마트스토어'
+     WHEN 매출처명='쿠팡' THEN '쿠팡' ELSE '기타' END</pre></div>
+
+<div class="card"><h4>신제품 출시 추적 뷰</h4>
+<table>
+<tbody><tr><th>뷰</th><th>용도</th></tr>
+<tr><td><code>v_new_product_article</code> → <code>_ready</code> → <code>_purchase</code></td><td>신제품 품목 등록 → 준비 → 발주 단계 (구매가·최소발주수량·소요기간 포함)</td></tr>
+<tr><td><code>v_new_product_launch</code></td><td><b>첫판매일자</b> 기록 — 출시일 기준점 · NOSP 6개월 자격 판단에도 활용</td></tr>
+<tr><td><code>v_daily_sales_detail</code></td><td>출시 후 일별 판매 추적</td></tr>
+</tbody></table></div>
+
+<div class="card"><h4>판매 대시보드 리포팅 기준</h4>
+<ul>
+<li>월별 <b>판매수량·매출액 추이</b> + <b>전월 대비 증감률</b>을 제품별로 표기</li>
+<li>채널 구성은 스마트스토어/쿠팡/기타 3분류 — 주력 3종 모두 스토어+쿠팡이 <b>70~80%</b> 수준이 정상 범위</li>
+<li>진행 중인 달은 부분 데이터이므로 추이 비교에서 제외 (마지막 완결 월까지만)</li>
+</ul></div>
+
+<h3>Meta 광고 — 성과 판단 원칙 <span class="chip c-cp">CPAS</span></h3>
+<div class="card">
+<ul>
+<li>뷰티팀 Meta 캠페인은 전부 <b>CPAS(네이버 협력광고)</b> — 전환 추적은 네이버-Meta 카탈로그 연동으로 동작하며 픽셀은 무관</li>
+<li>⚠️ <b>Meta 표기 ROAS·전환값은 신뢰하지 않음</b> — 성과 판단은 <b>CPA(구매당 비용) + 네이버 실매출</b> 교차 검증으로</li>
+<li>세트별 CPA 편차가 크므로(수천 원~2만 원+) 캠페인 평균이 아닌 <b>세트 단위</b>로 모니터링</li>
+<li>예산 운용: ABO 유지(직접 제어·스케일업) · 증액은 <b>하루 최대 20~30% 스텝업</b></li>
+</ul>
+<div class="stop"><b>실행 규칙</b> — 광고 세트 on/off·예산 변경 등 모든 실행은 담당자의 명시적 <b>"진행"</b> 확인 후에만. 조회·분석은 자유. 소재 수량·학습기간 보호·[중단검토] 처리 등 세부 운영 규칙은 <a href="#std">0장 업무 기준</a> 참조.</div></div>
+
+<h3>Claude 연동 (MCP)</h3>
+<div class="card"><h4>연결 구성</h4>
+<ul>
+<li><b>claude.ai</b>: 설정 → 커넥터에 OA MySQL·Meta 광고 MCP 등록 → 대화에서 바로 판매 조회·광고 분석 가능</li>
+<li><b>Claude Code</b>: 원격 HTTP MCP는 명령 한 줄로 추가</li>
+</ul>
+<pre># 원격 MCP 추가 (URL은 claude.ai 커넥터 설정의 값 사용)
+claude mcp add --transport http meta-ads &lt;MCP_URL&gt; --scope user
+
+claude mcp list        # 등록 확인
+/mcp                   # 세션 내 OAuth 인증</pre>
+<ul>
+<li>스코프: <code>local</code>(기본·이 프로젝트만) / <code>project</code>(팀 공유 .mcp.json) / <code>user</code>(내 전체 프로젝트)</li>
+<li>⚠️ 토큰·자격증명은 <b>채팅·커밋 파일에 평문 금지</b> — 환경변수로 전달</li>
+</ul></div>
+
+<h3>제품 등급 판정 프레임워크</h3>
+<div class="card"><h4>등급 × 채널 매트릭스 — "우수"의 정의</h4>
+<table>
+<tbody><tr><th>등급</th><th><span class="chip c-nv">네이버</span></th><th><span class="chip c-cp">쿠팡</span></th><th><span class="chip c-cf">자사몰</span></th><th><span class="chip c-eb">이베이·11번가</span></th></tr>
+<tr><td><b>S급 (주력)</b><br><span style="font-size:12px;color:#5a6472">무조건 유지 — 하루라도 깨지면 이슈 · 일일 점검</span></td>
+<td>원부 순위·최저가·리뷰 무결점 유지</td>
+<td>위너 사수 + N배송 무결점 (판정은 <b>출고 파일</b> 기준)</td>
+<td>가격 원복·재고 정상</td>
+<td>최저가 연동·행사 시 마진 30% 사수</td></tr>
+<tr><td><b>신제품 (출시 6개월)</b><br><span style="font-size:12px;color:#5a6472">절대 매출 X, 성장 지표 — 주간 점검</span></td>
+<td>리뷰 30개 도달 속도 · 원부 노출 확보</td>
+<td>위너 선정 + 로켓 입고 안착</td>
+<td>등록·설명서 완비</td>
+<td>주차별 판매 증가율 우상향</td></tr>
+<tr><td><b>일반 (롱테일)</b><br><span style="font-size:12px;color:#5a6472">품절·대형 이탈만 없으면 OK — 주 1~2회</span></td>
+<td>최저가 대형 이탈 없음</td>
+<td>품절 없음 (판매가능일수 20일+)</td>
+<td>판매 상태 유지</td>
+<td>행사 제안 시 마진계산기 기준 충족</td></tr>
+<tr><td><b>악성/단종</b><br><span style="font-size:12px;color:#5a6472">기준 반전: 빨리 소진이 우수 — 월간</span></td>
+<td colspan="4">마진 20% 허용 · 소진 속도가 유일한 지표 · 본품 소진 완료 시 잔여 소모품 처분(떨이/폐기 품의)까지가 종결</td></tr>
+</tbody></table>
+<p style="font-size:12.5px;color:#5a6472">⚠ 쿠팡 주간 판정은 DB 매출이 아닌 <b>일일판매 파일(출고 기준)</b>으로 — DB는 정산 시차로 가짜 0이 발생함 (2026-07 검증)</p></div><div class="card"><h4>S급 순위 · 광고비 규칙</h4>
+<ul>
+<li><b>전 사이트 검색 순위 무조건 5위 이내 유지</b> (네이버·쿠팡·이베이·11번가) — 이탈 = 당일 이슈 보고</li>
+<li>순위 판단에 따른 광고비는 <b>원가 대비 비율</b>로 계산: 일 광고비 상한 = 일평균 판매량 × 원가 × 광고비율</li>
+<li>기본 광고비율 <b>10%</b> (가안) · 5위 밖 이탈 시 한시 <b>15%</b>까지 증액 허용 · 1~3위 안정 시 <b>5~7%</b>로 절감</li>
+<li><b>사이트별 판매량 체크</b>: 네이버/쿠팡/기타 채널별 판매를 주간 단위로 확인 — 판정 도구 ③ 파일에 채널 컬럼 포함 시 자동 표시</li>
+</ul>
+<p style="font-size:12.5px;color:#5a6472">비율 수치는 가안 — 판정 도구 설정에서 조정 가능. 순위 데이터는 파일에 없으므로 S급 제품에 "순위 5위 체크" 플래그로 표시되며, 실제 순위는 광고어드민·아이템스카우트에서 확인.</p></div>
+
+
+<div class="card"><h4>제품 등급 배정 — 가안 (2026-07-09 데이터 기준, 수정 예정)</h4>
+<table>
+<tbody><tr><th>등급</th><th>제품</th><th>비고</th></tr>
+<tr><td>S급</td><td>에어리소닉 · 소닉플로우</td><td>매출 축 — 쿠팡 6월 "0주간"은 정산 시차로 판명, 실제 무결점</td></tr>
+<tr><td>S급 (한시)</td><td>UV렌즈세척기</td><td>여름 시즌 +146% 급등 — 시즌 종료까지 일일 점검 승격</td></tr>
+<tr><td>신제품</td><td>에어스트레이트 (출시 시)</td><td>첫판매일 기준 6개월 시계 — NOSP 자격 기간</td></tr>
+<tr><td>일반</td><td>에어리미니 · 클리어렌즈세척기 · 네일드릴 · 고데기 라인 전반</td><td>에어리미니는 26-07-02 신제품 자격 만료 → 재분류, 광고도 일반 체제 전환</td></tr>
+<tr><td>악성/단종</td><td>슈퍼플로우드라이기 (소진 중) · 플렌티무드가습기 (543개)</td><td>발각질제거기·이지컷/다이얼클리퍼·눈썹정리기 본품은 소진 종결 — 잔여 소모품(필터·연마석·칼날) 처분만 남음</td></tr>
+</tbody></table></div>
+<div class="card" id="tiertool"><h4>등급 자동 판정 도구 — 파일 3개로 완전 판정</h4>
+<p style="font-size:13px;color:#5a6472;margin-bottom:10px">①만 넣어도 기본 판정이 되고, ②③을 더 넣을수록 판정이 정확해집니다. 파일은 브라우저 안에서만 처리되고 외부 전송 없음 (인터넷은 파서 로드용으로만 필요).</p>
+
+<div style="display:flex;flex-direction:column;gap:8px;margin-bottom:10px">
+<div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;background:#f6f5f0;border-radius:9px;padding:9px 12px">
+<b style="font-size:13px;min-width:200px">① 쿠팡 일일판매량 .xlsx <span style="color:#b3261e">필수</span></b>
+<input type="file" id="tt_f1" accept=".xlsx,.xls" style="font-size:12.5px">
+<span id="tt_s1" style="font-size:12px;color:#8b93a0">미등록</span>
+</div>
+<div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;background:#f6f5f0;border-radius:9px;padding:9px 12px">
+<b style="font-size:13px;min-width:200px">② 재고관리정리 .xlsx <span style="color:#5a6472">권장</span></b>
+<input type="file" id="tt_f2" accept=".xlsx,.xls" style="font-size:12.5px">
+<span id="tt_s2" style="font-size:12px;color:#8b93a0">미등록 — 넣으면 품절임박을 발주/아르고로 구분</span>
+</div>
+<div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;background:#f6f5f0;border-radius:9px;padding:9px 12px">
+<b style="font-size:13px;min-width:200px">③ 판매량 체크 .csv <span style="color:#5a6472">권장</span></b>
+<input type="file" id="tt_f3" accept=".csv" style="font-size:12.5px">
+<span id="tt_s3" style="font-size:12px;color:#8b93a0">미등록 — 넣으면 신제품 D-day·전채널 성장·사이트별 판매 자동</span>
+<button id="tt_prompt_btn" style="font-size:12px;padding:4px 10px;border:1px solid #d3d2ca;border-radius:7px;background:#fff;cursor:pointer">③ 받는 법 (프롬프트)</button>
+</div>
+</div>
+
+<div id="tt_prompt" style="display:none;background:#1d2733;color:#e8ecf2;border-radius:10px;padding:14px 16px;margin-bottom:10px;font-size:13px;line-height:1.7">
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+<b>Claude에게 아래를 그대로 보내면 ③ 파일을 만들어줍니다</b>
+<button id="tt_copy" style="font-size:12px;padding:4px 12px;border:none;border-radius:7px;background:#0b8f56;color:#fff;cursor:pointer">복사</button>
+</div>
+<pre id="tt_prompt_text" style="background:transparent;color:#e8ecf2;padding:0;margin:0;white-space:pre-wrap">OA MySQL 커넥터로 등급판정용 판매 CSV를 만들어줘.
+v_daily_sales_detail에서 최근 1년 내 판매가 있는 모든 품목에 대해
+① 품목명
+② 첫판매일 = 전체 기간 MIN(판매날짜)
+③ 최근28일판매 = 오늘 기준 최근 28일 판매수량 합
+④ 직전28일판매 = 그 이전 28일 판매수량 합
+⑤ 채널별 최근 28일 판매: 네이버28일판매(스마트스토어), 쿠팡28일판매, 기타28일판매
+를 계산해서, 헤더가 '품목명,첫판매일,최근28일판매,직전28일판매,네이버28일판매,쿠팡28일판매,기타28일판매'인
+CSV 파일(sales_check.csv)로 저장해서 다운로드 링크로 줘.</pre>
+</div>
+
+<div style="margin-bottom:10px"><button id="tt_cfg_btn" style="font-size:12px;padding:5px 10px;border:1px solid #d3d2ca;border-radius:7px;background:#fff;cursor:pointer">설정</button></div>
+<div id="tt_cfg" style="display:none;background:#f6f5f0;border-radius:9px;padding:12px;margin-bottom:10px;font-size:13px">
+<label>S급 고정 지정 (콤마 구분)<br><input id="tt_s" style="width:100%;padding:6px;border:1px solid #d3d2ca;border-radius:6px;font:inherit" value="에어리소닉,소닉플로우"></label><br><br>
+<label>신제품 수동 지정 — ③ 파일 없을 때만 사용 (제품명:첫판매일)<br><input id="tt_new" style="width:100%;padding:6px;border:1px solid #d3d2ca;border-radius:6px;font:inherit" value="에어스트레이트:2026-08-01"></label><br><br>
+<label>대상 키워드 필터<br><input id="tt_kw" style="width:100%;padding:6px;border:1px solid #d3d2ca;border-radius:6px;font:inherit" value="소닉,에어리,드라이기,고데기,스트레이트,렌즈,네일,눈썹,갈바닉,스칼프,면도기,클리퍼,발각질,뷰러,컬링"></label><br><br>
+<label>S급 자동 승격: 일평균 <input id="tt_th1" type="number" value="15" style="width:56px;padding:4px;border:1px solid #d3d2ca;border-radius:6px">개 이상 &nbsp;|&nbsp; 한시 승격: 성장률 <input id="tt_th2" type="number" value="80" style="width:56px;padding:4px;border:1px solid #d3d2ca;border-radius:6px">% 이상 &nbsp;|&nbsp; S급 광고비율(원가 대비) <input id="tt_th3" type="number" value="10" style="width:56px;padding:4px;border:1px solid #d3d2ca;border-radius:6px">%</label>
+<br><br><button id="tt_save" style="font-size:12px;padding:5px 12px;border:none;border-radius:7px;background:#16202e;color:#fff;cursor:pointer">저장</button>
+</div>
+<div id="tt_out" style="font-size:13.5px"></div>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script>
+(function(){
+const $=id=>document.getElementById(id);
+const LS='oa_tier_cfg';
+const D={cp:null,inv:null,sales:null};
+try{const c=JSON.parse(localStorage.getItem(LS)||'null');if(c){$('tt_s').value=c.s;$('tt_new').value=c.n;$('tt_kw').value=c.k;$('tt_th1').value=c.t1;$('tt_th2').value=c.t2;if(c.t3)$('tt_th3').value=c.t3;}}catch(e){}
+$('tt_cfg_btn').onclick=()=>{const d=$('tt_cfg');d.style.display=d.style.display==='none'?'block':'none'};
+$('tt_prompt_btn').onclick=()=>{const d=$('tt_prompt');d.style.display=d.style.display==='none'?'block':'none'};
+$('tt_copy').onclick=()=>{const t=$('tt_prompt_text').textContent;
+ (navigator.clipboard?navigator.clipboard.writeText(t):Promise.reject()).then(()=>{$('tt_copy').textContent='복사됨!';setTimeout(()=>$('tt_copy').textContent='복사',1500)}).catch(()=>{const ta=document.createElement('textarea');ta.value=t;document.body.appendChild(ta);ta.select();document.execCommand('copy');ta.remove();$('tt_copy').textContent='복사됨!';setTimeout(()=>$('tt_copy').textContent='복사',1500)})};
+$('tt_save').onclick=()=>{try{localStorage.setItem(LS,JSON.stringify({s:$('tt_s').value,n:$('tt_new').value,k:$('tt_kw').value,t1:$('tt_th1').value,t2:$('tt_th2').value,t3:$('tt_th3').value}))}catch(e){}$('tt_cfg').style.display='none';judge()};
+
+function ok(id,msg){const e=$(id);e.textContent='✓ '+msg;e.style.color='#0b8f56'}
+function bad(id,msg){const e=$(id);e.textContent='✗ '+msg;e.style.color='#b3261e'}
+
+// ① 쿠팡 일일판매
+$('tt_f1').addEventListener('change',async e=>{
+ const f=e.target.files[0]; if(!f)return;
+ try{
+  const wb=XLSX.read(await f.arrayBuffer(),{cellDates:true});
+  const sheets=wb.SheetNames.filter(s=>s.includes('출고'));
+  const sname=sheets.sort((a,b)=>(parseInt(b)||0)-(parseInt(a)||0))[0]||wb.SheetNames[0];
+  const arr=XLSX.utils.sheet_to_json(wb.Sheets[sname],{header:1});
+  let h=-1;for(let i=0;i<8;i++){if(arr[i]&&arr[i].some(v=>v==='SKU명')){h=i;break}}
+  if(h<0){bad('tt_s1','SKU명 헤더 없음');return}
+  const head=arr[h],ix=n=>head.findIndex(v=>String(v).replace(/\s/g,'')===n);
+  const iSku=ix('SKU명'),iOp=ix('운영현황'),iStk=ix('현재고'),iDays=ix('판매가능일수'),iA7=ix('7일평균판매량');
+  const dateCols=head.map((v,i)=>v instanceof Date?{i,d:v}:null).filter(Boolean).sort((a,b)=>a.d-b.d);
+  const rows=[];
+  for(let r=h+1;r<arr.length;r++){const sku=arr[r][iSku];if(!sku)continue;
+   rows.push({sku:String(sku),op:String(arr[r][iOp]||''),stk:+arr[r][iStk]||0,days:+arr[r][iDays]||0,a7:+arr[r][iA7]||0,daily:dateCols.map(c=>({d:c.d,v:+arr[r][c.i]||0}))});}
+  D.cp=rows; ok('tt_s1',`${sname} · SKU ${rows.length}개`); judge();
+ }catch(err){bad('tt_s1','파싱 오류: '+err.message)}
+});
+
+// ② 재고관리정리
+$('tt_f2').addEventListener('change',async e=>{
+ const f=e.target.files[0]; if(!f)return;
+ try{
+  const wb=XLSX.read(await f.arrayBuffer());
+  const inv=[];
+  for(const sn of wb.SheetNames){
+   const arr=XLSX.utils.sheet_to_json(wb.Sheets[sn],{header:1});
+   let h=-1;for(let i=0;i<6;i++){const row=arr[i]||[];if(row.includes('재고')&&row.includes('생산중')){h=i;break}}
+   if(h<0)continue;
+   const head=arr[h],iStk=head.indexOf('재고');
+   const iSku=iStk-1,iG2=head.indexOf('구분2'),iRsv=head.indexOf('예약재고'),iIn=head.indexOf('입고중'),iPr=head.indexOf('생산중'),iSt=head.indexOf('쿠팡 운영 현황'),iCost=head.findIndex(v=>String(v).startsWith('원가'));
+   for(let r=h+1;r<arr.length;r++){const sku=arr[r][iSku];if(!sku||typeof sku!=='string')continue;
+    inv.push({sku:sku,g2:String(arr[r][iG2]||''),stk:(+arr[r][iStk]||0)-(+arr[r][iRsv]||0),inc:+arr[r][iIn]||0,prod:+arr[r][iPr]||0,st:String(arr[r][iSt]||''),cost:iCost>=0?(+arr[r][iCost]||0):0});}
+  }
+  if(!inv.length){bad('tt_s2','재고/생산중 헤더 시트 없음');return}
+  // 중복 SKU 제거 (전체NEW + 팀시트 중복)
+  const seen={},uniq=[];inv.forEach(r=>{if(!seen[r.sku]){seen[r.sku]=1;uniq.push(r)}});
+  D.inv=uniq; ok('tt_s2',`창고 SKU ${uniq.length}개`); judge();
+ }catch(err){bad('tt_s2','파싱 오류: '+err.message)}
+});
+
+// ③ 판매량 CSV
+$('tt_f3').addEventListener('change',async e=>{
+ const f=e.target.files[0]; if(!f)return;
+ try{
+  const txt=await f.text();
+  const lines=txt.split(/\r?\n/).filter(l=>l.trim());
+  const head=lines[0].split(',').map(s=>s.trim());
+  const iN=head.findIndex(h=>h.includes('품목')),iF=head.findIndex(h=>h.includes('첫판매')),iR=head.findIndex(h=>h.includes('최근')&&!h.includes('네이버')&&!h.includes('쿠팡')&&!h.includes('기타')),iP=head.findIndex(h=>h.includes('직전')),iNv=head.findIndex(h=>h.includes('네이버')),iCp2=head.findIndex(h=>h.includes('쿠팡')),iEt=head.findIndex(h=>h.includes('기타'));
+  if(iN<0||iF<0){bad('tt_s3','헤더에 품목명/첫판매일 없음');return}
+  const rows=lines.slice(1).map(l=>{const c=l.split(',');return{name:(c[iN]||'').trim(),first:new Date((c[iF]||'').trim()),r28:+c[iR]||0,p28:+c[iP]||0,nv:iNv>=0&&c[iNv]!==''?+c[iNv]:null,cp:iCp2>=0&&c[iCp2]!==''?+c[iCp2]:null,et:iEt>=0&&c[iEt]!==''?+c[iEt]:null}}).filter(r=>r.name);
+  D.sales=rows; ok('tt_s3',`품목 ${rows.length}개`); judge();
+ }catch(err){bad('tt_s3','파싱 오류: '+err.message)}
+});
+
+function judge(){
+ if(!D.cp){return}
+ const kw=$('tt_kw').value.split(',').map(s=>s.trim()).filter(Boolean);
+ const sFix=$('tt_s').value.split(',').map(s=>s.trim()).filter(Boolean);
+ const manualNew={};$('tt_new').value.split(',').forEach(p=>{const[a,b]=p.split(':');if(a&&b)manualNew[a.trim()]=new Date(b.trim())});
+ const th1=+$('tt_th1').value||15,th2=+$('tt_th2').value||80,th3=+$('tt_th3').value||10;
+ const beauty=D.cp.filter(r=>kw.some(k=>r.sku.includes(k)));
+ const prods={};
+ beauty.forEach(r=>{const p=r.sku.includes('-')?r.sku.slice(0,r.sku.lastIndexOf('-')):r.sku;(prods[p]=prods[p]||[]).push(r)});
+ const lastDay=Math.max(...beauty.flatMap(r=>r.daily.filter(x=>x.v>0).map(x=>+x.d)),0);
+ const findSales=p=>{if(!D.sales)return null;let best=null;D.sales.forEach(s=>{if(s.name===p||s.name.includes(p)||p.includes(s.name)){if(!best||s.name.length>best.name.length)best=s}});return best};
+ const findInv=p=>{if(!D.inv)return null;const m=D.inv.filter(r=>r.sku.startsWith(p)||r.sku.includes(p));if(!m.length)return null;
+  return{stk:m.reduce((s,r)=>s+r.stk,0),prod:m.reduce((s,r)=>s+r.prod,0),inc:m.reduce((s,r)=>s+r.inc,0),disc:m.some(r=>r.g2.includes('단종')||r.st.includes('단종')),cost:Math.max(...m.map(r=>r.cost||0))}};
+ const out=[];
+ for(const[p,list]of Object.entries(prods)){
+  const a7=list.reduce((s,r)=>s+r.a7,0);
+  const rec=(f,t)=>list.reduce((s,r)=>s+r.daily.filter(x=>+x.d>f&&+x.d<=t).reduce((a,x)=>a+x.v,0),0);
+  const d14=14*864e5,r14=rec(lastDay-d14,lastDay),p14=rec(lastDay-2*d14,lastDay-d14);
+  const gCp=p14>0?Math.round((r14-p14)/p14*100):(r14>0?999:0);
+  const act=list.filter(r=>r.a7>0.3);
+  const minD=act.length?Math.min(...act.map(r=>r.days)):999;
+  const sl=findSales(p),iv=findInv(p);
+  const gAll=sl&&sl.p28>0?Math.round((sl.r28-sl.p28)/sl.p28*100):null;
+  const growth=gAll!==null?gAll:gCp;
+  const disc=(iv&&iv.disc)||list.every(r=>r.op.includes('단종'))||(sl?(sl.r28===0&&sl.p28===0):(r14===0&&p14===0));
+  let tier,why='';
+  // 신제품: ③ 첫판매일 자동 > 수동 지정
+  let launch=null,src='';
+  if(sl&&sl.first&&!isNaN(+sl.first)){launch=sl.first;src='DB'}
+  const mk=Object.keys(manualNew).find(n=>p.includes(n));
+  if(!launch&&mk){launch=manualNew[mk];src='수동'}
+  const age=launch?(Date.now()-launch)/864e5:null;
+  if(launch&&age<0){tier='신제품(예정)';why='출시 전'}
+  else if(launch&&age<=180){tier='신제품';why=`출시 ${Math.round(age)}일차 · 6개월 D-${Math.round(180-age)} (${src})`}
+  else if(disc){tier='악성/단종';why=iv&&iv.disc?'재고파일 단종 마킹':'판매 정지'}
+  else if(sFix.some(s=>p.includes(s))){tier='S급';why='고정 지정'}
+  else if(a7>=th1){tier='S급(자동)';why=`일평균 ${a7.toFixed(1)}개 ≥ ${th1}`}
+  else if(growth>=th2&&a7>=5){tier='S급(한시)';why=`성장 +${growth}%${gAll!==null?' (전채널)':''}`}
+  else{tier='일반';why=launch&&age>180&&age<240?`⚠ 신제품 만료 ${Math.round(age-180)}일 경과 — 광고 전환 확인`:''}
+  // 이슈 + 조치
+  const iss=[];
+  if(tier!=='악성/단종'&&minD<20){
+   let act2='';
+   if(iv){if(iv.stk>=a7*30)act2=' · 포항 '+iv.stk.toLocaleString()+'개 보유 → 아르고 발송/입고요청';
+    else if(iv.prod>0||iv.inc>0)act2=' · 생산·입고 진행중 '+(iv.prod+iv.inc).toLocaleString()+'개 → 입고 대기';
+    else act2=' · 포항도 부족 → ★생산 발주 필요';}
+   iss.push(`쿠팡재고 ${minD.toFixed(0)}일치 남음${act2}`);
+  }
+  list.forEach(r=>{const dd=r.daily.filter(x=>+x.d<=lastDay).slice(-2);
+   if(r.a7>=5&&dd.length===2&&(dd[0].v+dd[1].v)/2<r.a7*0.5)iss.push('급락:'+r.sku.split('-').pop())});
+  if(tier.startsWith('S급')){
+     let ad=iv&&iv.cost>0?' · 일 광고비 상한 ₩'+Math.round(a7*iv.cost*th3/100).toLocaleString()+' (원가 '+th3+'%)':'';
+     why+=(why?' · ':'')+'전사이트 5위 체크'+ad;
+   }
+   const chTxt=(sl&&sl.nv!==null&&sl.nv!==undefined)?('N '+sl.nv.toLocaleString()+' / C '+sl.cp.toLocaleString()+' / 기타 '+sl.et.toLocaleString()):null;
+   out.push({p,tier,why,a7,growth,gAll,minD,iss,chTxt});
+ }
+ const ord={'S급':0,'S급(자동)':1,'S급(한시)':2,'신제품':3,'신제품(예정)':4,'일반':5,'악성/단종':6};
+ out.sort((a,b)=>(ord[a.tier]-ord[b.tier])||(b.a7-a.a7));
+ const color=t=>t.startsWith('S급')?'#0b8f56':t.startsWith('신제품')?'#b91c4b':t==='일반'?'#5a6472':'#8b93a0';
+ const loaded=['① 쿠팡',D.inv?'② 재고':null,D.sales?'③ 판매DB':null].filter(Boolean).join(' + ');
+ let htm=`<p style="font-size:12.5px;color:#0b8f56;font-weight:600">${loaded} 기준 판정 · 제품 ${out.length}개</p>`;
+ const hasCh=out.some(o=>o.chTxt);
+ htm+=`<table><tr><th>제품</th><th>등급</th><th>일평균</th><th>성장${D.sales?'(전채널 28일)':'(쿠팡 14일)'}</th>${hasCh?'<th>사이트별 28일</th>':''}<th>최소재고일</th><th>판정 근거 / 이슈</th></tr>`;
+ out.forEach(o=>{htm+=`<tr><td><b>${o.p.replace('오아','')}</b></td><td style="color:${color(o.tier)};font-weight:700">${o.tier}</td><td>${o.a7.toFixed(1)}</td><td>${o.growth>=999?'신규':o.growth+'%'}</td>${hasCh?'<td style="font-size:12px;white-space:nowrap">'+(o.chTxt||'-')+'</td>':''}<td>${o.minD===999?'-':o.minD.toFixed(0)+'일'}</td><td>${o.why}${o.iss.length?' <span style="color:#b3261e">⚠ '+o.iss.join(' · ')+'</span>':''}</td></tr>`});
+ htm+='</table><p style="font-size:12px;color:#8b93a0">재고일수 = 쿠팡 로켓 기준 · ② 미등록 시 품절임박의 발주/아르고 구분 불가 · ③ 미등록 시 신제품 D-day는 수동 지정만 반영 · S급 순위(전사이트 5위)는 광고어드민·아이템스카우트에서 확인 후 광고비율 조정</p>';
+ $('tt_out').innerHTML=htm;
+}
+})();
+</script>
+
+</section>
+
+<footer>
+OA 온라인영업팀 업무 가이드 · 노션 원본 기준 2026.07.06 재정비 · 종료 정책(원쁠딜, 리스팅광고 등)은 아카이브 표시 · 일회성 업무 로그는 별도 페이지 분리 권장
+</footer>
+</main>
+</div>
+
+<script>
+// 검색 필터
+const q=document.getElementById('q'),qh=document.getElementById('qh');
+const cards=[...document.querySelectorAll('.card')];
+q.addEventListener('input',()=>{
+  const v=q.value.trim().toLowerCase();
+  document.querySelectorAll('mark').forEach(m=>{m.replaceWith(m.textContent)});
+  if(!v){cards.forEach(c=>c.classList.remove('hidden'));document.querySelectorAll('section').forEach(s=>s.style.display='');qh.textContent='';return}
+  let n=0;
+  cards.forEach(c=>{
+    const hit=c.textContent.toLowerCase().includes(v);
+    c.classList.toggle('hidden',!hit);
+    if(hit)n++;
+  });
+  document.querySelectorAll('section').forEach(s=>{
+    const vis=[...s.querySelectorAll('.card')].some(c=>!c.classList.contains('hidden'));
+    s.style.display=vis?'':'none';
+  });
+  qh.textContent=n+'개 항목';
+});
+
+// 체크리스트 저장
+document.querySelectorAll('.ck input').forEach(cb=>{
+  const key='oaguide_'+cb.id;
+  try{if(localStorage.getItem(key)==='1')cb.checked=true}catch(e){}
+  cb.addEventListener('change',()=>{try{localStorage.setItem(key,cb.checked?'1':'0')}catch(e){}});
+});
+
+// 현재 섹션 하이라이트
+const links=[...document.querySelectorAll('nav a')];
+const secs=links.map(a=>document.querySelector(a.getAttribute('href')));
+const io=new IntersectionObserver(es=>{
+  es.forEach(e=>{if(e.isIntersecting){
+    links.forEach(a=>a.classList.toggle('on',a.getAttribute('href')==='#'+e.target.id));
+  }});
+},{rootMargin:'-20% 0px -70% 0px'});
+secs.forEach(s=>s&&io.observe(s));
+
+
+// ── 편집 모드 ──
+const eb=document.getElementById('editbtn'),sb=document.getElementById('savebtn'),mainEl=document.querySelector('main');
+eb.addEventListener('click',()=>{
+  const on=!document.body.classList.contains('editing');
+  document.body.classList.toggle('editing',on);
+  mainEl.contentEditable=on?'true':'false';
+  eb.classList.toggle('on',on);
+  eb.textContent=on?'✓ 편집 중':'✎ 편집';
+  sb.style.display=on?'':'none';
+});
+sb.addEventListener('click',()=>{
+  // 편집 상태 정리 후 직렬화
+  const wasOn=document.body.classList.contains('editing');
+  document.body.classList.remove('editing');
+  mainEl.removeAttribute('contenteditable');
+  eb.classList.remove('on'); eb.textContent='✎ 편집'; sb.style.display='none';
+  // 체크박스 현재 상태를 속성으로 반영
+  document.querySelectorAll('input[type=checkbox]').forEach(c=>{c.checked?c.setAttribute('checked',''):c.removeAttribute('checked')});
+  const doc='<!DOCTYPE html>\n'+document.documentElement.outerHTML;
+  const blob=new Blob([doc],{type:'text/html;charset=utf-8'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  const d=new Date(),pad=n=>String(n).padStart(2,'0');
+  a.download=`oa_guide_${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}.html`;
+  a.click(); URL.revokeObjectURL(a.href);
+  if(wasOn){/* 저장 후 편집 종료 상태 유지 */}
+});
+</script>
+
+
+</body></html>

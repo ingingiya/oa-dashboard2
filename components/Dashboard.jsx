@@ -6983,6 +6983,37 @@ export default function OaDashboard(){
   const [metaBackfill, setMetaBackfill] = useState([]);
   // 행사 일정: [{id,name,start,end,memo}]
   const [promoEvents, setPromoEvents] = useSyncState("oa_events_v1", []);
+  // 채널 랭킹 트래커: [{id,date,channel,product,rank}] — 랭킹 탭
+  const [rankLog, setRankLog] = useSyncState("oa_rank_tracker_v1", []);
+  const [rankReal, setRankReal] = useState(null); // 실판매 14일 요약 {`채널|제품|cur/prv`: qty}
+  useEffect(()=>{
+    if(sec!=="ranking"||rankReal) return;
+    const SURL=process.env.NEXT_PUBLIC_SUPABASE_URL, SKEY=process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+    (async()=>{
+      try{
+        const frm=new Date(Date.now()-28*86400000).toISOString().slice(0,10);
+        let all=[],o=0;
+        for(;;){
+          const r=await fetch(`${SURL}/rest/v1/channel_daily_sales?select=channel,name,date,qty&date=gte.${frm}`,
+            {headers:{apikey:SKEY,Authorization:`Bearer ${SKEY}`,Range:`${o}-${o+999}`}});
+          if(!r.ok) throw new Error("fetch fail");
+          const page=await r.json(); all.push(...page);
+          if(page.length<1000) break; o+=1000;
+        }
+        const now=Date.now(), agg={};
+        all.forEach(r=>{
+          const n=String(r.name||"");
+          const prod = n.includes("프리온") ? "프리온 고데기"
+            : /드라이|에어리|소닉플로우/.test(n) ? "드라이기" : null;
+          if(!prod) return;
+          const ago=Math.floor((now-new Date(r.date))/86400000);
+          const k=`${r.channel}|${prod}|${ago<=14?"cur":"prv"}`;
+          agg[k]=(agg[k]||0)+(Number(r.qty)||0);
+        });
+        setRankReal(agg);
+      }catch{ setRankReal({}); }
+    })();
+  },[sec]);
   // 카피뱅크: scripts/copy-bank.py가 저장한 리뷰/문의 분석 (읽기 전용)
   const [copyBank] = useSyncState("oa_copy_bank_v1", null);
   const [cbScope, setCbScope] = useState("beauty"); // beauty | all
@@ -7219,11 +7250,153 @@ export default function OaDashboard(){
   }
   async function deleteSch(id){ setSch(arr=>arr.filter(s=>s.id!==id)); }
 
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  // 🏆 랭킹 트래커 — 5채널 × 드라이기·프리온 (10월 목표)
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  const RankingSection=(()=>{
+    const CHANNELS=["네이버","쿠팡","지그재그","에이블리","무신사"];
+    const PRODUCTS=["드라이기","프리온 고데기"];
+    const SHARE={쿠팡:"30%",네이버:"20%",무신사:"20%",지그재그:"15%",에이블리:"15%"};
+    const MONTH_FOCUS={
+      7:["지그재그·에이블리 프리온 딜 재점화 (실판매 -59% 방어)","무신사 체험단 발주 — 리뷰 시딩","5채널 베이스라인 순위 기록 시작","쿠팡 고데기 대표 SKU 결정 (프리온 vs 오토고데기)"],
+      8:["앱 채널 드라이기 격주 딜 사이클","8월 중순부터 고데기 성수기 모드 전환","프리온 성수기 재고 선확보"],
+      9:["전 채널 프리온 총공세 (기획전·와우딜·포인트딜)","무신사 두 제품 동시 푸시 (리뷰 반영 시점)"],
+      10:["랭킹 유지 모드 + 연휴 프로모션","채널×제품 10칸 랭킹 진입 개수로 목표 판정"],
+    };
+    const month=new Date().getMonth()+1;
+    const focus=MONTH_FOCUS[month]||MONTH_FOCUS[7];
+    const todayStr=new Date().toISOString().slice(0,10);
+    const logsFor=(ch,pd)=>(rankLog||[]).filter(l=>l.channel===ch&&l.product===pd)
+      .sort((a,b)=>b.date.localeCompare(a.date)||String(b.id).localeCompare(String(a.id)));
+    const addRank=(ch,pd)=>{
+      const v=window.prompt(`${ch} · ${pd} — 현재 카테고리 순위 (숫자만)`);
+      if(v==null) return;
+      const rank=parseInt(String(v).replace(/[^0-9]/g,""),10);
+      if(!rank) return alert("숫자를 입력하세요 (예: 12)");
+      setRankLog(prev=>[{id:Date.now()+"",date:todayStr,channel:ch,product:pd,rank},...(prev||[])]);
+    };
+    const delRank=(id)=>{
+      if(!window.confirm("이 기록을 삭제할까요?")) return;
+      setRankLog(prev=>(prev||[]).filter(l=>l.id!==id));
+    };
+    const realChip=(ch,pd)=>{
+      if(!rankReal) return <span style={{fontSize:9,color:C.inkLt}}>실판매 로딩…</span>;
+      const cur=rankReal[`${ch}|${pd}|cur`], prv=rankReal[`${ch}|${pd}|prv`];
+      if(cur==null&&prv==null) return <span style={{fontSize:9,color:C.inkLt}}>실판매 데이터 없음</span>;
+      const pct=prv?Math.round(((cur||0)-prv)/prv*100):null;
+      const up=pct!==null&&pct>=0;
+      return(
+        <span style={{fontSize:9,fontWeight:700,padding:"2px 7px",borderRadius:20,whiteSpace:"nowrap",
+          color:up?C.good:C.bad,background:up?"#EDF7F1":"#FEF0F0",border:`1px solid ${(up?C.good:C.bad)+"33"}`}}>
+          14일 {Math.round(cur||0).toLocaleString()}개{pct!==null?` (${pct>=0?"+":""}${pct}%)`:""}
+        </span>
+      );
+    };
+    // 진척 요약: 랭킹 기록된 칸 수
+    const trackedCells=CHANNELS.flatMap(ch=>PRODUCTS.map(pd=>logsFor(ch,pd).length>0)).filter(Boolean).length;
+    return(
+      <div style={{display:"flex",flexDirection:"column",gap:14}}>
+        {/* ── 목표 헤더 ── */}
+        <div style={{background:`linear-gradient(135deg,${C.ink},#3d2b42)`,borderRadius:16,padding:"20px 22px",color:C.white}}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:10,flexWrap:"wrap"}}>
+            <div>
+              <div style={{fontSize:15,fontWeight:900}}>🎯 10월 목표 — 5개 채널 랭킹 상위 노출</div>
+              <div style={{fontSize:11,opacity:.75,marginTop:4}}>드라이기 + 프리온 무선 고데기 · 네이버 / 쿠팡 / 지그재그 / 에이블리 / 무신사</div>
+              <div style={{display:"flex",gap:5,flexWrap:"wrap",marginTop:10}}>
+                {CHANNELS.map(ch=>(
+                  <span key={ch} style={{fontSize:10,fontWeight:700,padding:"3px 10px",borderRadius:20,
+                    background:"rgba(255,255,255,0.12)",border:"1px solid rgba(255,255,255,0.2)"}}>{ch} {SHARE[ch]}</span>
+                ))}
+              </div>
+            </div>
+            <div style={{textAlign:"right"}}>
+              <div style={{fontSize:9,opacity:.6}}>순위 기록</div>
+              <div style={{fontSize:22,fontWeight:900}}>{trackedCells}<span style={{fontSize:12,opacity:.6}}>/10칸</span></div>
+              <button onClick={()=>setSec("guide")} style={{marginTop:6,padding:"5px 12px",borderRadius:20,cursor:"pointer",
+                fontSize:10,fontWeight:700,fontFamily:"inherit",background:"rgba(255,255,255,0.15)",
+                border:"1px solid rgba(255,255,255,0.3)",color:C.white}}>전체 플랜 보기 →</button>
+            </div>
+          </div>
+          <div style={{marginTop:14,padding:"12px 14px",background:"rgba(255,255,255,0.08)",borderRadius:12}}>
+            <div style={{fontSize:11,fontWeight:800,marginBottom:6}}>📌 {month}월 포커스</div>
+            {focus.map((f,i)=>(
+              <div key={i} style={{fontSize:11,opacity:.85,padding:"2px 0"}}>· {f}</div>
+            ))}
+          </div>
+        </div>
+
+        {/* ── 제품별 랭킹 테이블 ── */}
+        {PRODUCTS.map(pd=>(
+          <Card key={pd}>
+            <CardTitle title={`${pd==="드라이기"?"💨":"🔥"} ${pd}`} sub="채널별 카테고리 순위 — 주 1회 기록 권장"/>
+            <div style={{overflowX:"auto"}}>
+              <table style={{width:"100%",borderCollapse:"collapse",fontSize:11,minWidth:560}}>
+                <thead><tr style={{borderBottom:`2px solid ${C.border}`}}>
+                  {["채널","현재 순위","변화","실판매","기록 히스토리",""].map((h,i)=>(
+                    <th key={i} style={{padding:"8px",textAlign:i===0?"left":"center",color:C.inkLt,fontWeight:700,fontSize:9,whiteSpace:"nowrap"}}>{h}</th>
+                  ))}
+                </tr></thead>
+                <tbody>{CHANNELS.map(ch=>{
+                  const logs=logsFor(ch,pd);
+                  const latest=logs[0], prev=logs[1];
+                  const delta=latest&&prev?prev.rank-latest.rank:null; // 순위는 낮을수록 좋음
+                  return(
+                    <tr key={ch} style={{borderBottom:`1px solid ${C.border}`}}>
+                      <td style={{padding:"10px 8px",fontWeight:800,color:C.ink,whiteSpace:"nowrap"}}>
+                        {ch} <span style={{fontSize:9,fontWeight:600,color:C.inkLt}}>{SHARE[ch]}</span>
+                      </td>
+                      <td style={{padding:"10px 8px",textAlign:"center"}}>
+                        {latest
+                          ?<span style={{fontSize:15,fontWeight:900,color:latest.rank<=10?C.good:latest.rank<=30?C.warn:C.ink}}>{latest.rank}위
+                            <span style={{fontSize:9,fontWeight:600,color:C.inkLt,marginLeft:4}}>({latest.date.slice(5).replace("-","/")})</span></span>
+                          :<span style={{fontSize:10,color:C.inkLt}}>기록 없음</span>}
+                      </td>
+                      <td style={{padding:"10px 8px",textAlign:"center"}}>
+                        {delta==null?<span style={{color:C.inkLt,fontSize:10}}>—</span>
+                          :delta>0?<span style={{color:C.good,fontWeight:800,fontSize:11}}>▲ {delta}</span>
+                          :delta<0?<span style={{color:C.bad,fontWeight:800,fontSize:11}}>▼ {-delta}</span>
+                          :<span style={{color:C.inkMid,fontSize:10}}>0</span>}
+                      </td>
+                      <td style={{padding:"10px 8px",textAlign:"center"}}>{realChip(ch,pd)}</td>
+                      <td style={{padding:"10px 8px",textAlign:"center"}}>
+                        <div style={{display:"flex",gap:3,justifyContent:"center",flexWrap:"wrap"}}>
+                          {logs.slice(0,6).map(l=>(
+                            <span key={l.id} onClick={()=>delRank(l.id)} title="클릭 시 삭제"
+                              style={{fontSize:9,fontWeight:600,padding:"2px 7px",borderRadius:20,cursor:"pointer",
+                                background:C.cream,color:C.inkMid,border:`1px solid ${C.border}`,whiteSpace:"nowrap"}}>
+                              {l.date.slice(5).replace("-","/")} {l.rank}위
+                            </span>
+                          ))}
+                          {logs.length===0&&<span style={{fontSize:9,color:C.inkLt}}>—</span>}
+                        </div>
+                      </td>
+                      <td style={{padding:"10px 8px",textAlign:"center"}}>
+                        <button onClick={()=>addRank(ch,pd)} style={{padding:"4px 10px",borderRadius:8,cursor:"pointer",
+                          fontSize:10,fontWeight:700,fontFamily:"inherit",background:C.blush,
+                          border:`1px solid ${C.rose}33`,color:C.rose,whiteSpace:"nowrap"}}>+ 기록</button>
+                      </td>
+                    </tr>
+                  );
+                })}</tbody>
+              </table>
+            </div>
+          </Card>
+        ))}
+        <div style={{fontSize:10,color:C.inkLt,padding:"0 4px"}}>
+          순위 확인처: 네이버 쇼핑 카테고리 랭킹 · 쿠팡 카테고리 베스트 · 지그재그/에이블리 뷰티 랭킹 · 무신사 뷰티 랭킹.
+          실판매 칩은 쿠팡·지그재그만 표시 (일일판매량 엑셀 동기화 데이터, 최근 14일 vs 직전 14일).
+        </div>
+      </div>
+    );
+  })();
+
   const NAVS=[
     {id:"home",      icon:"home",           label:"홈"},
     {id:"erp",       icon:"storage",        label:"ERP"},
     {id:"naver",     icon:"ads_click",      label:"네이버광고"},
     {id:"meta",      icon:"campaign",       label:"메타광고"},
+    {id:"ranking",   icon:"leaderboard",    label:"랭킹"},
+    {id:"guide",     icon:"menu_book",      label:"가이드"},
     {id:"stock",     icon:"inventory",      label:"재고"},
     {id:"ads11st",   icon:"trending_up",    label:"11번가광고"},
     {id:"inf_archive",icon:"photo_library", label:"아카이브"},
@@ -16660,6 +16833,8 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
           {sec==="projects"    && <ProjectSection/>}
           {sec==="detailplan"  && <DetailPlanSection/>}
           {sec==="coupang"     && CoupangSection}
+          {sec==="ranking"     && RankingSection}
+          {sec==="guide"       && <iframe src="/oa-guide.html" title="업무 가이드" style={{width:"100%",height:"calc(100vh - 150px)",border:`1px solid ${C.border}`,borderRadius:14,background:"#fff"}}/>}
         </main>
       </div>
 
