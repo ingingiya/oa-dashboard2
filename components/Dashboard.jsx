@@ -5707,6 +5707,7 @@ export default function OaDashboard(){
   const [homeRankChanges, setHomeRankChanges] = useState([]);
   const [metaTab,setMetaTab]   = useState("overview");
   const [campTab,setCampTab]   = useState("conversion");
+  const [showEnded,setShowEnded] = useState(false); // 캠페인 탭: 종료 광고 표시 여부
   const [pulse,setPulse]       = useState(false);
   const [nid,setNid]           = useState(300);
 
@@ -8487,13 +8488,33 @@ export default function OaDashboard(){
               </div>
             )}
             {hasSheet&&d&&(<>
-              <div style={{display:"flex",gap:4,padding:"4px",background:C.cream,borderRadius:12,width:"fit-content"}}>
-                {[{id:"conversion",label:"🛒 전환 캠페인"},{id:"traffic",label:"🚀 트래픽 캠페인"}].map(t=>(
-                  <button key={t.id} onClick={()=>setCampTab(t.id)} style={{
-                    padding:"7px 16px",borderRadius:9,border:"none",cursor:"pointer",fontSize:11,fontWeight:700,fontFamily:"inherit",
-                    background:campTab===t.id?C.white:"transparent",color:campTab===t.id?C.ink:C.inkMid,
-                    boxShadow:campTab===t.id?"0 2px 8px rgba(43,31,46,0.1)":"none",transition:"all 0.2s"}}>{t.label}</button>
-                ))}
+              <div style={{display:"flex",alignItems:"center",gap:10,flexWrap:"wrap"}}>
+                <div style={{display:"flex",gap:4,padding:"4px",background:C.cream,borderRadius:12,width:"fit-content"}}>
+                  {[{id:"conversion",label:"🛒 전환 캠페인"},{id:"traffic",label:"🚀 트래픽 캠페인"}].map(t=>(
+                    <button key={t.id} onClick={()=>setCampTab(t.id)} style={{
+                      padding:"7px 16px",borderRadius:9,border:"none",cursor:"pointer",fontSize:11,fontWeight:700,fontFamily:"inherit",
+                      background:campTab===t.id?C.white:"transparent",color:campTab===t.id?C.ink:C.inkMid,
+                      boxShadow:campTab===t.id?"0 2px 8px rgba(43,31,46,0.1)":"none",transition:"all 0.2s"}}>{t.label}</button>
+                  ))}
+                </div>
+                {(()=>{
+                  const all = campTab==="conversion" ? d.convCamps : d.trafficCamps;
+                  const ended = all.filter(c=>{
+                    const a = c.lastActiveDate&&sheetMaxDate ? Math.floor((new Date(sheetMaxDate)-new Date(c.lastActiveDate))/86400000) : null;
+                    return a===null||a>3;
+                  }).length;
+                  if(!ended) return null;
+                  return(
+                    <button onClick={()=>setShowEnded(v=>!v)} style={{
+                      padding:"6px 12px",borderRadius:20,cursor:"pointer",fontSize:10,fontWeight:700,fontFamily:"inherit",
+                      border:`1px solid ${showEnded?C.inkMid:C.border}`,
+                      background:showEnded?C.cream:C.white,color:C.inkMid,transition:"all 0.2s",
+                      display:"inline-flex",alignItems:"center",gap:4}}>
+                      <MI n={showEnded?"visibility":"visibility_off"} size={12}/>
+                      {showEnded?`종료 광고 숨기기 (${ended}개)`:`종료 광고 ${ended}개 숨겨짐`}
+                    </button>
+                  );
+                })()}
               </div>
 
               {/* ── 상위 광고 소재 카드 ── */}
@@ -8589,11 +8610,24 @@ export default function OaDashboard(){
               })()}
 
               {(()=>{
-                const camps = campTab==="conversion" ? d.convCamps : d.trafficCamps;
-                if(!camps||camps.length===0) return(
+                const allCamps = campTab==="conversion" ? d.convCamps : d.trafficCamps;
+                if(!allCamps||allCamps.length===0) return(
                   <div style={{textAlign:"center",padding:"32px",color:C.inkLt,fontSize:12}}>
                     해당 목적의 캠페인 데이터가 없습니다<br/>
                     <span style={{fontSize:10,marginTop:4,display:"block"}}>시트의 "캠페인_목적" 컬럼을 확인해주세요</span>
+                  </div>
+                );
+                // 비활성(마지막 지출이 시트 최신일 기준 3일 초과) 자동 숨김 + 광고비순 정렬
+                const isLive = c=>{
+                  const a = c.lastActiveDate&&sheetMaxDate ? Math.floor((new Date(sheetMaxDate)-new Date(c.lastActiveDate))/86400000) : null;
+                  return a!==null&&a<=3;
+                };
+                const camps = (showEnded ? allCamps : allCamps.filter(isLive))
+                  .slice().sort((a,b)=>(b.spend||0)-(a.spend||0));
+                if(camps.length===0) return(
+                  <div style={{textAlign:"center",padding:"32px",color:C.inkLt,fontSize:12}}>
+                    집행중인 광고가 없습니다<br/>
+                    <span style={{fontSize:10,marginTop:4,display:"block"}}>위 "종료 광고 숨겨짐" 버튼으로 지난 광고를 볼 수 있어요</span>
                   </div>
                 );
                 return(
@@ -8611,14 +8645,14 @@ export default function OaDashboard(){
                         {label:"총 전환값",    value:`₩${Math.round(totalConvV/10000).toLocaleString()}만`,      color:C.purple},
                         {label:"평균 CPA",     value:totalPurch>0?`₩${Math.round(totalSpend/totalPurch).toLocaleString()}`:"—", color:C.gold},
                         {label:"전체 ROAS",    value:totalSpend>0?`${Math.round((totalConvV/totalSpend)*100)}%`:"—", color:C.sage},
-                        {label:"총 광고수",    value:`${camps.length}개`,                                         color:C.inkMid},
+                        {label:showEnded?"전체 광고수":"집행중 광고수", value:`${camps.length}개`,                                         color:C.inkMid},
                       ] : [
                         {label:"트래픽 광고비",value:`₩${Math.round(totalSpend/10000).toLocaleString()}만`,      color:C.purple},
                         {label:"총 클릭수",    value:totalClicks.toLocaleString(),                                color:C.good},
                         {label:"총 LPV",       value:totalLpv.toLocaleString(),                                   color:C.sage},
                         {label:"평균 CPC",     value:totalClicks>0?`₩${Math.round(totalSpend/totalClicks).toLocaleString()}`:"—", color:C.gold},
                         {label:"평균 CTR",     value:`${avgCtr.toFixed(2)}%`,                                    color:C.rose},
-                        {label:"총 광고수",    value:`${camps.length}개`,                                        color:C.inkMid},
+                        {label:showEnded?"전체 광고수":"집행중 광고수", value:`${camps.length}개`,                                        color:C.inkMid},
                       ];
                       return(
                         <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:10,marginBottom:14}}>
@@ -8864,7 +8898,7 @@ export default function OaDashboard(){
                     })()}
                     <Card>
                       <CardTitle title={campTab==="conversion"?"전환 캠페인":"트래픽 캠페인"}
-                        sub={campTab==="conversion"?"CPA · LPV율 중심":"CPC · CTR 중심"}/>
+                        sub={`${campTab==="conversion"?"CPA · LPV율 중심":"CPC · CTR 중심"} · ${camps.length}개 (${showEnded?"종료 포함":"집행중만"}) · 광고비순`}/>
                       <div style={{overflowX:"auto"}}>
                         <table style={{width:"100%",borderCollapse:"collapse",fontSize:11,minWidth:600}}>
                           <thead><tr style={{borderBottom:`2px solid ${C.border}`}}>
@@ -8891,8 +8925,8 @@ export default function OaDashboard(){
                               const isUp=!isCut&&!isHold&&(lpvC?.label==="유지")&&(cpa?.label==="유지")&&(c.purchases||0)>=5;
                               if(isCut){verdict="🔴끄기";verdictColor=C.bad;verdictBg="#FEF0F0";}
                               else if(isHold){verdict="⚠️줄이기";verdictColor=C.warn;verdictBg="#FFF8EC";}
-                              else if(isUp){verdict="🚀올리기";verdictColor=C.good;verdictBg:"#EDF7F1";}
-                              else{verdict="👀유지";verdictColor=C.inkMid;verdictBg:C.cream;}
+                              else if(isUp){verdict="🚀올리기";verdictColor=C.good;verdictBg="#EDF7F1";}
+                              else{verdict="👀유지";verdictColor=C.inkMid;verdictBg=C.cream;}
                             } else {
                               const cpcOk=(c.cpc||0)>0&&(c.cpc||0)<=getTrafficCpcMax(c.name,c.campaign,trafficCriteria);
                               const ctrOk=(c.ctr||0)>=(trafficCriteria?.ctrMin||1);
@@ -8902,14 +8936,14 @@ export default function OaDashboard(){
                               else{verdict="🚀올리기";verdictColor=C.good;verdictBg="#EDF7F1";}
                             }
 
-                            // ── 게시 기간 (시트 날짜 기반) ──
-                            const today = new Date(); today.setHours(0,0,0,0);
+                            // ── 운영 기간 (시트 날짜 기반) ──
                             const parseD = s=>{ if(!s)return null; const d=new Date(s); return isNaN(d)?null:d; };
                             // 시트 전체 최신 날짜 (기준점)
                             const sheetMax = parseD(sheetMaxDate);
                             const fd  = parseD(c.firstDate);
                             const lad = parseD(c.lastActiveDate); // 지출 있는 마지막 날
-                            const adAge = fd ? Math.floor((today-fd)/86400000) : null;
+                            const fmtMD = dt=>dt?`${dt.getMonth()+1}/${dt.getDate()}`:"?";
+                            const runDays = fd&&lad ? Math.floor((lad-fd)/86400000)+1 : null; // 실제 운영 일수
                             // 시트 최신 날짜 기준으로 지출 있는 마지막 날 비교
                             const lastAgo = lad&&sheetMax ? Math.floor((sheetMax-lad)/86400000) : null;
                             const isActive = lastAgo!==null && lastAgo<=3; // 지출 기준 3일 이내면 집행중 (Meta 데이터 딜레이 고려)
@@ -8954,13 +8988,15 @@ export default function OaDashboard(){
                                 <div style={{display:"flex",flexWrap:"wrap",gap:3}}>
                                   {/* 판정 뱃지 */}
                                   <span style={{fontSize:9,fontWeight:800,padding:"2px 7px",borderRadius:20,color:verdictColor,background:verdictBg,border:`1px solid ${verdictColor}33`}}>{verdict}</span>
-                                  {/* 게시 기간 뱃지 */}
-                                  {adAge!==null&&(
-                                    <span style={{fontSize:9,fontWeight:600,padding:"2px 7px",borderRadius:20,
+                                  {/* 운영 기간 뱃지 */}
+                                  {runDays!==null&&(
+                                    <span style={{fontSize:9,fontWeight:600,padding:"2px 7px",borderRadius:20,whiteSpace:"nowrap",
                                       color:isActive?C.good:C.inkLt,
                                       background:isActive?"#EDF7F1":C.cream,
                                       border:`1px solid ${isActive?C.good+"44":C.border}`}}>
-                                      {isActive?<><MI n="circle" size={9} style={{color:C.good}}/> D+{adAge}집행중</>:`⏹ D+${adAge}${lastAgo!==null?` (${lastAgo}일전종료)`:""}`}
+                                      {isActive
+                                        ?<><MI n="circle" size={9} style={{color:C.good}}/> {fmtMD(fd)}~ 운영 {runDays}일째</>
+                                        :`⏹ ${fmtMD(fd)}~${fmtMD(lad)} · ${runDays}일 운영${lastAgo!==null?` · ${lastAgo}일전 종료`:""}`}
                                     </span>
                                   )}
                                   {/* 복제 추천 */}
