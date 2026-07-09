@@ -6986,6 +6986,7 @@ export default function OaDashboard(){
   // 채널 랭킹 트래커: [{id,date,channel,product,rank}] — 랭킹 탭
   const [rankLog, setRankLog] = useSyncState("oa_rank_tracker_v1", []);
   const [rankReal, setRankReal] = useState(null); // 실판매 14일 요약 {`채널|제품|cur/prv`: qty} — ERP 위탁주문(사입 제외)
+  const [rankFetching, setRankFetching] = useState(false); // 순위 자동 조회 중
   useEffect(()=>{
     if(sec!=="ranking"||rankReal) return;
     (async()=>{
@@ -7267,6 +7268,28 @@ export default function OaDashboard(){
       if(!window.confirm("이 기록을 삭제할까요?")) return;
       setRankLog(prev=>(prev||[]).filter(l=>l.id!==id));
     };
+    // 순위 자동 조회 (네이버/지그재그/에이블리/무신사 — 쿠팡은 봇 차단으로 수동)
+    const autoFetch=async()=>{
+      if(rankFetching) return;
+      setRankFetching(true);
+      try{
+        const [dry,pri]=await Promise.all(
+          ["dryer","prion"].map(p=>fetch(`/api/rank-check?product=${p}`).then(r=>r.json())));
+        const found=[];
+        [["드라이기",dry],["프리온 고데기",pri]].forEach(([pd,data])=>{
+          Object.entries(data?.channels||{}).forEach(([ch,v])=>{
+            if(v?.rank) found.push({channel:ch,product:pd,rank:v.rank});
+          });
+        });
+        if(!found.length){ alert("자동 조회 실패 — 잠시 후 다시 시도해 주세요"); return; }
+        setRankLog(prev=>{
+          // 오늘 자동 기록은 최신값으로 교체
+          const rest=(prev||[]).filter(l=>!(l.date===todayStr&&l.auto&&found.some(f=>f.channel===l.channel&&f.product===l.product)));
+          return [...found.map((f,i)=>({id:`${Date.now()}-${i}`,date:todayStr,auto:true,...f})),...rest];
+        });
+      }catch(e){ alert("자동 조회 실패: "+e.message); }
+      finally{ setRankFetching(false); }
+    };
     const realChip=(ch,pd)=>{
       if(!rankReal) return <span style={{fontSize:9,color:C.inkLt}}>실판매 로딩…</span>;
       const cur=rankReal[`${ch}|${pd}|cur`], prv=rankReal[`${ch}|${pd}|prv`];
@@ -7300,6 +7323,10 @@ export default function OaDashboard(){
             <div style={{textAlign:"right"}}>
               <div style={{fontSize:9,opacity:.6}}>순위 기록</div>
               <div style={{fontSize:22,fontWeight:900}}>{trackedCells}<span style={{fontSize:12,opacity:.6}}>/10칸</span></div>
+              <button onClick={autoFetch} disabled={rankFetching} style={{marginTop:6,padding:"5px 12px",borderRadius:20,
+                cursor:rankFetching?"wait":"pointer",fontSize:10,fontWeight:700,fontFamily:"inherit",
+                background:"rgba(255,255,255,0.15)",border:"1px solid rgba(255,255,255,0.3)",color:C.white,opacity:rankFetching?.6:1}}>
+                {rankFetching?"조회 중…":"🔄 순위 자동 조회"}</button>
             </div>
           </div>
           <div style={{marginTop:14,padding:"12px 14px",background:"rgba(255,255,255,0.08)",borderRadius:12}}>
@@ -7368,7 +7395,7 @@ export default function OaDashboard(){
           </Card>
         ))}
         <div style={{fontSize:10,color:C.inkLt,padding:"0 4px"}}>
-          순위 확인처: 네이버 쇼핑 카테고리 랭킹 · 쿠팡 카테고리 베스트 · 지그재그/에이블리 뷰티 랭킹 · 무신사 뷰티 랭킹.
+          🔄 자동 조회 = 채널 검색 결과 순위 (드라이기/무선 고데기 키워드, 네이버·지그재그·에이블리·무신사) — 쿠팡은 봇 차단으로 수동 기록 (카테고리 베스트에서 확인).
           실판매 칩 = ERP 위탁 주문 기준 채널 실판매 (사입·B2B 제외), 최근 14일 vs 직전 14일 — 5개 채널 모두 자동 표시.
         </div>
 
