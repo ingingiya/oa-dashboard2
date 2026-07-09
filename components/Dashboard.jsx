@@ -6989,18 +6989,32 @@ export default function OaDashboard(){
   const [rankFetching, setRankFetching] = useState(false); // 순위 자동 조회 중
   useEffect(()=>{
     if(sec!=="ranking"||rankReal) return;
+    const SURL=process.env.NEXT_PUBLIC_SUPABASE_URL, SKEY=process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
     (async()=>{
-      try{
-        const r=await fetch("/api/mysql?action=rank_sales");
-        if(!r.ok) throw new Error("fetch fail");
-        const {rows}=await r.json();
+      const toAgg=rows=>{
         const agg={};
         (rows||[]).forEach(row=>{
           agg[`${row.channel}|${row.product}|cur`]=Number(row.cur)||0;
           agg[`${row.channel}|${row.product}|prv`]=Number(row.prv)||0;
         });
-        setRankReal(agg);
-      }catch{ setRankReal({}); }
+        return agg;
+      };
+      try{
+        // 1순위: Supabase 동기화본 (scripts/sync-rank-sales.js 매일 크론 — Vercel은 MySQL 직접 접속 불가)
+        const r=await fetch(`${SURL}/rest/v1/settings?key=eq.oa_rank_sales_v1&select=value`,
+          {headers:{apikey:SKEY,Authorization:`Bearer ${SKEY}`}});
+        const data=await r.json();
+        const rows=data?.[0]?.value?.rows;
+        if(rows?.length){ setRankReal(toAgg(rows)); return; }
+        throw new Error("no synced data");
+      }catch{
+        try{
+          // 폴백: MySQL 직결 (로컬 개발 환경에서만 성공)
+          const r=await fetch("/api/mysql?action=rank_sales");
+          const {rows}=await r.json();
+          setRankReal(toAgg(rows));
+        }catch{ setRankReal({}); }
+      }
     })();
   },[sec]);
   // 카피뱅크: scripts/copy-bank.py가 저장한 리뷰/문의 분석 (읽기 전용)
