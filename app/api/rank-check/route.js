@@ -27,7 +27,7 @@ async function checkMusinsa(p) {
   const res = await fetch(url, { headers: { "User-Agent": UA } });
   if (!res.ok) throw new Error(`musinsa ${res.status}`);
   const data = await res.json();
-  const list = data?.data?.list || [];
+  const list = (data?.data?.list || []).filter(g => !g.isAd); // 광고 제외
   for (let i = 0; i < list.length; i++) {
     const g = list[i];
     if (p.match(g.brandName || g.brand || "", g.goodsName || "")) {
@@ -42,14 +42,14 @@ async function checkZigzag(p) {
     method: "POST",
     headers: { "Content-Type": "application/json", "User-Agent": UA },
     body: JSON.stringify({
-      query: "query GetSearchResult($input: SearchResultInput!) { search_result(input: $input) { ui_item_list { __typename ... on UxGoodsCardItem { shop_name title } } } }",
+      query: "query GetSearchResult($input: SearchResultInput!) { search_result(input: $input) { ui_item_list { __typename ... on UxGoodsCardItem { shop_name title aid } } } }",
       variables: { input: { page_id: "search_result", q: p.keyword } },
     }),
   });
   if (!res.ok) throw new Error(`zigzag ${res.status}`);
   const data = await res.json();
   if (data.errors) throw new Error(data.errors[0]?.message || "zigzag graphql error");
-  const goods = (data?.data?.search_result?.ui_item_list || []).filter(i => i.title);
+  const goods = (data?.data?.search_result?.ui_item_list || []).filter(i => i.title && !i.aid); // 광고 제외
   for (let i = 0; i < goods.length; i++) {
     if (p.match(goods[i].shop_name || "", goods[i].title || "")) {
       return { rank: i + 1, title: goods[i].title, total: goods.length };
@@ -72,7 +72,7 @@ async function checkAbly(p) {
   (function walk(o) {
     if (Array.isArray(o)) return o.forEach(walk);
     if (o && typeof o === "object") {
-      if (typeof o.name === "string" && (o.market_name || o.sno)) goods.push(o);
+      if (typeof o.name === "string" && (o.market_name || o.sno) && !o.ad) goods.push(o); // 광고 제외
       Object.values(o).forEach(walk);
     }
   })(data.components || []);
