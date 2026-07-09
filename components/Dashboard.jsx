@@ -7438,6 +7438,32 @@ export default function OaDashboard(){
           </div>
         </Card>
 
+        {/* ── 진행 현황 로그 ── */}
+        <Card>
+          <CardTitle title="🚀 진행 현황" sub="실행 착수 로그 — 최신순"/>
+          {[
+            ["07/09","김경은","쿠팡 세팅 착수 (1주차 플랜)",[
+              "에어리소닉 검색광고 — 일예산 50만원, 키워드별 제안입찰가로 테스트, 스마트 타겟팅 입찰가 610원, 키워드 일괄 추가 요청",
+              "키워드 추가: 수영장드라이기 · 헬스장드라이기",
+              "골드박스 — 에어리소닉 599 가능 일정 체크 요청",
+              "베이지 컬러 단독 가격할인 가능 여부 확인 요청",
+            ]],
+          ].map(([d,who,title,items])=>(
+            <div key={d+title} style={{border:`1px solid ${C.border}`,borderRadius:12,padding:"12px 14px"}}>
+              <div style={{fontSize:12,fontWeight:900,color:C.ink}}>
+                <span style={{color:C.rose}}>{d}</span> {title} <span style={{fontSize:10,fontWeight:700,color:C.inkLt}}>— {who}</span>
+              </div>
+              <ul style={{margin:"8px 0 0",paddingLeft:16,fontSize:10.5,color:C.inkMid,lineHeight:1.7}}>
+                {items.map((it,i)=><li key={i}>{it}</li>)}
+              </ul>
+            </div>
+          ))}
+          <div style={{marginTop:10,padding:"10px 12px",background:"#FFF6E8",border:"1px solid #EFD9AE",borderRadius:10,fontSize:11,color:"#B07A1E",fontWeight:700,lineHeight:1.6}}>
+            ⚠️ 체크: 일예산 50만원 = 풀소진 시 월 최대 1,500만원 — 플랜 광고비는 월 150만원. 캡이므로 문제는 아니지만 실집행액 주간 확인 필요.
+            골드박스·베이지 단독 할인가는 네이버 판매가보다 낮아지지 않게 (가격 역전 주의).
+          </div>
+        </Card>
+
         {/* ── SKU 재고 현황 · 역할 ── */}
         <Card>
           <CardTitle title="📦 SKU 재고 · 소진개월" sub="현 판매 속도 월 9,703개 · 소진 12개월 초과(빨강)는 분산 대상"/>
