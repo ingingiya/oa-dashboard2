@@ -6985,6 +6985,9 @@ export default function OaDashboard(){
   const [promoEvents, setPromoEvents] = useSyncState("oa_events_v1", []);
   // 채널 랭킹 트래커: [{id,date,channel,product,rank}] — 랭킹 탭
   const [rankLog, setRankLog] = useSyncState("oa_rank_tracker_v1", []);
+  const [rankMemo, setRankMemo] = useSyncState("oa_rank_memo_v1", [
+    {id:"seed-0709",date:"2026-07-09",who:"김경은",text:"쿠팡 세팅 착수 — 에어리소닉 검색광고 일예산 50만·제안입찰가 테스트·스마트타겟팅 610원·키워드 일괄 추가 / 키워드 추가: 수영장드라이기·헬스장드라이기 / 골드박스 599 일정 체크 / 베이지 단독 가격할인 가능 여부 확인"},
+  ]);
   const [rankReal, setRankReal] = useState(null); // 실판매 14일 요약 {`채널|제품|cur/prv`: qty} — ERP 위탁주문(사입 제외)
   const [rankFetching, setRankFetching] = useState(false); // 순위 자동 조회 중
   useEffect(()=>{
@@ -7438,29 +7441,34 @@ export default function OaDashboard(){
           </div>
         </Card>
 
-        {/* ── 진행 현황 로그 ── */}
+        {/* ── 진행 현황 메모 ── */}
         <Card>
-          <CardTitle title="🚀 진행 현황" sub="실행 착수 로그 — 최신순"/>
-          {[
-            ["07/09","김경은","쿠팡 세팅 착수 (1주차 플랜)",[
-              "에어리소닉 검색광고 — 일예산 50만원, 키워드별 제안입찰가로 테스트, 스마트 타겟팅 입찰가 610원, 키워드 일괄 추가 요청",
-              "키워드 추가: 수영장드라이기 · 헬스장드라이기",
-              "골드박스 — 에어리소닉 599 가능 일정 체크 요청",
-              "베이지 컬러 단독 가격할인 가능 여부 확인 요청",
-            ]],
-          ].map(([d,who,title,items])=>(
-            <div key={d+title} style={{border:`1px solid ${C.border}`,borderRadius:12,padding:"12px 14px"}}>
-              <div style={{fontSize:12,fontWeight:900,color:C.ink}}>
-                <span style={{color:C.rose}}>{d}</span> {title} <span style={{fontSize:10,fontWeight:700,color:C.inkLt}}>— {who}</span>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
+            <CardTitle title="🚀 진행 현황" sub="팀 진행 메모 — 직접 기록 (최신순, 클릭 시 삭제)"/>
+            <button onClick={()=>{
+              const who=window.prompt("작성자 이름");
+              if(who==null) return;
+              const text=window.prompt("진행 내용 메모");
+              if(!text||!text.trim()) return;
+              setRankMemo(prev=>[{id:Date.now()+"",date:todayStr,who:who.trim()||"팀",text:text.trim()},...(prev||[])]);
+            }} style={{padding:"5px 12px",borderRadius:20,cursor:"pointer",fontSize:10,fontWeight:700,fontFamily:"inherit",
+              background:C.blush,border:`1px solid ${C.rose}33`,color:C.rose,whiteSpace:"nowrap"}}>+ 메모</button>
+          </div>
+          <div style={{display:"flex",flexDirection:"column",gap:8,marginTop:4}}>
+            {(rankMemo||[]).slice().sort((a,b)=>b.date.localeCompare(a.date)||String(b.id).localeCompare(String(a.id))).map(m=>(
+              <div key={m.id} onClick={()=>{if(window.confirm("이 메모를 삭제할까요?")) setRankMemo(prev=>(prev||[]).filter(x=>x.id!==m.id));}}
+                title="클릭 시 삭제" style={{border:`1px solid ${C.border}`,borderRadius:12,padding:"11px 14px",cursor:"pointer"}}>
+                <div style={{fontSize:11,fontWeight:900,color:C.ink}}>
+                  <span style={{color:C.rose}}>{m.date.slice(5).replace("-","/")}</span>
+                  <span style={{fontSize:9.5,fontWeight:700,color:C.inkLt,marginLeft:6}}>{m.who}</span>
+                </div>
+                <div style={{fontSize:11,color:C.inkMid,marginTop:3,lineHeight:1.6,whiteSpace:"pre-wrap"}}>{m.text}</div>
               </div>
-              <ul style={{margin:"8px 0 0",paddingLeft:16,fontSize:10.5,color:C.inkMid,lineHeight:1.7}}>
-                {items.map((it,i)=><li key={i}>{it}</li>)}
-              </ul>
-            </div>
-          ))}
+            ))}
+            {(!rankMemo||rankMemo.length===0)&&<div style={{fontSize:10,color:C.inkLt,padding:"6px 2px"}}>메모가 없어요 — 위 + 메모 버튼으로 기록하세요</div>}
+          </div>
           <div style={{marginTop:10,padding:"10px 12px",background:"#FFF6E8",border:"1px solid #EFD9AE",borderRadius:10,fontSize:11,color:"#B07A1E",fontWeight:700,lineHeight:1.6}}>
-            ⚠️ 체크: 일예산 50만원 = 풀소진 시 월 최대 1,500만원 — 플랜 광고비는 월 150만원. 캡이므로 문제는 아니지만 실집행액 주간 확인 필요.
-            골드박스·베이지 단독 할인가는 네이버 판매가보다 낮아지지 않게 (가격 역전 주의).
+            ⚠️ 상시 체크: 광고 실집행액 주간 확인 (플랜 월 150만) · 딜·할인가는 네이버 판매가보다 낮아지지 않게 (가격 역전 주의).
           </div>
         </Card>
 
@@ -7599,7 +7607,6 @@ export default function OaDashboard(){
     {id:"creative",  icon:"palette",        label:"소재"},
     {id:"hypothesis",icon:"psychology",     label:"가설"},
     {id:"insight",   icon:"edit_note",      label:"팀 노트"},
-    {id:"projects",  icon:"folder_open",    label:"프로젝트"},
     {id:"detailplan",icon:"article",        label:"상세기획"},
   ];
   const NAVS_WIP=[
@@ -17025,7 +17032,6 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
           {sec==="naver_review" && <NaverReviewSection/>}
           {sec==="hypothesis"  && HypothesisSection}
           {sec==="insight"     && InsightSection}
-          {sec==="projects"    && <ProjectSection/>}
           {sec==="detailplan"  && <DetailPlanSection/>}
           {sec==="coupang"     && CoupangSection}
           {sec==="ranking"     && RankingSection}
