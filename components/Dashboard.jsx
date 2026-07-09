@@ -7300,9 +7300,6 @@ export default function OaDashboard(){
             <div style={{textAlign:"right"}}>
               <div style={{fontSize:9,opacity:.6}}>순위 기록</div>
               <div style={{fontSize:22,fontWeight:900}}>{trackedCells}<span style={{fontSize:12,opacity:.6}}>/10칸</span></div>
-              <button onClick={()=>setSec("guide")} style={{marginTop:6,padding:"5px 12px",borderRadius:20,cursor:"pointer",
-                fontSize:10,fontWeight:700,fontFamily:"inherit",background:"rgba(255,255,255,0.15)",
-                border:"1px solid rgba(255,255,255,0.3)",color:C.white}}>전체 플랜 보기 →</button>
             </div>
           </div>
           <div style={{marginTop:14,padding:"12px 14px",background:"rgba(255,255,255,0.08)",borderRadius:12}}>
@@ -7374,6 +7371,72 @@ export default function OaDashboard(){
           순위 확인처: 네이버 쇼핑 카테고리 랭킹 · 쿠팡 카테고리 베스트 · 지그재그/에이블리 뷰티 랭킹 · 무신사 뷰티 랭킹.
           실판매 칩 = ERP 위탁 주문 기준 채널 실판매 (사입·B2B 제외), 최근 14일 vs 직전 14일 — 5개 채널 모두 자동 표시.
         </div>
+
+        {/* ── 리소스 분배 플랜 ── */}
+        <Card>
+          <CardTitle title="📋 리소스 분배 (100%)" sub="강한 곳은 방어만 · 신규 예산은 구멍에 집중"/>
+          <div style={{overflowX:"auto"}}>
+            <table style={{width:"100%",borderCollapse:"collapse",fontSize:11,minWidth:560}}>
+              <thead><tr style={{borderBottom:`2px solid ${C.border}`}}>
+                {["채널","비중","7~8월","9~10월"].map((h,i)=>(
+                  <th key={i} style={{padding:"8px",textAlign:i<2?"center":"left",color:C.inkLt,fontWeight:700,fontSize:9,whiteSpace:"nowrap"}}>{h}</th>
+                ))}
+              </tr></thead>
+              <tbody>{[
+                ["쿠팡","드라이기 CPC·로켓 증액 (네이버와 격차 해소) + 리뷰 이벤트","프리온 랭킹 방어 + 와우딜"],
+                ["네이버","드라이기 판매지수 유지 + 리뷰 적립","프리온 기획전 · 원쁠딜"],
+                ["무신사","체험단 리뷰 시딩 (리뷰 100개 목표 — 9월 랭킹 반영)","두 제품 동시 푸시 — 판이 작아 ROI 최고"],
+                ["지그재그","프리온 딜 즉시 재점화 + 드라이기 세트 동반 노출","프리온 포인트딜 반복"],
+                ["에이블리","고데기 고객에 드라이기 크로스셀","프리온 브랜드데이"],
+              ].map(([ch,a,b])=>(
+                <tr key={ch} style={{borderBottom:`1px solid ${C.border}`}}>
+                  <td style={{padding:"9px 8px",fontWeight:800,color:C.ink,textAlign:"center",whiteSpace:"nowrap"}}>{ch}</td>
+                  <td style={{padding:"9px 8px",fontWeight:900,color:C.rose,textAlign:"center"}}>{SHARE[ch]}</td>
+                  <td style={{padding:"9px 8px",color:C.inkMid}}>{a}</td>
+                  <td style={{padding:"9px 8px",color:C.inkMid}}>{b}</td>
+                </tr>
+              ))}</tbody>
+            </table>
+          </div>
+          <div style={{marginTop:10,padding:"10px 12px",background:C.cream,borderRadius:10,fontSize:11,color:C.inkMid,lineHeight:1.6}}>
+            <b style={{color:C.ink}}>원칙:</b> 강한 곳(네이버 드라이기, 쿠팡 고데기)은 방어 비용만 — 신규 예산은 구멍(앱 채널 드라이기, 무신사 전체)에 집중.
+            지그재그·에이블리 랭킹은 <b style={{color:C.ink}}>최근 판매속도</b> 기반이라 예산을 상시 태우지 말고 <b style={{color:C.ink}}>딜 주간에 몰아서</b> 소진.
+          </div>
+        </Card>
+
+        {/* ── 월별 로드맵 ── */}
+        <Card>
+          <CardTitle title="🗓 월별 로드맵" sub="7월 베이스라인 → 10월 랭킹 유지"/>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(220px,1fr))",gap:10}}>
+            {[
+              ["7월","베이스라인 + 급한 불",["5개 채널 현재 순위 기록 시작 (주 1회)","지그재그·에이블리 프리온 딜 재점화 — 실판매 -59% 방어 최우선","무신사 체험단 발주 (리뷰 시딩)","앱 채널 드라이기는 프리온 딜에 세트/추가할인 동반 노출"]],
+              ["8월","앱 채널 드라이기 + 고데기 조기 전환",["지그재그·에이블리 격주 딜 사이클로 드라이기 순위 진입","8월 중순부터 고데기 성수기 모드 (쿠팡 프리온 +39% 조기 시동 확인)","프리온 성수기 재고 선확보"]],
+              ["9월","프리온 총공세",["전 채널 프리온 딜 집중 — 네이버 기획전·원쁠딜, 쿠팡 와우딜, 앱 포인트딜","무신사 두 제품 동시 푸시 (7월 심은 리뷰 반영 시점)"]],
+              ["10월","랭킹 유지 모드",["순위 유지 광고 + 리뷰 이벤트 지속, 연휴 프로모션","채널×제품 10칸 중 랭킹 진입 개수로 목표 판정"]],
+            ].map(([m,t,items])=>(
+              <div key={m} style={{border:`1px solid ${m===`${month}월`?C.rose:C.border}`,borderRadius:12,padding:"12px 14px",
+                background:m===`${month}월`?C.blush:C.white}}>
+                <div style={{fontSize:12,fontWeight:900,color:m===`${month}월`?C.rose:C.ink}}>{m} <span style={{fontSize:10,fontWeight:700,color:C.inkMid}}>{t}</span></div>
+                <ul style={{margin:"8px 0 0",paddingLeft:16,fontSize:10.5,color:C.inkMid,lineHeight:1.7}}>
+                  {items.map((it,i)=><li key={i}>{it}</li>)}
+                </ul>
+              </div>
+            ))}
+          </div>
+        </Card>
+
+        {/* ── 데이터 근거 + 지금 액션 ── */}
+        <Card>
+          <CardTitle title="📊 데이터 근거" sub="2026-07-09 기준"/>
+          <ul style={{margin:0,paddingLeft:16,fontSize:11,color:C.inkMid,lineHeight:1.8}}>
+            <li>ERP 5~7월: 네이버 드라이기 9,883개(최강) · 쿠팡 고데기 카테고리 최강 · <b style={{color:C.bad}}>지그재그/에이블리 드라이기 270/80개(구멍)</b> · 무신사 양쪽 약함(429/498개)</li>
+            <li>실판매(사입 제외) 최근 14일: 쿠팡 프리온 <b style={{color:C.good}}>+39%↑</b> · 지그재그 프리온 <b style={{color:C.bad}}>-59%↓</b> · 쿠팡 드라이기 보합</li>
+            <li>쿠팡 고데기 내부 1위는 오토고데기40mm-퍼플 — <b style={{color:C.ink}}>프리온 vs 오토고데기 대표 SKU 결정 필요</b></li>
+          </ul>
+          <div style={{marginTop:10,padding:"10px 12px",background:"#FEF0F0",border:`1px solid ${C.bad}33`,borderRadius:10,fontSize:11,color:C.ink,fontWeight:700}}>
+            지금 액션 3개: ① 지그재그 프리온 딜 일정 확정 ② 무신사 체험단 발주 ③ 쿠팡 고데기 대표 SKU 결정 (프리온 vs 오토고데기)
+          </div>
+        </Card>
       </div>
     );
   })();
