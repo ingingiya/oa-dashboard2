@@ -31,21 +31,33 @@ const campaignPayload = {
   dailyBudget: BUDGET,
   useDailyBudget: true,
 };
-const adgroupPayload = (nccCampaignId) => ({
+const adgroupPayload = (nccCampaignId, channelId) => ({
   nccCampaignId,
   customerId: CUSTOMER_ID,
+  adgroupType: 'WEB_SITE', // 3734 Invalid type of ad group — 캠페인 유형과 일치 필요
   name: `${PRODUCT}_기본그룹`,
   bidAmt: BID,
   useGroupBidAmt: true,
   dailyBudget: BUDGET,
   useDailyBudget: true,
-  ...(flags.url ? { pcChannelId: null, mobileChannelId: null } : {}), // 채널은 라이브 시 계정의 기본 비즈채널 필요 — 에러 바디 보고 보완
+  pcChannelId: channelId,     // 비즈채널 필수 (3604 Invalid Biz Channel) — /ncc/channels의 nccBusinessChannelId
+  mobileChannelId: channelId,
 });
+
+// 비즈채널 선택: --channel <nccBusinessChannelId> 또는 자동 (SITE·ELIGIBLE, --url/스마트스토어 우선)
+async function pickChannel() {
+  if (flags.channel) return { nccBusinessChannelId: flags.channel, name: '(수동 지정)' };
+  const channels = (await searchAdFetch('GET', '/ncc/channels'))
+    .filter(c => c.channelTp === 'SITE' && c.status === 'ELIGIBLE' && c.enabled && !c.delFlag);
+  if (channels.length === 0) throw new Error('사용 가능한 SITE 비즈채널 없음 — searchad 콘솔에서 등록 필요');
+  const byUrl = flags.url && channels.find(c => flags.url.includes(new URL(c.channelKey).hostname));
+  return byUrl || channels.find(c => (c.channelKey || '').includes('smartstore')) || channels[0];
+}
 const keywordPayloads = (nccAdgroupId) => KEYWORDS.map(k => ({ nccAdgroupId, keyword: k.replace(/\s/g, ''), customerId: CUSTOMER_ID }));
 
 console.log(`── 네이버 검색광고 ${LIVE ? 'LIVE 생성' : 'DRY-RUN'} ──`);
 console.log('캠페인:', JSON.stringify(campaignPayload, null, 2));
-console.log('광고그룹(템플릿):', JSON.stringify(adgroupPayload('<campaignId>'), null, 2));
+console.log('광고그룹(템플릿):', JSON.stringify(adgroupPayload('<campaignId>', flags.channel || '<자동 선택>'), null, 2));
 console.log(`키워드 ${KEYWORDS.length}개:`, KEYWORDS.join(', '));
 
 if (!LIVE) {
@@ -59,10 +71,16 @@ if (!LIVE) {
 
 // ── LIVE ──
 try {
-  const camp = await searchAdFetch('POST', '/ncc/campaigns', { body: campaignPayload });
-  console.log('캠페인 생성:', camp.nccCampaignId);
+  const channel = await pickChannel();
+  console.log('비즈채널:', channel.nccBusinessChannelId, channel.name || channel.channelKey || '');
 
-  const group = await searchAdFetch('POST', '/ncc/adgroups', { body: adgroupPayload(camp.nccCampaignId) });
+  // --campaign-id 지정 시 캠페인 생성 생략 (재시도용)
+  const camp = flags['campaign-id']
+    ? { nccCampaignId: flags['campaign-id'] }
+    : await searchAdFetch('POST', '/ncc/campaigns', { body: campaignPayload });
+  console.log('캠페인:', camp.nccCampaignId, flags['campaign-id'] ? '(기존 재사용)' : '(생성)');
+
+  const group = await searchAdFetch('POST', '/ncc/adgroups', { body: adgroupPayload(camp.nccCampaignId, channel.nccBusinessChannelId) });
   console.log('광고그룹 생성:', group.nccAdgroupId);
 
   const kws = await searchAdFetch('POST', `/ncc/keywords`, { query: { nccAdgroupId: group.nccAdgroupId }, body: keywordPayloads(group.nccAdgroupId) });
