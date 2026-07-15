@@ -494,6 +494,212 @@ function detectPlatformClient(url) {
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 🚀 신제품 런칭 (스킬 스크립트와 oa_launch_v1 공유)
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+const LAUNCH_STAGE_DEFS = [
+  {key:"creative", label:"광고 소재",       icon:"palette",    checks:[["copy","카피뱅크"],["video_prompt","영상 프롬프트"],["video_done","영상 완성"]]},
+  {key:"detail",   label:"상세페이지",       icon:"article",    checks:[["plan","기획안"],["figma","Figma 디자인"],["final","최종본"]]},
+  {key:"store",    label:"스토어 등록",      icon:"storefront", checks:[["images","이미지 준비"],["draft","판매대기 등록"],["live","판매중 전환"]]},
+  {key:"ads",      label:"네이버 광고",      icon:"ads_click",  checks:[["keywords","키워드 선정"],["dryrun","드라이런 확인"],["live","캠페인 라이브"]]},
+  {key:"seeding",  label:"인플루언서 시딩",  icon:"send",       checks:[["candidates","후보 선정"],["kit","발송킷 생성"],["sent","발송 완료"]]},
+];
+const LAUNCH_STATUS_CYCLE = ["대기","진행","완료","차단"];
+const LAUNCH_STATUS_STYLE = {
+  "대기":{bg:"#f4f4f5",fg:"#71717a"}, "진행":{bg:"#EFF6FF",fg:"#2563EB"},
+  "완료":{bg:"#F0FDF4",fg:"#16A34A"}, "차단":{bg:"#FEF2F2",fg:"#DC2626"},
+};
+const LAUNCH_CATS = ["헤어","스킨케어","디바이스","기타"];
+
+function newLaunchStages() {
+  const stages = {};
+  for (const s of LAUNCH_STAGE_DEFS) {
+    stages[s.key] = { status:"대기", checklist:Object.fromEntries(s.checks.map(([k])=>[k,false])), artifacts:[] };
+    if (s.key==="store") stages[s.key].productNo = null;
+    if (s.key==="ads") stages[s.key].campaignId = null;
+    if (s.key==="seeding") stages[s.key].candidateIds = [];
+  }
+  return stages;
+}
+
+function LaunchSection() {
+  const [state, setState, loaded] = useSupabaseState("oa_launch_v1", {launches:[]});
+  const launches = state?.launches || [];
+  const [selId, setSelId] = useState(null);
+  const [addOpen, setAddOpen] = useState(false);
+  const [form, setForm] = useState({name:"", category:"헤어", targetDate:""});
+  const [artInput, setArtInput] = useState(null); // {stage, label, url}
+
+  const sel = launches.find(l=>l.id===selId) || launches[0] || null;
+  const persist = (ls) => setState({launches:ls, updated:new Date().toISOString()});
+  const patchSel = (fn) => persist(launches.map(l=>l.id===sel.id ? fn(structuredClone(l)) : l));
+
+  function addLaunch() {
+    if (!form.name.trim()) return alert("제품명을 입력해주세요");
+    const entry = {
+      id: Date.now().toString(), name: form.name.trim(), category: form.category,
+      targetDate: form.targetDate || "", notes: "", stages: newLaunchStages(),
+    };
+    persist([...launches, entry]);
+    setSelId(entry.id); setAddOpen(false); setForm({name:"", category:"헤어", targetDate:""});
+  }
+  function removeLaunch(id) {
+    if (!confirm("이 런칭을 삭제할까요?")) return;
+    persist(launches.filter(l=>l.id!==id));
+    if (selId===id) setSelId(null);
+  }
+
+  const doneCount = sel ? LAUNCH_STAGE_DEFS.filter(s=>sel.stages?.[s.key]?.status==="완료").length : 0;
+  const dday = sel?.targetDate ? Math.ceil((new Date(sel.targetDate+"T00:00:00+09:00") - Date.now())/86400000) : null;
+
+  if (!loaded) return <Card><div style={{fontSize:11,color:C.inkLt,padding:"20px 0",textAlign:"center"}}>런칭 데이터 로딩 중…</div></Card>;
+
+  return (
+    <div style={{display:"flex",flexDirection:"column",gap:14}}>
+      {/* 런칭 선택 + 새 런칭 */}
+      <Card>
+        <CardTitle title="🚀 신제품 런칭" sub="광고 소재 → 상세페이지 → 스토어 등록 → 네이버 광고 → 시딩 · 스킬(런칭 ㄱㄱ)과 상태 공유"
+          action={<Btn small onClick={()=>setAddOpen(v=>!v)}>{addOpen?"닫기":"+ 새 런칭"}</Btn>}/>
+        <div style={{display:"flex",gap:8,flexWrap:"wrap",alignItems:"center"}}>
+          {launches.length===0 && !addOpen && <div style={{fontSize:11,color:C.inkLt}}>진행 중인 런칭이 없어요 — "새 런칭"으로 시작하세요</div>}
+          {launches.map(l=>{
+            const active = sel?.id===l.id;
+            const done = LAUNCH_STAGE_DEFS.filter(s=>l.stages?.[s.key]?.status==="완료").length;
+            return (
+              <button key={l.id} onClick={()=>setSelId(l.id)} style={{
+                padding:"6px 14px",borderRadius:20,cursor:"pointer",fontFamily:"inherit",fontSize:11,fontWeight:700,
+                border:`1.5px solid ${active?C.rose:C.border}`,background:active?C.rose:C.white,color:active?"#fff":C.inkMid}}>
+                {l.name} <span style={{fontSize:9,opacity:0.8}}>{done}/5</span>
+              </button>
+            );
+          })}
+        </div>
+        {addOpen && (
+          <div style={{marginTop:12,padding:"12px 14px",background:C.cream,borderRadius:12,display:"flex",gap:8,flexWrap:"wrap",alignItems:"flex-end"}}>
+            <div>
+              <div style={{fontSize:10,fontWeight:700,color:C.inkLt,marginBottom:3}}>제품명</div>
+              <input value={form.name} onChange={e=>setForm(f=>({...f,name:e.target.value}))} placeholder="예: 소닉 플로우 2"
+                style={{padding:"7px 10px",border:`1px solid ${C.border}`,borderRadius:8,fontSize:12,outline:"none",width:180,fontFamily:"inherit"}}/>
+            </div>
+            <div>
+              <div style={{fontSize:10,fontWeight:700,color:C.inkLt,marginBottom:3}}>카테고리</div>
+              <div style={{display:"flex",gap:4}}>
+                {LAUNCH_CATS.map(c=>(
+                  <button key={c} onClick={()=>setForm(f=>({...f,category:c}))} style={{
+                    padding:"6px 10px",borderRadius:8,cursor:"pointer",fontFamily:"inherit",fontSize:10,fontWeight:700,
+                    border:`1.5px solid ${form.category===c?C.rose:C.border}`,background:form.category===c?C.rose:C.white,color:form.category===c?"#fff":C.inkMid}}>{c}</button>
+                ))}
+              </div>
+            </div>
+            <div>
+              <div style={{fontSize:10,fontWeight:700,color:C.inkLt,marginBottom:3}}>목표일</div>
+              <input type="date" value={form.targetDate} onChange={e=>setForm(f=>({...f,targetDate:e.target.value}))}
+                style={{padding:"6px 10px",border:`1px solid ${C.border}`,borderRadius:8,fontSize:12,outline:"none",fontFamily:"inherit"}}/>
+            </div>
+            <Btn small onClick={addLaunch}>생성</Btn>
+          </div>
+        )}
+      </Card>
+
+      {sel && (
+        <>
+          {/* 요약 KPI */}
+          <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+            {[
+              ["진행률",`${doneCount}/5 단계`,doneCount===5?"#15803d":C.ink,doneCount===5?"#f0fdf4":"#fff"],
+              ["목표일",sel.targetDate||"미정",C.ink,"#fff"],
+              ["D-Day",dday===null?"—":(dday>=0?`D-${dday}`:`D+${-dday}`),dday!==null&&dday<7?"#b91c1c":C.ink,dday!==null&&dday<7?"#fef2f2":"#fff"],
+              ["카테고리",sel.category||"—",C.ink,"#fff"],
+            ].map(([l,v,fg,bg])=>(
+              <div key={l} style={{flex:1,minWidth:130,background:bg,border:`1px solid ${C.border}`,borderRadius:12,padding:"12px 14px"}}>
+                <div style={{fontSize:10,fontWeight:700,color:C.inkLt}}>{l}</div>
+                <div style={{fontSize:19,fontWeight:800,color:fg}}>{v}</div>
+              </div>
+            ))}
+          </div>
+
+          {/* 5단계 카드 */}
+          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(260px,1fr))",gap:10}}>
+            {LAUNCH_STAGE_DEFS.map((def,i)=>{
+              const st = sel.stages?.[def.key] || {status:"대기",checklist:{},artifacts:[]};
+              const sty = LAUNCH_STATUS_STYLE[st.status] || LAUNCH_STATUS_STYLE["대기"];
+              return (
+                <div key={def.key} style={{background:C.white,border:`1px solid ${st.status==="진행"?C.rose+"66":C.border}`,borderRadius:14,padding:"14px 16px"}}>
+                  <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10}}>
+                    <MI n={def.icon} size={16} style={{color:sty.fg}}/>
+                    <div style={{fontSize:12,fontWeight:800,color:C.ink,flex:1}}>{i+1}. {def.label}</div>
+                    <button onClick={()=>{
+                      const next = LAUNCH_STATUS_CYCLE[(LAUNCH_STATUS_CYCLE.indexOf(st.status)+1)%LAUNCH_STATUS_CYCLE.length];
+                      patchSel(l=>{ l.stages[def.key].status = next; return l; });
+                    }} style={{padding:"3px 12px",borderRadius:20,border:"none",cursor:"pointer",fontFamily:"inherit",
+                      fontSize:10,fontWeight:800,background:sty.bg,color:sty.fg}}>{st.status}</button>
+                  </div>
+                  <div style={{display:"flex",flexDirection:"column",gap:5}}>
+                    {def.checks.map(([k,label])=>(
+                      <label key={k} style={{display:"flex",alignItems:"center",gap:7,fontSize:11,color:st.checklist?.[k]?C.inkLt:C.inkMid,cursor:"pointer",
+                        textDecoration:st.checklist?.[k]?"line-through":"none"}}>
+                        <input type="checkbox" checked={!!st.checklist?.[k]} onChange={e=>{
+                          const v = e.target.checked;
+                          patchSel(l=>{ l.stages[def.key].checklist[k] = v; return l; });
+                        }} style={{accentColor:C.rose}}/>
+                        {label}
+                      </label>
+                    ))}
+                  </div>
+                  {(st.artifacts||[]).length>0 && (
+                    <div style={{marginTop:10,display:"flex",flexDirection:"column",gap:4}}>
+                      {st.artifacts.map((a,ai)=>(
+                        <div key={ai} style={{display:"flex",alignItems:"center",gap:6,fontSize:10.5,background:C.cream,borderRadius:8,padding:"5px 8px"}}>
+                          <MI n="attach_file" size={12} style={{color:C.inkLt}}/>
+                          {/^https?:\/\//.test(a.url||"")
+                            ? <a href={a.url} target="_blank" rel="noreferrer" style={{color:C.rose,fontWeight:700,textDecoration:"none",flex:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{a.label||a.url}</a>
+                            : <span style={{color:C.inkMid,fontWeight:700,flex:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}} title={a.url}>{a.label||a.url}</span>}
+                          <button onClick={()=>patchSel(l=>{ l.stages[def.key].artifacts.splice(ai,1); return l; })}
+                            style={{border:"none",background:"transparent",cursor:"pointer",color:C.inkLt,padding:0,display:"flex"}}><MI n="close" size={12}/></button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {artInput?.stage===def.key ? (
+                    <div style={{marginTop:8,display:"flex",gap:4,flexWrap:"wrap"}}>
+                      <input value={artInput.label} onChange={e=>setArtInput(v=>({...v,label:e.target.value}))} placeholder="이름"
+                        style={{padding:"5px 8px",border:`1px solid ${C.border}`,borderRadius:8,fontSize:10.5,outline:"none",width:80,fontFamily:"inherit"}}/>
+                      <input value={artInput.url} onChange={e=>setArtInput(v=>({...v,url:e.target.value}))} placeholder="URL 또는 파일경로"
+                        style={{padding:"5px 8px",border:`1px solid ${C.border}`,borderRadius:8,fontSize:10.5,outline:"none",flex:1,minWidth:100,fontFamily:"inherit"}}/>
+                      <Btn small onClick={()=>{
+                        if (!artInput.url.trim()) return;
+                        const a = {label:artInput.label.trim()||artInput.url.trim(), url:artInput.url.trim()};
+                        patchSel(l=>{ (l.stages[def.key].artifacts = l.stages[def.key].artifacts||[]).push(a); return l; });
+                        setArtInput(null);
+                      }}>추가</Btn>
+                      <Btn small variant="neutral" onClick={()=>setArtInput(null)}>취소</Btn>
+                    </div>
+                  ) : (
+                    <button onClick={()=>setArtInput({stage:def.key,label:"",url:""})}
+                      style={{marginTop:8,border:"none",background:"transparent",cursor:"pointer",fontFamily:"inherit",
+                        fontSize:10,fontWeight:700,color:C.inkLt,padding:0,display:"flex",alignItems:"center",gap:3}}>
+                      <MI n="add" size={12}/> 링크 추가
+                    </button>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+
+          {/* 노트 + 삭제 */}
+          <Card>
+            <CardTitle title="메모" action={<Btn small variant="danger" onClick={()=>removeLaunch(sel.id)}>런칭 삭제</Btn>}/>
+            <textarea key={sel.id} defaultValue={sel.notes||""} placeholder="런칭 관련 메모 (포커스 벗어나면 저장)"
+              onBlur={e=>{ const v=e.target.value; if(v!==(sel.notes||"")) patchSel(l=>{ l.notes=v; return l; }); }}
+              style={{width:"100%",minHeight:70,padding:"10px 12px",border:`1px solid ${C.border}`,borderRadius:10,
+                fontSize:12,fontFamily:"inherit",color:C.ink,outline:"none",resize:"vertical",boxSizing:"border-box"}}/>
+          </Card>
+        </>
+      )}
+    </div>
+  );
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // 📂 인플루언서 아카이브
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 const INF_CATS = ["공동구매", "뷰티릴스", "제품리뷰", "언박싱", "브이로그", "행사용", "기타"];
@@ -7603,6 +7809,7 @@ export default function OaDashboard(){
     {id:"stock",     icon:"inventory",      label:"재고"},
     {id:"ads11st",   icon:"trending_up",    label:"11번가광고"},
     {id:"inf_archive",icon:"photo_library", label:"아카이브"},
+    {id:"launch",    icon:"rocket_launch",  label:"런칭"},
     {id:"schedule",  icon:"calendar_month", label:"스케줄"},
     {id:"creative",  icon:"palette",        label:"소재"},
     {id:"hypothesis",icon:"psychology",     label:"가설"},
@@ -17022,6 +17229,7 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
           {sec==="stock"       && StockSection}
           {sec==="ads11st"     && Ads11stSection}
           {sec==="inf_archive" && <InfluencerArchiveSection/>}
+          {sec==="launch"      && <LaunchSection/>}
           {sec==="schedule"    && ScheduleSection}
           {sec==="erp"         && <ErpSection/>}
           {sec==="naver"       && <NaverSection/>}
