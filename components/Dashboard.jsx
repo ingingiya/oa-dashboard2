@@ -695,6 +695,31 @@ function LaunchSection() {
           </Card>
         </>
       )}
+
+      {/* 자동화 사용법 */}
+      <Card>
+        <CardTitle title="🤖 자동화 사용법" sub="이 탭은 현황판 — 실제 실행은 클로드(텔레그램/터미널)에게 시키면 여기 상태가 자동 반영돼요"/>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(240px,1fr))",gap:10}}>
+          {[
+            ["전체 실행","클로드에게 \"런칭 ㄱㄱ [제품명]\" — 다음 미완료 단계부터 알아서 진행. 단계만 하려면 \"런칭 ㄱㄱ [제품명] 소재\" 처럼 뒤에 단계명"],
+            ["1. 광고 소재 (자동)","카피뱅크+리뷰 데이터로 카피 세트, 프롬프트 가이드로 weavy 영상 프롬프트 2~3종 생성 → copy-bank/launch_제품.md"],
+            ["2. 상세페이지 (자동)","AI 기획안 생성 (상세기획 탭과 동일 엔진). Figma 디자인·최종본 체크는 디자이너 작업 후 여기서 수동"],
+            ["3. 스토어 등록 (반자동)","커머스 API로 판매대기 등록. 미리보기(dry-run) 확인 → 승인해야 실제 등록. 판매중 전환은 센터에서 수동"],
+            ["4. 네이버 광고 (반자동)","키워드 제안 → 미리보기 확인 → 승인 시 캠페인+그룹+키워드 생성. 성과는 기존 크론이 자동 수집"],
+            ["5. 시딩 (반자동)","아카이브에서 후보 선정 → 발송 엑셀+후보 리스트+DM 문안 자동 생성 (~/Downloads). 실제 발송·DM은 수동"],
+          ].map(([t,d])=>(
+            <div key={t} style={{border:`1px solid ${C.border}`,borderRadius:12,padding:"12px 14px",background:C.cream}}>
+              <div style={{fontSize:11,fontWeight:800,color:C.ink,marginBottom:4}}>{t}</div>
+              <div style={{fontSize:10.5,color:C.inkMid,lineHeight:1.6}}>{d}</div>
+            </div>
+          ))}
+        </div>
+        <div style={{marginTop:10,padding:"10px 12px",background:C.blush,borderRadius:10,fontSize:10.5,color:C.inkMid,lineHeight:1.6}}>
+          <b style={{color:C.ink}}>규칙:</b> 스토어·광고는 실행 전 미리보기를 텔레그램으로 받고, 승인해야 실제 반영.
+          각 단계가 끝나면 텔레그램 알림 + 이 탭의 상태·체크리스트·산출물 링크가 자동 업데이트돼요.
+          수동 항목(Figma, 판매중 전환, 발송 완료)은 여기서 직접 체크.
+        </div>
+      </Card>
     </div>
   );
 }
