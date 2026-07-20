@@ -7231,6 +7231,7 @@ export default function OaDashboard(){
   const [prioCat, setPrioCat] = useState("전체");
   const [prioQ, setPrioQ] = useState("");
   const [prioActOnly, setPrioActOnly] = useState(false);
+  const [prioShowTable, setPrioShowTable] = useState(false);
   const [promoEvents, setPromoEvents] = useSyncState("oa_events_v1", []);
   // 채널 랭킹 트래커: [{id,date,channel,product,rank}] — 랭킹 탭
   const [rankLog, setRankLog] = useSyncState("oa_rank_tracker_v1", []);
@@ -8173,17 +8174,21 @@ export default function OaDashboard(){
       const hay=`${r.campaign||""} ${r.adset||""} ${r.adName||""}`;
       const hit=prodKeys.find(x=>hay.includes(x.k));
       if(hit){
-        const a=metaAgg[hit.p]=metaAgg[hit.p]||{spend:0,imp:0,clicks:0,lpv:0,pur:0};
+        const a=metaAgg[hit.p]=metaAgg[hit.p]||{spend:0,convSpend:0,imp:0,clicks:0,lpv:0,pur:0,convPur:0};
+        const isConv=isConversionCampaign(r.objective,r.campaign,r.resultType);
         a.spend+=r.spend||0; a.imp+=r.impressions||0; a.clicks+=(r.clicks||r.clicksAll||0); a.lpv+=r.lpv||0; a.pur+=r.purchases||0;
+        if(isConv){a.convSpend+=r.spend||0; a.convPur+=r.purchases||0;}
       }
     });
     const enriched=items.map(it=>{
-      const m=metaAgg[it.product]||{spend:0,imp:0,clicks:0,lpv:0,pur:0};
+      const m=metaAgg[it.product]||{spend:0,convSpend:0,imp:0,clicks:0,lpv:0,pur:0,convPur:0};
       return {...it,growth:it.p30>0?it.s30/it.p30-1:null,act:classify(it),ad30:m.spend,
+        adConv30:m.convSpend, adTraffic30:m.spend-m.convSpend,
         adClicks:m.clicks,
         adCtr:m.imp>0?m.clicks/m.imp*100:null,
         adLpvRate:m.clicks>0?Math.min(m.lpv/m.clicks*100,100):null,
-        adCpa:m.pur>0?m.spend/m.pur:null,
+        adCpa:m.convPur>0?m.convSpend/m.convPur:null, // 구매당비용은 전환 캠페인 지출/구매만으로 계산
+        adTrafficOnly:m.spend>0&&m.convSpend===0, // 지출 전부 트래픽 캠페인 — CPA 판단 불가
         nav30:it.nav30||0,
         navClk:it.navClk||0,
         navCtr:(it.navImp||0)>0?(it.navClk||0)/it.navImp*100:null,
@@ -8213,23 +8218,54 @@ export default function OaDashboard(){
     const td={padding:"6px 8px",whiteSpace:"nowrap"};
     const updated=prioData?.updated?new Date(prioData.updated).toLocaleString("ko-KR",{month:"numeric",day:"numeric",hour:"numeric",minute:"2-digit"}):null;
 
+    // 제품별 추천 액션 한 줄 — 판단을 대신해주는 문장
+    const advise=(it)=>{
+      const noAd=!(it.ad30>0)&&!(it.nav30>0);
+      if(it.act.key==="boost"){
+        if(noAd) return "광고 없이도 크는 중 → 광고 시작하면 더 큽니다";
+        if(it.adTrafficOnly) return "메타가 전부 트래픽 캠페인 → 전환 캠페인으로 구매 측정부터";
+        if(it.adCtr!==null&&it.adCtr<0.8) return "메타 CTR 낮음 → 소재 교체 후 증액";
+        if(it.adLpvRate!==null&&it.adLpvRate<60) return "랜딩 도달율 낮음 → 랜딩/로딩 점검 후 증액";
+        return "잘 돌고 있음 → 예산 20~30% 증액";
+      }
+      if(it.act.key==="spark") return noAd?"아직 무광고 → 소재 만들어 소액 테스트":"반응 좋으면 예산 올리기";
+      if(it.act.key==="cool") return (it.ad30>0||it.nav30>0)?"품절·가격·경쟁 먼저 확인 → 원인 없으면 광고비 축소":"품절·가격·리뷰 확인 (광고 문제 아님)";
+      return "그대로 유지 — 구매당비용만 주시";
+    };
+    const actGroups=[
+      {key:"boost",title:"🔥 증액 — 잘 팔리는 중, 더 밀기",color:C.bad,bg:"#FEF0F0"},
+      {key:"spark",title:"💡 점화 — 뜨기 시작, 광고 태우기",color:C.good,bg:"#EDF7F1"},
+      {key:"cool", title:"⚠️ 하락 — 원인 확인",color:C.warn,bg:"#FFF8EC"},
+      {key:"guard",title:"🛡 방어 — 캐시카우 유지",color:"#5B7FA6",bg:"#EEF4FA"},
+    ];
+
     return(
       <div style={{display:"grid",gap:14}}>
         <Card>
-          <CardTitle title="🔥 우선순위 — 지금 불붙일 제품" sub={`전제품(보아르 제외) 최근 30일 vs 이전 30일 매출 기준 · ${updated?`데이터 갱신 ${updated}`:"데이터 없음 — sync-priority.js 실행 필요"}`}/>
-          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(150px,1fr))",gap:10}}>
-            {[
-              ["🔥 증액 후보",counts.boost,C.bad,"매출 2천만↑ & +30%↑"],
-              ["💡 점화 후보",counts.spark,C.good,"매출 5백만~2천만 & +50%↑"],
-              ["🛡 방어 (캐시카우)",counts.guard,"#5B7FA6","매출 5천만↑ & 보합"],
-              ["⚠️ 하락 점검",counts.cool,C.warn,"매출 1천만↑ & -30%↓"],
-            ].map(([l,v,color,d])=>(
-              <div key={l} style={{border:`1px solid ${C.border}`,borderRadius:12,padding:"10px 12px",background:C.cream}}>
-                <div style={{fontSize:10,color:C.inkLt,fontWeight:700}}>{l}</div>
-                <div style={{fontSize:18,fontWeight:900,color,marginTop:2}}>{v}<span style={{fontSize:11,color:C.inkLt,fontWeight:600}}> 개</span></div>
-                <div style={{fontSize:9,color:C.inkLt,marginTop:2}}>{d}</div>
-              </div>
-            ))}
+          <CardTitle title="🔥 이번 주 액션 보드" sub={`최근 30일 vs 이전 30일 매출로 자동 분류 · 제품 아래 문장이 추천 액션 · ${updated?`갱신 ${updated}`:"데이터 없음"}`}/>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(300px,1fr))",gap:10}}>
+            {actGroups.map(gr=>{
+              const list=enriched.filter(it=>it.act&&it.act.key===gr.key&&(prioCat==="전체"||it.cat1===prioCat)).sort((a,b)=>b.s30-a.s30);
+              return(
+                <div key={gr.key} style={{border:`1px solid ${C.border}`,borderRadius:14,overflow:"hidden",background:C.white}}>
+                  <div style={{padding:"9px 12px",background:gr.bg,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                    <span style={{fontSize:12,fontWeight:900,color:gr.color}}>{gr.title}</span>
+                    <span style={{fontSize:12,fontWeight:900,color:gr.color}}>{list.length}개</span>
+                  </div>
+                  {list.slice(0,6).map(it=>(
+                    <div key={it.product} style={{padding:"8px 12px",borderTop:`1px solid ${C.cream}`}}>
+                      <div style={{display:"flex",justifyContent:"space-between",alignItems:"baseline",gap:8}}>
+                        <span style={{fontSize:12,fontWeight:800,color:C.ink,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{it.product}</span>
+                        <span style={{fontSize:11,fontWeight:800,color:C.inkMid,whiteSpace:"nowrap"}}>₩{fmtW(it.s30)} {growthChip(it.growth)}</span>
+                      </div>
+                      <div style={{fontSize:10.5,color:C.inkMid,marginTop:2}}>→ {advise(it)}</div>
+                    </div>
+                  ))}
+                  {list.length>6&&<div style={{padding:"6px 12px",borderTop:`1px solid ${C.cream}`,fontSize:10,color:C.inkLt}}>+{list.length-6}개 더 — 아래 전체 표에서 확인</div>}
+                  {list.length===0&&<div style={{padding:"12px",fontSize:11,color:C.inkLt}}>해당 없음</div>}
+                </div>
+              );
+            })}
           </div>
         </Card>
 
@@ -8260,9 +8296,10 @@ export default function OaDashboard(){
         )}
 
         <Card>
-          <CardTitle title="📋 제품별 우선순위" sub={`${filtered.length}개 표시 · 메타=광고명 제품 매칭, 네이버=광고그룹 제품 매칭 (네이버 칸에 마우스 올리면 클릭·CTR) · 무광고 기회=메타·네이버 모두 0`}
+          <CardTitle title="📋 제품별 우선순위 (전체 표)" sub={prioShowTable?`${filtered.length}개 표시 · 메타=광고명 제품 매칭, 네이버=광고그룹 제품 매칭 (네이버 칸에 마우스 올리면 클릭·CTR) · 무광고 기회=메타·네이버 모두 0 · 구매당비용=전환 캠페인만`:"자세한 숫자가 필요할 때만 펼쳐보세요"}
             action={
               <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
+                {prioShowTable&&<>
                 <select value={prioCat} onChange={e=>setPrioCat(e.target.value)}
                   style={{padding:"5px 8px",border:`1px solid ${C.border}`,borderRadius:8,fontSize:11,fontFamily:"inherit",background:C.white}}>
                   {cats.map(c=><option key={c} value={c}>{c}</option>)}
@@ -8272,12 +8309,17 @@ export default function OaDashboard(){
                 <label style={{display:"flex",alignItems:"center",gap:4,fontSize:11,color:C.inkMid,cursor:"pointer"}}>
                   <input type="checkbox" checked={prioActOnly} onChange={e=>setPrioActOnly(e.target.checked)}/>액션만
                 </label>
+                </>}
+                <button onClick={()=>setPrioShowTable(v=>!v)}
+                  style={{padding:"5px 12px",border:`1px solid ${C.border}`,borderRadius:8,fontSize:11,fontWeight:700,fontFamily:"inherit",background:C.white,color:C.inkMid,cursor:"pointer"}}>
+                  {prioShowTable?"접기":"전체 표 펼치기"}
+                </button>
               </div>
             }/>
-          <div style={{overflowX:"auto"}}>
+          {prioShowTable&&<div style={{overflowX:"auto"}}>
             <table style={{width:"100%",borderCollapse:"collapse",fontSize:11}}>
               <thead><tr style={{background:C.cream}}>
-                {["#","카테고리","제품","최근 30일","이전 30일","성장률","수량(30일)","메타광고비(30일)","클릭","CTR","랜딩도달율","구매당비용","네이버광고비(30일)","네이버구매당비용","액션"].map(h=><th key={h} style={th}>{h}</th>)}
+                {["#","카테고리","제품","최근 30일","이전 30일","성장률","수량(30일)","메타광고비(30일)","클릭","CTR","랜딩도달율","구매당비용(전환)","네이버광고비(30일)","네이버구매당비용","액션"].map(h=><th key={h} style={th}>{h}</th>)}
               </tr></thead>
               <tbody>
                 {filtered.slice(0,100).map((it,i)=>(
@@ -8289,13 +8331,15 @@ export default function OaDashboard(){
                     <td style={{...td,color:C.inkMid}}>₩{fmtW(it.p30)}</td>
                     <td style={td}>{growthChip(it.growth)}</td>
                     <td style={{...td,color:C.inkMid}}>{(it.q30||0).toLocaleString()}</td>
-                    <td style={td}>{it.ad30>0?`₩${fmtW(it.ad30)}`:(it.act&&(it.act.key==="boost"||it.act.key==="spark")&&!(it.nav30>0)?(
+                    <td style={td} title={it.ad30>0?`전환 ₩${fmtW(it.adConv30||0)} · 트래픽 ₩${fmtW(it.adTraffic30||0)}`:undefined}>{it.ad30>0?`₩${fmtW(it.ad30)}`:(it.act&&(it.act.key==="boost"||it.act.key==="spark")&&!(it.nav30>0)?(
                       <span style={{fontSize:9,fontWeight:800,padding:"2px 7px",borderRadius:20,color:C.rose,background:C.blush,border:`1px solid ${C.rose}33`}}>무광고 기회</span>
                     ):<span style={{color:C.inkLt}}>—</span>)}</td>
                     <td style={{...td,color:C.inkMid}}>{it.adClicks>0?it.adClicks.toLocaleString():"—"}</td>
                     <td style={{...td,fontWeight:700,color:it.adCtr===null?C.inkLt:it.adCtr>=1.5?C.good:it.adCtr<0.8?C.bad:C.ink}}>{it.adCtr!==null?`${it.adCtr.toFixed(2)}%`:"—"}</td>
                     <td style={{...td,fontWeight:700,color:it.adLpvRate===null?C.inkLt:it.adLpvRate>=80?C.good:it.adLpvRate<60?C.bad:C.ink}}>{it.adLpvRate!==null?`${Math.round(it.adLpvRate)}%`:"—"}</td>
-                    <td style={{...td,fontWeight:700,color:it.adCpa===null?C.inkLt:C.ink}}>{it.adCpa!==null?`₩${fmtW(it.adCpa)}`:"—"}</td>
+                    <td style={{...td,fontWeight:700,color:it.adCpa===null?C.inkLt:C.ink}}>{it.adCpa!==null?`₩${fmtW(it.adCpa)}`:it.adTrafficOnly?(
+                      <span style={{fontSize:9,fontWeight:800,padding:"2px 7px",borderRadius:20,color:C.warn,background:"#FFF8EC",border:`1px solid ${C.warn}33`}} title="메타 지출이 전부 트래픽 캠페인 — 구매당비용 측정 불가">트래픽만</span>
+                    ):"—"}</td>
                     <td style={td} title={it.nav30>0?`클릭 ${(it.navClk||0).toLocaleString()} · CTR ${it.navCtr!==null?it.navCtr.toFixed(2)+"%":"—"}`:undefined}>{it.nav30>0?`₩${fmtW(it.nav30)}`:<span style={{color:C.inkLt}}>—</span>}</td>
                     <td style={{...td,fontWeight:700,color:it.navCpa===null?C.inkLt:C.ink}}>{it.navCpa!==null?`₩${fmtW(it.navCpa)}`:"—"}</td>
                     <td style={td}>{it.act?(
@@ -8308,8 +8352,8 @@ export default function OaDashboard(){
                 )}
               </tbody>
             </table>
-          </div>
-          {filtered.length>100&&<div style={{fontSize:10,color:C.inkLt,marginTop:8}}>상위 100개만 표시 (전체 {filtered.length}개)</div>}
+          </div>}
+          {prioShowTable&&filtered.length>100&&<div style={{fontSize:10,color:C.inkLt,marginTop:8}}>상위 100개만 표시 (전체 {filtered.length}개)</div>}
         </Card>
       </div>
     );
