@@ -31,7 +31,7 @@ async function main() {
       FROM v_daily_sales_detail d
       LEFT JOIN v_sales_category c ON c.\`품목명\` = d.\`품목명\`
       WHERE d.\`판매날짜\` >= DATE_SUB(CURDATE(), INTERVAL 60 DAY)
-        AND d.\`브랜드명\` NOT IN ('보아르', '삼대오백')
+        AND d.\`브랜드명\` = '오아'
         AND (c.\`카테고리1\` IS NULL OR c.\`카테고리1\` <> '식품')
       GROUP BY 1, 2, 3
     `);
