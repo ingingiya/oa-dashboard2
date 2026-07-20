@@ -1,6 +1,7 @@
 export const metadata = {
   title: 'OA HQ — Marketing Dashboard',
   description: '메타광고 · 인플루언서 · 재고 · 스케줄 통합 대시보드',
+  icons: { icon: '/oa-logo.jpg' },
 }
 
 export default function RootLayout({ children }) {

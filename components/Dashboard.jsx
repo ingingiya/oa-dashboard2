@@ -17594,9 +17594,10 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
         {/* 로고 */}
         <div style={{padding:"24px 20px 20px",borderBottom:"1px solid rgba(0,0,0,.06)"}}>
           <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:16}}>
-            <div style={{width:36,height:36,background:"linear-gradient(135deg,#0071E3,#64D2FF)",
+            <div style={{width:36,height:36,background:"#fff",border:"1px solid rgba(0,0,0,.08)",
               borderRadius:10,display:"flex",alignItems:"center",justifyContent:"center",
-              fontSize:18,boxShadow:"0 4px 12px rgba(0,113,227,.28)",flexShrink:0}}>🌸</div>
+              boxShadow:"0 2px 8px rgba(0,0,0,.08)",flexShrink:0,overflow:"hidden"}}>
+              <img src="/oa-logo.jpg" alt="OA" style={{width:30,height:30,objectFit:"contain"}}/></div>
             <div>
               <div style={{fontSize:15,fontWeight:800,color:"#1D1D1F",letterSpacing:"-0.02em"}}>OA <span style={{color:"#0071E3"}}>HQ</span></div>
               <div style={{fontSize:9,color:"#86868B",letterSpacing:"0.08em"}}>MARKETING DASHBOARD</div>
@@ -17691,8 +17692,9 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
         padding:"0 16px",height:54,alignItems:"center",justifyContent:"space-between",
         position:"sticky",top:0,zIndex:100}}>
         <div style={{display:"flex",alignItems:"center",gap:8}}>
-          <div style={{width:28,height:28,background:"linear-gradient(135deg,#0071E3,#64D2FF)",
-            borderRadius:8,display:"flex",alignItems:"center",justifyContent:"center",fontSize:14}}>🌸</div>
+          <div style={{width:28,height:28,background:"#fff",border:"1px solid rgba(0,0,0,.08)",
+            borderRadius:8,display:"flex",alignItems:"center",justifyContent:"center",overflow:"hidden"}}>
+            <img src="/oa-logo.jpg" alt="OA" style={{width:23,height:23,objectFit:"contain"}}/></div>
           <div style={{fontSize:13,fontWeight:800,color:"#1D1D1F"}}>OA <span style={{color:"#0071E3"}}>HQ</span></div>
         </div>
         <div style={{display:"flex",alignItems:"center",gap:8}}>
