@@ -24,6 +24,7 @@ async function main() {
       SELECT \`카테고리1\` AS cat1, \`카테고리2\` AS cat2, \`품목명\` AS product
       FROM v_sales_category
       WHERE \`품목명\` NOT LIKE '%보아르%'
+        AND \`카테고리1\` NOT IN ('식품')
     `);
     console.log(`  → 품목 ${cats.length}개`);
 
