@@ -7864,7 +7864,7 @@ export default function OaDashboard(){
     monthRows.forEach(r=>{
       const hay=`${r.campaign||""} ${r.adset||""} ${r.adName||""}`.toLowerCase();
       const t=(pfTeams||[]).find(tm=>(tm.keywords||[]).some(k=>k==="*"||(k&&hay.includes(String(k).toLowerCase()))));
-      if(t){ const a=teamMeta[t.id]=teamMeta[t.id]||{spend:0,conv:0}; a.spend+=r.spend||0; a.conv+=r.convValue||0; }
+      if(t){ const a=teamMeta[t.id]=teamMeta[t.id]||{spend:0,conv:0,purch:0,clicks:0}; a.spend+=r.spend||0; a.conv+=r.convValue||0; a.purch+=r.purchases||0; a.clicks+=r.clicks||0; }
       else{
         unmatched.spend+=r.spend||0; unmatched.conv+=r.convValue||0;
         const c=r.campaign||r.adName||"(이름 없음)";
@@ -7907,14 +7907,21 @@ export default function OaDashboard(){
     const rows=(pfBudgets||[]).filter(b=>b.month===pfMonth);
     const rowStat=(b)=>{
       if(b.source==="메타"){
-        const a=teamMeta[b.teamId]||{spend:0,conv:0};
-        return {spent:a.spend,roas:a.spend>0?a.conv/a.spend*100:null,auto:true};
+        const a=teamMeta[b.teamId]||{spend:0,conv:0,purch:0};
+        return {spent:a.spend,rev:a.conv,purch:a.purch,
+          roas:a.spend>0?a.conv/a.spend*100:null,
+          cpa:a.purch>0?a.spend/a.purch:null,auto:true};
       }
-      return {spent:b.spent||0,roas:null,auto:false};
+      const spent=b.spent||0, rev=b.rev||0, purch=b.purch||0;
+      return {spent,rev,purch,
+        roas:spent>0&&rev>0?rev/spent*100:null,
+        cpa:purch>0?spent/purch:null,auto:false};
     };
     const totBudget=rows.reduce((s,b)=>s+(b.budget||0),0);
     const totSpent=rows.reduce((s,b)=>s+rowStat(b).spent,0);
     const totRatio=totBudget>0?totSpent/totBudget:0;
+    const totRev=rows.reduce((s,b)=>s+(rowStat(b).rev||0),0);
+    const totTargetRev=rows.reduce((s,b)=>s+(b.targetRev||0),0);
 
     const TEAM_COLORS=["#0A84FF","#BF5AF2","#30D158","#FF9F0A","#FF375F","#64D2FF","#FFD60A"];
     const paceState=(ratio,budget)=>{
@@ -7965,6 +7972,8 @@ export default function OaDashboard(){
               ["집행액", fmtW(totSpent), null],
               ["집행률", totBudget>0?`${Math.round(totRatio*100)}%`:"—",
                 totBudget>0?`경과율 ${Math.round(elapsedRatio*100)}% 대비 ${totDiff>=0?"+":""}${totDiff}%p`:null],
+              ["목표 매출 달성", totTargetRev>0?`${Math.round(totRev/totTargetRev*100)}%`:"—",
+                totTargetRev>0?`${fmtW(totRev)} / ${fmtW(totTargetRev)}`:"매체별 목표 매출 입력 시 표시"],
               ["미분류 지출", fmtW(unmatched.spend), unmatched.spend>0?"팀 키워드 보완 필요":null],
             ].map(([l,v,s])=>(
               <div key={l} style={{background:"rgba(255,255,255,.10)",border:"1px solid rgba(255,255,255,.15)",
@@ -7998,6 +8007,8 @@ export default function OaDashboard(){
             const ps=paceState(tRatio,tBudget);
             const tm=teamMeta[t.id];
             const tRoas=tm&&tm.spend>0?tm.conv/tm.spend*100:null;
+            const tRev=tRows.reduce((s,b)=>s+(rowStat(b).rev||0),0);
+            const tTargetRev=tRows.reduce((s,b)=>s+(b.targetRev||0),0);
             return(
               <div key={t.id} style={{background:C.white,borderRadius:18,border:`1px solid ${C.border}`,
                 borderTop:`4px solid ${col}`,padding:"16px 16px 14px",boxShadow:"0 6px 20px rgba(24,24,27,.06)"}}>
@@ -8026,6 +8037,16 @@ export default function OaDashboard(){
                 <div style={{marginTop:8}}>
                   <PaceBar ratio={tRatio} color={tBudget>0?ps.color:C.inkLt} h={10}/>
                 </div>
+                {tTargetRev>0&&(
+                  <div style={{marginTop:10,background:"#F5F5F7",borderRadius:10,padding:"8px 10px"}}>
+                    <div style={{display:"flex",justifyContent:"space-between",fontSize:9.5,fontWeight:700,color:C.inkMid,marginBottom:5}}>
+                      <span>목표 매출 달성</span>
+                      <span style={{fontWeight:900,color:tRev>=tTargetRev?"#248A3D":tTargetRev>0&&tRev/tTargetRev>=elapsedRatio?"#CA8A04":"#D70015"}}>
+                        {fmtW(tRev)} / {fmtW(tTargetRev)} ({Math.round(tRev/tTargetRev*100)}%)</span>
+                    </div>
+                    <PaceBar ratio={tRev/tTargetRev} color={tRev>=tTargetRev?"#248A3D":col} h={7}/>
+                  </div>
+                )}
                 <div style={{marginTop:12,display:"grid",gap:6}}>
                   {tRows.map(b=>{
                     const st=rowStat(b);
@@ -8047,12 +8068,44 @@ export default function OaDashboard(){
                             :<NumIn val={b.spent} onCommit={v=>patchBudget(b.id,{spent:v})}/>}
                         </div>
                         <span style={{fontSize:11,fontWeight:900,color:paceState(ratio,b.budget).color}}>{b.budget>0?`${Math.round(ratio*100)}%`:"—"}</span>
-                        <div style={{display:"flex",alignItems:"center",gap:4,marginLeft:"auto"}}>
-                          {st.roas!=null&&<span style={{fontSize:11,fontWeight:900,
-                            color:b.targetRoas>0?(st.roas>=b.targetRoas?"#248A3D":"#D70015"):roasColor(st.roas)}}>ROAS {Math.round(st.roas)}%</span>}
-                          <span style={{fontSize:9,color:C.inkLt,fontWeight:700}}>목표</span>
-                          <NumIn val={b.targetRoas} onCommit={v=>patchBudget(b.id,{targetRoas:v})} w={48}/>
-                          <button onClick={()=>delBudget(b.id)} style={{background:"none",border:"none",cursor:"pointer",padding:2,color:C.inkLt}}><MI n="close" size={13}/></button>
+                        {!st.auto&&(
+                          <>
+                            <div style={{display:"flex",alignItems:"center",gap:4}}>
+                              <span style={{fontSize:9,color:C.inkLt,fontWeight:700}}>매출</span>
+                              <NumIn val={b.rev} onCommit={v=>patchBudget(b.id,{rev:v})}/>
+                            </div>
+                            <div style={{display:"flex",alignItems:"center",gap:4}}>
+                              <span style={{fontSize:9,color:C.inkLt,fontWeight:700}}>구매</span>
+                              <NumIn val={b.purch} onCommit={v=>patchBudget(b.id,{purch:v})} w={44}/>
+                            </div>
+                          </>
+                        )}
+                        <button onClick={()=>delBudget(b.id)} style={{background:"none",border:"none",cursor:"pointer",padding:2,color:C.inkLt,marginLeft:"auto"}}><MI n="close" size={13}/></button>
+                        {/* 세부 목표 라인 — ROAS · 매출 · CPA */}
+                        <div style={{display:"flex",alignItems:"center",gap:12,flexWrap:"wrap",width:"100%",
+                          paddingTop:7,marginTop:2,borderTop:"1px dashed #E5E5EA"}}>
+                          <span style={{fontSize:8.5,fontWeight:800,color:C.inkLt,letterSpacing:"0.06em"}}>목표</span>
+                          <div style={{display:"flex",alignItems:"center",gap:4}}>
+                            <span style={{fontSize:9,color:C.inkLt,fontWeight:700}}>ROAS</span>
+                            <NumIn val={b.targetRoas} onCommit={v=>patchBudget(b.id,{targetRoas:v})} w={48}/>
+                            {st.roas!=null&&<span style={{fontSize:10.5,fontWeight:900,
+                              color:b.targetRoas>0?(st.roas>=b.targetRoas?"#248A3D":"#D70015"):roasColor(st.roas)}}>
+                              {Math.round(st.roas)}%{b.targetRoas>0&&` (${Math.round(st.roas/b.targetRoas*100)}%)`}</span>}
+                          </div>
+                          <div style={{display:"flex",alignItems:"center",gap:4}}>
+                            <span style={{fontSize:9,color:C.inkLt,fontWeight:700}}>매출</span>
+                            <NumIn val={b.targetRev} onCommit={v=>patchBudget(b.id,{targetRev:v})}/>
+                            {(st.rev||0)>0&&b.targetRev>0&&<span style={{fontSize:10.5,fontWeight:900,
+                              color:st.rev>=b.targetRev?"#248A3D":st.rev/b.targetRev>=elapsedRatio?"#CA8A04":"#D70015"}}>
+                              {fmtW(st.rev)} ({Math.round(st.rev/b.targetRev*100)}%)</span>}
+                          </div>
+                          <div style={{display:"flex",alignItems:"center",gap:4}}>
+                            <span style={{fontSize:9,color:C.inkLt,fontWeight:700}}>CPA</span>
+                            <NumIn val={b.targetCpa} onCommit={v=>patchBudget(b.id,{targetCpa:v})} w={60}/>
+                            {st.cpa!=null&&<span style={{fontSize:10.5,fontWeight:900,
+                              color:b.targetCpa>0?(st.cpa<=b.targetCpa?"#248A3D":"#D70015"):C.inkMid}}>
+                              {fmtW(st.cpa)}</span>}
+                          </div>
                         </div>
                       </div>
                     );
@@ -8340,6 +8393,31 @@ export default function OaDashboard(){
     return(
     <div style={{display:"flex",flexDirection:"column",gap:12}}>
 
+      {/* ── 상단 히어로 (애플 스타일 그래파이트) ── */}
+      <div style={{background:"linear-gradient(135deg,#1D1D1F 0%,#2C2C2E 60%,#3A3A3C 100%)",
+        borderRadius:20,padding:"22px 24px",color:"#fff",position:"relative",overflow:"hidden",
+        boxShadow:"0 12px 32px rgba(0,0,0,.18)"}}>
+        <div style={{position:"absolute",right:-60,top:-60,width:200,height:200,borderRadius:"50%",background:"rgba(255,255,255,.05)"}}/>
+        <div style={{fontSize:10,fontWeight:700,letterSpacing:"0.14em",color:"#8E8E93",marginBottom:6,position:"relative"}}>TODAY · {dateStr}</div>
+        <div style={{fontSize:26,fontWeight:800,lineHeight:1.15,letterSpacing:"-0.02em",position:"relative"}}>
+          {totalAlerts>0
+            ?<>확인 필요 <span style={{color:"#FF453A"}}>{totalAlerts}건</span></>
+            :<>모두 정상 <span style={{color:"#30D158"}}>✓</span></>}
+        </div>
+        {totalAlerts>0&&(
+          <div style={{display:"flex",flexWrap:"wrap",gap:6,marginTop:12,position:"relative"}}>
+            {activeGroups.map(g=>(
+              <span key={g.id} onClick={g.action} style={{
+                fontSize:10.5,fontWeight:700,padding:"5px 12px",borderRadius:20,
+                background:"rgba(255,255,255,.12)",color:"#fff",
+                cursor:"pointer",backdropFilter:"blur(6px)",border:"1px solid rgba(255,255,255,.18)"}}>
+                <MI n={g.icon} size={10}/> {g.label} {g.count}
+              </span>
+            ))}
+          </div>
+        )}
+      </div>
+
       {/* ── 전날 광고비 카드 ── */}
       {sheetConvRaw.length>0&&(
         <div onClick={()=>setSec("meta")} style={{
@@ -8377,9 +8455,9 @@ export default function OaDashboard(){
             {label:"이번 주",value:homeSales.week,sub:homeSales.weekChange!==0?`${homeSales.weekChange>0?"+":""}${homeSales.weekChange}% 전주비`:""},
             {label:"이번 달",value:homeSales.month,sub:null},
           ].map(k=>(
-            <div key={k.label} onClick={()=>setSec("erp")} style={{background:C.white,border:`1px solid ${C.border}`,borderRadius:10,padding:"12px",cursor:"pointer"}}>
-              <div style={{fontSize:10,color:C.inkMid,fontWeight:600}}>{k.label}</div>
-              <div style={{fontSize:16,fontWeight:900,color:C.ink,marginTop:2}}>{k.value>=100000000?(k.value/100000000).toFixed(1)+"억":k.value>=10000?Math.round(k.value/10000).toLocaleString()+"만":k.value.toLocaleString()+"원"}</div>
+            <div key={k.label} onClick={()=>setSec("erp")} style={{background:C.white,border:"1px solid rgba(0,0,0,.06)",borderRadius:16,padding:"14px 14px",cursor:"pointer",boxShadow:"0 2px 8px rgba(0,0,0,.04)"}}>
+              <div style={{fontSize:10.5,color:C.inkLt,fontWeight:600}}>{k.label}</div>
+              <div style={{fontSize:19,fontWeight:800,color:C.ink,marginTop:3,letterSpacing:"-0.02em"}}>{k.value>=100000000?(k.value/100000000).toFixed(1)+"억":k.value>=10000?Math.round(k.value/10000).toLocaleString()+"만":k.value.toLocaleString()+"원"}</div>
               {k.sub&&<div style={{fontSize:10,color:k.sub.includes("+")?C.good:k.sub.includes("-")?C.bad:C.inkLt,fontWeight:700,marginTop:2}}>{k.sub}</div>}
             </div>
           ))}
@@ -8404,13 +8482,13 @@ export default function OaDashboard(){
           if(!isNaN(n))setMonthlyTarget(n*10000);
         };
         if(!monthlyTarget)return(
-          <div onClick={editTarget} style={{background:C.white,border:`1px dashed ${C.border}`,borderRadius:10,padding:"12px 14px",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+          <div onClick={editTarget} style={{background:C.white,border:`1px dashed ${C.border}`,borderRadius:16,padding:"12px 14px",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
             <div style={{fontSize:11,color:C.inkMid,fontWeight:600}}>🎯 월 매출 목표를 설정하면 진척률과 월말 예측을 보여드려요</div>
             <span style={{fontSize:11,color:C.gold,fontWeight:800}}>설정</span>
           </div>
         );
         return(
-          <div style={{background:C.white,border:`1px solid ${C.border}`,borderRadius:10,padding:"12px 14px"}}>
+          <div style={{background:C.white,border:"1px solid rgba(0,0,0,.06)",borderRadius:16,padding:"14px 16px",boxShadow:"0 2px 8px rgba(0,0,0,.04)"}}>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
               <div style={{fontSize:10,color:C.inkMid,fontWeight:600}}>🎯 이번 달 목표 {fmt(monthlyTarget)}</div>
               <button onClick={editTarget} style={{background:"none",border:"none",fontSize:10,color:C.inkLt,cursor:"pointer",fontFamily:"inherit",padding:0}}>수정</button>
@@ -8434,7 +8512,7 @@ export default function OaDashboard(){
 
       {/* ── 광고비 소진 ── */}
       {homeAdSpend&&(
-        <div onClick={()=>setSec("naver")} style={{background:C.white,border:`1px solid ${C.border}`,borderRadius:10,padding:"12px 14px",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+        <div onClick={()=>setSec("naver")} style={{background:C.white,border:"1px solid rgba(0,0,0,.06)",borderRadius:16,padding:"14px 16px",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"space-between",boxShadow:"0 2px 8px rgba(0,0,0,.04)"}}>
           <div>
             <div style={{fontSize:10,color:C.inkMid,fontWeight:600}}>이번 달 네이버 이미용 광고비</div>
             <div style={{fontSize:16,fontWeight:900,color:C.ink,marginTop:2}}>{homeAdSpend.month>=10000?Math.round(homeAdSpend.month/10000).toLocaleString()+"만":homeAdSpend.month.toLocaleString()+"원"}</div>
@@ -8564,27 +8642,6 @@ export default function OaDashboard(){
             </div>
           </div>
         ))}
-      </div>
-
-      {/* ── 상단 헤더 배너 ── */}
-      <div style={{background:totalAlerts>0?`linear-gradient(135deg,${C.bad},#EF4444)`:`linear-gradient(135deg,${C.good},#22C55E)`,
-        borderRadius:16,padding:"18px 20px",color:C.white,boxShadow:`0 4px 20px rgba(0,0,0,0.12)`}}>
-        <div style={{fontSize:10,fontWeight:700,letterSpacing:"0.12em",opacity:0.75,marginBottom:6}}>TODAY · {dateStr}</div>
-        <div style={{fontSize:24,fontWeight:900,lineHeight:1.15}}>
-          {totalAlerts>0?`확인 필요 ${totalAlerts}건`:"모두 정상 ✅"}
-        </div>
-        {totalAlerts>0&&(
-          <div style={{display:"flex",flexWrap:"wrap",gap:6,marginTop:10}}>
-            {activeGroups.map(g=>(
-              <span key={g.id} onClick={g.action} style={{
-                fontSize:10,fontWeight:700,padding:"3px 10px",borderRadius:20,
-                background:"rgba(255,255,255,0.2)",color:C.white,
-                cursor:"pointer",backdropFilter:"blur(4px)",border:"1px solid rgba(255,255,255,0.3)"}}>
-                <MI n={g.icon} size={10}/> {g.label} {g.count}
-              </span>
-            ))}
-          </div>
-        )}
       </div>
 
       {/* ── 알림 없을 때 ── */}
@@ -17343,10 +17400,11 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
   // RENDER
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   return(
-    <div className="oa-layout" style={{background:"#F5F5F7",minHeight:"100vh",fontFamily:"-apple-system,BlinkMacSystemFont,'Apple SD Gothic Neo','Pretendard','Noto Sans KR',sans-serif",color:C.ink}}>
+    <div className="oa-layout" style={{background:"#F5F5F7",minHeight:"100vh",fontFamily:"-apple-system,BlinkMacSystemFont,'Apple SD Gothic Neo','Pretendard','Noto Sans KR',sans-serif,'Noto Color Emoji'",color:C.ink}}>
       <style>{`
         @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css');
         @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;600;700;800;900&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Color+Emoji&display=swap');
         @import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200');
         .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
         *{box-sizing:border-box;margin:0;padding:0;} button{font-family:inherit;}
