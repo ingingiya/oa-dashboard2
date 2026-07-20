@@ -8514,6 +8514,15 @@ export default function OaDashboard(){
               <div onClick={()=>setSec("meta")} style={{cursor:"pointer"}}>
                 <div style={{fontSize:10,fontWeight:700,color:"#8E8E93"}}>전날 광고비 · {yStr.slice(5)}</div>
                 <div style={{fontSize:21,fontWeight:800,letterSpacing:"-0.02em",marginTop:2}}>{fmtW(ySpend)}</div>
+                <div style={{fontSize:9.5,fontWeight:600,color:"#8E8E93",marginTop:1}}>전환 {fmtW(yConv)} · 트래픽 {fmtW(yTraff)}</div>
+              </div>
+            )}
+            {homeSales&&(
+              <div onClick={()=>setSec("erp")} style={{cursor:"pointer"}}>
+                <div style={{fontSize:10,fontWeight:700,color:"#8E8E93"}}>이번 주</div>
+                <div style={{fontSize:21,fontWeight:800,letterSpacing:"-0.02em",marginTop:2}}>{fmtS(homeSales.week)}</div>
+                {homeSales.weekChange!==0&&<div style={{fontSize:9.5,fontWeight:700,marginTop:1,
+                  color:homeSales.weekChange>0?"#30D158":"#FF453A"}}>{homeSales.weekChange>0?"+":""}{homeSales.weekChange}% 전주비</div>}
               </div>
             )}
             {homeSales&&(
@@ -8525,24 +8534,6 @@ export default function OaDashboard(){
           </div>
         )}
       </div>
-
-
-      {/* ── 매출 요약 ── */}
-      {homeSales&&(
-        <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:8}}>
-          {[
-            {label:"오늘 매출",value:homeSales.today,sub:null},
-            {label:"이번 주",value:homeSales.week,sub:homeSales.weekChange!==0?`${homeSales.weekChange>0?"+":""}${homeSales.weekChange}% 전주비`:""},
-            {label:"이번 달",value:homeSales.month,sub:null},
-          ].map(k=>(
-            <div key={k.label} onClick={()=>setSec("erp")} style={{background:C.white,border:"1px solid rgba(0,0,0,.06)",borderRadius:16,padding:"14px 14px",cursor:"pointer",boxShadow:"0 2px 8px rgba(0,0,0,.04)"}}>
-              <div style={{fontSize:10.5,color:C.inkLt,fontWeight:600}}>{k.label}</div>
-              <div style={{fontSize:19,fontWeight:800,color:C.ink,marginTop:3,letterSpacing:"-0.02em"}}>{k.value>=100000000?(k.value/100000000).toFixed(1)+"억":k.value>=10000?Math.round(k.value/10000).toLocaleString()+"만":k.value.toLocaleString()+"원"}</div>
-              {k.sub&&<div style={{fontSize:10,color:k.sub.includes("+")?C.good:k.sub.includes("-")?C.bad:C.inkLt,fontWeight:700,marginTop:2}}>{k.sub}</div>}
-            </div>
-          ))}
-        </div>
-      )}
 
       {/* ── 월 매출 목표 진척률 ── */}
       {homeSales&&(()=>{
@@ -8590,31 +8581,16 @@ export default function OaDashboard(){
         );
       })()}
 
-      {/* ── 광고비 통합 카드 (전날 메타 + 이번달 네이버) ── */}
-      {(sheetConvRaw.length>0||homeAdSpend)&&(
-        <div style={{background:C.white,border:"1px solid rgba(0,0,0,.06)",borderRadius:16,padding:"14px 16px",
-          boxShadow:"0 2px 8px rgba(0,0,0,.04)",display:"grid",
-          gridTemplateColumns:sheetConvRaw.length>0&&homeAdSpend?"1fr 1fr":"1fr",gap:14}}>
-          {sheetConvRaw.length>0&&(
-            <div onClick={()=>setSec("meta")} style={{cursor:"pointer"}}>
-              <div style={{fontSize:10,color:C.inkLt,fontWeight:600}}>전날 메타 광고비 · {yStr.slice(5)}</div>
-              <div style={{fontSize:18,fontWeight:800,color:C.ink,marginTop:3,letterSpacing:"-0.02em"}}>
-                {ySpend>0?fmtW(ySpend):metaRaw.length===0?"데이터 없음":"어제 데이터 없음"}</div>
-              {ySpend>0&&(
-                <div style={{display:"flex",gap:10,marginTop:3,fontSize:10,color:C.inkMid,fontWeight:600}}>
-                  <span>전환 {fmtW(yConv)}</span><span>트래픽 {fmtW(yTraff)}</span>
-                </div>
-              )}
-            </div>
-          )}
-          {homeAdSpend&&(
-            <div onClick={()=>setSec("naver")} style={{cursor:"pointer",
-              borderLeft:sheetConvRaw.length>0?"1px solid rgba(0,0,0,.06)":"none",
-              paddingLeft:sheetConvRaw.length>0?14:0}}>
-              <div style={{fontSize:10,color:C.inkLt,fontWeight:600}}>이번 달 네이버 이미용 광고비</div>
-              <div style={{fontSize:18,fontWeight:800,color:C.ink,marginTop:3,letterSpacing:"-0.02em"}}>{fmtS(homeAdSpend.month)}</div>
-            </div>
-          )}
+      {/* ── 네이버 광고비 (메타 전날은 히어로에 표시) ── */}
+      {homeAdSpend&&(
+        <div onClick={()=>setSec("naver")} style={{background:C.white,border:"1px solid rgba(0,0,0,.06)",
+          borderRadius:16,padding:"14px 16px",cursor:"pointer",boxShadow:"0 2px 8px rgba(0,0,0,.04)",
+          display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+          <div>
+            <div style={{fontSize:10,color:C.inkLt,fontWeight:600}}>이번 달 네이버 이미용 광고비</div>
+            <div style={{fontSize:18,fontWeight:800,color:C.ink,marginTop:3,letterSpacing:"-0.02em"}}>{fmtS(homeAdSpend.month)}</div>
+          </div>
+          <MI n="arrow_forward_ios" size={14} style={{color:C.inkLt}}/>
         </div>
       )}
 
