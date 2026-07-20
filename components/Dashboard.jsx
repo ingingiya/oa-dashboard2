@@ -8433,6 +8433,7 @@ export default function OaDashboard(){
     const yConv  = yRows.filter(r=>isConversionCampaign(r.objective,r.campaign,r.resultType)).reduce((s,r)=>s+(r.spend||0),0);
     const yTraff = yRows.filter(r=>!isConversionCampaign(r.objective,r.campaign,r.resultType)).reduce((s,r)=>s+(r.spend||0),0);
     const fmtW = n=>n>=10000?`₩${Math.round(n/10000).toLocaleString()}만`:`₩${Math.round(n).toLocaleString()}`;
+    const fmtS = v=>v>=100000000?(v/100000000).toFixed(1)+"억":v>=10000?Math.round(v/10000).toLocaleString()+"만":Math.round(v||0).toLocaleString()+"원";
 
     return(
     <div style={{display:"flex",flexDirection:"column",gap:12}}>
@@ -8460,35 +8461,31 @@ export default function OaDashboard(){
             ))}
           </div>
         )}
-      </div>
-
-      {/* ── 전날 광고비 카드 ── */}
-      {sheetConvRaw.length>0&&(
-        <div onClick={()=>setSec("meta")} style={{
-          background: ySpend>0 ? "linear-gradient(135deg,#0071E3 0%,#2997FF 100%)" : C.cream,
-          borderRadius:14, padding:"14px 18px", cursor:"pointer",
-          border:`1px solid ${ySpend>0?"#0071E3":C.border}`,
-          display:"flex", alignItems:"center", justifyContent:"space-between",
-          boxShadow: ySpend>0?"0 4px 20px rgba(37,99,235,0.25)":"none",
-        }}>
-          <div>
-            <div style={{fontSize:11,fontWeight:700,color:ySpend>0?"rgba(255,255,255,0.75)":C.inkMid,marginBottom:4}}>
-              전날 광고비 · {yStr}
-              {ySpend===0&&metaRaw.length>0&&<span style={{marginLeft:6,fontSize:10}}>({metaRaw.map(r=>r.date).sort().pop()||"—"} 기준)</span>}
-            </div>
-            <div style={{fontSize:28,fontWeight:900,color:ySpend>0?"#fff":C.inkLt,lineHeight:1}}>
-              {ySpend>0 ? fmtW(ySpend) : metaRaw.length===0 ? "데이터 없음" : "어제 데이터 없음"}
-            </div>
+        {/* 핵심 숫자 — 오늘 매출 · 전날 광고비 · 이번 달 매출 */}
+        {(homeSales||ySpend>0)&&(
+          <div style={{display:"flex",gap:28,marginTop:16,paddingTop:14,flexWrap:"wrap",position:"relative",
+            borderTop:"1px solid rgba(255,255,255,.12)"}}>
+            {homeSales&&(
+              <div onClick={()=>setSec("erp")} style={{cursor:"pointer"}}>
+                <div style={{fontSize:10,fontWeight:700,color:"#8E8E93"}}>오늘 매출</div>
+                <div style={{fontSize:21,fontWeight:800,letterSpacing:"-0.02em",marginTop:2}}>{fmtS(homeSales.today)}</div>
+              </div>
+            )}
             {ySpend>0&&(
-              <div style={{display:"flex",gap:12,marginTop:6}}>
-                <span style={{fontSize:11,color:"rgba(255,255,255,0.8)"}}>전환 {fmtW(yConv)}</span>
-                <span style={{fontSize:11,color:"rgba(255,255,255,0.8)"}}>트래픽 {fmtW(yTraff)}</span>
+              <div onClick={()=>setSec("meta")} style={{cursor:"pointer"}}>
+                <div style={{fontSize:10,fontWeight:700,color:"#8E8E93"}}>전날 광고비 · {yStr.slice(5)}</div>
+                <div style={{fontSize:21,fontWeight:800,letterSpacing:"-0.02em",marginTop:2}}>{fmtW(ySpend)}</div>
+              </div>
+            )}
+            {homeSales&&(
+              <div onClick={()=>setSec("erp")} style={{cursor:"pointer"}}>
+                <div style={{fontSize:10,fontWeight:700,color:"#8E8E93"}}>이번 달 매출</div>
+                <div style={{fontSize:21,fontWeight:800,letterSpacing:"-0.02em",marginTop:2}}>{fmtS(homeSales.month)}</div>
               </div>
             )}
           </div>
-          <MI n="arrow_forward_ios" size={16} style={{color:ySpend>0?"rgba(255,255,255,0.6)":C.inkLt}}/>
-        </div>
-      )}
+        )}
+      </div>
 
 
       {/* ── 매출 요약 ── */}
@@ -8554,20 +8551,137 @@ export default function OaDashboard(){
         );
       })()}
 
-      {/* ── 광고비 소진 ── */}
-      {homeAdSpend&&(
-        <div onClick={()=>setSec("naver")} style={{background:C.white,border:"1px solid rgba(0,0,0,.06)",borderRadius:16,padding:"14px 16px",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"space-between",boxShadow:"0 2px 8px rgba(0,0,0,.04)"}}>
-          <div>
-            <div style={{fontSize:10,color:C.inkMid,fontWeight:600}}>이번 달 네이버 이미용 광고비</div>
-            <div style={{fontSize:16,fontWeight:900,color:C.ink,marginTop:2}}>{homeAdSpend.month>=10000?Math.round(homeAdSpend.month/10000).toLocaleString()+"만":homeAdSpend.month.toLocaleString()+"원"}</div>
+      {/* ── 광고비 통합 카드 (전날 메타 + 이번달 네이버) ── */}
+      {(sheetConvRaw.length>0||homeAdSpend)&&(
+        <div style={{background:C.white,border:"1px solid rgba(0,0,0,.06)",borderRadius:16,padding:"14px 16px",
+          boxShadow:"0 2px 8px rgba(0,0,0,.04)",display:"grid",
+          gridTemplateColumns:sheetConvRaw.length>0&&homeAdSpend?"1fr 1fr":"1fr",gap:14}}>
+          {sheetConvRaw.length>0&&(
+            <div onClick={()=>setSec("meta")} style={{cursor:"pointer"}}>
+              <div style={{fontSize:10,color:C.inkLt,fontWeight:600}}>전날 메타 광고비 · {yStr.slice(5)}</div>
+              <div style={{fontSize:18,fontWeight:800,color:C.ink,marginTop:3,letterSpacing:"-0.02em"}}>
+                {ySpend>0?fmtW(ySpend):metaRaw.length===0?"데이터 없음":"어제 데이터 없음"}</div>
+              {ySpend>0&&(
+                <div style={{display:"flex",gap:10,marginTop:3,fontSize:10,color:C.inkMid,fontWeight:600}}>
+                  <span>전환 {fmtW(yConv)}</span><span>트래픽 {fmtW(yTraff)}</span>
+                </div>
+              )}
+            </div>
+          )}
+          {homeAdSpend&&(
+            <div onClick={()=>setSec("naver")} style={{cursor:"pointer",
+              borderLeft:sheetConvRaw.length>0?"1px solid rgba(0,0,0,.06)":"none",
+              paddingLeft:sheetConvRaw.length>0?14:0}}>
+              <div style={{fontSize:10,color:C.inkLt,fontWeight:600}}>이번 달 네이버 이미용 광고비</div>
+              <div style={{fontSize:18,fontWeight:800,color:C.ink,marginTop:3,letterSpacing:"-0.02em"}}>{fmtS(homeAdSpend.month)}</div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── 팀 예산 페이싱 요약 (포트폴리오 미니뷰) ── */}
+      {(pfTeams||[]).length>0&&(()=>{
+        const now=new Date();
+        const m=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,"0")}`;
+        const elapsed=now.getDate()/new Date(now.getFullYear(),now.getMonth()+1,0).getDate();
+        const tmSpend={};
+        metaForChart.filter(r=>(r.date||"").startsWith(m)).forEach(r=>{
+          const hay=`${r.campaign||""} ${r.adset||""} ${r.adName||""}`.toLowerCase();
+          const t=(pfTeams||[]).find(tm=>(tm.keywords||[]).some(k=>k==="*"||(k&&hay.includes(String(k).toLowerCase()))));
+          if(t) tmSpend[t.id]=(tmSpend[t.id]||0)+(r.spend||0);
+        });
+        const bs=(pfBudgets||[]).filter(b=>b.month===m);
+        const COLS=["#0A84FF","#BF5AF2","#30D158","#FF9F0A","#FF375F","#64D2FF","#FFD60A"];
+        const teams=(pfTeams||[]).map((t,i)=>{
+          const rows=bs.filter(b=>b.teamId===t.id);
+          const budget=rows.reduce((s,b)=>s+(b.budget||0),0);
+          const spent=rows.reduce((s,b)=>s+(b.source==="메타"?0:(b.spent||0)),0)
+            +(rows.some(b=>b.source==="메타")?(tmSpend[t.id]||0):0);
+          return {t,budget,spent,color:COLS[i%COLS.length]};
+        }).filter(x=>x.budget>0);
+        if(!teams.length) return null;
+        return(
+          <div onClick={()=>setSec("portfolio")} style={{background:C.white,border:"1px solid rgba(0,0,0,.06)",
+            borderRadius:16,padding:"14px 16px",cursor:"pointer",boxShadow:"0 2px 8px rgba(0,0,0,.04)"}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
+              <div style={{fontSize:11,fontWeight:800,color:C.ink}}>📊 팀 예산 페이싱 · {Number(m.slice(5))}월</div>
+              <MI n="arrow_forward_ios" size={12} style={{color:C.inkLt}}/>
+            </div>
+            <div style={{display:"grid",gap:8}}>
+              {teams.map(({t,budget,spent,color})=>{
+                const ratio=budget>0?spent/budget:0;
+                const diff=ratio-elapsed;
+                const pColor=diff>0.1?"#D70015":diff<-0.1?"#C93400":"#248A3D";
+                return(
+                  <div key={t.id} style={{display:"flex",alignItems:"center",gap:10}}>
+                    <span style={{fontSize:10.5,fontWeight:800,color:C.ink,minWidth:56,display:"flex",alignItems:"center",gap:5}}>
+                      <span style={{width:7,height:7,borderRadius:"50%",background:color,flexShrink:0}}/>{t.name}</span>
+                    <div style={{flex:1,position:"relative",height:7,background:"#EDEDF0",borderRadius:7}}>
+                      <div style={{position:"absolute",left:0,top:0,bottom:0,width:`${Math.min(100,ratio*100)}%`,background:color,borderRadius:7}}/>
+                      <div style={{position:"absolute",left:`calc(${Math.min(100,elapsed*100)}% - 1px)`,top:-2,bottom:-2,width:2,background:"#1D1D1F",borderRadius:1,opacity:.5}}/>
+                    </div>
+                    <span style={{fontSize:10.5,fontWeight:900,color:pColor,minWidth:34,textAlign:"right"}}>{Math.round(ratio*100)}%</span>
+                    <span style={{fontSize:9.5,fontWeight:600,color:C.inkLt,minWidth:90,textAlign:"right"}}>{fmtW(spent)} / {fmtW(budget)}</span>
+                  </div>
+                );
+              })}
+            </div>
           </div>
-          <MI n="arrow_forward_ios" size={14} style={{color:C.inkLt}}/>
+        );
+      })()}
+
+      {/* ── 할 일: 알림 그룹 컴팩트 카드 ── */}
+      {activeGroups.length>0&&(
+        <div style={{display:"flex",flexDirection:"column",gap:8}}>
+          {activeGroups.map(g=>(
+            <div key={g.id} style={{background:C.white,border:`1px solid ${g.color}33`,
+              borderRadius:16,overflow:"hidden",boxShadow:"0 2px 8px rgba(0,0,0,.04)"}}>
+              {/* 헤더 */}
+              <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",
+                padding:"12px 16px",background:g.bg}}>
+                <div style={{display:"flex",alignItems:"center",gap:8,cursor:"pointer",flex:1}} onClick={g.action}>
+                  <span style={{fontSize:16}}>{g.icon}</span>
+                  <span style={{fontSize:12,fontWeight:800,color:g.color}}>{g.label}</span>
+                  <span style={{fontSize:11,fontWeight:900,color:C.white,background:g.color,
+                    padding:"1px 8px",borderRadius:20,minWidth:20,textAlign:"center"}}>{g.count}</span>
+                </div>
+                <div style={{display:"flex",alignItems:"center",gap:6}}>
+                  {g.dismissAll&&(
+                    <button onClick={e=>{e.stopPropagation();g.dismissAll();}}
+                      style={{fontSize:10,fontWeight:700,padding:"3px 10px",borderRadius:6,cursor:"pointer",
+                        border:`1px solid ${g.color}44`,background:"transparent",color:g.color,fontFamily:"inherit"}}>
+                      전체 삭제
+                    </button>
+                  )}
+                  <span onClick={g.action} style={{fontSize:10,color:g.color,fontWeight:700,opacity:0.7,cursor:"pointer"}}>→ 바로가기</span>
+                </div>
+              </div>
+              {/* 아이템 목록 */}
+              <div style={{padding:"8px 16px 10px"}}>
+                {g.items.slice(0,3).map((item,i)=>(
+                  <div key={i} style={{display:"flex",alignItems:"center",gap:6,
+                    padding:"5px 0",borderBottom:i<Math.min(g.items.length,3)-1?`1px solid ${C.border}`:"none"}}>
+                    <div style={{width:4,height:4,borderRadius:"50%",background:g.color,flexShrink:0}}/>
+                    <span style={{fontSize:11,color:C.ink,fontWeight:600,
+                      overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
+                      {g.render(item)}
+                    </span>
+                  </div>
+                ))}
+                {g.items.length>3&&(
+                  <div style={{fontSize:10,color:C.inkLt,marginTop:4,textAlign:"center"}}>
+                    +{g.items.length-3}개 더
+                  </div>
+                )}
+              </div>
+            </div>
+          ))}
         </div>
       )}
 
       {/* ── 재고 부족 알림 ── */}
       {homeStock.length>0&&(
-        <div style={{background:"#fef2f2",border:`1px solid #fecaca`,borderRadius:10,padding:"12px 14px"}}>
+        <div style={{background:"#fef2f2",border:`1px solid #fecaca`,borderRadius:16,padding:"14px 16px"}}>
           <div style={{fontSize:11,fontWeight:800,color:"#dc2626",marginBottom:6}}>📦 재고 부족 ({homeStock.length}개)</div>
           {homeStock.slice(0,5).map(s=>(
             <div key={s.name} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"3px 0",fontSize:11}}>
@@ -8580,7 +8694,7 @@ export default function OaDashboard(){
 
       {/* ── AI 인사이트 ── */}
       {homeInsights.length>0&&(
-        <div onClick={()=>setSec("insight")} style={{background:"linear-gradient(135deg,#7c3aed11,#a78bfa11)",border:`1px solid #e9d5ff`,borderRadius:10,padding:"12px 14px",cursor:"pointer"}}>
+        <div onClick={()=>setSec("insight")} style={{background:"linear-gradient(135deg,#7c3aed11,#a78bfa11)",border:`1px solid #e9d5ff`,borderRadius:16,padding:"14px 16px",cursor:"pointer"}}>
           <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:8}}>
             <div style={{fontSize:11,fontWeight:800,color:"#7c3aed"}}>🧠 AI 인사이트</div>
             <MI n="arrow_forward_ios" size={12} style={{color:"#a78bfa"}}/>
@@ -8596,7 +8710,7 @@ export default function OaDashboard(){
 
       {/* ── 검색순위 변동 ── */}
       {homeRankChanges.length>0&&(
-        <div onClick={()=>setSec("keyword")} style={{background:C.white,border:`1px solid ${C.border}`,borderRadius:10,padding:"12px 14px",cursor:"pointer"}}>
+        <div onClick={()=>setSec("keyword")} style={{background:C.white,border:"1px solid rgba(0,0,0,.06)",borderRadius:16,padding:"14px 16px",cursor:"pointer",boxShadow:"0 2px 8px rgba(0,0,0,.04)"}}>
           <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:8}}>
             <div style={{fontSize:11,fontWeight:800,color:C.ink}}>🔍 검색순위 변동</div>
             <MI n="arrow_forward_ios" size={12} style={{color:C.inkLt}}/>
@@ -8619,7 +8733,7 @@ export default function OaDashboard(){
       )}
 
       {/* ── 채널 바로가기 + ERP ── */}
-      <div style={{background:C.white,border:`1px solid ${C.border}`,borderRadius:12,padding:"12px 14px"}}>
+      <div style={{background:C.white,border:"1px solid rgba(0,0,0,.06)",borderRadius:16,padding:"14px 16px",boxShadow:"0 2px 8px rgba(0,0,0,.04)"}}>
         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:10}}>
           <div style={{fontSize:9,fontWeight:700,color:C.inkLt,letterSpacing:"0.08em"}}>빠른 링크</div>
           <button onClick={()=>setQuickLinksEditing(v=>!v)}
@@ -8687,65 +8801,6 @@ export default function OaDashboard(){
           </div>
         ))}
       </div>
-
-      {/* ── 알림 없을 때 ── */}
-      {totalAlerts===0&&(
-        <div style={{background:C.white,border:`1px solid ${C.border}`,borderRadius:14,
-          padding:"28px",textAlign:"center"}}>
-          <div style={{fontSize:32,marginBottom:8}}><MI n="celebration" size={32}/></div>
-          <div style={{fontSize:13,fontWeight:800,color:C.ink}}>오늘은 처리할 항목이 없어요</div>
-          <div style={{fontSize:11,color:C.inkLt,marginTop:4}}>재고·광고·인플루언서·일정 모두 정상</div>
-        </div>
-      )}
-
-      {/* ── 알림 그룹 컴팩트 카드 ── */}
-      {activeGroups.length>0&&(
-        <div style={{display:"flex",flexDirection:"column",gap:8}}>
-          {activeGroups.map(g=>(
-            <div key={g.id} style={{background:C.white,border:`1px solid ${g.color}33`,
-              borderRadius:14,overflow:"hidden"}}>
-              {/* 헤더 */}
-              <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",
-                padding:"12px 16px",background:g.bg}}>
-                <div style={{display:"flex",alignItems:"center",gap:8,cursor:"pointer",flex:1}} onClick={g.action}>
-                  <span style={{fontSize:16}}>{g.icon}</span>
-                  <span style={{fontSize:12,fontWeight:800,color:g.color}}>{g.label}</span>
-                  <span style={{fontSize:11,fontWeight:900,color:C.white,background:g.color,
-                    padding:"1px 8px",borderRadius:20,minWidth:20,textAlign:"center"}}>{g.count}</span>
-                </div>
-                <div style={{display:"flex",alignItems:"center",gap:6}}>
-                  {g.dismissAll&&(
-                    <button onClick={e=>{e.stopPropagation();g.dismissAll();}}
-                      style={{fontSize:10,fontWeight:700,padding:"3px 10px",borderRadius:6,cursor:"pointer",
-                        border:`1px solid ${g.color}44`,background:"transparent",color:g.color,fontFamily:"inherit"}}>
-                      전체 삭제
-                    </button>
-                  )}
-                  <span onClick={g.action} style={{fontSize:10,color:g.color,fontWeight:700,opacity:0.7,cursor:"pointer"}}>→ 바로가기</span>
-                </div>
-              </div>
-              {/* 아이템 목록 */}
-              <div style={{padding:"8px 16px 10px"}}>
-                {g.items.slice(0,3).map((item,i)=>(
-                  <div key={i} style={{display:"flex",alignItems:"center",gap:6,
-                    padding:"5px 0",borderBottom:i<Math.min(g.items.length,3)-1?`1px solid ${C.border}`:"none"}}>
-                    <div style={{width:4,height:4,borderRadius:"50%",background:g.color,flexShrink:0}}/>
-                    <span style={{fontSize:11,color:C.ink,fontWeight:600,
-                      overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
-                      {g.render(item)}
-                    </span>
-                  </div>
-                ))}
-                {g.items.length>3&&(
-                  <div style={{fontSize:10,color:C.inkLt,marginTop:4,textAlign:"center"}}>
-                    +{g.items.length-3}개 더
-                  </div>
-                )}
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
 
       {/* 발주임박은 알림 그룹에 통합됨 — 상세 테이블은 재고 섹션에서 확인 */}
 
