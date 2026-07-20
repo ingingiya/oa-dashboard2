@@ -19,48 +19,28 @@ async function main() {
     connectionLimit: 2,
   });
   try {
-    // 1) 품목 카탈로그 (보아르 제외)
-    const [cats] = await pool.query(`
-      SELECT \`카테고리1\` AS cat1, \`카테고리2\` AS cat2, \`품목명\` AS product
-      FROM v_sales_category
-      WHERE \`품목명\` NOT LIKE '%보아르%'
-        AND \`품목명\` NOT LIKE '%삼대오백%'
-        AND \`카테고리1\` NOT IN ('식품')
+    // 1) 품목별 매출 집계 (v_daily_sales_detail = 전 채널 ERP 매출, 품목명 직접 제공)
+    //    ⚠️ 이전엔 v_daily_sales_management를 썼는데 그 뷰는 쿠팡만 들어있어 금액이 틀렸음 (2026-07-20 수정)
+    const [rows] = await pool.query(`
+      SELECT d.\`품목명\` AS product,
+        COALESCE(c.\`카테고리1\`, d.\`카테고리\`) AS cat1,
+        COALESCE(c.\`카테고리2\`, d.\`카테고리\`) AS cat2,
+        SUM(CASE WHEN d.\`판매날짜\` >= DATE_SUB(CURDATE(), INTERVAL 30 DAY) THEN d.\`총매출액\` ELSE 0 END) AS s30,
+        SUM(CASE WHEN d.\`판매날짜\` <  DATE_SUB(CURDATE(), INTERVAL 30 DAY) THEN d.\`총매출액\` ELSE 0 END) AS p30,
+        SUM(CASE WHEN d.\`판매날짜\` >= DATE_SUB(CURDATE(), INTERVAL 30 DAY) THEN d.\`판매수량\` ELSE 0 END) AS q30
+      FROM v_daily_sales_detail d
+      LEFT JOIN v_sales_category c ON c.\`품목명\` = d.\`품목명\`
+      WHERE d.\`판매날짜\` >= DATE_SUB(CURDATE(), INTERVAL 60 DAY)
+        AND d.\`브랜드명\` NOT IN ('보아르', '삼대오백')
+        AND (c.\`카테고리1\` IS NULL OR c.\`카테고리1\` <> '식품')
+      GROUP BY 1, 2, 3
     `);
-    console.log(`  → 품목 ${cats.length}개`);
-
-    // 2) 상품명 단위 매출 집계 (최근 60일, MySQL에서 그룹핑만 — 품목 매칭은 JS)
-    const [sales] = await pool.query(`
-      SELECT \`상품명\` AS name,
-        SUM(CASE WHEN \`매출일자\` >= DATE_SUB(CURDATE(), INTERVAL 30 DAY) THEN \`판매액\` ELSE 0 END) AS s30,
-        SUM(CASE WHEN \`매출일자\` <  DATE_SUB(CURDATE(), INTERVAL 30 DAY) THEN \`판매액\` ELSE 0 END) AS p30,
-        SUM(CASE WHEN \`매출일자\` >= DATE_SUB(CURDATE(), INTERVAL 30 DAY) THEN \`수량\` ELSE 0 END) AS q30
-      FROM v_daily_sales_management
-      WHERE \`매출일자\` >= DATE_SUB(CURDATE(), INTERVAL 60 DAY)
-        AND \`상품명\` NOT LIKE '%보아르%'
-        AND \`상품명\` NOT LIKE '%삼대오백%'
-      GROUP BY \`상품명\`
-    `);
-    console.log(`  → 판매 상품명 ${sales.length}개`);
-
-    // 3) JS 매칭: 상품명에 품목명이 포함되면 해당 품목으로 귀속 (가장 긴 품목명 우선)
-    const sorted = [...cats].sort((a, b) => b.product.length - a.product.length);
-    const agg = {}; // product → {cat1,cat2,s30,p30,q30}
-    let unmatched = 0;
-    for (const row of sales) {
-      const hit = sorted.find(c => row.name && row.name.includes(c.product));
-      if (!hit) { unmatched++; continue; }
-      const a = agg[hit.product] = agg[hit.product] || { cat1: hit.cat1, cat2: hit.cat2, s30: 0, p30: 0, q30: 0 };
-      a.s30 += Number(row.s30) || 0;
-      a.p30 += Number(row.p30) || 0;
-      a.q30 += Number(row.q30) || 0;
-    }
-
-    const items = Object.entries(agg)
-      .map(([product, a]) => ({ product, ...a, s30: Math.round(a.s30), p30: Math.round(a.p30) }))
+    const items = rows
+      .map(r => ({ product: r.product, cat1: r.cat1, cat2: r.cat2,
+        s30: Math.round(Number(r.s30) || 0), p30: Math.round(Number(r.p30) || 0), q30: Number(r.q30) || 0 }))
       .filter(a => a.s30 > 0 || a.p30 > 0)
       .sort((a, b) => b.s30 - a.s30);
-    console.log(`  → 품목 매칭 ${items.length}개 (미매칭 상품명 ${unmatched}개)`);
+    console.log(`  → 품목 ${items.length}개 (전 채널)`);
 
     // 3.5) 네이버 제품별 광고비 — 광고그룹이 제품 단위 ("선풍기_아이스볼트미스트(상품형)")
     const [navGroups] = await pool.query(`
