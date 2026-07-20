@@ -7249,6 +7249,10 @@ export default function OaDashboard(){
   const [prioShowTable, setPrioShowTable] = useState(false);
   const [prioFrom, setPrioFrom] = useState(()=>{const d=new Date();d.setDate(d.getDate()-30);return d.toISOString().slice(0,10);});
   const [prioTo, setPrioTo] = useState(()=>new Date().toISOString().slice(0,10));
+  // 전제품 검색순위 (scripts/sync-search-rank-all.js — 사내 크롤러 v_analyze_search_ranking, 네이버쇼핑, 읽기 전용)
+  const [srData] = useSyncState("oa_searchrank_v1", null);
+  const [srQ, setSrQ] = useState("");
+  const [srOpen, setSrOpen] = useState(false);
   const [promoEvents, setPromoEvents] = useSyncState("oa_events_v1", []);
   // 채널 랭킹 트래커: [{id,date,channel,product,rank}] — 랭킹 탭
   const [rankLog, setRankLog] = useSyncState("oa_rank_tracker_v1", []);
@@ -8316,7 +8320,40 @@ export default function OaDashboard(){
       if(u!==null&&pu!==null&&u>=pu*1.15) r.push(`판매단가 +${Math.round((u/pu-1)*100)}% (₩${fmtW(pu)}→₩${fmtW(u)}) — 할인 종료/가격 인상 확인`);
       if(it.zero7>=3) r.push(`최근 7일 중 판매 0인 날 ${it.zero7}일 — 품절/노출 중단 의심`);
       if(u!==null&&pu!==null&&u<=pu*0.85&&r.length===0) r.push(`단가 ${Math.round((u/pu-1)*100)}% 내렸는데도 매출 하락 — 수요 자체 감소 (경쟁/시즌)`);
+      const rk=whyRank(it.product);
+      if(rk) r.push(rk);
       return r;
+    };
+    // ── 전제품 검색순위 (사내 크롤러 v_analyze_search_ranking · 네이버쇼핑 · 오아 최고순위, 매일 ~17시 갱신) ──
+    const srRanks=(srData?.ranks)||{};
+    const srProds=(srData?.prods)||{};
+    const srAt=(arr,cutoff)=>{let v=null;for(const [d,r] of arr){if(d<=cutoff)v=r;else break;}return v;};
+    const srList=Object.entries(srRanks).map(([kw,arr])=>{
+      const last=arr[arr.length-1];
+      if(!last) return null;
+      const cur=last[1], curDate=last[0];
+      const w1=srAt(arr,shiftDate(curDate,-7));
+      const m1=srAt(arr,shiftDate(curDate,-30));
+      return {kw,cur,curDate,w1,m1,d7:w1!=null?cur-w1:null,d30:m1!=null?cur-m1:null,prod:srProds[kw]||""};
+    }).filter(Boolean);
+    // 제품명 → 키워드 매칭 후 7일 순위 하락(5계단↑ & 30%↑) 신호 (하락 점검 진단용)
+    const whyRank=(product)=>{
+      const key=product.replace(/^오아/,"").replace(/\s/g,"");
+      if(key.length<2) return null;
+      const hits=srList.filter(x=>{const k=x.kw.replace(/\s/g,"");return key.includes(k)||k.includes(key);});
+      const worst=hits.filter(x=>x.d7!=null&&x.d7>=5&&x.cur>x.w1*1.3).sort((a,b)=>b.d7-a.d7)[0];
+      return worst?`네이버 검색순위 하락 '${worst.kw}' ${worst.w1}위→${worst.cur}위 (7일) — 노출 회복 필요`:null;
+    };
+    const srQq=srQ.trim().replace(/\s/g,"");
+    const srFiltered=srList.filter(x=>!srQq||x.kw.replace(/\s/g,"").includes(srQq)||x.prod.replace(/\s/g,"").includes(srQq))
+      .sort((a,b)=>a.cur-b.cur);
+    const srMovers=srList.filter(x=>x.d7!=null&&Math.abs(x.d7)>=5&&(x.cur<=100||x.w1<=100)).sort((a,b)=>b.d7-a.d7);
+    const srUpdated=srData?.updated?new Date(srData.updated).toLocaleString("ko-KR",{month:"numeric",day:"numeric",hour:"numeric",minute:"2-digit"}):null;
+    const srChip=(d)=>{
+      if(d==null) return <span style={{fontSize:10,color:C.inkLt}}>—</span>;
+      if(d===0) return <span style={{fontSize:10,fontWeight:700,color:C.inkLt}}>0</span>;
+      const worse=d>0;
+      return <span style={{fontSize:10.5,fontWeight:800,color:worse?C.bad:C.good}}>{worse?`▼${d}`:`▲${-d}`}</span>;
     };
     const actGroups=[
       {key:"boost",title:"🔥 증액 — 잘 팔리는 중, 더 밀기",color:C.bad,bg:"#FEF0F0"},
@@ -8413,6 +8450,64 @@ export default function OaDashboard(){
             );
           })}
         </div>
+
+        {/* ── 전제품 검색순위 (네이버쇼핑 사내 크롤러) ── */}
+        {srList.length>0&&(
+          <Card>
+            <CardTitle title="🔍 검색순위 자동조회 (전제품)" sub={`네이버쇼핑 ${srList.length}개 키워드 · 오아 최고순위 (사내 크롤러, 매일 갱신${srUpdated?` · ${srUpdated}`:""}) · ▼=순위 하락`}
+              action={
+                <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
+                  <input value={srQ} onChange={e=>setSrQ(e.target.value)} placeholder="키워드/제품 검색"
+                    style={{padding:"5px 8px",border:`1px solid ${C.border}`,borderRadius:8,fontSize:11,fontFamily:"inherit",width:130}}/>
+                  <button onClick={()=>setSrOpen(v=>!v)}
+                    style={{padding:"5px 12px",border:`1px solid ${C.border}`,borderRadius:8,fontSize:11,fontWeight:700,fontFamily:"inherit",background:C.white,color:C.inkMid,cursor:"pointer"}}>
+                    {srOpen||srQq?"급변만 보기":`전체 ${srList.length}개 펼치기`}
+                  </button>
+                </div>
+              }/>
+            {!(srOpen||srQq)&&(
+              srMovers.length>0?(
+                <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(250px,1fr))",gap:8}}>
+                  {srMovers.slice(0,12).map(x=>(
+                    <div key={x.kw} style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:8,
+                      background:x.d7>0?"#FFF8EC":"#EDF7F1",borderRadius:10,padding:"8px 12px"}}>
+                      <div style={{overflow:"hidden"}}>
+                        <div style={{fontSize:11.5,fontWeight:800,color:C.ink,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{x.kw}</div>
+                        <div style={{fontSize:9.5,color:C.inkLt,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{x.prod||"—"}</div>
+                      </div>
+                      <div style={{textAlign:"right",whiteSpace:"nowrap"}}>
+                        <div style={{fontSize:12,fontWeight:900,color:C.ink}}>{x.cur}위</div>
+                        <div>{srChip(x.d7)}<span style={{fontSize:9,color:C.inkLt,marginLeft:3}}>7일</span></div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ):<div style={{fontSize:11,color:C.inkLt}}>최근 7일 급변(±5계단 이상) 없음 — 검색하거나 전체를 펼쳐보세요</div>
+            )}
+            {(srOpen||srQq)&&(
+              <div style={{overflowX:"auto",maxHeight:420,overflowY:"auto"}}>
+                <table style={{width:"100%",borderCollapse:"collapse",fontSize:11}}>
+                  <thead><tr style={{background:C.cream,position:"sticky",top:0}}>
+                    {["키워드","현재","7일 전","30일 전","7일 변동","대표 상품"].map(h=><th key={h} style={th}>{h}</th>)}
+                  </tr></thead>
+                  <tbody>
+                    {srFiltered.map(x=>(
+                      <tr key={x.kw} style={{borderBottom:`1px solid ${C.cream}`}}>
+                        <td style={{...td,fontWeight:700}}>{x.kw}</td>
+                        <td style={{...td,fontWeight:900,color:x.cur<=10?C.good:x.cur<=40?C.ink:C.inkLt}}>{x.cur}위</td>
+                        <td style={td}>{x.w1!=null?`${x.w1}위`:"—"}</td>
+                        <td style={td}>{x.m1!=null?`${x.m1}위`:"—"}</td>
+                        <td style={td}>{srChip(x.d7)}</td>
+                        <td style={{...td,maxWidth:280,overflow:"hidden",textOverflow:"ellipsis",color:C.inkMid}}>{x.prod||"—"}</td>
+                      </tr>
+                    ))}
+                    {srFiltered.length===0&&<tr><td colSpan={6} style={{...td,color:C.inkLt}}>검색 결과 없음</td></tr>}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </Card>
+        )}
 
         {adRows.length>0&&(
           <Card>
