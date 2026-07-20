@@ -8122,11 +8122,18 @@ export default function OaDashboard(){
       if((r.date||"")<adCut) return;
       const hay=`${r.campaign||""} ${r.adset||""} ${r.adName||""}`;
       const hit=prodKeys.find(x=>hay.includes(x.k));
-      if(hit){const a=metaAgg[hit.p]=metaAgg[hit.p]||{spend:0,conv:0};a.spend+=r.spend||0;a.conv+=r.convValue||0;}
+      if(hit){
+        const a=metaAgg[hit.p]=metaAgg[hit.p]||{spend:0,imp:0,clicks:0,lpv:0,pur:0};
+        a.spend+=r.spend||0; a.imp+=r.impressions||0; a.clicks+=(r.clicks||r.clicksAll||0); a.lpv+=r.lpv||0; a.pur+=r.purchases||0;
+      }
     });
     const enriched=items.map(it=>{
-      const m=metaAgg[it.product]||{spend:0,conv:0};
-      return {...it,growth:it.p30>0?it.s30/it.p30-1:null,act:classify(it),ad30:m.spend,adRoas:m.spend>0?m.conv/m.spend*100:null};
+      const m=metaAgg[it.product]||{spend:0,imp:0,clicks:0,lpv:0,pur:0};
+      return {...it,growth:it.p30>0?it.s30/it.p30-1:null,act:classify(it),ad30:m.spend,
+        adClicks:m.clicks,
+        adCtr:m.imp>0?m.clicks/m.imp*100:null,
+        adLpvRate:m.clicks>0?Math.min(m.lpv/m.clicks*100,100):null,
+        adCpa:m.pur>0?m.spend/m.pur:null};
     });
     const cats=["전체",...Array.from(new Set(items.map(i=>i.cat1))).sort()];
     const q=prioQ.trim();
@@ -8216,7 +8223,7 @@ export default function OaDashboard(){
           <div style={{overflowX:"auto"}}>
             <table style={{width:"100%",borderCollapse:"collapse",fontSize:11}}>
               <thead><tr style={{background:C.cream}}>
-                {["#","카테고리","제품","최근 30일","이전 30일","성장률","수량(30일)","메타광고비(30일)","메타ROAS","액션"].map(h=><th key={h} style={th}>{h}</th>)}
+                {["#","카테고리","제품","최근 30일","이전 30일","성장률","수량(30일)","메타광고비(30일)","클릭","CTR","랜딩도달율","구매당비용","액션"].map(h=><th key={h} style={th}>{h}</th>)}
               </tr></thead>
               <tbody>
                 {filtered.slice(0,100).map((it,i)=>(
@@ -8231,14 +8238,17 @@ export default function OaDashboard(){
                     <td style={td}>{it.ad30>0?`₩${fmtW(it.ad30)}`:(it.act&&(it.act.key==="boost"||it.act.key==="spark")?(
                       <span style={{fontSize:9,fontWeight:800,padding:"2px 7px",borderRadius:20,color:C.rose,background:C.blush,border:`1px solid ${C.rose}33`}}>무광고 기회</span>
                     ):<span style={{color:C.inkLt}}>—</span>)}</td>
-                    <td style={{...td,fontWeight:700,color:it.adRoas===null?C.inkLt:it.adRoas>=400?C.good:it.adRoas<200?C.bad:C.ink}}>{it.adRoas!==null?`${Math.round(it.adRoas)}%`:"—"}</td>
+                    <td style={{...td,color:C.inkMid}}>{it.adClicks>0?it.adClicks.toLocaleString():"—"}</td>
+                    <td style={{...td,fontWeight:700,color:it.adCtr===null?C.inkLt:it.adCtr>=1.5?C.good:it.adCtr<0.8?C.bad:C.ink}}>{it.adCtr!==null?`${it.adCtr.toFixed(2)}%`:"—"}</td>
+                    <td style={{...td,fontWeight:700,color:it.adLpvRate===null?C.inkLt:it.adLpvRate>=80?C.good:it.adLpvRate<60?C.bad:C.ink}}>{it.adLpvRate!==null?`${Math.round(it.adLpvRate)}%`:"—"}</td>
+                    <td style={{...td,fontWeight:700,color:it.adCpa===null?C.inkLt:C.ink}}>{it.adCpa!==null?`₩${fmtW(it.adCpa)}`:"—"}</td>
                     <td style={td}>{it.act?(
                       <span title={it.act.desc} style={{fontSize:10,fontWeight:800,padding:"2px 8px",borderRadius:20,color:it.act.color,background:it.act.bg,border:`1px solid ${it.act.color}33`,cursor:"default"}}>{it.act.label}</span>
                     ):<span style={{fontSize:10,color:C.inkLt}}>—</span>}</td>
                   </tr>
                 ))}
                 {filtered.length===0&&(
-                  <tr><td colSpan={10} style={{...td,textAlign:"center",color:C.inkLt,padding:20}}>표시할 제품이 없습니다</td></tr>
+                  <tr><td colSpan={13} style={{...td,textAlign:"center",color:C.inkLt,padding:20}}>표시할 제품이 없습니다</td></tr>
                 )}
               </tbody>
             </table>
