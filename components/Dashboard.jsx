@@ -8107,7 +8107,20 @@ export default function OaDashboard(){
       if(g!==null&&it.s30>=5000000&&it.s30<20000000&&g>=0.5) return {key:"spark", label:"💡 점화", color:C.good, bg:"#EDF7F1", desc:"불씨 커짐 — 소재·광고 투입 기회"};
       return null;
     };
-    const enriched=items.map(it=>({...it,growth:it.p30>0?it.s30/it.p30-1:null,act:classify(it)}));
+    // 제품별 메타 광고비 (최근 30일) — 캠페인/세트/광고명에 제품명('오아' 접두 제거) 포함 매칭. 네이버는 캠페인이 카테고리 단위라 제품별 분리 불가
+    const adCut=(()=>{const d=new Date();d.setDate(d.getDate()-30);return d.toISOString().slice(0,10);})();
+    const prodKeys=items.map(it=>({p:it.product,k:it.product.replace(/^오아/,"")})).filter(x=>x.k.length>=2).sort((a,b)=>b.k.length-a.k.length);
+    const metaAgg={};
+    (metaForChart||[]).forEach(r=>{
+      if((r.date||"")<adCut) return;
+      const hay=`${r.campaign||""} ${r.adset||""} ${r.adName||""}`;
+      const hit=prodKeys.find(x=>hay.includes(x.k));
+      if(hit){const a=metaAgg[hit.p]=metaAgg[hit.p]||{spend:0,conv:0};a.spend+=r.spend||0;a.conv+=r.convValue||0;}
+    });
+    const enriched=items.map(it=>{
+      const m=metaAgg[it.product]||{spend:0,conv:0};
+      return {...it,growth:it.p30>0?it.s30/it.p30-1:null,act:classify(it),ad30:m.spend,adRoas:m.spend>0?m.conv/m.spend*100:null};
+    });
     const cats=["전체",...Array.from(new Set(items.map(i=>i.cat1))).sort()];
     const q=prioQ.trim();
     const filtered=enriched.filter(it=>
@@ -8179,7 +8192,7 @@ export default function OaDashboard(){
         )}
 
         <Card>
-          <CardTitle title="📋 제품별 우선순위" sub={`${filtered.length}개 표시`}
+          <CardTitle title="📋 제품별 우선순위" sub={`${filtered.length}개 표시 · 메타광고비=광고명 제품 매칭 (네이버는 캠페인이 카테고리 단위라 제품별 불가)`}
             action={
               <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
                 <select value={prioCat} onChange={e=>setPrioCat(e.target.value)}
@@ -8196,7 +8209,7 @@ export default function OaDashboard(){
           <div style={{overflowX:"auto"}}>
             <table style={{width:"100%",borderCollapse:"collapse",fontSize:11}}>
               <thead><tr style={{background:C.cream}}>
-                {["#","카테고리","제품","최근 30일","이전 30일","성장률","수량(30일)","액션"].map(h=><th key={h} style={th}>{h}</th>)}
+                {["#","카테고리","제품","최근 30일","이전 30일","성장률","수량(30일)","메타광고비(30일)","메타ROAS","액션"].map(h=><th key={h} style={th}>{h}</th>)}
               </tr></thead>
               <tbody>
                 {filtered.slice(0,100).map((it,i)=>(
@@ -8208,13 +8221,17 @@ export default function OaDashboard(){
                     <td style={{...td,color:C.inkMid}}>₩{fmtW(it.p30)}</td>
                     <td style={td}>{growthChip(it.growth)}</td>
                     <td style={{...td,color:C.inkMid}}>{(it.q30||0).toLocaleString()}</td>
+                    <td style={td}>{it.ad30>0?`₩${fmtW(it.ad30)}`:(it.act&&(it.act.key==="boost"||it.act.key==="spark")?(
+                      <span style={{fontSize:9,fontWeight:800,padding:"2px 7px",borderRadius:20,color:C.rose,background:C.blush,border:`1px solid ${C.rose}33`}}>무광고 기회</span>
+                    ):<span style={{color:C.inkLt}}>—</span>)}</td>
+                    <td style={{...td,fontWeight:700,color:it.adRoas===null?C.inkLt:it.adRoas>=400?C.good:it.adRoas<200?C.bad:C.ink}}>{it.adRoas!==null?`${Math.round(it.adRoas)}%`:"—"}</td>
                     <td style={td}>{it.act?(
                       <span title={it.act.desc} style={{fontSize:10,fontWeight:800,padding:"2px 8px",borderRadius:20,color:it.act.color,background:it.act.bg,border:`1px solid ${it.act.color}33`,cursor:"default"}}>{it.act.label}</span>
                     ):<span style={{fontSize:10,color:C.inkLt}}>—</span>}</td>
                   </tr>
                 ))}
                 {filtered.length===0&&(
-                  <tr><td colSpan={8} style={{...td,textAlign:"center",color:C.inkLt,padding:20}}>표시할 제품이 없습니다</td></tr>
+                  <tr><td colSpan={10} style={{...td,textAlign:"center",color:C.inkLt,padding:20}}>표시할 제품이 없습니다</td></tr>
                 )}
               </tbody>
             </table>
@@ -17306,7 +17323,7 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
   // RENDER
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   return(
-    <div className="oa-layout" style={{background:"#F4F4F5",minHeight:"100vh",fontFamily:"'Noto Sans KR',sans-serif",color:C.ink}}>
+    <div className="oa-layout" style={{background:"linear-gradient(180deg,#EDF1F9 0%,#F7F8FB 320px)",minHeight:"100vh",fontFamily:"'Noto Sans KR',sans-serif",color:C.ink}}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;600;700;800;900&display=swap');
         @import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200');
@@ -17322,11 +17339,14 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
         .oa-body   { display:flex; flex:1; }
         .oa-sidebar{
           width:220px; flex-shrink:0;
-          background:${C.white}; border-right:1px solid ${C.border};
+          background:linear-gradient(180deg,#0B1B3F 0%,#12295C 55%,#173D8F 130%);
+          border-right:none;
           position:fixed; top:0; left:0; bottom:0;
           display:flex; flex-direction:column;
           z-index:100; overflow-y:auto;
+          box-shadow:4px 0 24px rgba(11,27,63,.18);
         }
+        .oa-sidebar::-webkit-scrollbar-thumb{background:rgba(255,255,255,.2);}
         .oa-main { margin-left:220px; flex:1; padding:28px 32px 60px; max-width:1200px; }
         .oa-mobile-nav { display:none !important; }
         .kpi-grid { grid-template-columns: repeat(6,1fr) !important; }
@@ -17378,20 +17398,20 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
       {/* ── PC 사이드바 ── */}
       <aside className="oa-sidebar">
         {/* 로고 */}
-        <div style={{padding:"24px 20px 20px",borderBottom:`1px solid ${C.border}`}}>
+        <div style={{padding:"24px 20px 20px",borderBottom:"1px solid rgba(255,255,255,.10)"}}>
           <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:16}}>
-            <div style={{width:36,height:36,background:`linear-gradient(135deg,${C.rose},${C.roseLt})`,
+            <div style={{width:36,height:36,background:"linear-gradient(135deg,#3B82F6,#7DD3FC)",
               borderRadius:10,display:"flex",alignItems:"center",justifyContent:"center",
-              fontSize:18,boxShadow:`0 3px 12px ${C.rose}44`,flexShrink:0}}>🌸</div>
+              fontSize:18,boxShadow:"0 4px 14px rgba(59,130,246,.5)",flexShrink:0}}>🌸</div>
             <div>
-              <div style={{fontSize:15,fontWeight:900,color:C.ink,letterSpacing:"-0.02em"}}>OA <span style={{color:C.rose}}>HQ</span></div>
-              <div style={{fontSize:9,color:C.inkLt,letterSpacing:"0.08em"}}>MARKETING DASHBOARD</div>
+              <div style={{fontSize:15,fontWeight:900,color:"#fff",letterSpacing:"-0.02em"}}>OA <span style={{color:"#7DD3FC"}}>HQ</span></div>
+              <div style={{fontSize:9,color:"rgba(255,255,255,.45)",letterSpacing:"0.08em"}}>MARKETING DASHBOARD</div>
             </div>
           </div>
           <div style={{display:"flex",alignItems:"center",gap:6,padding:"7px 12px",
-            background:C.blush,borderRadius:10,fontSize:11,color:C.rose,fontWeight:700}}>
-            <span style={{width:6,height:6,borderRadius:"50%",background:C.rose,flexShrink:0,
-              boxShadow:pulse?`0 0 0 4px ${C.rose}33`:"none",transition:"box-shadow 0.4s",display:"inline-block"}}/>
+            background:"rgba(255,255,255,.10)",border:"1px solid rgba(255,255,255,.12)",borderRadius:10,fontSize:11,color:"#BFDBFE",fontWeight:700}}>
+            <span style={{width:6,height:6,borderRadius:"50%",background:"#7DD3FC",flexShrink:0,
+              boxShadow:pulse?"0 0 0 4px rgba(125,211,252,.25)":"none",transition:"box-shadow 0.4s",display:"inline-block"}}/>
             {dateStr}
           </div>
         </div>
@@ -17407,18 +17427,18 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
                   padding:"11px 14px",borderRadius:11,border:"none",cursor:"pointer",
                   fontFamily:"inherit",fontWeight:700,fontSize:13,
                   marginBottom:4,transition:"all 0.18s",textAlign:"left",
-                  background:active?C.rose:"transparent",
-                  color:active?C.white:C.inkMid,
-                  boxShadow:active?`0 4px 14px ${C.rose}44`:"none",
+                  background:active?"#fff":"transparent",
+                  color:active?"#12295C":"rgba(255,255,255,.65)",
+                  boxShadow:active?"0 8px 20px rgba(0,0,0,.28)":"none",
                   position:"relative",
                 }}
-                onMouseEnter={e=>{ if(!active){ e.currentTarget.style.background=C.cream; } }}
+                onMouseEnter={e=>{ if(!active){ e.currentTarget.style.background="rgba(255,255,255,.08)"; } }}
                 onMouseLeave={e=>{ if(!active){ e.currentTarget.style.background="transparent"; } }}>
                   <MI n={n.icon} size={18}/>
                   <span>{n.label}</span>
                   {n.id==="home"&&totalAlerts>0&&(
                     <span style={{marginLeft:"auto",minWidth:20,height:20,borderRadius:10,
-                      background:active?C.white:C.bad,color:active?C.bad:C.white,
+                      background:active?C.bad:C.bad,color:C.white,
                       fontSize:10,fontWeight:900,display:"flex",alignItems:"center",justifyContent:"center",padding:"0 5px"}}>
                       {totalAlerts}
                     </span>
@@ -17428,7 +17448,7 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
             })}
           </div>
           {/* 수리중 탭 구분선 */}
-          <div style={{borderTop:`1px solid ${C.border}`,marginTop:8,paddingTop:8}}>
+          <div style={{borderTop:"1px solid rgba(255,255,255,.10)",marginTop:8,paddingTop:8}}>
             <div style={{fontSize:10,fontWeight:800,color:"#f59e0b",padding:"2px 14px 6px",letterSpacing:"0.05em",display:"flex",alignItems:"center",gap:4}}>
               🚧 <span>수리중</span>
             </div>
@@ -17441,11 +17461,11 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
                   fontFamily:"inherit",fontWeight:700,fontSize:13,
                   marginBottom:4,transition:"all 0.18s",textAlign:"left",
                   background:active?"#f59e0b":"transparent",
-                  color:active?C.white:"#9ca3af",
+                  color:active?C.white:"rgba(255,255,255,.45)",
                   boxShadow:active?"0 4px 14px #f59e0b44":"none",
-                  opacity:0.8,
+                  opacity:0.9,
                 }}
-                onMouseEnter={e=>{ if(!active){ e.currentTarget.style.background=C.cream; } }}
+                onMouseEnter={e=>{ if(!active){ e.currentTarget.style.background="rgba(255,255,255,.08)"; } }}
                 onMouseLeave={e=>{ if(!active){ e.currentTarget.style.background="transparent"; } }}>
                   <MI n={n.icon} size={18}/>
                   <span>{n.label}</span>
@@ -17458,14 +17478,14 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
 
         {/* 사이드바 하단: 알림 요약 */}
         {totalAlerts>0&&(
-          <div style={{margin:"0 12px 20px",padding:"12px",background:"#FFF8EC",
-            border:`1px solid ${C.warn}33`,borderRadius:12}}>
-            <div style={{fontSize:11,fontWeight:800,color:C.warn,marginBottom:6}}>🔔 확인 필요</div>
-            {orderStatus==="ok"&&orderRaw.length>0&&<div style={{fontSize:10,color:C.bad,fontWeight:700,marginBottom:3}}><MI n="inventory_2" size={11}/> 발주임박 {orderRaw.length}개</div>}
-            {cutAds.length>0&&<div style={{fontSize:10,color:C.bad,fontWeight:700,marginBottom:3}}><MI n="cancel" size={11}/> 광고교체 {cutAds.length}개</div>}
-            {holdAds.length>0&&<div style={{fontSize:10,color:C.warn,marginBottom:3}}><MI n="pause_circle" size={11}/> 광고보류 {holdAds.length}개</div>}
-            {overdueScheds.length>0&&<div style={{fontSize:10,color:C.inkMid,marginBottom:3}}><MI n="calendar_month" size={11}/> 기간초과 {overdueScheds.length}건</div>}
-            {urgentScheds.length>0&&<div style={{fontSize:10,color:C.inkMid}}><MI n="notifications" size={11}/> D-5임박 {urgentScheds.length}건</div>}
+          <div style={{margin:"0 12px 20px",padding:"12px",background:"rgba(255,255,255,.08)",
+            border:"1px solid rgba(255,255,255,.14)",borderRadius:12}}>
+            <div style={{fontSize:11,fontWeight:800,color:"#FCD34D",marginBottom:6}}>🔔 확인 필요</div>
+            {orderStatus==="ok"&&orderRaw.length>0&&<div style={{fontSize:10,color:"#FCA5A5",fontWeight:700,marginBottom:3}}><MI n="inventory_2" size={11}/> 발주임박 {orderRaw.length}개</div>}
+            {cutAds.length>0&&<div style={{fontSize:10,color:"#FCA5A5",fontWeight:700,marginBottom:3}}><MI n="cancel" size={11}/> 광고교체 {cutAds.length}개</div>}
+            {holdAds.length>0&&<div style={{fontSize:10,color:"#FCD34D",marginBottom:3}}><MI n="pause_circle" size={11}/> 광고보류 {holdAds.length}개</div>}
+            {overdueScheds.length>0&&<div style={{fontSize:10,color:"rgba(255,255,255,.7)",marginBottom:3}}><MI n="calendar_month" size={11}/> 기간초과 {overdueScheds.length}건</div>}
+            {urgentScheds.length>0&&<div style={{fontSize:10,color:"rgba(255,255,255,.7)"}}><MI n="notifications" size={11}/> D-5임박 {urgentScheds.length}건</div>}
           </div>
         )}
       </aside>
