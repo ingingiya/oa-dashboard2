@@ -8195,19 +8195,21 @@ export default function OaDashboard(){
     const prodKeys=items.map(it=>({p:it.product,k:it.product.replace(/^오아/,"")})).filter(x=>x.k.length>=2).sort((a,b)=>b.k.length-a.k.length);
     const metaAgg={};
     (metaForChart||[]).forEach(r=>{
-      if((r.date||"")<from||(r.date||"")>to) return;
+      const dt=r.date||"";
+      if(dt<prevFrom||dt>to) return;
       const hay=`${r.campaign||""} ${r.adset||""} ${r.adName||""}`;
       const hit=prodKeys.find(x=>hay.includes(x.k));
       if(hit){
-        const a=metaAgg[hit.p]=metaAgg[hit.p]||{spend:0,convSpend:0,imp:0,clicks:0,lpv:0,pur:0,convPur:0};
+        const a=metaAgg[hit.p]=metaAgg[hit.p]||{spend:0,convSpend:0,imp:0,clicks:0,lpv:0,pur:0,convPur:0,prevSpend:0};
+        if(dt<from){a.prevSpend+=r.spend||0;return;} // 비교 기간 — 하락 원인 진단용
         const isConv=isConversionCampaign(r.objective,r.campaign,r.resultType);
         a.spend+=r.spend||0; a.imp+=r.impressions||0; a.clicks+=(r.clicks||r.clicksAll||0); a.lpv+=r.lpv||0; a.pur+=r.purchases||0;
         if(isConv){a.convSpend+=r.spend||0; a.convPur+=r.purchases||0;}
       }
     });
     const enriched=items.map(it=>{
-      const m=metaAgg[it.product]||{spend:0,convSpend:0,imp:0,clicks:0,lpv:0,pur:0,convPur:0};
-      return {...it,growth:it.p30>0?it.s30/it.p30-1:null,act:classify(it),ad30:m.spend,
+      const m=metaAgg[it.product]||{spend:0,convSpend:0,imp:0,clicks:0,lpv:0,pur:0,convPur:0,prevSpend:0};
+      return {...it,growth:it.p30>0?it.s30/it.p30-1:null,act:classify(it),ad30:m.spend,adPrev:m.prevSpend,
         adConv30:m.convSpend, adTraffic30:m.spend-m.convSpend,
         adClicks:m.clicks,
         adCtr:m.imp>0?m.clicks/m.imp*100:null,
@@ -8254,8 +8256,22 @@ export default function OaDashboard(){
         return "잘 돌고 있음 → 예산 20~30% 증액";
       }
       if(it.act.key==="spark") return noAd?"아직 무광고 → 소재 만들어 소액 테스트":"반응 좋으면 예산 올리기";
-      if(it.act.key==="cool") return (it.ad30>0||it.nav30>0)?"품절·가격·경쟁 먼저 확인 → 원인 없으면 광고비 축소":"품절·가격·리뷰 확인 (광고 문제 아님)";
+      if(it.act.key==="cool"){
+        const w=whyCool(it);
+        return w.length?w.join(" · "):(it.ad30>0||it.nav30>0)?"광고·단가·품절 이상 없음 → 경쟁·시즌·리뷰 점검, 원인 없으면 광고비 축소":"광고·단가·품절 이상 없음 → 경쟁·시즌·리뷰 점검 (광고 문제 아님)";
+      }
       return "그대로 유지 — 구매당비용만 주시";
+    };
+    // 하락 원인 자동 진단 — 데이터로 잡히는 신호만 (없으면 빈 배열)
+    const whyCool=(it)=>{
+      const r=[];
+      const curAd=(it.ad30||0)+(it.nav30||0), prevAd=(it.adPrev||0)+(it.navPrev||0);
+      if(prevAd>=100000&&curAd<prevAd*0.7) r.push(`광고비 ${Math.round((1-curAd/prevAd)*100)}% 감소 (₩${fmtW(prevAd)}→₩${fmtW(curAd)}) — 광고 줄인 게 원인일 수 있음`);
+      const u=it.q30>0?it.s30/it.q30:null, pu=(it.pq||0)>0?it.p30/it.pq:null;
+      if(u!==null&&pu!==null&&u>=pu*1.15) r.push(`판매단가 +${Math.round((u/pu-1)*100)}% (₩${fmtW(pu)}→₩${fmtW(u)}) — 할인 종료/가격 인상 확인`);
+      if(it.zero7>=3) r.push(`최근 7일 중 판매 0인 날 ${it.zero7}일 — 품절/노출 중단 의심`);
+      if(u!==null&&pu!==null&&u<=pu*0.85&&r.length===0) r.push(`단가 ${Math.round((u/pu-1)*100)}% 내렸는데도 매출 하락 — 수요 자체 감소 (경쟁/시즌)`);
+      return r;
     };
     const actGroups=[
       {key:"boost",title:"🔥 증액 — 잘 팔리는 중, 더 밀기",color:C.bad,bg:"#FEF0F0"},
@@ -8427,7 +8443,7 @@ export default function OaDashboard(){
                     <td style={td} title={it.nav30>0?`클릭 ${(it.navClk||0).toLocaleString()} · CTR ${it.navCtr!==null?it.navCtr.toFixed(2)+"%":"—"}`:undefined}>{it.nav30>0?`₩${fmtW(it.nav30)}`:<span style={{color:C.inkLt}}>—</span>}</td>
                     <td style={{...td,fontWeight:700,color:it.navCpa===null?C.inkLt:C.ink}}>{it.navCpa!==null?`₩${fmtW(it.navCpa)}`:"—"}</td>
                     <td style={td}>{it.act?(
-                      <span title={it.act.desc} style={{fontSize:10,fontWeight:800,padding:"2px 8px",borderRadius:20,color:it.act.color,background:it.act.bg,border:`1px solid ${it.act.color}33`,cursor:"default"}}>{it.act.label}</span>
+                      <span title={it.act.key==="cool"?(whyCool(it).join(" · ")||it.act.desc):it.act.desc} style={{fontSize:10,fontWeight:800,padding:"2px 8px",borderRadius:20,color:it.act.color,background:it.act.bg,border:`1px solid ${it.act.color}33`,cursor:"default"}}>{it.act.label}</span>
                     ):<span style={{fontSize:10,color:C.inkLt}}>—</span>}</td>
                   </tr>
                 ))}
