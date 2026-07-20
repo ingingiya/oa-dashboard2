@@ -7289,6 +7289,32 @@ export default function OaDashboard(){
       setPauseStates(p => ({ ...p, [adName]: "error" })); alert(`광고 끄기 실패: ${e.message}`);
     }
   };
+  // 캠페인 탭 광고 ON/OFF 토글: 메타 실제 상태 조회 + 전환
+  const [adStatuses, setAdStatuses] = useState(null); // null=미로드 | {광고명: "ACTIVE"|"PAUSED"...}
+  const [toggleStates, setToggleStates] = useState({}); // {광고명: "loading"}
+  useEffect(() => {
+    if (metaTab !== "campaign" || adStatuses !== null) return;
+    fetch("/api/meta-ad-control")
+      .then(r => r.json())
+      .then(j => setAdStatuses(j.statuses || {}))
+      .catch(() => setAdStatuses({}));
+  }, [metaTab, adStatuses]);
+  const toggleAd = async (adName) => {
+    const isOn = adStatuses?.[adName] === "ACTIVE";
+    const action = isOn ? "off" : "on";
+    if (!window.confirm(`"${adName}" 광고를 ${isOn ? "끌까요?\n(메타에서 즉시 PAUSED 처리됩니다)" : "켤까요?\n(메타에서 즉시 ACTIVE 처리됩니다)"}`)) return;
+    setToggleStates(p => ({ ...p, [adName]: "loading" }));
+    try {
+      const res = await fetch("/api/meta-ad-control", { method: "POST",
+        headers: { "Content-Type": "application/json" }, body: JSON.stringify({ adName, action }) });
+      const d = await res.json();
+      if (d.ok) setAdStatuses(p => ({ ...(p || {}), [adName]: isOn ? "PAUSED" : "ACTIVE" }));
+      else alert(`광고 ${isOn ? "끄기" : "켜기"} 실패: ${d.error || "알 수 없는 오류"}`);
+    } catch (e) {
+      alert(`광고 ${isOn ? "끄기" : "켜기"} 실패: ${e.message}`);
+    }
+    setToggleStates(p => ({ ...p, [adName]: undefined }));
+  };
   useEffect(()=>{
     if(!metaRaw.length){ setMetaBackfill([]); return; }
     const byDate={};
@@ -8263,8 +8289,12 @@ export default function OaDashboard(){
       return "그대로 유지 — 구매당비용만 주시";
     };
     // 하락 원인 자동 진단 — 데이터로 잡히는 신호만 (없으면 빈 배열)
+    const lyMap=(prioData?.ly)||{};
     const whyCool=(it)=>{
       const r=[];
+      // 시즌성: 작년 같은 시기(365일 전 기준 30일 vs 그 이전 30일)에도 20% 이상 빠졌으면 시즌 요인
+      const lyd=lyMap[it.product];
+      if(lyd&&lyd[1]>=3000000&&lyd[0]<lyd[1]*0.8) r.push(`작년 같은 시기에도 ${Math.round((lyd[0]/lyd[1]-1)*100)}% 하락 (₩${fmtW(lyd[1])}→₩${fmtW(lyd[0])}) — 시즌성일 가능성`);
       const curAd=(it.ad30||0)+(it.nav30||0), prevAd=(it.adPrev||0)+(it.navPrev||0);
       if(prevAd>=100000&&curAd<prevAd*0.7) r.push(`광고비 ${Math.round((1-curAd/prevAd)*100)}% 감소 (₩${fmtW(prevAd)}→₩${fmtW(curAd)}) — 광고 줄인 게 원인일 수 있음`);
       const u=it.q30>0?it.s30/it.q30:null, pu=(it.pq||0)>0?it.p30/it.pq:null;
@@ -8465,6 +8495,7 @@ export default function OaDashboard(){
     {id:"priority",  icon:"local_fire_department", label:"우선순위"},
     {id:"naver",     icon:"ads_click",      label:"네이버광고"},
     {id:"meta",      icon:"campaign",       label:"메타광고"},
+    {id:"adschedule",icon:"schedule",       label:"광고 스케줄"},
     {id:"guide",     icon:"menu_book",      label:"가이드"},
     {id:"inf_archive",icon:"photo_library", label:"아카이브"},
     {id:"launch",    icon:"rocket_launch",  label:"런칭"},
@@ -10035,8 +10066,8 @@ export default function OaDashboard(){
                         <table style={{width:"100%",borderCollapse:"collapse",fontSize:11,minWidth:600}}>
                           <thead><tr style={{borderBottom:`2px solid ${C.border}`}}>
                             {(campTab==="conversion"
-                              ?["광고명","광고세트","광고비","클릭","구매","전환값","CPA","ROAS","LPV율","삭제"]
-                              :["광고명","광고세트","광고비","클릭","LPV","CPC","CTR","LPV율","삭제"]
+                              ?["광고명","광고세트","광고비","클릭","구매","전환값","CPA","ROAS","LPV율","ON/OFF"]
+                              :["광고명","광고세트","광고비","클릭","LPV","CPC","CTR","LPV율","ON/OFF"]
                             ).map((h,hi)=>(
                               <th key={hi} style={{padding:"8px 8px",textAlign:h==="광고명"?"left":"center",
                                 color:C.inkLt,fontWeight:700,fontSize:9,whiteSpace:"nowrap"}}>{h==="삭제"?"":h}</th>
@@ -10174,17 +10205,27 @@ export default function OaDashboard(){
                                   <span style={{fontWeight:700,color:lpvOk?C.sage:C.warn,fontSize:10}}>{c.lpvRate}%</span>
                                 </div>
                               </td>
-                              {/* 삭제 */}
+                              {/* ON/OFF 토글 */}
                               <td style={{padding:"10px 8px",textAlign:"center"}}>
-                                <button onClick={()=>{const next=[...deletedAds,c.uid||c.name];setDeletedAds(next);}}
-                                  style={{background:"none",border:`1px solid ${C.border}`,borderRadius:6,
-                                    width:24,height:24,cursor:"pointer",fontSize:12,color:C.inkLt,
-                                    display:"flex",alignItems:"center",justifyContent:"center",transition:"all 0.15s"}}
-                                  title="광고 숨기기"
-                                  onMouseEnter={e=>{e.currentTarget.style.background="#FEF0F0";e.currentTarget.style.borderColor=C.bad;e.currentTarget.style.color=C.bad;}}
-                                  onMouseLeave={e=>{e.currentTarget.style.background="none";e.currentTarget.style.borderColor=C.border;e.currentTarget.style.color=C.inkLt;}}>
-                                  ✕
-                                </button>
+                                {(()=>{
+                                  const st=adStatuses?.[c.name];
+                                  const loading=toggleStates[c.name]==="loading";
+                                  if(adStatuses===null) return <span style={{fontSize:9,color:C.inkLt}}>…</span>;
+                                  if(!st) return <span style={{fontSize:9,color:C.inkLt}} title="메타에서 광고를 찾지 못함">—</span>;
+                                  const isOn=st==="ACTIVE";
+                                  return(
+                                    <button onClick={()=>toggleAd(c.name)} disabled={loading}
+                                      title={isOn?"클릭하면 광고 끄기 (PAUSED)":"클릭하면 광고 켜기 (ACTIVE)"}
+                                      style={{width:40,height:20,borderRadius:99,border:"none",padding:2,
+                                        cursor:loading?"wait":"pointer",opacity:loading?0.5:1,
+                                        background:isOn?C.good:C.border,transition:"background 0.2s",
+                                        display:"inline-flex",alignItems:"center",
+                                        justifyContent:isOn?"flex-end":"flex-start"}}>
+                                      <span style={{width:16,height:16,borderRadius:"50%",background:C.white,
+                                        boxShadow:"0 1px 3px rgba(0,0,0,0.25)",display:"block"}}/>
+                                    </button>
+                                  );
+                                })()}
                               </td>
                             </tr>);
                           })}</tbody>

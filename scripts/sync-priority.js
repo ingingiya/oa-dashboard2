@@ -45,6 +45,21 @@ async function main() {
     const items = Object.values(itemMap);
     console.log(`  → 품목 ${items.length}개 · 일별 ${rows.length}행 (180일)`);
 
+    // 1.5) 작년 같은 시기 성장률 (시즌성 판정용) — 작년 최근30일(365~395일 전) vs 그 이전 30일(395~425일 전)
+    const [lyRows] = await pool.query(`
+      SELECT \`품목명\` AS product,
+        ROUND(SUM(CASE WHEN \`판매날짜\` >= DATE_SUB(CURDATE(), INTERVAL 395 DAY) THEN \`총매출액\` ELSE 0 END)) AS same,
+        ROUND(SUM(CASE WHEN \`판매날짜\` <  DATE_SUB(CURDATE(), INTERVAL 395 DAY) THEN \`총매출액\` ELSE 0 END)) AS prev
+      FROM v_daily_sales_detail
+      WHERE \`판매날짜\` >= DATE_SUB(CURDATE(), INTERVAL 425 DAY)
+        AND \`판매날짜\` < DATE_SUB(CURDATE(), INTERVAL 365 DAY)
+        AND \`브랜드명\` = '오아'
+      GROUP BY 1
+    `);
+    const ly = {}; // product → [작년 같은 30일, 작년 그 이전 30일]
+    for (const r of lyRows) ly[r.product] = [Number(r.same) || 0, Number(r.prev) || 0];
+    console.log(`  → 작년 동기 데이터 ${lyRows.length}개 품목`);
+
     // 2) 네이버 제품별 일별 광고비 — 광고그룹이 제품 단위 ("선풍기_아이스볼트미스트(상품형)")
     const [navRows] = await pool.query(`
       SELECT adgroup_name AS name, DATE_FORMAT(stat_date, '%Y-%m-%d') AS date,
@@ -99,6 +114,7 @@ async function main() {
       items,
       daily,
       navDaily,
+      ly,
       adSpend: ads.map(r => ({ month: r.month, cat: r.cat, spend: Number(r.spend) })),
     };
     console.log(`  → payload ${(JSON.stringify(value).length / 1024).toFixed(0)}KB`);
