@@ -24,6 +24,7 @@ async function main() {
       SELECT \`카테고리1\` AS cat1, \`카테고리2\` AS cat2, \`품목명\` AS product
       FROM v_sales_category
       WHERE \`품목명\` NOT LIKE '%보아르%'
+        AND \`품목명\` NOT LIKE '%삼대오백%'
         AND \`카테고리1\` NOT IN ('식품')
     `);
     console.log(`  → 품목 ${cats.length}개`);
@@ -37,6 +38,7 @@ async function main() {
       FROM v_daily_sales_management
       WHERE \`매출일자\` >= DATE_SUB(CURDATE(), INTERVAL 60 DAY)
         AND \`상품명\` NOT LIKE '%보아르%'
+        AND \`상품명\` NOT LIKE '%삼대오백%'
       GROUP BY \`상품명\`
     `);
     console.log(`  → 판매 상품명 ${sales.length}개`);
