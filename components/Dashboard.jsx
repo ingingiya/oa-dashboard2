@@ -8239,35 +8239,74 @@ export default function OaDashboard(){
       {key:"guard",title:"🛡 방어 — 캐시카우 유지",color:"#5B7FA6",bg:"#EEF4FA"},
     ];
 
+    const heroCounts=[
+      ["🔥 증액", counts.boost, "#FF453A"],
+      ["💡 점화", counts.spark, "#30D158"],
+      ["⚠️ 하락 점검", counts.cool, "#FFD60A"],
+      ["🛡 방어", counts.guard, "#64D2FF"],
+    ];
     return(
-      <div style={{display:"grid",gap:14}}>
-        <Card>
-          <CardTitle title="🔥 이번 주 액션 보드" sub={`최근 30일 vs 이전 30일 매출로 자동 분류 · 제품 아래 문장이 추천 액션 · ${updated?`갱신 ${updated}`:"데이터 없음"}`}/>
-          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(300px,1fr))",gap:10}}>
-            {actGroups.map(gr=>{
-              const list=enriched.filter(it=>it.act&&it.act.key===gr.key&&(prioCat==="전체"||it.cat1===prioCat)).sort((a,b)=>b.s30-a.s30);
-              return(
-                <div key={gr.key} style={{border:`1px solid ${C.border}`,borderRadius:14,overflow:"hidden",background:C.white}}>
-                  <div style={{padding:"9px 12px",background:gr.bg,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-                    <span style={{fontSize:12,fontWeight:900,color:gr.color}}>{gr.title}</span>
-                    <span style={{fontSize:12,fontWeight:900,color:gr.color}}>{list.length}개</span>
-                  </div>
-                  {list.slice(0,6).map(it=>(
-                    <div key={it.product} style={{padding:"8px 12px",borderTop:`1px solid ${C.cream}`}}>
-                      <div style={{display:"flex",justifyContent:"space-between",alignItems:"baseline",gap:8}}>
-                        <span style={{fontSize:12,fontWeight:800,color:C.ink,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{it.product}</span>
-                        <span style={{fontSize:11,fontWeight:800,color:C.inkMid,whiteSpace:"nowrap"}}>₩{fmtW(it.s30)} {growthChip(it.growth)}</span>
-                      </div>
-                      <div style={{fontSize:10.5,color:C.inkMid,marginTop:2}}>→ {advise(it)}</div>
-                    </div>
-                  ))}
-                  {list.length>6&&<div style={{padding:"6px 12px",borderTop:`1px solid ${C.cream}`,fontSize:10,color:C.inkLt}}>+{list.length-6}개 더 — 아래 전체 표에서 확인</div>}
-                  {list.length===0&&<div style={{padding:"12px",fontSize:11,color:C.inkLt}}>해당 없음</div>}
-                </div>
-              );
-            })}
+      <div style={{display:"grid",gap:16}}>
+        {/* ── 히어로 (애플 스타일 그래파이트) ── */}
+        <div style={{borderRadius:22,padding:"24px 26px",color:"#fff",position:"relative",overflow:"hidden",
+          background:"linear-gradient(135deg,#1D1D1F 0%,#2C2C2E 55%,#3A3A3C 100%)",
+          boxShadow:"0 16px 40px rgba(0,0,0,.25)"}}>
+          <div style={{position:"absolute",right:-70,top:-70,width:240,height:240,borderRadius:"50%",background:"rgba(255,255,255,.07)"}}/>
+          <div style={{position:"absolute",right:60,bottom:-90,width:200,height:200,borderRadius:"50%",background:"rgba(255,255,255,.05)"}}/>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",flexWrap:"wrap",gap:10,position:"relative"}}>
+            <div>
+              <div style={{fontSize:11,fontWeight:800,letterSpacing:2,color:"#8E8E93"}}>PRODUCT PRIORITY</div>
+              <div style={{fontSize:22,fontWeight:900,marginTop:2}}>이번 주 어디에 불을 붙일까</div>
+              <div style={{fontSize:11,fontWeight:700,color:"#8E8E93",marginTop:4}}>
+                최근 30일 vs 이전 30일 매출 자동 분류 · 제품 {enriched.length}개{updated?` · 갱신 ${updated}`:""}
+              </div>
+            </div>
+            <select value={prioCat} onChange={e=>setPrioCat(e.target.value)}
+              style={{background:"rgba(255,255,255,.14)",border:"1px solid rgba(255,255,255,.25)",color:"#fff",
+                borderRadius:10,padding:"6px 12px",fontSize:12,fontWeight:800,cursor:"pointer",fontFamily:"inherit"}}>
+              {cats.map(c=><option key={c} value={c} style={{color:"#1D1D1F"}}>{c}</option>)}
+            </select>
           </div>
-        </Card>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(130px,1fr))",gap:10,marginTop:18,position:"relative"}}>
+            {heroCounts.map(([l,v,col])=>(
+              <div key={l} style={{background:"rgba(255,255,255,.10)",border:"1px solid rgba(255,255,255,.15)",
+                borderRadius:14,padding:"12px 14px",backdropFilter:"blur(4px)"}}>
+                <div style={{fontSize:10,fontWeight:700,color:"#AEAEB2"}}>{l}</div>
+                <div style={{fontSize:24,fontWeight:900,marginTop:3,letterSpacing:-.5,color:col}}>{v}<span style={{fontSize:12,color:"#AEAEB2",fontWeight:800,marginLeft:2}}>개</span></div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* ── 액션 보드 ── */}
+        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(310px,1fr))",gap:14}}>
+          {actGroups.map(gr=>{
+            const list=enriched.filter(it=>it.act&&it.act.key===gr.key&&(prioCat==="전체"||it.cat1===prioCat)).sort((a,b)=>b.s30-a.s30);
+            return(
+              <div key={gr.key} style={{borderRadius:18,overflow:"hidden",background:"#fff",
+                border:"1px solid rgba(0,0,0,.06)",boxShadow:"0 2px 12px rgba(0,0,0,.05)"}}>
+                <div style={{padding:"12px 16px",background:gr.bg,display:"flex",justifyContent:"space-between",alignItems:"center",
+                  borderBottom:"1px solid rgba(0,0,0,.05)"}}>
+                  <span style={{fontSize:13,fontWeight:900,color:gr.color,letterSpacing:-.2}}>{gr.title}</span>
+                  <span style={{fontSize:11,fontWeight:900,color:gr.color,background:"rgba(255,255,255,.7)",
+                    padding:"3px 10px",borderRadius:20}}>{list.length}개</span>
+                </div>
+                {list.slice(0,6).map((it,i)=>(
+                  <div key={it.product} style={{padding:"10px 16px",borderTop:i>0?"1px solid rgba(0,0,0,.04)":"none"}}>
+                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"baseline",gap:8}}>
+                      <span style={{fontSize:12.5,fontWeight:800,color:C.ink,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",letterSpacing:-.2}}>{it.product}</span>
+                      <span style={{fontSize:11,fontWeight:800,color:C.inkMid,whiteSpace:"nowrap"}}>₩{fmtW(it.s30)} {growthChip(it.growth)}</span>
+                    </div>
+                    <div style={{fontSize:10.5,fontWeight:600,color:gr.color,marginTop:3,background:gr.bg,
+                      display:"inline-block",padding:"3px 9px",borderRadius:8}}>→ {advise(it)}</div>
+                  </div>
+                ))}
+                {list.length>6&&<div style={{padding:"8px 16px",borderTop:"1px solid rgba(0,0,0,.04)",fontSize:10,fontWeight:700,color:C.inkLt}}>+{list.length-6}개 더 — 아래 전체 표에서 확인</div>}
+                {list.length===0&&<div style={{padding:"16px",fontSize:11,color:C.inkLt}}>해당 없음</div>}
+              </div>
+            );
+          })}
+        </div>
 
         {adRows.length>0&&(
           <Card>
