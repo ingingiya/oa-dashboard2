@@ -57,16 +57,16 @@ import {
 // 팔레트
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 const C = {
-  // 토스 블루+화이트+그레이
-  rose:"#2563EB", roseLt:"#3B82F6", blush:"#EFF6FF",
-  cream:"#F8FAFC", gold:"#2563EB", goldLt:"#DBEAFE",
-  sage:"#16A34A", sageLt:"#F0FDF4",
-  ink:"#18181B", inkMid:"#52525B", inkLt:"#A1A1AA",
-  white:"#FFFFFF", border:"#E4E4E7",
-  good:"#16A34A", warn:"#EA580C", bad:"#DC2626",
-  purple:"#2563EB", purpleLt:"#EFF6FF",
+  // 애플 스타일: 화이트+#F5F5F7+애플 블루
+  rose:"#0071E3", roseLt:"#2997FF", blush:"#EAF3FF",
+  cream:"#F5F5F7", gold:"#0071E3", goldLt:"#D8E9FB",
+  sage:"#248A3D", sageLt:"#EFFAF1",
+  ink:"#1D1D1F", inkMid:"#515154", inkLt:"#86868B",
+  white:"#FFFFFF", border:"#E5E5EA",
+  good:"#248A3D", warn:"#C93400", bad:"#D70015",
+  purple:"#0071E3", purpleLt:"#EAF3FF",
   // 배경
-  bg:"#F4F4F5",
+  bg:"#F5F5F7",
 };
 
 // 팀원 (담당자 지정용)
@@ -505,8 +505,8 @@ const LAUNCH_STAGE_DEFS = [
 ];
 const LAUNCH_STATUS_CYCLE = ["대기","진행","완료","차단"];
 const LAUNCH_STATUS_STYLE = {
-  "대기":{bg:"#f4f4f5",fg:"#71717a"}, "진행":{bg:"#EFF6FF",fg:"#2563EB"},
-  "완료":{bg:"#F0FDF4",fg:"#16A34A"}, "차단":{bg:"#FEF2F2",fg:"#DC2626"},
+  "대기":{bg:"#f4f4f5",fg:"#71717a"}, "진행":{bg:"#EAF3FF",fg:"#0071E3"},
+  "완료":{bg:"#F0FDF4",fg:"#248A3D"}, "차단":{bg:"#FEF2F2",fg:"#D70015"},
 };
 const LAUNCH_CATS = ["헤어","스킨케어","디바이스","기타"];
 
@@ -2284,17 +2284,14 @@ function isConversionCampaign(objective, campaignName="", resultType=""){
 // 공통 UI
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 const Card=({children,style={}})=>(
-  <div style={{background:C.white,border:"1px solid #E8EBF2",borderRadius:16,padding:"18px 16px",
-    boxShadow:"0 4px 18px rgba(15,23,42,.05)",...style}}>{children}</div>
+  <div style={{background:C.white,border:"1px solid rgba(0,0,0,.06)",borderRadius:18,padding:"20px 18px",
+    boxShadow:"0 2px 8px rgba(0,0,0,.04)",...style}}>{children}</div>
 );
 const CardTitle=({title,sub,action})=>(
   <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:14}}>
-    <div style={{display:"flex",gap:8}}>
-      <div style={{width:4,borderRadius:4,background:"linear-gradient(180deg,#3B82F6,#7DD3FC)",flexShrink:0,alignSelf:"stretch"}}/>
-      <div>
-        <div style={{fontSize:13.5,fontWeight:900,color:C.ink,letterSpacing:"-0.01em"}}>{title}</div>
-        {sub&&<div style={{fontSize:10,color:C.inkLt,marginTop:2}}>{sub}</div>}
-      </div>
+    <div>
+      <div style={{fontSize:14,fontWeight:800,color:C.ink,letterSpacing:"-0.02em"}}>{title}</div>
+      {sub&&<div style={{fontSize:10.5,color:C.inkLt,marginTop:2}}>{sub}</div>}
     </div>
     {action}
   </div>
@@ -5383,7 +5380,7 @@ function ErpSection() {
     <div style={{display:"flex",flexDirection:"column",gap:14}}>
 
       {/* 월 매출 목표 배너 */}
-      <div style={{background:`linear-gradient(135deg,#1D4ED8,#2563EB)`,borderRadius:14,padding:"16px 20px",color:"#fff"}}>
+      <div style={{background:`linear-gradient(135deg,#0071E3,#2997FF)`,borderRadius:14,padding:"16px 20px",color:"#fff"}}>
         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:8}}>
           <div>
             <div style={{fontSize:10,fontWeight:700,opacity:0.7,letterSpacing:"0.1em",marginBottom:4}}>
@@ -5818,7 +5815,7 @@ function ErpSection() {
                         <td style={{padding:"9px 12px",textAlign:"right",color:C.inkMid}}>{Number(r.production_qty||0)>0?<span style={{border:`1px solid #F59E0B`,borderRadius:4,padding:"1px 5px",color:"#F59E0B",fontWeight:700}}>{Number(r.production_qty||0).toLocaleString()}</span>:"—"}</td>
                         <td style={{padding:"9px 12px",textAlign:"right",color:C.inkMid}}>{Number(r.transport_qty||0)>0?<span style={{border:`1px solid #8B5CF6`,borderRadius:4,padding:"1px 5px",color:"#8B5CF6",fontWeight:700}}>{Number(r.transport_qty||0).toLocaleString()}</span>:"—"}</td>
                         <td style={{padding:"9px 12px",textAlign:"right",color:C.inkMid}}>{Number(r.order_pending||0).toLocaleString()}</td>
-                        <td style={{padding:"9px 12px",textAlign:"right",color:C.inkMid}}>{Number(r.ship_qty||0)>0?<span style={{border:`1px solid #3B82F6`,borderRadius:4,padding:"1px 5px",color:"#3B82F6",fontWeight:700}}>{Number(r.ship_qty||0).toLocaleString()}</span>:"—"}</td>
+                        <td style={{padding:"9px 12px",textAlign:"right",color:C.inkMid}}>{Number(r.ship_qty||0)>0?<span style={{border:`1px solid #2997FF`,borderRadius:4,padding:"1px 5px",color:"#2997FF",fontWeight:700}}>{Number(r.ship_qty||0).toLocaleString()}</span>:"—"}</td>
                         <td style={{padding:"9px 12px",textAlign:"right"}}>
                           {r.incoming_date
                             ? <div style={{display:"flex",flexDirection:"column",alignItems:"flex-end",gap:1}}>
@@ -7919,15 +7916,15 @@ export default function OaDashboard(){
     const totSpent=rows.reduce((s,b)=>s+rowStat(b).spent,0);
     const totRatio=totBudget>0?totSpent/totBudget:0;
 
-    const TEAM_COLORS=["#2563EB","#7C3AED","#059669","#EA580C","#DB2777","#0891B2","#CA8A04"];
+    const TEAM_COLORS=["#0A84FF","#BF5AF2","#30D158","#FF9F0A","#FF375F","#64D2FF","#FFD60A"];
     const paceState=(ratio,budget)=>{
       if(!budget) return {label:"예산 미설정",color:C.inkLt,bg:C.cream};
       const diff=ratio-elapsedRatio;
-      if(diff>0.1)  return {label:"조기 소진",color:"#DC2626",bg:"#FEF2F2"};
+      if(diff>0.1)  return {label:"조기 소진",color:"#D70015",bg:"#FEF2F2"};
       if(diff<-0.1) return {label:"미달 소진",color:"#EA580C",bg:"#FFF7ED"};
-      return {label:"정상 페이스",color:"#16A34A",bg:"#F0FDF4"};
+      return {label:"정상 페이스",color:"#248A3D",bg:"#F0FDF4"};
     };
-    const PaceBar=({ratio,color="#2563EB",h=10,track="#EEF2F7",markerColor="#18181B"})=>(
+    const PaceBar=({ratio,color="#0071E3",h=10,track="#EDEDF0",markerColor="#1D1D1F"})=>(
       <div style={{position:"relative",width:"100%",height:h,background:track,borderRadius:h}}>
         <div style={{position:"absolute",left:0,top:0,bottom:0,width:`${Math.min(100,ratio*100)}%`,
           background:`linear-gradient(90deg,${color}B3,${color})`,borderRadius:h,transition:"width .4s ease"}}/>
@@ -7936,7 +7933,7 @@ export default function OaDashboard(){
       </div>
     );
     const NumIn=PfNumIn; // 모듈 레벨 컴포넌트 재사용 — IIFE 내 정의 시 리렌더마다 입력 초기화 버그
-    const roasColor=r=>r>=500?"#16A34A":r>=300?"#CA8A04":"#DC2626";
+    const roasColor=r=>r>=500?"#248A3D":r>=300?"#CA8A04":"#D70015";
     const unmatchedTop=Object.entries(unmatched.byCamp).sort((a,b)=>b[1]-a[1]).slice(0,5);
     const heroBtn={background:"rgba(255,255,255,.14)",border:"1px solid rgba(255,255,255,.25)",color:"#fff",
       borderRadius:10,padding:"6px 12px",fontSize:12,fontWeight:800,cursor:"pointer",fontFamily:"inherit"};
@@ -7946,13 +7943,13 @@ export default function OaDashboard(){
       <div style={{display:"grid",gap:16}}>
         {/* ── 히어로 ── */}
         <div style={{borderRadius:22,padding:"24px 26px",color:"#fff",position:"relative",overflow:"hidden",
-          background:"linear-gradient(135deg,#0B1B3F 0%,#173D8F 55%,#2563EB 100%)",
-          boxShadow:"0 16px 40px rgba(30,64,175,.35)"}}>
+          background:"linear-gradient(135deg,#1D1D1F 0%,#2C2C2E 55%,#3A3A3C 100%)",
+          boxShadow:"0 16px 40px rgba(0,0,0,.25)"}}>
           <div style={{position:"absolute",right:-70,top:-70,width:240,height:240,borderRadius:"50%",background:"rgba(255,255,255,.07)"}}/>
           <div style={{position:"absolute",right:60,bottom:-90,width:200,height:200,borderRadius:"50%",background:"rgba(255,255,255,.05)"}}/>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",flexWrap:"wrap",gap:10,position:"relative"}}>
             <div>
-              <div style={{fontSize:11,fontWeight:800,letterSpacing:2,color:"#93C5FD"}}>MARKETING PORTFOLIO</div>
+              <div style={{fontSize:11,fontWeight:800,letterSpacing:2,color:"#8E8E93"}}>MARKETING PORTFOLIO</div>
               <div style={{fontSize:22,fontWeight:900,marginTop:2}}>{Number(pfMonth.slice(5))}월 팀별 예산 · 페이싱</div>
             </div>
             <div style={{display:"flex",alignItems:"center",gap:6}}>
@@ -7972,16 +7969,16 @@ export default function OaDashboard(){
             ].map(([l,v,s])=>(
               <div key={l} style={{background:"rgba(255,255,255,.10)",border:"1px solid rgba(255,255,255,.15)",
                 borderRadius:14,padding:"12px 14px",backdropFilter:"blur(4px)"}}>
-                <div style={{fontSize:10,fontWeight:700,color:"#BFDBFE"}}>{l}</div>
+                <div style={{fontSize:10,fontWeight:700,color:"#AEAEB2"}}>{l}</div>
                 <div style={{fontSize:22,fontWeight:900,marginTop:3,letterSpacing:-.5}}>{v}</div>
-                {s&&<div style={{fontSize:9.5,color:"#93C5FD",marginTop:2,fontWeight:700}}>{s}</div>}
+                {s&&<div style={{fontSize:9.5,color:"#8E8E93",marginTop:2,fontWeight:700}}>{s}</div>}
               </div>
             ))}
           </div>
           {totBudget>0&&(
             <div style={{marginTop:16,position:"relative"}}>
-              <PaceBar ratio={totRatio} color="#7DD3FC" h={12} track="rgba(255,255,255,.18)" markerColor="#fff"/>
-              <div style={{display:"flex",justifyContent:"space-between",fontSize:9.5,fontWeight:700,color:"#93C5FD",marginTop:5}}>
+              <PaceBar ratio={totRatio} color="#64D2FF" h={12} track="rgba(255,255,255,.18)" markerColor="#fff"/>
+              <div style={{display:"flex",justifyContent:"space-between",fontSize:9.5,fontWeight:700,color:"#8E8E93",marginTop:5}}>
                 <span>집행 {Math.round(totRatio*100)}%</span>
                 <span>│ 오늘 ({Math.round(elapsedRatio*100)}%)</span>
                 <span>월말 100%</span>
@@ -8038,7 +8035,7 @@ export default function OaDashboard(){
                         background:"#F8FAFC",border:`1px solid ${C.border}`,borderRadius:12,padding:"8px 10px"}}>
                         <span style={{fontSize:11,fontWeight:900,color:col,minWidth:38}}>{b.source}</span>
                         <span style={{fontSize:8.5,fontWeight:800,padding:"2px 6px",borderRadius:20,
-                          color:st.auto?"#16A34A":C.inkLt,background:st.auto?"#F0FDF4":C.cream}}>{st.auto?"자동":"수동"}</span>
+                          color:st.auto?"#248A3D":C.inkLt,background:st.auto?"#F0FDF4":C.cream}}>{st.auto?"자동":"수동"}</span>
                         <div style={{display:"flex",alignItems:"center",gap:4}}>
                           <span style={{fontSize:9,color:C.inkLt,fontWeight:700}}>예산</span>
                           <NumIn val={b.budget} onCommit={v=>patchBudget(b.id,{budget:v})}/>
@@ -8052,7 +8049,7 @@ export default function OaDashboard(){
                         <span style={{fontSize:11,fontWeight:900,color:paceState(ratio,b.budget).color}}>{b.budget>0?`${Math.round(ratio*100)}%`:"—"}</span>
                         <div style={{display:"flex",alignItems:"center",gap:4,marginLeft:"auto"}}>
                           {st.roas!=null&&<span style={{fontSize:11,fontWeight:900,
-                            color:b.targetRoas>0?(st.roas>=b.targetRoas?"#16A34A":"#DC2626"):roasColor(st.roas)}}>ROAS {Math.round(st.roas)}%</span>}
+                            color:b.targetRoas>0?(st.roas>=b.targetRoas?"#248A3D":"#D70015"):roasColor(st.roas)}}>ROAS {Math.round(st.roas)}%</span>}
                           <span style={{fontSize:9,color:C.inkLt,fontWeight:700}}>목표</span>
                           <NumIn val={b.targetRoas} onCommit={v=>patchBudget(b.id,{targetRoas:v})} w={48}/>
                           <button onClick={()=>delBudget(b.id)} style={{background:"none",border:"none",cursor:"pointer",padding:2,color:C.inkLt}}><MI n="close" size={13}/></button>
@@ -8340,9 +8337,9 @@ export default function OaDashboard(){
       {/* ── 전날 광고비 카드 ── */}
       {sheetConvRaw.length>0&&(
         <div onClick={()=>setSec("meta")} style={{
-          background: ySpend>0 ? "linear-gradient(135deg,#1D4ED8 0%,#2563EB 100%)" : C.cream,
+          background: ySpend>0 ? "linear-gradient(135deg,#0071E3 0%,#2997FF 100%)" : C.cream,
           borderRadius:14, padding:"14px 18px", cursor:"pointer",
-          border:`1px solid ${ySpend>0?"#1D4ED8":C.border}`,
+          border:`1px solid ${ySpend>0?"#0071E3":C.border}`,
           display:"flex", alignItems:"center", justifyContent:"space-between",
           boxShadow: ySpend>0?"0 4px 20px rgba(37,99,235,0.25)":"none",
         }}>
@@ -10257,7 +10254,7 @@ export default function OaDashboard(){
                   <div key={w.week} style={{borderRadius:12,border:`1px solid ${i===0?C.rose+"66":C.border}`,overflow:"hidden",background:C.white}}>
                     <div onClick={()=>setWeekOpenKey(isOpen?null:w.week)}
                       style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"12px 16px",cursor:"pointer",
-                        background:i===0?"linear-gradient(135deg,#EFF6FF,#fff)":"transparent"}}>
+                        background:i===0?"linear-gradient(135deg,#EAF3FF,#fff)":"transparent"}}>
                       <div style={{display:"flex",alignItems:"center",gap:10}}>
                         <div style={{fontSize:14,fontWeight:800,color:i===0?C.rose:C.ink}}>
                           {startStr} ~ {endStr}
@@ -10383,7 +10380,7 @@ export default function OaDashboard(){
                   <div key={m.month} style={{borderRadius:12,border:`1px solid ${i===0?C.rose+"66":C.border}`,overflow:"hidden",background:C.white}}>
                     <div onClick={()=>setMonthOpenKey(isOpen?null:m.month)}
                       style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"12px 16px",cursor:"pointer",
-                        background:i===0?"linear-gradient(135deg,#EFF6FF,#fff)":"transparent"}}>
+                        background:i===0?"linear-gradient(135deg,#EAF3FF,#fff)":"transparent"}}>
                       <div style={{display:"flex",alignItems:"center",gap:10}}>
                         <div style={{fontSize:14,fontWeight:800,color:i===0?C.rose:C.ink}}>
                           {yr}년 {mo}월
@@ -10463,7 +10460,7 @@ export default function OaDashboard(){
                     {/* 날짜 헤더 — 클릭으로 펼치기 */}
                     <div onClick={()=>setDailyOpenDate(isOpen?null:date)}
                       style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"12px 16px",cursor:"pointer",
-                        background:isLatest?"linear-gradient(135deg,#EFF6FF,#fff)":"transparent"}}>
+                        background:isLatest?"linear-gradient(135deg,#EAF3FF,#fff)":"transparent"}}>
                       <div style={{display:"flex",alignItems:"center",gap:10}}>
                         <div style={{fontSize:14,fontWeight:800,color:isLatest?C.rose:C.ink}}>
                           {date.slice(5).replace("-","/")}
@@ -10929,7 +10926,7 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
                   <div key={p.product} style={{borderRadius:12,border:`1px solid ${i===0?C.rose+"66":C.border}`,overflow:"hidden",background:C.white}}>
                     <div onClick={()=>setProductOpenKey(isOpen?null:p.product)}
                       style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"12px 16px",cursor:"pointer",
-                        background:i===0?"linear-gradient(135deg,#EFF6FF,#fff)":"transparent"}}>
+                        background:i===0?"linear-gradient(135deg,#EAF3FF,#fff)":"transparent"}}>
                       <div style={{display:"flex",alignItems:"center",gap:10}}>
                         <div style={{fontSize:14,fontWeight:800,color:C.ink}}>{p.product}</div>
                         <div style={{fontSize:10,color:C.inkLt,display:"flex",gap:8}}>
@@ -10976,7 +10973,7 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
         {/* ── 전환 시트 연결 모달 ── */}
         {sheetModal&&(
           <Modal title={<><MI n="table_chart"/> 전환캠페인 시트 연결</>} onClose={()=>setSheetModal(false)} wide>
-            <div style={{background:"#EFF6FF",border:"1px solid #BFDBFE",borderRadius:10,padding:"10px 14px",marginBottom:16,fontSize:11,color:"#1D4ED8",fontWeight:700}}>
+            <div style={{background:"#EAF3FF",border:"1px solid #B3D7F2",borderRadius:10,padding:"10px 14px",marginBottom:16,fontSize:11,color:"#0071E3",fontWeight:700}}>
               📊 전환캠페인(구매·전환값·CPA·ROAS)은 시트에서, 트래픽캠페인은 Meta API에서 자동 병합돼요.
             </div>
             <div style={{background:C.cream,border:`1px solid ${C.border}`,borderRadius:10,padding:"14px",marginBottom:16,fontSize:11,color:C.inkMid,lineHeight:1.8}}>
@@ -11398,7 +11395,7 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
                   const fmtNum=n=>n==null?"—":n>=1000000?(n/1000000).toFixed(1)+"M":n>=1000?(n/1000).toFixed(0)+"K":String(n);
                   return(
                     <tr key={r.username} style={{borderBottom:`1px solid ${C.border}`,
-                      background:isDup?"#FFFBEB":checked?"#EFF6FF":C.white,cursor:"pointer"}}
+                      background:isDup?"#FFFBEB":checked?"#EAF3FF":C.white,cursor:"pointer"}}
                       onClick={()=>!isDup&&setCollectSelected(p=>({...p,[r.username]:!p[r.username]}))}>
                       <td style={{padding:"8px 10px"}}>
                         {isDup
@@ -11763,7 +11760,7 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
                   return(<>
                     <tr key={f.id} onClick={()=>setExpandedRow(isExp?null:f.id)}
                       style={{borderBottom:`1px solid ${C.border}`,cursor:"pointer",
-                        background:isExp?"#EFF6FF":urgent?"#FFF8F8":C.white,
+                        background:isExp?"#EAF3FF":urgent?"#FFF8F8":C.white,
                         transition:"background 0.1s"}}>
                       <td style={{padding:"9px 10px",whiteSpace:"nowrap"}}>
                         <div style={{fontSize:12,fontWeight:800,color:C.ink}}>
@@ -12087,7 +12084,7 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
             <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",borderBottom:`1px solid ${C.border}`}}>
               {days.map((d,i)=>(
                 <div key={d} style={{padding:"6px 0",textAlign:"center",fontSize:10,fontWeight:700,
-                  color:i===0?C.bad:i===6?"#3B82F6":C.inkLt}}>{d}</div>
+                  color:i===0?C.bad:i===6?"#2997FF":C.inkLt}}>{d}</div>
               ))}
             </div>
             {/* 날짜 그리드 */}
@@ -12110,11 +12107,11 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
                     onDrop={e=>{e.preventDefault();handleDropOnDay(dateKey);}}
                     style={{padding:"6px 4px",borderRight:`1px solid ${C.border}`,borderBottom:`1px solid ${C.border}`,
                       cursor:"pointer",transition:"background 0.15s",
-                      background:dragOverDay===dateKey?"#DBEAFE":isSel?"#EFF6FF":isToday?C.blush:C.white}}>
+                      background:dragOverDay===dateKey?"#D8E9FB":isSel?"#EAF3FF":isToday?C.blush:C.white}}>
                     <div style={{fontSize:13,fontWeight:isToday?900:600,
                       width:22,height:22,borderRadius:"50%",display:"flex",alignItems:"center",justifyContent:"center",
-                      background:isToday?C.rose:isSel?"#DBEAFE":"transparent",
-                      color:isToday?C.white:col===0?C.bad:col===6?"#3B82F6":C.ink,marginBottom:2,flexShrink:0}}>
+                      background:isToday?C.rose:isSel?"#D8E9FB":"transparent",
+                      color:isToday?C.white:col===0?C.bad:col===6?"#2997FF":C.ink,marginBottom:2,flexShrink:0}}>
                       {day}
                     </div>
                     {items.slice(0,8).map((s,j)=>{
@@ -15021,7 +15018,7 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
       setNaverLoading(false);
     }
 
-    const COLORS = ["#2563EB","#16A34A","#EA580C","#8B5CF6","#EC4899","#0891B2","#D97706","#DC2626"];
+    const COLORS = ["#0071E3","#248A3D","#EA580C","#8B5CF6","#EC4899","#0891B2","#D97706","#D70015"];
 
     function addKeyword() {
       if (!kwInput.trim()) return;
@@ -15217,7 +15214,7 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
                                 ) : (
                                   <button onClick={()=>{
                                     const newKw={id:Date.now()+"",name:k.keyword,competitor:"",
-                                      color:["#2563EB","#16A34A","#EA580C","#8B5CF6","#EC4899"][keywords.length%5],
+                                      color:["#0071E3","#248A3D","#EA580C","#8B5CF6","#EC4899"][keywords.length%5],
                                       type:"my",addedAt:new Date().toISOString().slice(0,10)};
                                     setKwData({...kwData,keywords:[...keywords,newKw]});
                                   }} style={{fontSize:11,fontWeight:700,padding:"3px 10px",borderRadius:8,
@@ -17117,7 +17114,7 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
                     </div>
                     {kw.latest&&<div style={{fontSize:10,color:C.inkLt,marginTop:4,display:"flex",gap:6,flexWrap:"wrap"}}>
                       <span>{kw.latest.date} 기준</span>
-                      {kw.latest.brand&&<span style={{background:"#EFF6FF",color:C.rose,padding:"0 6px",borderRadius:8,fontWeight:700}}>브랜드: {kw.latest.brand}</span>}
+                      {kw.latest.brand&&<span style={{background:"#EAF3FF",color:C.rose,padding:"0 6px",borderRadius:8,fontWeight:700}}>브랜드: {kw.latest.brand}</span>}
                     </div>}
                     <div style={{display:"flex",gap:4,marginTop:6}}>
                       {autoRank[kw.name]?.topItems?.length>0&&(
@@ -17209,14 +17206,14 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
                               </span>
                             </td>
                             <td style={{padding:"7px 10px"}}>
-                              <span style={{fontSize:11,fontWeight:700,color:C.rose,background:"#EFF6FF",padding:"2px 8px",borderRadius:10}}>
+                              <span style={{fontSize:11,fontWeight:700,color:C.rose,background:"#EAF3FF",padding:"2px 8px",borderRadius:10}}>
                                 {log.brand||"OA"}
                               </span>
                             </td>
                             <td style={{padding:"7px 10px",fontWeight:800,color:C.ink}}>{log.rank}위</td>
                             <td style={{padding:"7px 10px",color:C.inkMid}}>{log.volume?log.volume.toLocaleString():"—"}</td>
                             <td style={{padding:"7px 10px",color:C.inkMid,maxWidth:160,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
-                              {log.auto ? <span style={{fontSize:10,color:C.rose,fontWeight:700,background:"#EFF6FF",padding:"1px 6px",borderRadius:10}}>자동</span> : log.note||"—"}
+                              {log.auto ? <span style={{fontSize:10,color:C.rose,fontWeight:700,background:"#EAF3FF",padding:"1px 6px",borderRadius:10}}>자동</span> : log.note||"—"}
                             </td>
                             <td style={{padding:"4px 6px"}}>
                               <button onClick={()=>setKwData({...kwData,logs:logs.filter(l=>l.id!==log.id)})}
@@ -17242,7 +17239,7 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
                 <div key={item.rank} style={{
                   display:"flex",alignItems:"center",gap:10,
                   padding:"9px 12px",borderRadius:10,marginBottom:4,
-                  background:item.isTarget?"#EFF6FF":item.isAd?"#fffbeb":"#fff",
+                  background:item.isTarget?"#EAF3FF":item.isAd?"#fffbeb":"#fff",
                   border:`1px solid ${item.isTarget?C.rose:C.border}`,
                   opacity:item.isAd?0.6:1,
                 }}>
@@ -17340,8 +17337,9 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
   // RENDER
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   return(
-    <div className="oa-layout" style={{background:"linear-gradient(180deg,#EDF1F9 0%,#F7F8FB 320px)",minHeight:"100vh",fontFamily:"'Noto Sans KR',sans-serif",color:C.ink}}>
+    <div className="oa-layout" style={{background:"#F5F5F7",minHeight:"100vh",fontFamily:"-apple-system,BlinkMacSystemFont,'Apple SD Gothic Neo','Pretendard','Noto Sans KR',sans-serif",color:C.ink}}>
       <style>{`
+        @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css');
         @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;600;700;800;900&display=swap');
         @import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200');
         .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
@@ -17356,14 +17354,15 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
         .oa-body   { display:flex; flex:1; }
         .oa-sidebar{
           width:220px; flex-shrink:0;
-          background:linear-gradient(180deg,#0B1B3F 0%,#12295C 55%,#173D8F 130%);
-          border-right:none;
+          background:rgba(255,255,255,.72);
+          -webkit-backdrop-filter:blur(20px) saturate(180%);
+          backdrop-filter:blur(20px) saturate(180%);
+          border-right:1px solid rgba(0,0,0,.06);
           position:fixed; top:0; left:0; bottom:0;
           display:flex; flex-direction:column;
           z-index:100; overflow-y:auto;
-          box-shadow:4px 0 24px rgba(11,27,63,.18);
         }
-        .oa-sidebar::-webkit-scrollbar-thumb{background:rgba(255,255,255,.2);}
+        .oa-sidebar::-webkit-scrollbar-thumb{background:rgba(0,0,0,.12);}
         .oa-main { margin-left:220px; flex:1; padding:28px 32px 60px; max-width:1200px; }
         .oa-mobile-nav { display:none !important; }
         .kpi-grid { grid-template-columns: repeat(6,1fr) !important; }
@@ -17415,20 +17414,20 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
       {/* ── PC 사이드바 ── */}
       <aside className="oa-sidebar">
         {/* 로고 */}
-        <div style={{padding:"24px 20px 20px",borderBottom:"1px solid rgba(255,255,255,.10)"}}>
+        <div style={{padding:"24px 20px 20px",borderBottom:"1px solid rgba(0,0,0,.06)"}}>
           <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:16}}>
-            <div style={{width:36,height:36,background:"linear-gradient(135deg,#3B82F6,#7DD3FC)",
+            <div style={{width:36,height:36,background:"linear-gradient(135deg,#0071E3,#64D2FF)",
               borderRadius:10,display:"flex",alignItems:"center",justifyContent:"center",
-              fontSize:18,boxShadow:"0 4px 14px rgba(59,130,246,.5)",flexShrink:0}}>🌸</div>
+              fontSize:18,boxShadow:"0 4px 12px rgba(0,113,227,.28)",flexShrink:0}}>🌸</div>
             <div>
-              <div style={{fontSize:15,fontWeight:900,color:"#fff",letterSpacing:"-0.02em"}}>OA <span style={{color:"#7DD3FC"}}>HQ</span></div>
-              <div style={{fontSize:9,color:"rgba(255,255,255,.45)",letterSpacing:"0.08em"}}>MARKETING DASHBOARD</div>
+              <div style={{fontSize:15,fontWeight:800,color:"#1D1D1F",letterSpacing:"-0.02em"}}>OA <span style={{color:"#0071E3"}}>HQ</span></div>
+              <div style={{fontSize:9,color:"#86868B",letterSpacing:"0.08em"}}>MARKETING DASHBOARD</div>
             </div>
           </div>
           <div style={{display:"flex",alignItems:"center",gap:6,padding:"7px 12px",
-            background:"rgba(255,255,255,.10)",border:"1px solid rgba(255,255,255,.12)",borderRadius:10,fontSize:11,color:"#BFDBFE",fontWeight:700}}>
-            <span style={{width:6,height:6,borderRadius:"50%",background:"#7DD3FC",flexShrink:0,
-              boxShadow:pulse?"0 0 0 4px rgba(125,211,252,.25)":"none",transition:"box-shadow 0.4s",display:"inline-block"}}/>
+            background:"rgba(0,0,0,.04)",border:"1px solid rgba(0,0,0,.05)",borderRadius:10,fontSize:11,color:"#515154",fontWeight:600}}>
+            <span style={{width:6,height:6,borderRadius:"50%",background:"#0071E3",flexShrink:0,
+              boxShadow:pulse?"0 0 0 4px rgba(0,113,227,.2)":"none",transition:"box-shadow 0.4s",display:"inline-block"}}/>
             {dateStr}
           </div>
         </div>
@@ -17444,12 +17443,12 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
                   padding:"11px 14px",borderRadius:11,border:"none",cursor:"pointer",
                   fontFamily:"inherit",fontWeight:700,fontSize:13,
                   marginBottom:4,transition:"all 0.18s",textAlign:"left",
-                  background:active?"#fff":"transparent",
-                  color:active?"#12295C":"rgba(255,255,255,.65)",
-                  boxShadow:active?"0 8px 20px rgba(0,0,0,.28)":"none",
+                  background:active?"#0071E3":"transparent",
+                  color:active?"#fff":"#515154",
+                  boxShadow:active?"0 4px 12px rgba(0,113,227,.28)":"none",
                   position:"relative",
                 }}
-                onMouseEnter={e=>{ if(!active){ e.currentTarget.style.background="rgba(255,255,255,.08)"; } }}
+                onMouseEnter={e=>{ if(!active){ e.currentTarget.style.background="rgba(0,0,0,.045)"; } }}
                 onMouseLeave={e=>{ if(!active){ e.currentTarget.style.background="transparent"; } }}>
                   <MI n={n.icon} size={18}/>
                   <span>{n.label}</span>
@@ -17465,8 +17464,8 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
             })}
           </div>
           {/* 수리중 탭 구분선 */}
-          <div style={{borderTop:"1px solid rgba(255,255,255,.10)",marginTop:8,paddingTop:8}}>
-            <div style={{fontSize:10,fontWeight:800,color:"#f59e0b",padding:"2px 14px 6px",letterSpacing:"0.05em",display:"flex",alignItems:"center",gap:4}}>
+          <div style={{borderTop:"1px solid rgba(0,0,0,.06)",marginTop:8,paddingTop:8}}>
+            <div style={{fontSize:10,fontWeight:800,color:"#C93400",padding:"2px 14px 6px",letterSpacing:"0.05em",display:"flex",alignItems:"center",gap:4}}>
               🚧 <span>수리중</span>
             </div>
             {NAVS_WIP.map(n=>{
@@ -17477,12 +17476,12 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
                   padding:"11px 14px",borderRadius:11,border:"none",cursor:"pointer",
                   fontFamily:"inherit",fontWeight:700,fontSize:13,
                   marginBottom:4,transition:"all 0.18s",textAlign:"left",
-                  background:active?"#f59e0b":"transparent",
-                  color:active?C.white:"rgba(255,255,255,.45)",
-                  boxShadow:active?"0 4px 14px #f59e0b44":"none",
+                  background:active?"#FF9F0A":"transparent",
+                  color:active?C.white:"#86868B",
+                  boxShadow:active?"0 4px 12px rgba(255,159,10,.3)":"none",
                   opacity:0.9,
                 }}
-                onMouseEnter={e=>{ if(!active){ e.currentTarget.style.background="rgba(255,255,255,.08)"; } }}
+                onMouseEnter={e=>{ if(!active){ e.currentTarget.style.background="rgba(0,0,0,.045)"; } }}
                 onMouseLeave={e=>{ if(!active){ e.currentTarget.style.background="transparent"; } }}>
                   <MI n={n.icon} size={18}/>
                   <span>{n.label}</span>
@@ -17495,35 +17494,37 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
 
         {/* 사이드바 하단: 알림 요약 */}
         {totalAlerts>0&&(
-          <div style={{margin:"0 12px 20px",padding:"12px",background:"rgba(255,255,255,.08)",
-            border:"1px solid rgba(255,255,255,.14)",borderRadius:12}}>
-            <div style={{fontSize:11,fontWeight:800,color:"#FCD34D",marginBottom:6}}>🔔 확인 필요</div>
-            {orderStatus==="ok"&&orderRaw.length>0&&<div style={{fontSize:10,color:"#FCA5A5",fontWeight:700,marginBottom:3}}><MI n="inventory_2" size={11}/> 발주임박 {orderRaw.length}개</div>}
-            {cutAds.length>0&&<div style={{fontSize:10,color:"#FCA5A5",fontWeight:700,marginBottom:3}}><MI n="cancel" size={11}/> 광고교체 {cutAds.length}개</div>}
-            {holdAds.length>0&&<div style={{fontSize:10,color:"#FCD34D",marginBottom:3}}><MI n="pause_circle" size={11}/> 광고보류 {holdAds.length}개</div>}
-            {overdueScheds.length>0&&<div style={{fontSize:10,color:"rgba(255,255,255,.7)",marginBottom:3}}><MI n="calendar_month" size={11}/> 기간초과 {overdueScheds.length}건</div>}
-            {urgentScheds.length>0&&<div style={{fontSize:10,color:"rgba(255,255,255,.7)"}}><MI n="notifications" size={11}/> D-5임박 {urgentScheds.length}건</div>}
+          <div style={{margin:"0 12px 20px",padding:"12px",background:"rgba(255,255,255,.8)",
+            border:"1px solid rgba(0,0,0,.06)",borderRadius:12,boxShadow:"0 1px 4px rgba(0,0,0,.04)"}}>
+            <div style={{fontSize:11,fontWeight:800,color:"#C93400",marginBottom:6}}>🔔 확인 필요</div>
+            {orderStatus==="ok"&&orderRaw.length>0&&<div style={{fontSize:10,color:"#D70015",fontWeight:700,marginBottom:3}}><MI n="inventory_2" size={11}/> 발주임박 {orderRaw.length}개</div>}
+            {cutAds.length>0&&<div style={{fontSize:10,color:"#D70015",fontWeight:700,marginBottom:3}}><MI n="cancel" size={11}/> 광고교체 {cutAds.length}개</div>}
+            {holdAds.length>0&&<div style={{fontSize:10,color:"#C93400",marginBottom:3}}><MI n="pause_circle" size={11}/> 광고보류 {holdAds.length}개</div>}
+            {overdueScheds.length>0&&<div style={{fontSize:10,color:"#515154",marginBottom:3}}><MI n="calendar_month" size={11}/> 기간초과 {overdueScheds.length}건</div>}
+            {urgentScheds.length>0&&<div style={{fontSize:10,color:"#515154"}}><MI n="notifications" size={11}/> D-5임박 {urgentScheds.length}건</div>}
           </div>
         )}
       </aside>
 
       {/* ── 모바일 상단 헤더 ── */}
-      <header className="oa-topbar" style={{background:"linear-gradient(135deg,#0B1B3F,#173D8F)",borderBottom:"none",
+      <header className="oa-topbar" style={{background:"rgba(255,255,255,.72)",
+        WebkitBackdropFilter:"blur(20px) saturate(180%)",backdropFilter:"blur(20px) saturate(180%)",
+        borderBottom:"1px solid rgba(0,0,0,.06)",
         padding:"0 16px",height:54,alignItems:"center",justifyContent:"space-between",
-        position:"sticky",top:0,zIndex:100,boxShadow:"0 4px 18px rgba(11,27,63,.25)"}}>
+        position:"sticky",top:0,zIndex:100}}>
         <div style={{display:"flex",alignItems:"center",gap:8}}>
-          <div style={{width:28,height:28,background:"linear-gradient(135deg,#3B82F6,#7DD3FC)",
+          <div style={{width:28,height:28,background:"linear-gradient(135deg,#0071E3,#64D2FF)",
             borderRadius:8,display:"flex",alignItems:"center",justifyContent:"center",fontSize:14}}>🌸</div>
-          <div style={{fontSize:13,fontWeight:900,color:"#fff"}}>OA <span style={{color:"#7DD3FC"}}>HQ</span></div>
+          <div style={{fontSize:13,fontWeight:800,color:"#1D1D1F"}}>OA <span style={{color:"#0071E3"}}>HQ</span></div>
         </div>
         <div style={{display:"flex",alignItems:"center",gap:8}}>
           {totalAlerts>0&&(
             <div onClick={()=>setSec("home")} style={{display:"flex",alignItems:"center",gap:5,padding:"5px 10px",
-              background:"rgba(252,211,77,.15)",border:"1px solid rgba(252,211,77,.4)",borderRadius:20,
-              fontSize:10,color:"#FCD34D",fontWeight:700,cursor:"pointer"}}>🔔 {totalAlerts}건</div>
+              background:"rgba(215,0,21,.08)",border:"1px solid rgba(215,0,21,.2)",borderRadius:20,
+              fontSize:10,color:"#D70015",fontWeight:700,cursor:"pointer"}}>🔔 {totalAlerts}건</div>
           )}
-          <div style={{fontSize:10,color:"#BFDBFE",fontWeight:700,background:"rgba(255,255,255,.10)",
-            padding:"4px 10px",borderRadius:20,border:"1px solid rgba(255,255,255,.15)"}}>{dateStr}</div>
+          <div style={{fontSize:10,color:"#515154",fontWeight:600,background:"rgba(0,0,0,.04)",
+            padding:"4px 10px",borderRadius:20,border:"1px solid rgba(0,0,0,.05)"}}>{dateStr}</div>
         </div>
       </header>
 
@@ -17552,9 +17553,10 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
       </div>
 
       {/* ── 모바일 하단 탭바 ── */}
-      <nav className="oa-mobile-nav" style={{position:"fixed",bottom:0,left:0,right:0,background:C.white,
-        borderTop:`1px solid ${C.border}`,padding:"6px 0 max(6px,env(safe-area-inset-bottom))",
-        zIndex:200,boxShadow:"0 -4px 20px rgba(43,31,46,0.08)"}}>
+      <nav className="oa-mobile-nav" style={{position:"fixed",bottom:0,left:0,right:0,background:"rgba(255,255,255,.8)",
+        WebkitBackdropFilter:"blur(20px) saturate(180%)",backdropFilter:"blur(20px) saturate(180%)",
+        borderTop:"1px solid rgba(0,0,0,.06)",padding:"6px 0 max(6px,env(safe-area-inset-bottom))",
+        zIndex:200}}>
         {NAVS.map(n=>(
           <button key={n.id} onClick={()=>setSec(n.id)} style={{
             flex:1,display:"flex",flexDirection:"column",alignItems:"center",gap:2,
