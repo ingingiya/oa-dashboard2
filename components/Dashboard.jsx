@@ -8166,17 +8166,20 @@ export default function OaDashboard(){
     // 품목별 매출: 일별 데이터(daily)에서 선택 기간 합산 (s30/p30 필드명은 유지 — 선택기간/비교기간 의미)
     const dailyMap=(prioData?.daily)||{};
     const navDailyMap=(prioData?.navDaily)||{};
+    const cut7=shiftDate(to,-6); // 기간 마지막 7일 (품절 의심 판정용)
     const items=((prioData?.items)||[]).map(c=>{
-      let s30=0,p30=0,q30=0;
+      let s30=0,p30=0,q30=0,pq=0;
+      const sell7=new Set();
       for(const [dt,amt,qty] of (dailyMap[c.product]||[])){
-        if(dt>=from&&dt<=to){s30+=amt;q30+=qty;}
-        else if(dt>=prevFrom&&dt<=prevTo){p30+=amt;}
+        if(dt>=from&&dt<=to){s30+=amt;q30+=qty;if(amt>0&&dt>=cut7)sell7.add(dt);}
+        else if(dt>=prevFrom&&dt<=prevTo){p30+=amt;pq+=qty;}
       }
-      let nav30=0,navImp=0,navClk=0,navConv=0;
+      let nav30=0,navImp=0,navClk=0,navConv=0,navPrev=0;
       for(const row of (navDailyMap[c.product]||[])){
         if(row[0]>=from&&row[0]<=to){nav30+=row[1];navImp+=row[2];navClk+=row[3];navConv+=row[4];}
+        else if(row[0]>=prevFrom&&row[0]<=prevTo){navPrev+=row[1];}
       }
-      return {...c,s30:Math.round(s30),p30:Math.round(p30),q30,nav30,navImp,navClk,navConv};
+      return {...c,s30:Math.round(s30),p30:Math.round(p30),q30,pq,zero7:Math.max(0,7-sell7.size),nav30,navImp,navClk,navConv,navPrev};
     }).filter(it=>it.s30>0||it.p30>0).sort((a,b)=>b.s30-a.s30);
     // 액션 분류 — 선택 기간 매출 + 성장률 기반 (기준액은 30일 스케일을 기간에 비례 조정)
     const f=days/30;
@@ -8575,52 +8578,6 @@ export default function OaDashboard(){
           </div>
         )}
       </div>
-
-      {/* ── 월 매출 목표 진척률 ── */}
-      {homeSales&&(()=>{
-        const now=new Date();
-        const elapsed=now.getDate();
-        const daysInMonth=new Date(now.getFullYear(),now.getMonth()+1,0).getDate();
-        const forecast=elapsed>0?Math.round(homeSales.month/elapsed*daysInMonth):0;
-        const pct=monthlyTarget>0?Math.round(homeSales.month/monthlyTarget*100):0;
-        const fPct=monthlyTarget>0?Math.round(forecast/monthlyTarget*100):0;
-        const fmt=(v)=>v>=100000000?(v/100000000).toFixed(1)+"억":v>=10000?Math.round(v/10000).toLocaleString()+"만":v.toLocaleString()+"원";
-        const fColor=fPct>=100?C.good:fPct>=85?"#d97706":"#dc2626";
-        const editTarget=()=>{
-          const cur=monthlyTarget>0?String(Math.round(monthlyTarget/10000)):"";
-          const inp=window.prompt("이번 달 목표 매출 (만원 단위)",cur);
-          if(inp===null)return;
-          const n=Number(String(inp).replace(/[^\d]/g,""));
-          if(!isNaN(n))setMonthlyTarget(n*10000);
-        };
-        if(!monthlyTarget)return(
-          <div onClick={editTarget} style={{background:C.white,border:`1px dashed ${C.border}`,borderRadius:16,padding:"12px 14px",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
-            <div style={{fontSize:11,color:C.inkMid,fontWeight:600}}>🎯 월 매출 목표를 설정하면 진척률과 월말 예측을 보여드려요</div>
-            <span style={{fontSize:11,color:C.gold,fontWeight:800}}>설정</span>
-          </div>
-        );
-        return(
-          <div style={{background:C.white,border:"1px solid rgba(0,0,0,.06)",borderRadius:16,padding:"14px 16px",boxShadow:"0 2px 8px rgba(0,0,0,.04)"}}>
-            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-              <div style={{fontSize:10,color:C.inkMid,fontWeight:600}}>🎯 이번 달 목표 {fmt(monthlyTarget)}</div>
-              <button onClick={editTarget} style={{background:"none",border:"none",fontSize:10,color:C.inkLt,cursor:"pointer",fontFamily:"inherit",padding:0}}>수정</button>
-            </div>
-            <div style={{display:"flex",alignItems:"baseline",gap:8,marginTop:4}}>
-              <span style={{fontSize:18,fontWeight:900,color:C.ink}}>{pct}%</span>
-              <span style={{fontSize:11,color:C.inkMid}}>{fmt(homeSales.month)} / {fmt(monthlyTarget)}</span>
-            </div>
-            <div style={{height:8,background:C.cream,borderRadius:4,marginTop:6,overflow:"hidden",position:"relative"}}>
-              <div style={{width:`${Math.min(pct,100)}%`,height:"100%",background:pct>=100?C.good:C.gold,borderRadius:4}}/>
-              {/* 오늘 기준 페이스 마커 */}
-              <div style={{position:"absolute",top:0,left:`${Math.min(Math.round(elapsed/daysInMonth*100),100)}%`,width:2,height:"100%",background:C.inkLt,opacity:0.6}}/>
-            </div>
-            <div style={{fontSize:11,marginTop:6,color:C.inkMid}}>
-              현재 페이스 월말 착지 <span style={{fontWeight:800,color:fColor}}>{fmt(forecast)} ({fPct}%)</span>
-              {fPct<100&&<span style={{color:C.inkLt}}> · 목표까지 일평균 {fmt(Math.ceil((monthlyTarget-homeSales.month)/Math.max(daysInMonth-elapsed,1)))} 필요</span>}
-            </div>
-          </div>
-        );
-      })()}
 
       {/* ── 네이버 광고비 (메타 전날은 히어로에 표시) ── */}
       {homeAdSpend&&(
