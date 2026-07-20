@@ -8059,17 +8059,13 @@ export default function OaDashboard(){
     {id:"erp",       icon:"storage",        label:"ERP"},
     {id:"naver",     icon:"ads_click",      label:"네이버광고"},
     {id:"meta",      icon:"campaign",       label:"메타광고"},
-    {id:"ranking",   icon:"leaderboard",    label:"랭킹"},
     {id:"guide",     icon:"menu_book",      label:"가이드"},
-    {id:"stock",     icon:"inventory",      label:"재고"},
-    {id:"ads11st",   icon:"trending_up",    label:"11번가광고"},
     {id:"inf_archive",icon:"photo_library", label:"아카이브"},
     {id:"launch",    icon:"rocket_launch",  label:"런칭"},
     {id:"schedule",  icon:"calendar_month", label:"스케줄"},
     {id:"creative",  icon:"palette",        label:"소재"},
     {id:"hypothesis",icon:"psychology",     label:"가설"},
     {id:"insight",   icon:"edit_note",      label:"팀 노트"},
-    {id:"detailplan",icon:"article",        label:"상세기획"},
   ];
   const NAVS_WIP=[
     {id:"keyword",   icon:"search",         label:"키워드"},
@@ -17481,8 +17477,6 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
         <main className="oa-main">
           {sec==="home"        && <HomeSection/>}
           {sec==="meta"        && MetaSection}
-          {sec==="stock"       && StockSection}
-          {sec==="ads11st"     && Ads11stSection}
           {sec==="inf_archive" && <InfluencerArchiveSection/>}
           {sec==="launch"      && <LaunchSection/>}
           {sec==="schedule"    && ScheduleSection}
@@ -17495,9 +17489,7 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
           {sec==="naver_review" && <NaverReviewSection/>}
           {sec==="hypothesis"  && HypothesisSection}
           {sec==="insight"     && InsightSection}
-          {sec==="detailplan"  && <DetailPlanSection/>}
           {sec==="coupang"     && CoupangSection}
-          {sec==="ranking"     && RankingSection}
           {sec==="portfolio"   && PortfolioSection}
           {sec==="guide"       && <iframe src="/oa-guide.html" title="업무 가이드" style={{width:"100%",height:"calc(100vh - 150px)",border:`1px solid ${C.border}`,borderRadius:14,background:"#fff"}}/>}
         </main>
