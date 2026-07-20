@@ -8595,19 +8595,6 @@ export default function OaDashboard(){
         )}
       </div>
 
-      {/* ── 네이버 광고비 (메타 전날은 히어로에 표시) ── */}
-      {homeAdSpend&&(
-        <div onClick={()=>setSec("naver")} style={{background:C.white,border:"1px solid rgba(0,0,0,.06)",
-          borderRadius:16,padding:"14px 16px",cursor:"pointer",boxShadow:"0 2px 8px rgba(0,0,0,.04)",
-          display:"flex",alignItems:"center",justifyContent:"space-between"}}>
-          <div>
-            <div style={{fontSize:10,color:C.inkLt,fontWeight:600}}>이번 달 네이버 이미용 광고비</div>
-            <div style={{fontSize:18,fontWeight:800,color:C.ink,marginTop:3,letterSpacing:"-0.02em"}}>{fmtS(homeAdSpend.month)}</div>
-          </div>
-          <MI n="arrow_forward_ios" size={14} style={{color:C.inkLt}}/>
-        </div>
-      )}
-
       {/* ── 팀 예산 페이싱 요약 (포트폴리오 미니뷰) ── */}
       {(pfTeams||[]).length>0&&(()=>{
         const now=new Date();
