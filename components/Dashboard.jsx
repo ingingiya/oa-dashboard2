@@ -2284,16 +2284,28 @@ function isConversionCampaign(objective, campaignName="", resultType=""){
 // 공통 UI
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 const Card=({children,style={}})=>(
-  <div style={{background:C.white,border:`1px solid ${C.border}`,borderRadius:14,padding:"18px 16px",...style}}>{children}</div>
+  <div style={{background:C.white,border:"1px solid #E8EBF2",borderRadius:16,padding:"18px 16px",
+    boxShadow:"0 4px 18px rgba(15,23,42,.05)",...style}}>{children}</div>
 );
 const CardTitle=({title,sub,action})=>(
   <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:14}}>
-    <div>
-      <div style={{fontSize:13,fontWeight:800,color:C.ink}}>{title}</div>
-      {sub&&<div style={{fontSize:10,color:C.inkLt,marginTop:2}}>{sub}</div>}
+    <div style={{display:"flex",gap:8}}>
+      <div style={{width:4,borderRadius:4,background:"linear-gradient(180deg,#3B82F6,#7DD3FC)",flexShrink:0,alignSelf:"stretch"}}/>
+      <div>
+        <div style={{fontSize:13.5,fontWeight:900,color:C.ink,letterSpacing:"-0.01em"}}>{title}</div>
+        {sub&&<div style={{fontSize:10,color:C.inkLt,marginTop:2}}>{sub}</div>}
+      </div>
     </div>
     {action}
   </div>
+);
+// 포트폴리오 탭 숫자 입력 — 모듈 레벨 (섹션 IIFE 안에 정의하면 리렌더마다 remount되어 입력이 초기화됨)
+const PfNumIn=({val,onCommit,w=76})=>(
+  <input key={String(val)} defaultValue={val||""} inputMode="numeric"
+    onBlur={e=>{const v=Number(String(e.target.value).replace(/[^0-9.]/g,""))||0; if(v!==(val||0)) onCommit(v);}}
+    onKeyDown={e=>{ if(e.key==="Enter") e.currentTarget.blur(); }}
+    style={{width:w,padding:"5px 7px",border:`1.5px solid ${C.border}`,borderRadius:8,fontSize:11.5,fontWeight:700,
+      fontFamily:"inherit",textAlign:"right",background:"#FAFBFF",color:C.ink,outline:"none"}}/>
 );
 const Btn=({children,onClick,variant="primary",small=false,disabled=false,style={}})=>{
   const v={
@@ -7923,12 +7935,7 @@ export default function OaDashboard(){
           background:markerColor,borderRadius:1,opacity:.9}}/>
       </div>
     );
-    const NumIn=({val,onCommit,w=76})=>(
-      <input key={String(val)} defaultValue={val||""} inputMode="numeric"
-        onBlur={e=>{const v=Number(String(e.target.value).replace(/[^0-9.]/g,""))||0; if(v!==(val||0)) onCommit(v);}}
-        style={{width:w,padding:"5px 7px",border:`1.5px solid ${C.border}`,borderRadius:8,fontSize:11.5,fontWeight:700,
-          fontFamily:"inherit",textAlign:"right",background:"#FAFBFF",color:C.ink,outline:"none"}}/>
-    );
+    const NumIn=PfNumIn; // 모듈 레벨 컴포넌트 재사용 — IIFE 내 정의 시 리렌더마다 입력 초기화 버그
     const roasColor=r=>r>=500?"#16A34A":r>=300?"#CA8A04":"#DC2626";
     const unmatchedTop=Object.entries(unmatched.byCamp).sort((a,b)=>b[1]-a[1]).slice(0,5);
     const heroBtn={background:"rgba(255,255,255,.14)",border:"1px solid rgba(255,255,255,.25)",color:"#fff",
@@ -17491,22 +17498,22 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
       </aside>
 
       {/* ── 모바일 상단 헤더 ── */}
-      <header className="oa-topbar" style={{background:C.white,borderBottom:`1px solid ${C.border}`,
+      <header className="oa-topbar" style={{background:"linear-gradient(135deg,#0B1B3F,#173D8F)",borderBottom:"none",
         padding:"0 16px",height:54,alignItems:"center",justifyContent:"space-between",
-        position:"sticky",top:0,zIndex:100,boxShadow:"0 2px 10px rgba(232,86,122,0.07)"}}>
+        position:"sticky",top:0,zIndex:100,boxShadow:"0 4px 18px rgba(11,27,63,.25)"}}>
         <div style={{display:"flex",alignItems:"center",gap:8}}>
-          <div style={{width:28,height:28,background:`linear-gradient(135deg,${C.rose},${C.roseLt})`,
+          <div style={{width:28,height:28,background:"linear-gradient(135deg,#3B82F6,#7DD3FC)",
             borderRadius:8,display:"flex",alignItems:"center",justifyContent:"center",fontSize:14}}>🌸</div>
-          <div style={{fontSize:13,fontWeight:900,color:C.ink}}>OA <span style={{color:C.rose}}>HQ</span></div>
+          <div style={{fontSize:13,fontWeight:900,color:"#fff"}}>OA <span style={{color:"#7DD3FC"}}>HQ</span></div>
         </div>
         <div style={{display:"flex",alignItems:"center",gap:8}}>
           {totalAlerts>0&&(
             <div onClick={()=>setSec("home")} style={{display:"flex",alignItems:"center",gap:5,padding:"5px 10px",
-              background:"#FFF8EC",border:`1px solid ${C.warn}44`,borderRadius:20,
-              fontSize:10,color:C.warn,fontWeight:700,cursor:"pointer"}}>🔔 {totalAlerts}건</div>
+              background:"rgba(252,211,77,.15)",border:"1px solid rgba(252,211,77,.4)",borderRadius:20,
+              fontSize:10,color:"#FCD34D",fontWeight:700,cursor:"pointer"}}>🔔 {totalAlerts}건</div>
           )}
-          <div style={{fontSize:10,color:C.rose,fontWeight:700,background:C.blush,
-            padding:"4px 10px",borderRadius:20,border:`1px solid ${C.rose}33`}}>{dateStr}</div>
+          <div style={{fontSize:10,color:"#BFDBFE",fontWeight:700,background:"rgba(255,255,255,.10)",
+            padding:"4px 10px",borderRadius:20,border:"1px solid rgba(255,255,255,.15)"}}>{dateStr}</div>
         </div>
       </header>
 
