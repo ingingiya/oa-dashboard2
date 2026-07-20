@@ -60,6 +60,37 @@ async function main() {
       .sort((a, b) => b.s30 - a.s30);
     console.log(`  → 품목 매칭 ${items.length}개 (미매칭 상품명 ${unmatched}개)`);
 
+    // 3.5) 네이버 제품별 광고비 — 광고그룹이 제품 단위 ("선풍기_아이스볼트미스트(상품형)")
+    const [navGroups] = await pool.query(`
+      SELECT adgroup_name AS name,
+        ROUND(SUM(sales_amt)) AS spend, SUM(imp_cnt) AS imp, SUM(clk_cnt) AS clk, SUM(conv_cnt) AS conv
+      FROM ad_daily_adgroup
+      WHERE stat_date >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)
+      GROUP BY adgroup_name
+    `);
+    // 광고그룹명 정규화: "(상품형)" 등 괄호 제거, "카테고리_" 접두 제거, 공백 제거
+    const tokenOf = (n) => (n || '').replace(/\(.*?\)/g, '').split('_').pop().replace(/\s/g, '').trim();
+    // 제품 키 = 품목명에서 '오아' 접두 제거
+    const keys = items.map(it => ({ it, k: it.product.replace(/^오아/, '') })).filter(x => x.k.length >= 2);
+    let navMatched = 0;
+    for (const g of navGroups) {
+      const token = tokenOf(g.name);
+      if (token.length < 2) continue;
+      // 1순위 완전일치 → 2순위 토큰이 키 포함(긴 키 우선) → 3순위 키가 토큰 포함(짧은 키 우선)
+      const exact = keys.find(x => x.k === token);
+      const hit = exact
+        || [...keys].sort((a, b) => b.k.length - a.k.length).find(x => token.includes(x.k))
+        || [...keys].sort((a, b) => a.k.length - b.k.length).find(x => x.k.includes(token));
+      if (!hit) continue;
+      const it = hit.it;
+      it.nav30 = (it.nav30 || 0) + Number(g.spend);
+      it.navImp = (it.navImp || 0) + Number(g.imp);
+      it.navClk = (it.navClk || 0) + Number(g.clk);
+      it.navConv = (it.navConv || 0) + Number(g.conv);
+      navMatched++;
+    }
+    console.log(`  → 네이버 광고그룹 ${navGroups.length}개 중 ${navMatched}개 제품 매칭`);
+
     // 4) 카테고리별 월 광고비 (오아 브랜드, 최근 2개월)
     const [ads] = await pool.query(`
       SELECT \`집행월\` AS month, \`카테고리\` AS cat, ROUND(SUM(\`금액\`)) AS spend

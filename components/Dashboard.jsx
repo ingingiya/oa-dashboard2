@@ -8111,7 +8111,7 @@ export default function OaDashboard(){
       if(g!==null&&it.s30>=5000000&&it.s30<20000000&&g>=0.5) return {key:"spark", label:"💡 점화", color:C.good, bg:"#EDF7F1", desc:"불씨 커짐 — 소재·광고 투입 기회"};
       return null;
     };
-    // 제품별 메타 광고비 (최근 30일) — 캠페인/세트/광고명에 제품명('오아' 접두 제거) 포함 매칭. 네이버는 캠페인이 카테고리 단위라 제품별 분리 불가
+    // 제품별 메타 광고비 (최근 30일) — 캠페인/세트/광고명에 제품명('오아' 접두 제거) 포함 매칭. 네이버는 광고그룹 단위(sync-priority.js가 nav* 필드로 제공)
     const adCut=(()=>{const d=new Date();d.setDate(d.getDate()-30);return d.toISOString().slice(0,10);})();
     const prodKeys=items.map(it=>({p:it.product,k:it.product.replace(/^오아/,"")})).filter(x=>x.k.length>=2).sort((a,b)=>b.k.length-a.k.length);
     const metaAgg={};
@@ -8130,7 +8130,11 @@ export default function OaDashboard(){
         adClicks:m.clicks,
         adCtr:m.imp>0?m.clicks/m.imp*100:null,
         adLpvRate:m.clicks>0?Math.min(m.lpv/m.clicks*100,100):null,
-        adCpa:m.pur>0?m.spend/m.pur:null};
+        adCpa:m.pur>0?m.spend/m.pur:null,
+        nav30:it.nav30||0,
+        navClk:it.navClk||0,
+        navCtr:(it.navImp||0)>0?(it.navClk||0)/it.navImp*100:null,
+        navCpa:(it.navConv||0)>0?(it.nav30||0)/it.navConv:null};
     });
     const cats=["전체",...Array.from(new Set(items.map(i=>i.cat1))).sort()];
     const q=prioQ.trim();
@@ -8203,7 +8207,7 @@ export default function OaDashboard(){
         )}
 
         <Card>
-          <CardTitle title="📋 제품별 우선순위" sub={`${filtered.length}개 표시 · 메타광고비=광고명 제품 매칭 (네이버는 캠페인이 카테고리 단위라 제품별 불가)`}
+          <CardTitle title="📋 제품별 우선순위" sub={`${filtered.length}개 표시 · 메타=광고명 제품 매칭, 네이버=광고그룹 제품 매칭 (네이버 칸에 마우스 올리면 클릭·CTR) · 무광고 기회=메타·네이버 모두 0`}
             action={
               <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
                 <select value={prioCat} onChange={e=>setPrioCat(e.target.value)}
@@ -8220,7 +8224,7 @@ export default function OaDashboard(){
           <div style={{overflowX:"auto"}}>
             <table style={{width:"100%",borderCollapse:"collapse",fontSize:11}}>
               <thead><tr style={{background:C.cream}}>
-                {["#","카테고리","제품","최근 30일","이전 30일","성장률","수량(30일)","메타광고비(30일)","클릭","CTR","랜딩도달율","구매당비용","액션"].map(h=><th key={h} style={th}>{h}</th>)}
+                {["#","카테고리","제품","최근 30일","이전 30일","성장률","수량(30일)","메타광고비(30일)","클릭","CTR","랜딩도달율","구매당비용","네이버광고비(30일)","네이버구매당비용","액션"].map(h=><th key={h} style={th}>{h}</th>)}
               </tr></thead>
               <tbody>
                 {filtered.slice(0,100).map((it,i)=>(
@@ -8232,20 +8236,22 @@ export default function OaDashboard(){
                     <td style={{...td,color:C.inkMid}}>₩{fmtW(it.p30)}</td>
                     <td style={td}>{growthChip(it.growth)}</td>
                     <td style={{...td,color:C.inkMid}}>{(it.q30||0).toLocaleString()}</td>
-                    <td style={td}>{it.ad30>0?`₩${fmtW(it.ad30)}`:(it.act&&(it.act.key==="boost"||it.act.key==="spark")?(
+                    <td style={td}>{it.ad30>0?`₩${fmtW(it.ad30)}`:(it.act&&(it.act.key==="boost"||it.act.key==="spark")&&!(it.nav30>0)?(
                       <span style={{fontSize:9,fontWeight:800,padding:"2px 7px",borderRadius:20,color:C.rose,background:C.blush,border:`1px solid ${C.rose}33`}}>무광고 기회</span>
                     ):<span style={{color:C.inkLt}}>—</span>)}</td>
                     <td style={{...td,color:C.inkMid}}>{it.adClicks>0?it.adClicks.toLocaleString():"—"}</td>
                     <td style={{...td,fontWeight:700,color:it.adCtr===null?C.inkLt:it.adCtr>=1.5?C.good:it.adCtr<0.8?C.bad:C.ink}}>{it.adCtr!==null?`${it.adCtr.toFixed(2)}%`:"—"}</td>
                     <td style={{...td,fontWeight:700,color:it.adLpvRate===null?C.inkLt:it.adLpvRate>=80?C.good:it.adLpvRate<60?C.bad:C.ink}}>{it.adLpvRate!==null?`${Math.round(it.adLpvRate)}%`:"—"}</td>
                     <td style={{...td,fontWeight:700,color:it.adCpa===null?C.inkLt:C.ink}}>{it.adCpa!==null?`₩${fmtW(it.adCpa)}`:"—"}</td>
+                    <td style={td} title={it.nav30>0?`클릭 ${(it.navClk||0).toLocaleString()} · CTR ${it.navCtr!==null?it.navCtr.toFixed(2)+"%":"—"}`:undefined}>{it.nav30>0?`₩${fmtW(it.nav30)}`:<span style={{color:C.inkLt}}>—</span>}</td>
+                    <td style={{...td,fontWeight:700,color:it.navCpa===null?C.inkLt:C.ink}}>{it.navCpa!==null?`₩${fmtW(it.navCpa)}`:"—"}</td>
                     <td style={td}>{it.act?(
                       <span title={it.act.desc} style={{fontSize:10,fontWeight:800,padding:"2px 8px",borderRadius:20,color:it.act.color,background:it.act.bg,border:`1px solid ${it.act.color}33`,cursor:"default"}}>{it.act.label}</span>
                     ):<span style={{fontSize:10,color:C.inkLt}}>—</span>}</td>
                   </tr>
                 ))}
                 {filtered.length===0&&(
-                  <tr><td colSpan={13} style={{...td,textAlign:"center",color:C.inkLt,padding:20}}>표시할 제품이 없습니다</td></tr>
+                  <tr><td colSpan={15} style={{...td,textAlign:"center",color:C.inkLt,padding:20}}>표시할 제품이 없습니다</td></tr>
                 )}
               </tbody>
             </table>
