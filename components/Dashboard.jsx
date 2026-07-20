@@ -7232,6 +7232,8 @@ export default function OaDashboard(){
   const [prioQ, setPrioQ] = useState("");
   const [prioActOnly, setPrioActOnly] = useState(false);
   const [prioShowTable, setPrioShowTable] = useState(false);
+  const [prioFrom, setPrioFrom] = useState(()=>{const d=new Date();d.setDate(d.getDate()-30);return d.toISOString().slice(0,10);});
+  const [prioTo, setPrioTo] = useState(()=>new Date().toISOString().slice(0,10));
   const [promoEvents, setPromoEvents] = useSyncState("oa_events_v1", []);
   // 채널 랭킹 트래커: [{id,date,channel,product,rank}] — 랭킹 탭
   const [rankLog, setRankLog] = useSyncState("oa_rank_tracker_v1", []);
@@ -8155,22 +8157,42 @@ export default function OaDashboard(){
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   const PrioritySection=(()=>{
     const fmtW=n=>Math.abs(n)>=100000000?`${(n/100000000).toFixed(1)}억`:Math.abs(n)>=10000?`${Math.round(n/10000).toLocaleString()}만`:`${Math.round(n||0).toLocaleString()}`;
-    const items=(prioData?.items)||[];
-    // 액션 분류 — 최근30일 매출 + 성장률 기반
+    // 기간 선택: prioFrom~prioTo (기본 최근 30일), 비교 기간 = 직전 같은 길이
+    const from=prioFrom, to=prioTo;
+    const days=Math.max(1,Math.round((new Date(to)-new Date(from))/86400000)+1);
+    const shiftDate=(base,n)=>{const d=new Date(base);d.setDate(d.getDate()+n);return d.toISOString().slice(0,10);};
+    const prevTo=shiftDate(from,-1), prevFrom=shiftDate(from,-days);
+    const setPreset=(n)=>{setPrioTo(new Date().toISOString().slice(0,10));setPrioFrom(shiftDate(new Date().toISOString().slice(0,10),-(n-1)));};
+    // 품목별 매출: 일별 데이터(daily)에서 선택 기간 합산 (s30/p30 필드명은 유지 — 선택기간/비교기간 의미)
+    const dailyMap=(prioData?.daily)||{};
+    const navDailyMap=(prioData?.navDaily)||{};
+    const items=((prioData?.items)||[]).map(c=>{
+      let s30=0,p30=0,q30=0;
+      for(const [dt,amt,qty] of (dailyMap[c.product]||[])){
+        if(dt>=from&&dt<=to){s30+=amt;q30+=qty;}
+        else if(dt>=prevFrom&&dt<=prevTo){p30+=amt;}
+      }
+      let nav30=0,navImp=0,navClk=0,navConv=0;
+      for(const row of (navDailyMap[c.product]||[])){
+        if(row[0]>=from&&row[0]<=to){nav30+=row[1];navImp+=row[2];navClk+=row[3];navConv+=row[4];}
+      }
+      return {...c,s30:Math.round(s30),p30:Math.round(p30),q30,nav30,navImp,navClk,navConv};
+    }).filter(it=>it.s30>0||it.p30>0).sort((a,b)=>b.s30-a.s30);
+    // 액션 분류 — 선택 기간 매출 + 성장률 기반 (기준액은 30일 스케일을 기간에 비례 조정)
+    const f=days/30;
     const classify=(it)=>{
       const g=it.p30>0?it.s30/it.p30-1:null;
-      if(g!==null&&it.s30>=20000000&&g>=0.3)  return {key:"boost", label:"🔥 증액",     color:C.bad,  bg:"#FEF0F0", desc:"타오르는 중 — 기름 붓기"};
-      if(g!==null&&it.s30>=10000000&&g<=-0.3) return {key:"cool",  label:"⚠️ 하락 점검", color:C.warn, bg:"#FFF8EC", desc:"급락 — 원인 확인/소화 검토"};
-      if(it.s30>=50000000&&(g===null||Math.abs(g)<0.15)) return {key:"guard", label:"🛡 방어", color:"#5B7FA6", bg:"#EEF4FA", desc:"캐시카우 — 화력 유지"};
-      if(g!==null&&it.s30>=5000000&&it.s30<20000000&&g>=0.5) return {key:"spark", label:"💡 점화", color:C.good, bg:"#EDF7F1", desc:"불씨 커짐 — 소재·광고 투입 기회"};
+      if(g!==null&&it.s30>=20000000*f&&g>=0.3)  return {key:"boost", label:"🔥 증액",     color:C.bad,  bg:"#FEF0F0", desc:"타오르는 중 — 기름 붓기"};
+      if(g!==null&&it.s30>=10000000*f&&g<=-0.3) return {key:"cool",  label:"⚠️ 하락 점검", color:C.warn, bg:"#FFF8EC", desc:"급락 — 원인 확인/소화 검토"};
+      if(it.s30>=50000000*f&&(g===null||Math.abs(g)<0.15)) return {key:"guard", label:"🛡 방어", color:"#5B7FA6", bg:"#EEF4FA", desc:"캐시카우 — 화력 유지"};
+      if(g!==null&&it.s30>=5000000*f&&it.s30<20000000*f&&g>=0.5) return {key:"spark", label:"💡 점화", color:C.good, bg:"#EDF7F1", desc:"불씨 커짐 — 소재·광고 투입 기회"};
       return null;
     };
-    // 제품별 메타 광고비 (최근 30일) — 캠페인/세트/광고명에 제품명('오아' 접두 제거) 포함 매칭. 네이버는 광고그룹 단위(sync-priority.js가 nav* 필드로 제공)
-    const adCut=(()=>{const d=new Date();d.setDate(d.getDate()-30);return d.toISOString().slice(0,10);})();
+    // 제품별 메타 광고비 (선택 기간) — 캠페인/세트/광고명에 제품명('오아' 접두 제거) 포함 매칭. 네이버는 광고그룹 단위(navDaily)
     const prodKeys=items.map(it=>({p:it.product,k:it.product.replace(/^오아/,"")})).filter(x=>x.k.length>=2).sort((a,b)=>b.k.length-a.k.length);
     const metaAgg={};
     (metaForChart||[]).forEach(r=>{
-      if((r.date||"")<adCut) return;
+      if((r.date||"")<from||(r.date||"")>to) return;
       const hay=`${r.campaign||""} ${r.adset||""} ${r.adName||""}`;
       const hit=prodKeys.find(x=>hay.includes(x.k));
       if(hit){
@@ -8258,7 +8280,7 @@ export default function OaDashboard(){
               <div style={{fontSize:11,fontWeight:800,letterSpacing:2,color:"#8E8E93"}}>PRODUCT PRIORITY</div>
               <div style={{fontSize:22,fontWeight:900,marginTop:2}}>이번 주 어디에 불을 붙일까</div>
               <div style={{fontSize:11,fontWeight:700,color:"#8E8E93",marginTop:4}}>
-                최근 30일 vs 이전 30일 매출 자동 분류 · 제품 {enriched.length}개{updated?` · 갱신 ${updated}`:""}
+                선택 기간 {days}일 vs 직전 {days}일 매출 자동 분류 · 제품 {enriched.length}개{updated?` · 갱신 ${updated}`:""}
               </div>
             </div>
             <select value={prioCat} onChange={e=>setPrioCat(e.target.value)}
@@ -8266,6 +8288,26 @@ export default function OaDashboard(){
                 borderRadius:10,padding:"6px 12px",fontSize:12,fontWeight:800,cursor:"pointer",fontFamily:"inherit"}}>
               {cats.map(c=><option key={c} value={c} style={{color:"#1D1D1F"}}>{c}</option>)}
             </select>
+          </div>
+          {/* 기간 선택 */}
+          <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap",marginTop:14,position:"relative"}}>
+            {[7,14,30,60,90].map(n=>(
+              <button key={n} onClick={()=>setPreset(n)}
+                style={{background:days===n&&to===new Date().toISOString().slice(0,10)?"#fff":"rgba(255,255,255,.14)",
+                  color:days===n&&to===new Date().toISOString().slice(0,10)?"#1D1D1F":"#fff",
+                  border:"1px solid rgba(255,255,255,.25)",borderRadius:20,padding:"5px 13px",
+                  fontSize:11,fontWeight:800,cursor:"pointer",fontFamily:"inherit"}}>
+                {n}일
+              </button>
+            ))}
+            <input type="date" value={prioFrom} max={prioTo} onChange={e=>e.target.value&&setPrioFrom(e.target.value)}
+              style={{background:"rgba(255,255,255,.14)",border:"1px solid rgba(255,255,255,.25)",color:"#fff",
+                borderRadius:10,padding:"4px 8px",fontSize:11,fontWeight:700,fontFamily:"inherit",colorScheme:"dark"}}/>
+            <span style={{fontSize:11,color:"#8E8E93",fontWeight:800}}>~</span>
+            <input type="date" value={prioTo} min={prioFrom} onChange={e=>e.target.value&&setPrioTo(e.target.value)}
+              style={{background:"rgba(255,255,255,.14)",border:"1px solid rgba(255,255,255,.25)",color:"#fff",
+                borderRadius:10,padding:"4px 8px",fontSize:11,fontWeight:700,fontFamily:"inherit",colorScheme:"dark"}}/>
+            <span style={{fontSize:10,color:"#8E8E93",fontWeight:700}}>비교: {prevFrom} ~ {prevTo}</span>
           </div>
           <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(130px,1fr))",gap:10,marginTop:18,position:"relative"}}>
             {heroCounts.map(([l,v,col])=>(
@@ -8310,11 +8352,11 @@ export default function OaDashboard(){
 
         {adRows.length>0&&(
           <Card>
-            <CardTitle title={`💸 카테고리 광고비 vs 매출 (${lastMonth})`} sub="오아 브랜드 월 광고비 대비 해당 카테고리 최근 30일 매출 — 배분이 안 맞는 곳 점검"/>
+            <CardTitle title={`💸 카테고리 광고비 vs 매출 (${lastMonth})`} sub={`오아 브랜드 월 광고비 대비 해당 카테고리 선택 기간(${days}일) 매출 — 배분이 안 맞는 곳 점검`}/>
             <div style={{overflowX:"auto"}}>
               <table style={{width:"100%",borderCollapse:"collapse",fontSize:11}}>
                 <thead><tr style={{background:C.cream}}>
-                  {["카테고리","월 광고비","최근 30일 매출","매출/광고비"].map(h=><th key={h} style={th}>{h}</th>)}
+                  {["카테고리","월 광고비",`기간 매출 (${days}일)`,"매출/광고비"].map(h=><th key={h} style={th}>{h}</th>)}
                 </tr></thead>
                 <tbody>
                   {adRows.map(a=>{
@@ -8358,7 +8400,7 @@ export default function OaDashboard(){
           {prioShowTable&&<div style={{overflowX:"auto"}}>
             <table style={{width:"100%",borderCollapse:"collapse",fontSize:11}}>
               <thead><tr style={{background:C.cream}}>
-                {["#","카테고리","제품","최근 30일","이전 30일","성장률","수량(30일)","메타광고비(30일)","클릭","CTR","랜딩도달율","구매당비용(전환)","네이버광고비(30일)","네이버구매당비용","액션"].map(h=><th key={h} style={th}>{h}</th>)}
+                {["#","카테고리","제품",`기간 ${days}일`,`직전 ${days}일`,"성장률","수량","메타광고비","클릭","CTR","랜딩도달율","구매당비용(전환)","네이버광고비","네이버구매당비용","액션"].map(h=><th key={h} style={th}>{h}</th>)}
               </tr></thead>
               <tbody>
                 {filtered.slice(0,100).map((it,i)=>(
@@ -8689,19 +8731,6 @@ export default function OaDashboard(){
                   </div>
                 )}
               </div>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* ── 재고 부족 알림 ── */}
-      {homeStock.length>0&&(
-        <div style={{background:"#fef2f2",border:`1px solid #fecaca`,borderRadius:16,padding:"14px 16px"}}>
-          <div style={{fontSize:11,fontWeight:800,color:"#dc2626",marginBottom:6}}>📦 재고 부족 ({homeStock.length}개)</div>
-          {homeStock.slice(0,5).map(s=>(
-            <div key={s.name} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"3px 0",fontSize:11}}>
-              <span style={{color:C.ink,fontWeight:600,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",maxWidth:200}}>{s.name}</span>
-              <span style={{fontWeight:800,color:s.stock_qty<=10?"#dc2626":"#ea580c"}}>{s.stock_qty}개{s.production_qty>0?` (생산중 ${s.production_qty})`:""}</span>
             </div>
           ))}
         </div>
