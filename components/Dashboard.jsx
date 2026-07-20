@@ -7213,6 +7213,10 @@ export default function OaDashboard(){
   // ── 시트 누락 자동 보완: 지출 0인 날을 메타 API에서 직접 받아 병합 ──
   const [metaBackfill, setMetaBackfill] = useState([]);
   // 행사 일정: [{id,name,start,end,memo}]
+  // 포트폴리오 (팀별 예산·페이싱) 상태
+  const [pfTeams, setPfTeams]     = useSyncState("oa_teams_v1", []);   // [{id,name,keywords:[]}]
+  const [pfBudgets, setPfBudgets] = useSyncState("oa_budget_v1", []);  // [{id,month,teamId,source,budget,targetRoas,spent}]
+  const [pfMonth, setPfMonth]     = useState(()=>{const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}`;});
   const [promoEvents, setPromoEvents] = useSyncState("oa_events_v1", []);
   // 채널 랭킹 트래커: [{id,date,channel,product,rank}] — 랭킹 탭
   const [rankLog, setRankLog] = useSyncState("oa_rank_tracker_v1", []);
@@ -7824,8 +7828,234 @@ export default function OaDashboard(){
     );
   })();
 
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  // 📊 포트폴리오 — 전 카테고리 팀별 예산 · 페이싱
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  const PortfolioSection=(()=>{
+    const PF_SOURCES=["메타","GFA","네이버","기타"];
+    const fmtW=n=>Math.abs(n)>=10000?`₩${Math.round(n/10000).toLocaleString()}만`:`₩${Math.round(n||0).toLocaleString()}`;
+    const today=new Date();
+    const curMonth=`${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,"0")}`;
+    const elapsedRatio=(()=>{
+      if(pfMonth<curMonth) return 1;
+      if(pfMonth>curMonth) return 0;
+      const [y,m]=pfMonth.split("-").map(Number);
+      return today.getDate()/new Date(y,m,0).getDate();
+    })();
+    const shiftMonth=(d)=>{
+      const [y,m]=pfMonth.split("-").map(Number);
+      const nd=new Date(y,m-1+d,1);
+      setPfMonth(`${nd.getFullYear()}-${String(nd.getMonth()+1).padStart(2,"0")}`);
+    };
+
+    // 메타 자동 집계 — 팀 키워드 ↔ 캠페인/세트/광고명 매칭 ("*"는 전부)
+    const monthRows=metaForChart.filter(r=>(r.date||"").startsWith(pfMonth));
+    const teamMeta={}; const unmatched={spend:0,conv:0,byCamp:{}};
+    monthRows.forEach(r=>{
+      const hay=`${r.campaign||""} ${r.adset||""} ${r.adName||""}`.toLowerCase();
+      const t=(pfTeams||[]).find(tm=>(tm.keywords||[]).some(k=>k==="*"||(k&&hay.includes(String(k).toLowerCase()))));
+      if(t){ const a=teamMeta[t.id]=teamMeta[t.id]||{spend:0,conv:0}; a.spend+=r.spend||0; a.conv+=r.convValue||0; }
+      else{
+        unmatched.spend+=r.spend||0; unmatched.conv+=r.convValue||0;
+        const c=r.campaign||r.adName||"(이름 없음)";
+        unmatched.byCamp[c]=(unmatched.byCamp[c]||0)+(r.spend||0);
+      }
+    });
+
+    const addTeam=()=>{
+      const name=window.prompt("팀 이름 (예: 이미용, 헬스케어)"); if(!name) return;
+      const kw=window.prompt("메타 캠페인/광고명 매칭 키워드 — 쉼표로 구분\n(예: 드라이기,고데기,갈바닉 · 전부 매칭은 *)")||"";
+      setPfTeams(prev=>[...(prev||[]),{id:Date.now()+"",name:name.trim(),keywords:kw.split(",").map(s=>s.trim()).filter(Boolean)}]);
+    };
+    const editTeamKw=(t)=>{
+      const kw=window.prompt(`"${t.name}" 매칭 키워드 (쉼표 구분)`,(t.keywords||[]).join(","));
+      if(kw==null) return;
+      setPfTeams(prev=>(prev||[]).map(x=>x.id===t.id?{...x,keywords:kw.split(",").map(s=>s.trim()).filter(Boolean)}:x));
+    };
+    const delTeam=(t)=>{
+      if(!window.confirm(`"${t.name}" 팀을 삭제할까요? (모든 월의 예산 행도 함께 삭제)`)) return;
+      setPfTeams(prev=>(prev||[]).filter(x=>x.id!==t.id));
+      setPfBudgets(prev=>(prev||[]).filter(b=>b.teamId!==t.id));
+    };
+    const addBudget=(t)=>{
+      const src=window.prompt(`"${t.name}" 매체 (${PF_SOURCES.join(" / ")})`,"메타"); if(!src) return;
+      setPfBudgets(prev=>[...(prev||[]),{id:Date.now()+"",month:pfMonth,teamId:t.id,source:src.trim(),budget:0,targetRoas:0,spent:0}]);
+    };
+    const patchBudget=(id,patch)=>setPfBudgets(prev=>(prev||[]).map(b=>b.id===id?{...b,...patch}:b));
+    const delBudget=(id)=>{ if(window.confirm("이 예산 행을 삭제할까요?")) setPfBudgets(prev=>(prev||[]).filter(b=>b.id!==id)); };
+    const copyPrev=()=>{
+      const [y,m]=pfMonth.split("-").map(Number);
+      const pd=new Date(y,m-2,1);
+      const pm=`${pd.getFullYear()}-${String(pd.getMonth()+1).padStart(2,"0")}`;
+      const src=(pfBudgets||[]).filter(b=>b.month===pm);
+      if(!src.length) return alert(`${pm} 예산이 없습니다`);
+      const cur=(pfBudgets||[]).filter(b=>b.month===pfMonth);
+      if(cur.length&&!window.confirm("이번 달에 이미 예산 행이 있어요. 전월 행을 추가로 복사할까요?")) return;
+      setPfBudgets(prev=>[...(prev||[]),...src.map((b,i)=>({...b,id:`${Date.now()}-${i}`,month:pfMonth,spent:0}))]);
+    };
+
+    const rows=(pfBudgets||[]).filter(b=>b.month===pfMonth);
+    const rowStat=(b)=>{
+      if(b.source==="메타"){
+        const a=teamMeta[b.teamId]||{spend:0,conv:0};
+        return {spent:a.spend,roas:a.spend>0?a.conv/a.spend*100:null,auto:true};
+      }
+      return {spent:b.spent||0,roas:null,auto:false};
+    };
+    const totBudget=rows.reduce((s,b)=>s+(b.budget||0),0);
+    const totSpent=rows.reduce((s,b)=>s+rowStat(b).spent,0);
+    const totRatio=totBudget>0?totSpent/totBudget:0;
+
+    const PaceBar=({ratio})=>(
+      <div style={{position:"relative",width:90,height:8,background:C.cream,borderRadius:4}}>
+        <div style={{position:"absolute",left:0,top:0,bottom:0,width:`${Math.min(100,ratio*100)}%`,
+          background:ratio>elapsedRatio+0.1?C.bad:ratio<elapsedRatio-0.1?C.warn:C.good,borderRadius:4}}/>
+        <div style={{position:"absolute",left:`${Math.min(100,elapsedRatio*100)}%`,top:-2,bottom:-2,width:2,background:C.ink,borderRadius:1}}/>
+      </div>
+    );
+    const paceChip=(ratio,budget)=>{
+      if(!budget) return <span style={{fontSize:9,color:C.inkLt}}>예산 미설정</span>;
+      const diff=ratio-elapsedRatio;
+      const [label,color,bg]=diff>0.1?["조기 소진",C.bad,"#FEF0F0"]:diff<-0.1?["미달 소진",C.warn,"#FFF8EC"]:["정상",C.good,"#EDF7F1"];
+      return <span style={{fontSize:9,fontWeight:700,padding:"2px 7px",borderRadius:20,color,background:bg,border:`1px solid ${color}33`}}>{label}</span>;
+    };
+    const NumIn=({val,onCommit,w=80})=>(
+      <input key={String(val)} defaultValue={val||""} inputMode="numeric"
+        onBlur={e=>{const v=Number(String(e.target.value).replace(/[^0-9.]/g,""))||0; if(v!==(val||0)) onCommit(v);}}
+        style={{width:w,padding:"4px 6px",border:`1px solid ${C.border}`,borderRadius:6,fontSize:11,fontFamily:"inherit",textAlign:"right",background:C.white}}/>
+    );
+    const th={padding:"6px 8px",textAlign:"left",fontWeight:700,color:C.inkMid,borderBottom:`1px solid ${C.border}`,whiteSpace:"nowrap"};
+    const td={padding:"6px 8px",whiteSpace:"nowrap"};
+    const unmatchedTop=Object.entries(unmatched.byCamp).sort((a,b)=>b[1]-a[1]).slice(0,5);
+
+    return(
+      <div style={{display:"grid",gap:14}}>
+        {/* 월 셀렉터 + 요약 */}
+        <Card>
+          <CardTitle title="📊 포트폴리오 — 팀별 예산 · 페이싱" sub="전 카테고리 마케팅 예산 계획과 집행 현황 (메타 집행액은 자동, 그 외 매체는 수동 입력)"
+            action={
+              <div style={{display:"flex",alignItems:"center",gap:6}}>
+                <Btn small variant="neutral" onClick={()=>shiftMonth(-1)}>◀</Btn>
+                <span style={{fontSize:13,fontWeight:800,color:C.ink}}>{pfMonth}</span>
+                <Btn small variant="neutral" onClick={()=>shiftMonth(1)}>▶</Btn>
+                <Btn small variant="ghost" onClick={copyPrev}>전월 예산 복사</Btn>
+              </div>
+            }/>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(140px,1fr))",gap:10}}>
+            {[
+              ["총 예산",fmtW(totBudget)],
+              ["집행액",fmtW(totSpent)],
+              ["집행률",totBudget>0?`${Math.round(totRatio*100)}%`:"—"],
+              ["월 경과율",`${Math.round(elapsedRatio*100)}%`],
+            ].map(([l,v])=>(
+              <div key={l} style={{border:`1px solid ${C.border}`,borderRadius:12,padding:"10px 12px",background:C.cream}}>
+                <div style={{fontSize:10,color:C.inkLt,fontWeight:700}}>{l}</div>
+                <div style={{fontSize:16,fontWeight:900,color:C.ink,marginTop:2}}>{v}</div>
+              </div>
+            ))}
+          </div>
+          {totBudget>0&&<div style={{marginTop:10,display:"flex",alignItems:"center",gap:8}}>
+            <PaceBar ratio={totRatio}/>
+            {paceChip(totRatio,totBudget)}
+            <span style={{fontSize:10,color:C.inkLt}}>세로선 = 오늘 기준 월 경과 지점</span>
+          </div>}
+        </Card>
+
+        {/* 팀 구성 */}
+        <Card>
+          <CardTitle title="팀 구성" sub="키워드는 메타 캠페인·광고세트·광고명과 부분 일치로 팀 집행액을 자동 배정합니다"
+            action={<Btn small onClick={addTeam}>+ 팀 추가</Btn>}/>
+          {!(pfTeams||[]).length
+            ?<div style={{fontSize:11,color:C.inkLt,padding:"8px 0"}}>아직 팀이 없어요. "팀 추가"로 시작하세요 (예: 이미용 → 키워드 드라이기,고데기,갈바닉,거울)</div>
+            :<div style={{display:"flex",flexWrap:"wrap",gap:8}}>
+              {(pfTeams||[]).map(t=>(
+                <div key={t.id} style={{border:`1px solid ${C.border}`,borderRadius:12,padding:"8px 12px",background:C.white,display:"flex",alignItems:"center",gap:8}}>
+                  <span style={{fontSize:12,fontWeight:800,color:C.ink}}>{t.name}</span>
+                  <span style={{fontSize:10,color:C.inkMid}}>{(t.keywords||[]).length?(t.keywords||[]).join(", "):"키워드 없음"}</span>
+                  <button onClick={()=>editTeamKw(t)} style={{background:"none",border:"none",cursor:"pointer",fontSize:10,color:C.rose,fontWeight:700,padding:0,fontFamily:"inherit"}}>수정</button>
+                  <button onClick={()=>delTeam(t)} style={{background:"none",border:"none",cursor:"pointer",fontSize:10,color:C.bad,padding:0,fontFamily:"inherit"}}>삭제</button>
+                </div>
+              ))}
+            </div>}
+        </Card>
+
+        {/* 예산 그리드 */}
+        <Card>
+          <CardTitle title={`${pfMonth} 예산 그리드`} sub="예산·목표 ROAS는 셀에서 바로 입력 (포커스 아웃 시 저장). 메타 행 집행액·ROAS는 자동 집계"/>
+          {!(pfTeams||[]).length
+            ?<div style={{fontSize:11,color:C.inkLt}}>먼저 팀을 추가하세요.</div>
+            :(pfTeams||[]).map(t=>{
+              const tRows=rows.filter(b=>b.teamId===t.id);
+              const tBudget=tRows.reduce((s,b)=>s+(b.budget||0),0);
+              const tSpent=tRows.reduce((s,b)=>s+rowStat(b).spent,0);
+              return(
+                <div key={t.id} style={{marginBottom:16}}>
+                  <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
+                    <span style={{fontSize:12,fontWeight:800,color:C.ink}}>{t.name}</span>
+                    <span style={{fontSize:10,color:C.inkMid}}>{fmtW(tSpent)} / {fmtW(tBudget)}</span>
+                    {tBudget>0&&paceChip(tBudget>0?tSpent/tBudget:0,tBudget)}
+                    <Btn small variant="neutral" onClick={()=>addBudget(t)}>+ 매체</Btn>
+                  </div>
+                  {!tRows.length
+                    ?<div style={{fontSize:10,color:C.inkLt,paddingLeft:2}}>예산 행 없음 — "+ 매체"로 추가</div>
+                    :<div style={{overflowX:"auto"}}>
+                      <table style={{width:"100%",borderCollapse:"collapse",fontSize:11}}>
+                        <thead><tr style={{background:C.cream}}>
+                          {["매체","예산","집행액","집행률","페이싱","ROAS","목표 ROAS",""].map(h=>
+                            <th key={h} style={th}>{h}</th>)}
+                        </tr></thead>
+                        <tbody>
+                          {tRows.map(b=>{
+                            const st=rowStat(b);
+                            const ratio=b.budget>0?st.spent/b.budget:0;
+                            return(
+                              <tr key={b.id} style={{borderBottom:`1px solid ${C.cream}`}}>
+                                <td style={{...td,fontWeight:700,color:C.ink}}>{b.source}
+                                  {st.auto&&<span style={{fontSize:8,color:C.sage,fontWeight:700,marginLeft:4}}>자동</span>}</td>
+                                <td style={td}><NumIn val={b.budget} onCommit={v=>patchBudget(b.id,{budget:v})}/></td>
+                                <td style={td}>{st.auto
+                                  ?<span style={{fontWeight:700}}>{fmtW(st.spent)}</span>
+                                  :<NumIn val={b.spent} onCommit={v=>patchBudget(b.id,{spent:v})}/>}</td>
+                                <td style={td}>{b.budget>0?`${Math.round(ratio*100)}%`:"—"}</td>
+                                <td style={td}><div style={{display:"flex",alignItems:"center",gap:6}}><PaceBar ratio={ratio}/>{paceChip(ratio,b.budget)}</div></td>
+                                <td style={td}>{st.roas!=null
+                                  ?<span style={{fontWeight:800,color:b.targetRoas>0?(st.roas>=b.targetRoas?C.good:C.bad):C.ink}}>{Math.round(st.roas)}%</span>
+                                  :<span style={{color:C.inkLt}}>—</span>}</td>
+                                <td style={td}><NumIn val={b.targetRoas} onCommit={v=>patchBudget(b.id,{targetRoas:v})} w={60}/></td>
+                                <td style={td}><button onClick={()=>delBudget(b.id)} style={{background:"none",border:"none",cursor:"pointer",fontSize:10,color:C.bad,padding:0,fontFamily:"inherit"}}>삭제</button></td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>}
+                </div>
+              );
+            })}
+        </Card>
+
+        {/* 미분류 메타 지출 */}
+        {unmatched.spend>0&&(
+          <Card>
+            <CardTitle title="⚠️ 미분류 메타 지출" sub={`${pfMonth} 중 어느 팀 키워드에도 매칭되지 않은 지출 — 팀 키워드에 캠페인명을 추가하면 자동 배정됩니다`}/>
+            <div style={{fontSize:13,fontWeight:900,color:C.warn,marginBottom:8}}>{fmtW(unmatched.spend)}</div>
+            <div style={{display:"grid",gap:4}}>
+              {unmatchedTop.map(([name,sp])=>(
+                <div key={name} style={{display:"flex",justifyContent:"space-between",fontSize:10.5,color:C.inkMid,borderBottom:`1px solid ${C.cream}`,padding:"4px 0"}}>
+                  <span style={{overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",maxWidth:"70%"}}>{name}</span>
+                  <span style={{fontWeight:700}}>{fmtW(sp)}</span>
+                </div>
+              ))}
+            </div>
+          </Card>
+        )}
+      </div>
+    );
+  })();
+
   const NAVS=[
     {id:"home",      icon:"home",           label:"홈"},
+    {id:"portfolio", icon:"donut_small",    label:"포트폴리오"},
     {id:"erp",       icon:"storage",        label:"ERP"},
     {id:"naver",     icon:"ads_click",      label:"네이버광고"},
     {id:"meta",      icon:"campaign",       label:"메타광고"},
@@ -17268,6 +17498,7 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
           {sec==="detailplan"  && <DetailPlanSection/>}
           {sec==="coupang"     && CoupangSection}
           {sec==="ranking"     && RankingSection}
+          {sec==="portfolio"   && PortfolioSection}
           {sec==="guide"       && <iframe src="/oa-guide.html" title="업무 가이드" style={{width:"100%",height:"calc(100vh - 150px)",border:`1px solid ${C.border}`,borderRadius:14,background:"#fff"}}/>}
         </main>
       </div>
