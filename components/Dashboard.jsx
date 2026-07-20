@@ -7217,6 +7217,11 @@ export default function OaDashboard(){
   const [pfTeams, setPfTeams]     = useSyncState("oa_teams_v1", []);   // [{id,name,keywords:[]}]
   const [pfBudgets, setPfBudgets] = useSyncState("oa_budget_v1", []);  // [{id,month,teamId,source,budget,targetRoas,spent}]
   const [pfMonth, setPfMonth]     = useState(()=>{const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}`;});
+  // 우선순위 탭 (scripts/sync-priority.js 로컬 크론이 기록 — 읽기 전용)
+  const [prioData] = useSyncState("oa_priority_v1", null);
+  const [prioCat, setPrioCat] = useState("전체");
+  const [prioQ, setPrioQ] = useState("");
+  const [prioActOnly, setPrioActOnly] = useState(false);
   const [promoEvents, setPromoEvents] = useSyncState("oa_events_v1", []);
   // 채널 랭킹 트래커: [{id,date,channel,product,rank}] — 랭킹 탭
   const [rankLog, setRankLog] = useSyncState("oa_rank_tracker_v1", []);
@@ -8053,9 +8058,143 @@ export default function OaDashboard(){
     );
   })();
 
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  // 🔥 우선순위 — 전제품(보아르 제외) 매출 기반 화력 배분
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  const PrioritySection=(()=>{
+    const fmtW=n=>Math.abs(n)>=100000000?`${(n/100000000).toFixed(1)}억`:Math.abs(n)>=10000?`${Math.round(n/10000).toLocaleString()}만`:`${Math.round(n||0).toLocaleString()}`;
+    const items=(prioData?.items)||[];
+    // 액션 분류 — 최근30일 매출 + 성장률 기반
+    const classify=(it)=>{
+      const g=it.p30>0?it.s30/it.p30-1:null;
+      if(g!==null&&it.s30>=20000000&&g>=0.3)  return {key:"boost", label:"🔥 증액",     color:C.bad,  bg:"#FEF0F0", desc:"타오르는 중 — 기름 붓기"};
+      if(g!==null&&it.s30>=10000000&&g<=-0.3) return {key:"cool",  label:"⚠️ 하락 점검", color:C.warn, bg:"#FFF8EC", desc:"급락 — 원인 확인/소화 검토"};
+      if(it.s30>=50000000&&(g===null||Math.abs(g)<0.15)) return {key:"guard", label:"🛡 방어", color:"#5B7FA6", bg:"#EEF4FA", desc:"캐시카우 — 화력 유지"};
+      if(g!==null&&it.s30>=5000000&&it.s30<20000000&&g>=0.5) return {key:"spark", label:"💡 점화", color:C.good, bg:"#EDF7F1", desc:"불씨 커짐 — 소재·광고 투입 기회"};
+      return null;
+    };
+    const enriched=items.map(it=>({...it,growth:it.p30>0?it.s30/it.p30-1:null,act:classify(it)}));
+    const cats=["전체",...Array.from(new Set(items.map(i=>i.cat1))).sort()];
+    const q=prioQ.trim();
+    const filtered=enriched.filter(it=>
+      (prioCat==="전체"||it.cat1===prioCat)&&
+      (!q||it.product.includes(q)||(it.cat2||"").includes(q))&&
+      (!prioActOnly||it.act));
+    const counts={boost:0,spark:0,guard:0,cool:0};
+    enriched.forEach(it=>{if(it.act)counts[it.act.key]++;});
+    // 카테고리 광고비 대비 매출 (최근 월)
+    const adSpend=(prioData?.adSpend)||[];
+    const lastMonth=adSpend.map(a=>a.month).sort().pop();
+    const catSales={}; enriched.forEach(it=>{catSales[it.cat1]=(catSales[it.cat1]||0)+it.s30;});
+    const adRows=adSpend.filter(a=>a.month===lastMonth&&a.cat!=="공통")
+      .map(a=>({...a,sales:catSales[a.cat]||0}))
+      .sort((a,b)=>b.spend-a.spend);
+    const growthChip=(g)=>{
+      if(g===null) return <span style={{fontSize:10,color:C.inkLt}}>신규</span>;
+      const up=g>=0;
+      return <span style={{fontSize:11,fontWeight:800,color:up?(g>=0.3?C.good:C.inkMid):(g<=-0.3?C.bad:C.inkMid)}}>{up?"+":""}{Math.round(g*100)}%</span>;
+    };
+    const th={padding:"6px 8px",textAlign:"left",fontWeight:700,color:C.inkMid,borderBottom:`1px solid ${C.border}`,whiteSpace:"nowrap"};
+    const td={padding:"6px 8px",whiteSpace:"nowrap"};
+    const updated=prioData?.updated?new Date(prioData.updated).toLocaleString("ko-KR",{month:"numeric",day:"numeric",hour:"numeric",minute:"2-digit"}):null;
+
+    return(
+      <div style={{display:"grid",gap:14}}>
+        <Card>
+          <CardTitle title="🔥 우선순위 — 지금 불붙일 제품" sub={`전제품(보아르 제외) 최근 30일 vs 이전 30일 매출 기준 · ${updated?`데이터 갱신 ${updated}`:"데이터 없음 — sync-priority.js 실행 필요"}`}/>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(150px,1fr))",gap:10}}>
+            {[
+              ["🔥 증액 후보",counts.boost,C.bad,"매출 2천만↑ & +30%↑"],
+              ["💡 점화 후보",counts.spark,C.good,"매출 5백만~2천만 & +50%↑"],
+              ["🛡 방어 (캐시카우)",counts.guard,"#5B7FA6","매출 5천만↑ & 보합"],
+              ["⚠️ 하락 점검",counts.cool,C.warn,"매출 1천만↑ & -30%↓"],
+            ].map(([l,v,color,d])=>(
+              <div key={l} style={{border:`1px solid ${C.border}`,borderRadius:12,padding:"10px 12px",background:C.cream}}>
+                <div style={{fontSize:10,color:C.inkLt,fontWeight:700}}>{l}</div>
+                <div style={{fontSize:18,fontWeight:900,color,marginTop:2}}>{v}<span style={{fontSize:11,color:C.inkLt,fontWeight:600}}> 개</span></div>
+                <div style={{fontSize:9,color:C.inkLt,marginTop:2}}>{d}</div>
+              </div>
+            ))}
+          </div>
+        </Card>
+
+        {adRows.length>0&&(
+          <Card>
+            <CardTitle title={`💸 카테고리 광고비 vs 매출 (${lastMonth})`} sub="오아 브랜드 월 광고비 대비 해당 카테고리 최근 30일 매출 — 배분이 안 맞는 곳 점검"/>
+            <div style={{overflowX:"auto"}}>
+              <table style={{width:"100%",borderCollapse:"collapse",fontSize:11}}>
+                <thead><tr style={{background:C.cream}}>
+                  {["카테고리","월 광고비","최근 30일 매출","매출/광고비"].map(h=><th key={h} style={th}>{h}</th>)}
+                </tr></thead>
+                <tbody>
+                  {adRows.map(a=>{
+                    const ratio=a.spend>0?a.sales/a.spend:null;
+                    return(
+                      <tr key={a.cat} style={{borderBottom:`1px solid ${C.cream}`}}>
+                        <td style={{...td,fontWeight:700}}>{a.cat}</td>
+                        <td style={td}>₩{fmtW(a.spend)}</td>
+                        <td style={td}>₩{fmtW(a.sales)}</td>
+                        <td style={{...td,fontWeight:800,color:ratio!==null&&ratio<1?C.bad:ratio!==null&&ratio>=3?C.good:C.ink}}>{ratio!==null?`${ratio.toFixed(1)}배`:"—"}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </Card>
+        )}
+
+        <Card>
+          <CardTitle title="📋 제품별 우선순위" sub={`${filtered.length}개 표시`}
+            action={
+              <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
+                <select value={prioCat} onChange={e=>setPrioCat(e.target.value)}
+                  style={{padding:"5px 8px",border:`1px solid ${C.border}`,borderRadius:8,fontSize:11,fontFamily:"inherit",background:C.white}}>
+                  {cats.map(c=><option key={c} value={c}>{c}</option>)}
+                </select>
+                <input value={prioQ} onChange={e=>setPrioQ(e.target.value)} placeholder="제품 검색"
+                  style={{padding:"5px 8px",border:`1px solid ${C.border}`,borderRadius:8,fontSize:11,fontFamily:"inherit",width:110}}/>
+                <label style={{display:"flex",alignItems:"center",gap:4,fontSize:11,color:C.inkMid,cursor:"pointer"}}>
+                  <input type="checkbox" checked={prioActOnly} onChange={e=>setPrioActOnly(e.target.checked)}/>액션만
+                </label>
+              </div>
+            }/>
+          <div style={{overflowX:"auto"}}>
+            <table style={{width:"100%",borderCollapse:"collapse",fontSize:11}}>
+              <thead><tr style={{background:C.cream}}>
+                {["#","카테고리","제품","최근 30일","이전 30일","성장률","수량(30일)","액션"].map(h=><th key={h} style={th}>{h}</th>)}
+              </tr></thead>
+              <tbody>
+                {filtered.slice(0,100).map((it,i)=>(
+                  <tr key={it.product} style={{borderBottom:`1px solid ${C.cream}`,background:it.act?it.act.bg+"55":"transparent"}}>
+                    <td style={{...td,color:C.inkLt}}>{i+1}</td>
+                    <td style={{...td,color:C.inkMid}}>{it.cat1}<span style={{color:C.inkLt}}> · {it.cat2}</span></td>
+                    <td style={{...td,fontWeight:700}}>{it.product}</td>
+                    <td style={{...td,fontWeight:800}}>₩{fmtW(it.s30)}</td>
+                    <td style={{...td,color:C.inkMid}}>₩{fmtW(it.p30)}</td>
+                    <td style={td}>{growthChip(it.growth)}</td>
+                    <td style={{...td,color:C.inkMid}}>{(it.q30||0).toLocaleString()}</td>
+                    <td style={td}>{it.act?(
+                      <span title={it.act.desc} style={{fontSize:10,fontWeight:800,padding:"2px 8px",borderRadius:20,color:it.act.color,background:it.act.bg,border:`1px solid ${it.act.color}33`,cursor:"default"}}>{it.act.label}</span>
+                    ):<span style={{fontSize:10,color:C.inkLt}}>—</span>}</td>
+                  </tr>
+                ))}
+                {filtered.length===0&&(
+                  <tr><td colSpan={8} style={{...td,textAlign:"center",color:C.inkLt,padding:20}}>표시할 제품이 없습니다</td></tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+          {filtered.length>100&&<div style={{fontSize:10,color:C.inkLt,marginTop:8}}>상위 100개만 표시 (전체 {filtered.length}개)</div>}
+        </Card>
+      </div>
+    );
+  })();
+
   const NAVS=[
     {id:"home",      icon:"home",           label:"홈"},
     {id:"portfolio", icon:"donut_small",    label:"포트폴리오"},
+    {id:"priority",  icon:"local_fire_department", label:"우선순위"},
     {id:"erp",       icon:"storage",        label:"ERP"},
     {id:"naver",     icon:"ads_click",      label:"네이버광고"},
     {id:"meta",      icon:"campaign",       label:"메타광고"},
@@ -17491,6 +17630,7 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
           {sec==="insight"     && InsightSection}
           {sec==="coupang"     && CoupangSection}
           {sec==="portfolio"   && PortfolioSection}
+          {sec==="priority"    && PrioritySection}
           {sec==="guide"       && <iframe src="/oa-guide.html" title="업무 가이드" style={{width:"100%",height:"calc(100vh - 150px)",border:`1px solid ${C.border}`,borderRadius:14,background:"#fff"}}/>}
         </main>
       </div>

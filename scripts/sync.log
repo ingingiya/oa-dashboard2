@@ -36,3 +36,104 @@ MySQL 조회 중...
 오류: connect ENETUNREACH 52.78.125.230:3306 - Local (0.0.0.0:53543)
 리마인드 대상 없음
 스마트스토어 동기화 실패: 토큰 실패: {"code":"GW.IP_NOT_ALLOWED","message":"호출이 허용되지 않은 IP입니다.","timestamp":"2026-07-08T08:30:36.495+09:00","traceId":"AZ74OlBycWGCw866XLtvAA^1782281031200^93747641"}
+발송 완료 (썸네일 5장):
+📋 7/9(목) 아침 브리핑
+
+🎨 소재 검토 6건 (평균 CTR 1.49%)
+1. 소닉플로우_삼남매엄마들사이에소문난
+   ㄴ 7일 48만원 · CTR 0.51%
+   ㄴ 재제작: oa-dashboard2.vercel.app/?recreate=%EC%86%8C%EB%8B%89%ED%94%8C%EB%A1%9C%EC%9A%B0_%EC%82%BC%EB%82%A8%EB%A7%A4%EC%97%84%EB%A7%88%EB%93%A4%EC%82%AC%EC%9D%B4%EC%97%90%EC%86%8C%EB%AC%B8%EB%82%9C
+2. 드라이기모음전_여름드라이기바꿀때됐다
+   ㄴ 7일 44만원 · CTR 0.51%
+   ㄴ 재제작: oa-dashboard2.vercel.app/?recreate=%EB%93%9C%EB%9D%BC%EC%9D%B4%EA%B8%B0%EB%AA%A8%EC%9D%8C%EC%A0%84_%EC%97%AC%EB%A6%84%EB%93%9C%EB%9D%BC%EC%9D%B4%EA%B8%B0%EB%B0%94%EA%BF%80%EB%95%8C%EB%90%90%EB%8B%A4
+3. 소닉플로우_디지털여름광명
+   ㄴ 7일 29만원 · CTR 0.68%
+   ㄴ 재제작: oa-dashboard2.vercel.app/?recreate=%EC%86%8C%EB%8B%89%ED%94%8C%EB%A1%9C%EC%9A%B0_%EB%94%94%EC%A7%80%ED%84%B8%EC%97%AC%EB%A6%84%EA%B4%91%EB%AA%85
+4. 드라이기모음전_초경량플라즈마
+   ㄴ 7일 22만원 · CTR 0.63%
+   ㄴ 재제작: oa-dashboard2.vercel.app/?recreate=%EB%93%9C%EB%9D%BC%EC%9D%B4%EA%B8%B0%EB%AA%A8%EC%9D%8C%EC%A0%84_%EC%B4%88%EA%B2%BD%EB%9F%89%ED%94%8C%EB%9D%BC%EC%A6%88%EB%A7%88
+5. 소닉플로우_이민정 소구 8
+   ㄴ 7일 15만원 · CTR 0.52%
+   ㄴ 재제작: oa-dashboard2.vercel.app/?recreate=%EC%86%8C%EB%8B%89%ED%94%8C%EB%A1%9C%EC%9A%B0_%EC%9D%B4%EB%AF%BC%EC%A0%95%20%EC%86%8C%EA%B5%AC%208
+
+⚠️ 확인: 이미용 매출데이터 누락
+
+👉 oa-dashboard2.vercel.app
+리마인드 대상 없음
+[2026. 7. 12. AM 9:00:10] 광고/프로모션 동기화 시작
+광고 캠페인 데이터 조회 중...
+오류: connect ETIMEDOUT
+[2026. 7. 13. AM 9:00:52] 광고/프로모션 동기화 시작
+광고 캠페인 데이터 조회 중...
+오류: connect ETIMEDOUT 52.78.125.230:3306
+스마트스토어 동기화 실패: fetch failed
+발송 완료 (썸네일 5장):
+📋 7/14(화) 아침 브리핑
+
+🎨 소재 검토 6건 (평균 CTR 1.71%)
+1. 드라이기모음전_여름드라이기바꿀때됐다
+   ㄴ 7일 45만원 · CTR 0.57%
+   ㄴ 재제작: oa-dashboard2.vercel.app/?recreate=%EB%93%9C%EB%9D%BC%EC%9D%B4%EA%B8%B0%EB%AA%A8%EC%9D%8C%EC%A0%84_%EC%97%AC%EB%A6%84%EB%93%9C%EB%9D%BC%EC%9D%B4%EA%B8%B0%EB%B0%94%EA%BF%80%EB%95%8C%EB%90%90%EB%8B%A4
+2. 드라이기모음전_초경량플라즈마
+   ㄴ 7일 33만원 · CTR 0.62%
+   ㄴ 재제작: oa-dashboard2.vercel.app/?recreate=%EB%93%9C%EB%9D%BC%EC%9D%B4%EA%B8%B0%EB%AA%A8%EC%9D%8C%EC%A0%84_%EC%B4%88%EA%B2%BD%EB%9F%89%ED%94%8C%EB%9D%BC%EC%A6%88%EB%A7%88
+3. 소닉플로우_삼남매엄마들사이에소문난
+   ㄴ 7일 26만원 · CTR 0.58%
+   ㄴ 재제작: oa-dashboard2.vercel.app/?recreate=%EC%86%8C%EB%8B%89%ED%94%8C%EB%A1%9C%EC%9A%B0_%EC%82%BC%EB%82%A8%EB%A7%A4%EC%97%84%EB%A7%88%EB%93%A4%EC%82%AC%EC%9D%B4%EC%97%90%EC%86%8C%EB%AC%B8%EB%82%9C
+4. 소닉플로우_디지털여름광명
+   ㄴ 7일 18만원 · CTR 0.67%
+   ㄴ 재제작: oa-dashboard2.vercel.app/?recreate=%EC%86%8C%EB%8B%89%ED%94%8C%EB%A1%9C%EC%9A%B0_%EB%94%94%EC%A7%80%ED%84%B8%EC%97%AC%EB%A6%84%EA%B4%91%EB%AA%85
+5. 소닉플로우_이민정 소구 1
+   ㄴ 7일 11만원 · CTR 0.37%
+   ㄴ 재제작: oa-dashboard2.vercel.app/?recreate=%EC%86%8C%EB%8B%89%ED%94%8C%EB%A1%9C%EC%9A%B0_%EC%9D%B4%EB%AF%BC%EC%A0%95%20%EC%86%8C%EA%B5%AC%201
+
+🎯 오늘의 가설 6건
+1. 오아에어리라이트-화이트-리테일
+   ㄴ 원인분석 · 담당 미지정❗
+2. 오아에어리소닉드라이기-베이지
+   ㄴ 원인분석 · 담당 미지정❗
+3. 오아프리온무선고데기-핑크
+   ㄴ 원인분석 · 담당 미지정❗
+4. 오아소닉플로우-베이지
+   ㄴ 마케팅액션 · 담당 미지정❗
+5. 오아오토고데기40mm-퍼플
+   ㄴ 마케팅액션 · 담당 미지정❗
+6. 오아에어리소닉드라이기-핑크
+   ㄴ 마케팅액션 · 담당 미지정❗
+
+⚠️ 확인: 이미용 매출데이터 누락
+
+👉 oa-dashboard2.vercel.app
+발송: 미지정 6건
+[2026. 7. 15. AM 9:04:12] 광고/프로모션 동기화 시작
+광고 캠페인 데이터 조회 중...
+오류: connect ENETUNREACH 52.78.125.230:3306 - Local (0.0.0.0:62438)
+[2026. 7. 15. AM 9:05:03] 랭킹 실판매 동기화 시작
+❌ 오류: connect ENETUNREACH 52.78.125.230:3306 - Local (0.0.0.0:62759)
+쿠팡 파일 없음
+지그재그 파일 없음
+경고: 쿠팡: 파일 없음; 지그재그: 파일 없음
+업서트 대상: 0행 (2026-06-11 ~ 2026-07-16)
+node:fs:440
+    return binding.readFileUtf8(path, stringToFlags(options.flag));
+                   ^
+
+Error: ENOENT: no such file or directory, open '"/Users/kirby/.naverworks/private.key"'
+    at readFileSync (node:fs:440:20)
+    at file:///Users/kirby/oa-dashboard2/scripts/nworks-auth.mjs:18:13
+    at ModuleJob.run (node:internal/modules/esm/module_job:430:25)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:661:26)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5) {
+  errno: -2,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: '"/Users/kirby/.naverworks/private.key"'
+}
+
+Node.js v24.14.0
+쿠팡 파일 없음
+지그재그 파일 없음
+경고: 쿠팡: 파일 없음; 지그재그: 파일 없음
+업서트 대상: 0행 (2026-06-13 ~ 2026-07-18)
+[2026. 7. 19. AM 9:12:19] 랭킹 실판매 동기화 시작
+❌ 오류: connect ETIMEDOUT
