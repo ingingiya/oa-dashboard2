@@ -8444,7 +8444,6 @@ export default function OaDashboard(){
     {id:"home",      icon:"home",           label:"홈"},
     {id:"portfolio", icon:"donut_small",    label:"포트폴리오"},
     {id:"priority",  icon:"local_fire_department", label:"우선순위"},
-    {id:"erp",       icon:"storage",        label:"ERP"},
     {id:"naver",     icon:"ads_click",      label:"네이버광고"},
     {id:"meta",      icon:"campaign",       label:"메타광고"},
     {id:"guide",     icon:"menu_book",      label:"가이드"},
@@ -8547,7 +8546,7 @@ export default function OaDashboard(){
           <div style={{display:"flex",gap:28,marginTop:16,paddingTop:14,flexWrap:"wrap",position:"relative",
             borderTop:"1px solid rgba(255,255,255,.12)"}}>
             {homeSales&&(
-              <div onClick={()=>setSec("erp")} style={{cursor:"pointer"}}>
+              <div>
                 <div style={{fontSize:10,fontWeight:700,color:"#8E8E93"}}>오늘 매출</div>
                 <div style={{fontSize:21,fontWeight:800,letterSpacing:"-0.02em",marginTop:2}}>{fmtS(homeSales.today)}</div>
               </div>
@@ -8560,7 +8559,7 @@ export default function OaDashboard(){
               </div>
             )}
             {homeSales&&(
-              <div onClick={()=>setSec("erp")} style={{cursor:"pointer"}}>
+              <div>
                 <div style={{fontSize:10,fontWeight:700,color:"#8E8E93"}}>이번 주</div>
                 <div style={{fontSize:21,fontWeight:800,letterSpacing:"-0.02em",marginTop:2}}>{fmtS(homeSales.week)}</div>
                 {homeSales.weekChange!==0&&<div style={{fontSize:9.5,fontWeight:700,marginTop:1,
@@ -8568,7 +8567,7 @@ export default function OaDashboard(){
               </div>
             )}
             {homeSales&&(
-              <div onClick={()=>setSec("erp")} style={{cursor:"pointer"}}>
+              <div>
                 <div style={{fontSize:10,fontWeight:700,color:"#8E8E93"}}>이번 달 매출</div>
                 <div style={{fontSize:21,fontWeight:800,letterSpacing:"-0.02em",marginTop:2}}>{fmtS(homeSales.month)}</div>
               </div>
@@ -8775,76 +8774,6 @@ export default function OaDashboard(){
           </div>
         </div>
       )}
-
-      {/* ── 채널 바로가기 + ERP ── */}
-      <div style={{background:C.white,border:"1px solid rgba(0,0,0,.06)",borderRadius:16,padding:"14px 16px",boxShadow:"0 2px 8px rgba(0,0,0,.04)"}}>
-        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:10}}>
-          <div style={{fontSize:9,fontWeight:700,color:C.inkLt,letterSpacing:"0.08em"}}>빠른 링크</div>
-          <button onClick={()=>setQuickLinksEditing(v=>!v)}
-            style={{fontSize:9,padding:"3px 10px",borderRadius:6,border:`1px solid ${C.border}`,
-              background:quickLinksEditing?C.rose:C.cream,color:quickLinksEditing?C.white:C.inkMid,
-              cursor:"pointer",fontFamily:"inherit",fontWeight:700}}>
-            {quickLinksEditing?"완료":"편집"}
-          </button>
-        </div>
-
-        {["channel","erp"].map(group=>(
-          <div key={group} style={{marginBottom:10}}>
-            <div style={{fontSize:9,color:C.inkLt,fontWeight:600,marginBottom:6}}>
-              {group==="channel"?"판매 채널":"ERP / 사내 툴"}
-            </div>
-            <div style={{display:"flex",gap:6,flexWrap:"wrap",alignItems:"center"}}>
-              {quickLinks.filter(l=>l.group===group).map(ch=>(
-                quickLinksEditing ? (
-                  <div key={ch.id} style={{display:"flex",alignItems:"center",gap:4,
-                    background:C.cream,borderRadius:8,padding:"4px 8px",border:`1px solid ${C.border}`}}>
-                    {/* 이름 편집 */}
-                    <input
-                      value={ch.name||""}
-                      onChange={e=>setQuickLinks(quickLinks.map(x=>x.id===ch.id?{...x,name:e.target.value}:x))}
-                      placeholder="이름"
-                      style={{width:70,padding:"3px 6px",border:`1px solid ${C.border}`,borderRadius:6,
-                        fontSize:10,fontFamily:"inherit",outline:"none",fontWeight:700}}
-                    />
-                    {/* URL 편집 */}
-                    <input
-                      value={ch.url||""}
-                      onChange={e=>setQuickLinks(quickLinks.map(x=>x.id===ch.id?{...x,url:e.target.value}:x))}
-                      placeholder="https://..."
-                      style={{width:180,padding:"3px 6px",border:`1px solid ${C.border}`,borderRadius:6,
-                        fontSize:10,fontFamily:"inherit",outline:"none"}}
-                    />
-                    {/* 삭제 */}
-                    <button onClick={()=>setQuickLinks(quickLinks.filter(x=>x.id!==ch.id))}
-                      style={{background:"none",border:"none",cursor:"pointer",color:C.bad,fontSize:13,padding:"0 2px",lineHeight:1}}>
-                      ✕
-                    </button>
-                  </div>
-                ) : (
-                  <a key={ch.id} href={ch.url||"#"} target={ch.url?"_blank":"_self"} rel="noopener noreferrer"
-                    onClick={e=>{if(!ch.url)e.preventDefault();}}
-                    style={{padding:"5px 14px",borderRadius:20,border:`1px solid ${C.border}`,
-                      background:C.cream,color:ch.url?C.ink:C.inkLt,fontSize:11,fontWeight:700,
-                      textDecoration:"none",whiteSpace:"nowrap",opacity:ch.url?1:0.5}}
-                    onMouseEnter={e=>{if(ch.url){e.currentTarget.style.background=group==="erp"?C.purple:C.rose;e.currentTarget.style.color=C.white;e.currentTarget.style.borderColor=group==="erp"?C.purple:C.rose;}}}
-                    onMouseLeave={e=>{e.currentTarget.style.background=C.cream;e.currentTarget.style.color=ch.url?C.ink:C.inkLt;e.currentTarget.style.borderColor=C.border;}}>
-                    {ch.name}
-                  </a>
-                )
-              ))}
-              {/* 항목 추가 버튼 */}
-              {quickLinksEditing&&(
-                <button onClick={()=>setQuickLinks([...quickLinks,{id:`${group}_${Date.now()}`,name:"새 링크",url:"",group}])}
-                  style={{padding:"4px 12px",borderRadius:20,border:`1px dashed ${C.border}`,
-                    background:"transparent",color:C.inkLt,fontSize:11,fontWeight:700,
-                    cursor:"pointer",fontFamily:"inherit",whiteSpace:"nowrap"}}>
-                  + 추가
-                </button>
-              )}
-            </div>
-          </div>
-        ))}
-      </div>
 
       {/* 발주임박은 알림 그룹에 통합됨 — 상세 테이블은 재고 섹션에서 확인 */}
 
@@ -17745,7 +17674,6 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
           {sec==="inf_archive" && <InfluencerArchiveSection/>}
           {sec==="launch"      && <LaunchSection/>}
           {sec==="schedule"    && ScheduleSection}
-          {sec==="erp"         && <ErpSection/>}
           {sec==="naver"       && <NaverSection/>}
           {sec==="creative"    && CreativeSection}
           {sec==="keyword"     && KeywordSection}
