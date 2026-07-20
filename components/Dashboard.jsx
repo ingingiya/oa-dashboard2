@@ -2551,6 +2551,7 @@ function AdSchedulePanel({C, getSetting}) {
   const [promoAds2, setPromoAds2] = useState([]);
   const [promoAdId, setPromoAdId] = useState("");
   const [showAll, setShowAll] = useState(false);
+  const [campQ, setCampQ] = useState("");
 
   const BEAUTY_KW = ["이미용","드라이","고데기","헤어","뷰티","스트레이트","소닉","에어리"];
 
@@ -2600,7 +2601,13 @@ function AdSchedulePanel({C, getSetting}) {
     return ()=>clearInterval(timer);
   },[]);
 
-  const filteredCamps = showAll ? camps : camps.filter(c=>BEAUTY_KW.some(k=>(c.name||"").toLowerCase().includes(k)));
+  // 켜진 것 먼저, 꺼진 것 맨 아래 (같은 상태끼리는 이름순)
+  const byStatus = (arr) => [...arr].sort((a,b)=>
+    ((a.status==="ACTIVE"?0:1)-(b.status==="ACTIVE"?0:1))||(a.name||"").localeCompare(b.name||"","ko"));
+  const cq = campQ.trim().toLowerCase();
+  const filteredCamps = byStatus(
+    (showAll ? camps : camps.filter(c=>BEAUTY_KW.some(k=>(c.name||"").toLowerCase().includes(k))))
+      .filter(c=>!cq||(c.name||"").toLowerCase().includes(cq)));
 
   const loadAdsets = async (campId) => {
     if(expandCamp===campId) { setExpandCamp(null); return; }
@@ -2703,12 +2710,20 @@ function AdSchedulePanel({C, getSetting}) {
   return (
   <div style={{display:"flex",flexDirection:"column",gap:14}}>
     {/* 필터 */}
-    <div style={{display:"flex",alignItems:"center",gap:8}}>
+    <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
       <button onClick={()=>setShowAll(!showAll)} style={{padding:"5px 12px",borderRadius:8,border:`1.5px solid ${showAll?C.border:C.rose}`,
         background:showAll?C.white:C.blush,color:showAll?C.inkMid:C.rose,fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
         {showAll?"전체 캠페인":"이미용만"}
       </button>
-      <span style={{fontSize:10,color:C.inkLt}}>{filteredCamps.length}개 캠페인</span>
+      <div style={{position:"relative",flex:1,minWidth:160,maxWidth:280}}>
+        <span className="material-symbols-outlined" style={{position:"absolute",left:9,top:"50%",transform:"translateY(-50%)",fontSize:14,color:C.inkLt}}>search</span>
+        <input value={campQ} onChange={e=>setCampQ(e.target.value)} placeholder="캠페인 검색"
+          style={{width:"100%",padding:"6px 26px 6px 28px",borderRadius:8,border:`1px solid ${C.border}`,fontSize:11,fontFamily:"inherit",background:C.white,boxSizing:"border-box"}}/>
+        {campQ&&<button onClick={()=>setCampQ("")} style={{position:"absolute",right:4,top:"50%",transform:"translateY(-50%)",border:"none",background:"none",cursor:"pointer",padding:2,display:"flex"}}>
+          <span className="material-symbols-outlined" style={{fontSize:14,color:C.inkLt}}>close</span>
+        </button>}
+      </div>
+      <span style={{fontSize:10,color:C.inkLt}}>{filteredCamps.length}개 캠페인 · 꺼진 캠페인은 맨 아래</span>
     </div>
 
     {/* 캠페인 트리 (접기 가능) */}
@@ -2719,9 +2734,9 @@ function AdSchedulePanel({C, getSetting}) {
         <span style={{fontSize:12,fontWeight:800,color:C.ink}}>광고 소재 ({filteredCamps.length}개 캠페인)</span>
         <span className="material-symbols-outlined" style={{fontSize:16,color:C.inkLt}}>{treeOpen?"expand_less":"expand_more"}</span>
       </button>
-      {filteredCamps.length===0&&treeOpen&&<div style={{padding:20,fontSize:11,color:C.inkLt,textAlign:"center"}}>캠페인 없음</div>}
-      {!treeOpen&&<div style={{fontSize:10,color:C.inkLt,padding:"6px 14px"}}>펼치기를 눌러 캠페인 목록을 확인하세요</div>}
-      {treeOpen&&filteredCamps.map(c=>(
+      {filteredCamps.length===0&&(treeOpen||cq)&&<div style={{padding:20,fontSize:11,color:C.inkLt,textAlign:"center"}}>캠페인 없음</div>}
+      {!treeOpen&&!cq&&<div style={{fontSize:10,color:C.inkLt,padding:"6px 14px"}}>펼치기를 누르거나 검색하면 캠페인 목록이 나옵니다</div>}
+      {(treeOpen||cq)&&filteredCamps.map(c=>(
         <div key={c.id}>
           {/* 캠페인 행 */}
           <div onClick={()=>loadAdsets(c.id)}
@@ -2738,7 +2753,7 @@ function AdSchedulePanel({C, getSetting}) {
           </div>
 
           {/* 광고세트 */}
-          {expandCamp===c.id&&(adsets[c.id]||[]).map(as=>(
+          {expandCamp===c.id&&byStatus(adsets[c.id]||[]).map(as=>(
             <div key={as.id}>
               <div onClick={()=>loadAds(as.id)}
                 style={{display:"flex",alignItems:"center",gap:8,padding:"8px 14px 8px 40px",cursor:"pointer",
@@ -2755,7 +2770,7 @@ function AdSchedulePanel({C, getSetting}) {
               </div>
 
               {/* 광고 */}
-              {expandAdset===as.id&&(ads[as.id]||[]).map(ad=>(
+              {expandAdset===as.id&&byStatus(ads[as.id]||[]).map(ad=>(
                 <div key={ad.id} style={{display:"flex",alignItems:"center",gap:8,padding:"6px 14px 6px 70px",
                   borderBottom:`1px solid ${C.border}11`}}>
                   <StatusDot status={ad.status}/>
