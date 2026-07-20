@@ -7907,148 +7907,186 @@ export default function OaDashboard(){
     const totSpent=rows.reduce((s,b)=>s+rowStat(b).spent,0);
     const totRatio=totBudget>0?totSpent/totBudget:0;
 
-    const PaceBar=({ratio})=>(
-      <div style={{position:"relative",width:90,height:8,background:C.cream,borderRadius:4}}>
+    const TEAM_COLORS=["#2563EB","#7C3AED","#059669","#EA580C","#DB2777","#0891B2","#CA8A04"];
+    const paceState=(ratio,budget)=>{
+      if(!budget) return {label:"예산 미설정",color:C.inkLt,bg:C.cream};
+      const diff=ratio-elapsedRatio;
+      if(diff>0.1)  return {label:"조기 소진",color:"#DC2626",bg:"#FEF2F2"};
+      if(diff<-0.1) return {label:"미달 소진",color:"#EA580C",bg:"#FFF7ED"};
+      return {label:"정상 페이스",color:"#16A34A",bg:"#F0FDF4"};
+    };
+    const PaceBar=({ratio,color="#2563EB",h=10,track="#EEF2F7",markerColor="#18181B"})=>(
+      <div style={{position:"relative",width:"100%",height:h,background:track,borderRadius:h}}>
         <div style={{position:"absolute",left:0,top:0,bottom:0,width:`${Math.min(100,ratio*100)}%`,
-          background:ratio>elapsedRatio+0.1?C.bad:ratio<elapsedRatio-0.1?C.warn:C.good,borderRadius:4}}/>
-        <div style={{position:"absolute",left:`${Math.min(100,elapsedRatio*100)}%`,top:-2,bottom:-2,width:2,background:C.ink,borderRadius:1}}/>
+          background:`linear-gradient(90deg,${color}B3,${color})`,borderRadius:h,transition:"width .4s ease"}}/>
+        <div style={{position:"absolute",left:`calc(${Math.min(100,elapsedRatio*100)}% - 1px)`,top:-3,bottom:-3,width:2,
+          background:markerColor,borderRadius:1,opacity:.9}}/>
       </div>
     );
-    const paceChip=(ratio,budget)=>{
-      if(!budget) return <span style={{fontSize:9,color:C.inkLt}}>예산 미설정</span>;
-      const diff=ratio-elapsedRatio;
-      const [label,color,bg]=diff>0.1?["조기 소진",C.bad,"#FEF0F0"]:diff<-0.1?["미달 소진",C.warn,"#FFF8EC"]:["정상",C.good,"#EDF7F1"];
-      return <span style={{fontSize:9,fontWeight:700,padding:"2px 7px",borderRadius:20,color,background:bg,border:`1px solid ${color}33`}}>{label}</span>;
-    };
-    const NumIn=({val,onCommit,w=80})=>(
+    const NumIn=({val,onCommit,w=76})=>(
       <input key={String(val)} defaultValue={val||""} inputMode="numeric"
         onBlur={e=>{const v=Number(String(e.target.value).replace(/[^0-9.]/g,""))||0; if(v!==(val||0)) onCommit(v);}}
-        style={{width:w,padding:"4px 6px",border:`1px solid ${C.border}`,borderRadius:6,fontSize:11,fontFamily:"inherit",textAlign:"right",background:C.white}}/>
+        style={{width:w,padding:"5px 7px",border:`1.5px solid ${C.border}`,borderRadius:8,fontSize:11.5,fontWeight:700,
+          fontFamily:"inherit",textAlign:"right",background:"#FAFBFF",color:C.ink,outline:"none"}}/>
     );
-    const th={padding:"6px 8px",textAlign:"left",fontWeight:700,color:C.inkMid,borderBottom:`1px solid ${C.border}`,whiteSpace:"nowrap"};
-    const td={padding:"6px 8px",whiteSpace:"nowrap"};
+    const roasColor=r=>r>=500?"#16A34A":r>=300?"#CA8A04":"#DC2626";
     const unmatchedTop=Object.entries(unmatched.byCamp).sort((a,b)=>b[1]-a[1]).slice(0,5);
+    const heroBtn={background:"rgba(255,255,255,.14)",border:"1px solid rgba(255,255,255,.25)",color:"#fff",
+      borderRadius:10,padding:"6px 12px",fontSize:12,fontWeight:800,cursor:"pointer",fontFamily:"inherit"};
+    const totDiff=Math.round((totRatio-elapsedRatio)*100);
 
     return(
-      <div style={{display:"grid",gap:14}}>
-        {/* 월 셀렉터 + 요약 */}
-        <Card>
-          <CardTitle title="📊 포트폴리오 — 팀별 예산 · 페이싱" sub="전 카테고리 마케팅 예산 계획과 집행 현황 (메타 집행액은 자동, 그 외 매체는 수동 입력)"
-            action={
-              <div style={{display:"flex",alignItems:"center",gap:6}}>
-                <Btn small variant="neutral" onClick={()=>shiftMonth(-1)}>◀</Btn>
-                <span style={{fontSize:13,fontWeight:800,color:C.ink}}>{pfMonth}</span>
-                <Btn small variant="neutral" onClick={()=>shiftMonth(1)}>▶</Btn>
-                <Btn small variant="ghost" onClick={copyPrev}>전월 예산 복사</Btn>
-              </div>
-            }/>
-          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(140px,1fr))",gap:10}}>
+      <div style={{display:"grid",gap:16}}>
+        {/* ── 히어로 ── */}
+        <div style={{borderRadius:22,padding:"24px 26px",color:"#fff",position:"relative",overflow:"hidden",
+          background:"linear-gradient(135deg,#0B1B3F 0%,#173D8F 55%,#2563EB 100%)",
+          boxShadow:"0 16px 40px rgba(30,64,175,.35)"}}>
+          <div style={{position:"absolute",right:-70,top:-70,width:240,height:240,borderRadius:"50%",background:"rgba(255,255,255,.07)"}}/>
+          <div style={{position:"absolute",right:60,bottom:-90,width:200,height:200,borderRadius:"50%",background:"rgba(255,255,255,.05)"}}/>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",flexWrap:"wrap",gap:10,position:"relative"}}>
+            <div>
+              <div style={{fontSize:11,fontWeight:800,letterSpacing:2,color:"#93C5FD"}}>MARKETING PORTFOLIO</div>
+              <div style={{fontSize:22,fontWeight:900,marginTop:2}}>{Number(pfMonth.slice(5))}월 팀별 예산 · 페이싱</div>
+            </div>
+            <div style={{display:"flex",alignItems:"center",gap:6}}>
+              <button style={heroBtn} onClick={()=>shiftMonth(-1)}>◀</button>
+              <span style={{fontSize:14,fontWeight:900,padding:"0 4px"}}>{pfMonth}</span>
+              <button style={heroBtn} onClick={()=>shiftMonth(1)}>▶</button>
+              <button style={heroBtn} onClick={copyPrev}>전월 복사</button>
+            </div>
+          </div>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(150px,1fr))",gap:10,marginTop:18,position:"relative"}}>
             {[
-              ["총 예산",fmtW(totBudget)],
-              ["집행액",fmtW(totSpent)],
-              ["집행률",totBudget>0?`${Math.round(totRatio*100)}%`:"—"],
-              ["월 경과율",`${Math.round(elapsedRatio*100)}%`],
-            ].map(([l,v])=>(
-              <div key={l} style={{border:`1px solid ${C.border}`,borderRadius:12,padding:"10px 12px",background:C.cream}}>
-                <div style={{fontSize:10,color:C.inkLt,fontWeight:700}}>{l}</div>
-                <div style={{fontSize:16,fontWeight:900,color:C.ink,marginTop:2}}>{v}</div>
+              ["총 예산", fmtW(totBudget), null],
+              ["집행액", fmtW(totSpent), null],
+              ["집행률", totBudget>0?`${Math.round(totRatio*100)}%`:"—",
+                totBudget>0?`경과율 ${Math.round(elapsedRatio*100)}% 대비 ${totDiff>=0?"+":""}${totDiff}%p`:null],
+              ["미분류 지출", fmtW(unmatched.spend), unmatched.spend>0?"팀 키워드 보완 필요":null],
+            ].map(([l,v,s])=>(
+              <div key={l} style={{background:"rgba(255,255,255,.10)",border:"1px solid rgba(255,255,255,.15)",
+                borderRadius:14,padding:"12px 14px",backdropFilter:"blur(4px)"}}>
+                <div style={{fontSize:10,fontWeight:700,color:"#BFDBFE"}}>{l}</div>
+                <div style={{fontSize:22,fontWeight:900,marginTop:3,letterSpacing:-.5}}>{v}</div>
+                {s&&<div style={{fontSize:9.5,color:"#93C5FD",marginTop:2,fontWeight:700}}>{s}</div>}
               </div>
             ))}
           </div>
-          {totBudget>0&&<div style={{marginTop:10,display:"flex",alignItems:"center",gap:8}}>
-            <PaceBar ratio={totRatio}/>
-            {paceChip(totRatio,totBudget)}
-            <span style={{fontSize:10,color:C.inkLt}}>세로선 = 오늘 기준 월 경과 지점</span>
-          </div>}
-        </Card>
+          {totBudget>0&&(
+            <div style={{marginTop:16,position:"relative"}}>
+              <PaceBar ratio={totRatio} color="#7DD3FC" h={12} track="rgba(255,255,255,.18)" markerColor="#fff"/>
+              <div style={{display:"flex",justifyContent:"space-between",fontSize:9.5,fontWeight:700,color:"#93C5FD",marginTop:5}}>
+                <span>집행 {Math.round(totRatio*100)}%</span>
+                <span>│ 오늘 ({Math.round(elapsedRatio*100)}%)</span>
+                <span>월말 100%</span>
+              </div>
+            </div>
+          )}
+        </div>
 
-        {/* 팀 구성 */}
-        <Card>
-          <CardTitle title="팀 구성" sub="키워드는 메타 캠페인·광고세트·광고명과 부분 일치로 팀 집행액을 자동 배정합니다"
-            action={<Btn small onClick={addTeam}>+ 팀 추가</Btn>}/>
-          {!(pfTeams||[]).length
-            ?<div style={{fontSize:11,color:C.inkLt,padding:"8px 0"}}>아직 팀이 없어요. "팀 추가"로 시작하세요 (예: 이미용 → 키워드 드라이기,고데기,갈바닉,거울)</div>
-            :<div style={{display:"flex",flexWrap:"wrap",gap:8}}>
-              {(pfTeams||[]).map(t=>(
-                <div key={t.id} style={{border:`1px solid ${C.border}`,borderRadius:12,padding:"8px 12px",background:C.white,display:"flex",alignItems:"center",gap:8}}>
-                  <span style={{fontSize:12,fontWeight:800,color:C.ink}}>{t.name}</span>
-                  <span style={{fontSize:10,color:C.inkMid}}>{(t.keywords||[]).length?(t.keywords||[]).join(", "):"키워드 없음"}</span>
-                  <button onClick={()=>editTeamKw(t)} style={{background:"none",border:"none",cursor:"pointer",fontSize:10,color:C.rose,fontWeight:700,padding:0,fontFamily:"inherit"}}>수정</button>
-                  <button onClick={()=>delTeam(t)} style={{background:"none",border:"none",cursor:"pointer",fontSize:10,color:C.bad,padding:0,fontFamily:"inherit"}}>삭제</button>
+        {/* ── 팀 카드 그리드 ── */}
+        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(340px,1fr))",gap:14}}>
+          {(pfTeams||[]).map((t,i)=>{
+            const col=TEAM_COLORS[i%TEAM_COLORS.length];
+            const tRows=rows.filter(b=>b.teamId===t.id);
+            const tBudget=tRows.reduce((s,b)=>s+(b.budget||0),0);
+            const tSpent=tRows.reduce((s,b)=>s+rowStat(b).spent,0);
+            const tRatio=tBudget>0?tSpent/tBudget:0;
+            const ps=paceState(tRatio,tBudget);
+            const tm=teamMeta[t.id];
+            const tRoas=tm&&tm.spend>0?tm.conv/tm.spend*100:null;
+            return(
+              <div key={t.id} style={{background:C.white,borderRadius:18,border:`1px solid ${C.border}`,
+                borderTop:`4px solid ${col}`,padding:"16px 16px 14px",boxShadow:"0 6px 20px rgba(24,24,27,.06)"}}>
+                <div style={{display:"flex",alignItems:"center",gap:8}}>
+                  <span style={{width:10,height:10,borderRadius:"50%",background:col,flexShrink:0}}/>
+                  <span style={{fontSize:15,fontWeight:900,color:C.ink}}>{t.name}</span>
+                  <span style={{fontSize:9.5,fontWeight:800,padding:"3px 9px",borderRadius:20,color:ps.color,background:ps.bg,marginLeft:"auto"}}>{ps.label}</span>
+                  <button onClick={()=>editTeamKw(t)} title="키워드 수정" style={{background:"none",border:"none",cursor:"pointer",padding:2,color:C.inkLt}}><MI n="edit" size={14}/></button>
+                  <button onClick={()=>delTeam(t)} title="팀 삭제" style={{background:"none",border:"none",cursor:"pointer",padding:2,color:C.inkLt}}><MI n="delete" size={14}/></button>
                 </div>
-              ))}
-            </div>}
-        </Card>
-
-        {/* 예산 그리드 */}
-        <Card>
-          <CardTitle title={`${pfMonth} 예산 그리드`} sub="예산·목표 ROAS는 셀에서 바로 입력 (포커스 아웃 시 저장). 메타 행 집행액·ROAS는 자동 집계"/>
-          {!(pfTeams||[]).length
-            ?<div style={{fontSize:11,color:C.inkLt}}>먼저 팀을 추가하세요.</div>
-            :(pfTeams||[]).map(t=>{
-              const tRows=rows.filter(b=>b.teamId===t.id);
-              const tBudget=tRows.reduce((s,b)=>s+(b.budget||0),0);
-              const tSpent=tRows.reduce((s,b)=>s+rowStat(b).spent,0);
-              return(
-                <div key={t.id} style={{marginBottom:16}}>
-                  <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
-                    <span style={{fontSize:12,fontWeight:800,color:C.ink}}>{t.name}</span>
-                    <span style={{fontSize:10,color:C.inkMid}}>{fmtW(tSpent)} / {fmtW(tBudget)}</span>
-                    {tBudget>0&&paceChip(tBudget>0?tSpent/tBudget:0,tBudget)}
-                    <Btn small variant="neutral" onClick={()=>addBudget(t)}>+ 매체</Btn>
+                <div style={{fontSize:9.5,color:C.inkLt,marginTop:4,marginLeft:18,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
+                  {(t.keywords||[]).length?`키워드: ${(t.keywords||[]).join(", ")}`:"매칭 키워드 없음 — 연필 아이콘으로 추가"}
+                </div>
+                <div style={{display:"flex",alignItems:"flex-end",justifyContent:"space-between",marginTop:12,flexWrap:"wrap",gap:6}}>
+                  <div>
+                    <span style={{fontSize:24,fontWeight:900,color:C.ink,letterSpacing:-.5}}>{fmtW(tSpent)}</span>
+                    <span style={{fontSize:12,fontWeight:700,color:C.inkLt,marginLeft:5}}>/ {tBudget>0?fmtW(tBudget):"예산 미설정"}</span>
                   </div>
-                  {!tRows.length
-                    ?<div style={{fontSize:10,color:C.inkLt,paddingLeft:2}}>예산 행 없음 — "+ 매체"로 추가</div>
-                    :<div style={{overflowX:"auto"}}>
-                      <table style={{width:"100%",borderCollapse:"collapse",fontSize:11}}>
-                        <thead><tr style={{background:C.cream}}>
-                          {["매체","예산","집행액","집행률","페이싱","ROAS","목표 ROAS",""].map(h=>
-                            <th key={h} style={th}>{h}</th>)}
-                        </tr></thead>
-                        <tbody>
-                          {tRows.map(b=>{
-                            const st=rowStat(b);
-                            const ratio=b.budget>0?st.spent/b.budget:0;
-                            return(
-                              <tr key={b.id} style={{borderBottom:`1px solid ${C.cream}`}}>
-                                <td style={{...td,fontWeight:700,color:C.ink}}>{b.source}
-                                  {st.auto&&<span style={{fontSize:8,color:C.sage,fontWeight:700,marginLeft:4}}>자동</span>}</td>
-                                <td style={td}><NumIn val={b.budget} onCommit={v=>patchBudget(b.id,{budget:v})}/></td>
-                                <td style={td}>{st.auto
-                                  ?<span style={{fontWeight:700}}>{fmtW(st.spent)}</span>
-                                  :<NumIn val={b.spent} onCommit={v=>patchBudget(b.id,{spent:v})}/>}</td>
-                                <td style={td}>{b.budget>0?`${Math.round(ratio*100)}%`:"—"}</td>
-                                <td style={td}><div style={{display:"flex",alignItems:"center",gap:6}}><PaceBar ratio={ratio}/>{paceChip(ratio,b.budget)}</div></td>
-                                <td style={td}>{st.roas!=null
-                                  ?<span style={{fontWeight:800,color:b.targetRoas>0?(st.roas>=b.targetRoas?C.good:C.bad):C.ink}}>{Math.round(st.roas)}%</span>
-                                  :<span style={{color:C.inkLt}}>—</span>}</td>
-                                <td style={td}><NumIn val={b.targetRoas} onCommit={v=>patchBudget(b.id,{targetRoas:v})} w={60}/></td>
-                                <td style={td}><button onClick={()=>delBudget(b.id)} style={{background:"none",border:"none",cursor:"pointer",fontSize:10,color:C.bad,padding:0,fontFamily:"inherit"}}>삭제</button></td>
-                              </tr>
-                            );
-                          })}
-                        </tbody>
-                      </table>
-                    </div>}
+                  {tRoas!=null&&(
+                    <div style={{textAlign:"right"}}>
+                      <span style={{fontSize:20,fontWeight:900,color:roasColor(tRoas)}}>{Math.round(tRoas)}%</span>
+                      <span style={{fontSize:9.5,fontWeight:700,color:C.inkLt,marginLeft:3}}>메타 ROAS</span>
+                    </div>
+                  )}
                 </div>
-              );
-            })}
-        </Card>
+                <div style={{marginTop:8}}>
+                  <PaceBar ratio={tRatio} color={tBudget>0?ps.color:C.inkLt} h={10}/>
+                </div>
+                <div style={{marginTop:12,display:"grid",gap:6}}>
+                  {tRows.map(b=>{
+                    const st=rowStat(b);
+                    const ratio=b.budget>0?st.spent/b.budget:0;
+                    return(
+                      <div key={b.id} style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap",
+                        background:"#F8FAFC",border:`1px solid ${C.border}`,borderRadius:12,padding:"8px 10px"}}>
+                        <span style={{fontSize:11,fontWeight:900,color:col,minWidth:38}}>{b.source}</span>
+                        <span style={{fontSize:8.5,fontWeight:800,padding:"2px 6px",borderRadius:20,
+                          color:st.auto?"#16A34A":C.inkLt,background:st.auto?"#F0FDF4":C.cream}}>{st.auto?"자동":"수동"}</span>
+                        <div style={{display:"flex",alignItems:"center",gap:4}}>
+                          <span style={{fontSize:9,color:C.inkLt,fontWeight:700}}>예산</span>
+                          <NumIn val={b.budget} onCommit={v=>patchBudget(b.id,{budget:v})}/>
+                        </div>
+                        <div style={{display:"flex",alignItems:"center",gap:4}}>
+                          <span style={{fontSize:9,color:C.inkLt,fontWeight:700}}>집행</span>
+                          {st.auto
+                            ?<span style={{fontSize:11.5,fontWeight:900,color:C.ink}}>{fmtW(st.spent)}</span>
+                            :<NumIn val={b.spent} onCommit={v=>patchBudget(b.id,{spent:v})}/>}
+                        </div>
+                        <span style={{fontSize:11,fontWeight:900,color:paceState(ratio,b.budget).color}}>{b.budget>0?`${Math.round(ratio*100)}%`:"—"}</span>
+                        <div style={{display:"flex",alignItems:"center",gap:4,marginLeft:"auto"}}>
+                          {st.roas!=null&&<span style={{fontSize:11,fontWeight:900,
+                            color:b.targetRoas>0?(st.roas>=b.targetRoas?"#16A34A":"#DC2626"):roasColor(st.roas)}}>ROAS {Math.round(st.roas)}%</span>}
+                          <span style={{fontSize:9,color:C.inkLt,fontWeight:700}}>목표</span>
+                          <NumIn val={b.targetRoas} onCommit={v=>patchBudget(b.id,{targetRoas:v})} w={48}/>
+                          <button onClick={()=>delBudget(b.id)} style={{background:"none",border:"none",cursor:"pointer",padding:2,color:C.inkLt}}><MI n="close" size={13}/></button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                  <button onClick={()=>addBudget(t)} style={{border:`1.5px dashed ${col}66`,background:`${col}0D`,color:col,
+                    borderRadius:12,padding:"7px 0",fontSize:11,fontWeight:800,cursor:"pointer",fontFamily:"inherit"}}>+ 매체 추가</button>
+                </div>
+              </div>
+            );
+          })}
+          <button onClick={addTeam} style={{minHeight:(pfTeams||[]).length?180:120,border:`2px dashed ${C.border}`,borderRadius:18,
+            background:"transparent",cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",
+            gap:6,color:C.inkLt,fontFamily:"inherit"}}>
+            <span style={{width:36,height:36,borderRadius:"50%",background:C.blush,color:C.rose,display:"flex",
+              alignItems:"center",justifyContent:"center",fontSize:20,fontWeight:900}}>+</span>
+            <span style={{fontSize:12,fontWeight:800}}>팀 추가</span>
+            {!(pfTeams||[]).length&&<span style={{fontSize:10,color:C.inkLt}}>예: 이미용 → 키워드 드라이기,고데기,갈바닉,거울</span>}
+          </button>
+        </div>
 
-        {/* 미분류 메타 지출 */}
+        {/* ── 미분류 메타 지출 ── */}
         {unmatched.spend>0&&(
-          <Card>
-            <CardTitle title="⚠️ 미분류 메타 지출" sub={`${pfMonth} 중 어느 팀 키워드에도 매칭되지 않은 지출 — 팀 키워드에 캠페인명을 추가하면 자동 배정됩니다`}/>
-            <div style={{fontSize:13,fontWeight:900,color:C.warn,marginBottom:8}}>{fmtW(unmatched.spend)}</div>
-            <div style={{display:"grid",gap:4}}>
+          <div style={{background:"#FFFBEB",border:"1px solid #FDE68A",borderLeft:"5px solid #F59E0B",borderRadius:16,padding:"16px 18px"}}>
+            <div style={{display:"flex",alignItems:"center",gap:8}}>
+              <MI n="warning" size={18} style={{color:"#D97706"}}/>
+              <span style={{fontSize:13,fontWeight:900,color:"#92400E"}}>미분류 메타 지출 {fmtW(unmatched.spend)}</span>
+            </div>
+            <div style={{fontSize:10,color:"#B45309",marginTop:3}}>어느 팀 키워드에도 매칭되지 않은 {pfMonth} 지출 — 팀 카드의 연필 아이콘으로 캠페인명 키워드를 추가하면 자동 배정됩니다</div>
+            <div style={{display:"grid",gap:4,marginTop:10}}>
               {unmatchedTop.map(([name,sp])=>(
-                <div key={name} style={{display:"flex",justifyContent:"space-between",fontSize:10.5,color:C.inkMid,borderBottom:`1px solid ${C.cream}`,padding:"4px 0"}}>
-                  <span style={{overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",maxWidth:"70%"}}>{name}</span>
-                  <span style={{fontWeight:700}}>{fmtW(sp)}</span>
+                <div key={name} style={{display:"flex",justifyContent:"space-between",fontSize:10.5,color:"#92400E",
+                  background:"#FFFFFF88",borderRadius:8,padding:"5px 10px"}}>
+                  <span style={{overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",maxWidth:"70%",fontWeight:600}}>{name}</span>
+                  <span style={{fontWeight:900}}>{fmtW(sp)}</span>
                 </div>
               ))}
             </div>
-          </Card>
+          </div>
         )}
       </div>
     );
