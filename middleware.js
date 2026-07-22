@@ -7,6 +7,7 @@ const ALLOWED_EMAILS = [
   'qwt0124@gmail.com',
   'sunup94321kr@gmail.com',
   'thdwldnjs321@gmail.com',
+  '120312yss@gmail.com',
 ]
 
 export async function middleware(request) {
