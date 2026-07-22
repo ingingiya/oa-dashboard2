@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>광고 영상 프롬프트 제조 가이드</title>
+<style>
+  :root{--ink:#1D1D1F;--bg:#F5F5F7;--card:#fff;--accent:#0071E3;--red:#D70015;--line:rgba(0,0,0,.08)}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Pretendard","Apple SD Gothic Neo",sans-serif;line-height:1.65}
+  .wrap{max-width:860px;margin:0 auto;padding:32px 20px 80px}
+  h1{font-size:26px;margin:12px 0 4px}
+  h2{font-size:20px;margin:44px 0 12px;padding-top:20px;border-top:1px solid var(--line)}
+  h3{font-size:16px;margin:26px 0 8px}
+  .sub{color:#6e6e73;font-size:14px;margin-bottom:8px}
+  .tip{background:#FFF8E6;border:1px solid #F0E2B6;border-radius:12px;padding:12px 16px;font-size:14px;margin:16px 0}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:4px 18px 14px;margin:14px 0;box-shadow:0 1px 4px rgba(0,0,0,.04)}
+  pre{background:#1D1D1F;color:#F5F5F7;border-radius:12px;padding:16px;font-size:12.5px;line-height:1.6;overflow-x:auto;white-space:pre-wrap;word-break:break-word;position:relative;font-family:"SF Mono",Menlo,Consolas,monospace}
+  .preblock{position:relative;margin:12px 0}
+  .copy{position:absolute;top:8px;right:8px;background:rgba(255,255,255,.14);color:#fff;border:none;border-radius:8px;padding:5px 10px;font-size:12px;cursor:pointer}
+  .copy:hover{background:rgba(255,255,255,.25)}
+  table{border-collapse:collapse;width:100%;font-size:14px;margin:10px 0}
+  th,td{border:1px solid var(--line);padding:8px 10px;text-align:left;vertical-align:top}
+  th{background:#fafafa}
+  ul{padding-left:20px}
+  li{margin:4px 0}
+  code{background:#eee;border-radius:5px;padding:1px 6px;font-size:.92em;font-family:"SF Mono",Menlo,monospace}
+  .badge{display:inline-block;background:var(--accent);color:#fff;border-radius:999px;padding:2px 10px;font-size:12px;font-weight:600;vertical-align:middle}
+  .footer{margin-top:60px;color:#a1a1a6;font-size:12px;text-align:center}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<h1>광고 영상 프롬프트 제조 가이드 <span class="badge">MASTER</span></h1>
+<p class="sub">Seedance 등 영상 생성 AI용 · 2026-07 브랜드필름 11컷으로 검증</p>
+
+<div class="tip">💡 <b>사용법:</b> 이 페이지 내용을 통째로 LLM(Claude 등)에게 붙여넣고 <b>"이 가이드대로 [제품/컨셉] 광고 프롬프트 만들어줘"</b>라고 하면 같은 퀄리티의 프롬프트가 나옵니다. 각 블록의 <b>복사</b> 버튼으로 바로 복붙하세요.</div>
+
+<h2>1. 프롬프트 표준 구조 (이 순서 그대로)</h2>
+<div class="preblock"><pre>[1] Reference 선언 (실제 제품 쓸 때만)
+Reference 1 (HIGHEST PRIORITY) = THE [브랜드] [제품명] (exact real product — [형태/컬러 비유 앵커] — appears at [스케일] but identical shape and color).
+
+[2] 오프닝 문단 (한 문단에 다 넣기)
+A premium Korean brand film [shot/insert] in 16:9 widescreen format, [세계관 한 줄]. [주체 묘사 — 디테일 3개 이상]. [핵심 액션 한 문장]. [무드 형용사 2-3개]. CLEAN EMPTY SPACE [위치] for text overlay.
+
+[3] ★★★ THE ACTION (~N seconds):  ← 초 단위 타임라인 필수
+- 0-1s: [동작 1]
+- 1-1.5s: [디테일 동작 — 퍼펙셔니스트 제스처 등 성격 부여]
+- 1.5-2s: [마무리 + stable final frame]
+- ★ The final stable frame MUST hold with [주인공] in sharp focus (freeze-friendly ending for overlay)
+
+[4] ★★★ COMPOSITION (★ for text overlay):
+- [주인공 위치 — 삼분할 명시]
+- [반대편] is CLEAN NEGATIVE SPACE ([배경 묘사], softly blurred) for [오버레이 용도]
+- [샷 사이즈 + 스케일 관계]
+
+[5] THE PRODUCT: (제품 컷일 때)
+- Matches Reference 1 EXACTLY — same shape, same color, same details
+- CORDLESS device, completely wireless, clean smooth bottom with no cable attached  ← 무선제품 필수
+- blank unbranded matte surface  ← 클로즈업 필수 (네거티브 "logos"는 무시됨)
+- EXACTLY ONE [제품], premium matte finish, sharp crisp focus
+
+[6] THE SETTING: / LIGHTING: / COLOR PALETTE:
+- 각 3줄 내외, 브랜드 컬러 + 보조색 명시
+
+[7] ★★★ AD-GRADE DETAIL 블록  ← 아래 스타일 라이브러리에서 상황 맞는 것 복사 (5종)
+
+[8] Style: [한 문장 — 브랜드필름 성격 + 아트디렉션 + 에너지]
+Duration: N seconds. 16:9 widescreen.
+
+[9] Negative prompt: [아래 규칙 참조]</pre></div>
+
+<h2>2. 검증된 규칙 (전부 실패에서 나온 것 — 어기지 말 것)</h2>
+
+<div class="card">
+<h3>텍스트/로고</h3>
+<ul>
+<li><b>텍스트는 절대 AI 생성 금지</b> — 가격/자막/로고/별점 전부 편집 오버레이. 프롬프트는 CLEAN NEGATIVE SPACE만 확보</li>
+<li>네거티브 "no logos"는 <b>무시됨</b> → 본문에 긍정형으로 "blank unbranded matte surface" 명시</li>
+</ul>
+<h3>중요 배제는 본문에 긍정형으로 (핵심 원리)</h3>
+<ul>
+<li>"no X"(네거티브)보다 "clean Y"(본문 긍정형)가 압도적으로 잘 먹힘</li>
+<li>예: 케이블 배제 → 네거티브 "no cords" 3회 연속 실패, 본문 "CORDLESS device, completely wireless, clean smooth handle bottom with no cable attached"로 해결</li>
+</ul>
+<h3>앵커링</h3>
+<ul>
+<li><b>숫자 앵커링:</b> 개수/cm/초/각도 명시 → 형태 붕괴 감소 (예: "slow 30-45 degree turn", "EXACTLY ONE dryer")</li>
+<li><b>비유 앵커링:</b> "warm beige like coffee with milk", "smartphone-sized" → 컬러/크기 고정</li>
+<li><b>컬러는 NOT 배제쌍:</b> "ballet slipper pink, NOT coral, NOT rosy brown, NOT mauve" (인접색 배제)</li>
+</ul>
+</div>
+
+<div class="card">
+<h3>인물 (★ 사람은 특히 자연스럽게)</h3>
+<p>모든 사람 등장 컷에 <b>NATURAL HUMAN REALISM 블록 필수:</b></p>
+<div class="preblock"><pre>★★★ NATURAL HUMAN REALISM (★ critical):
+- The hand is a REAL human hand — natural skin texture with visible pores and fine knuckle creases, soft natural warmth in the skin tone, NOT smooth CG plastic
+- Anatomically perfect: five fingers, natural proportions, relaxed natural posture between motions
+- Movement is human — tiny organic imperfections in the path, gentle natural easing, never robotic linear motion</pre></div>
+<ul>
+<li>얼굴 나올 땐 "REALISTIC natural face (natural skin texture, pores visible, NOT AI-perfect, NOT airbrushed plastic)"</li>
+<li><b>입은 닫기</b> — "MOUTH CLOSED, subtle closed-lip smile" (open mouth → 치아 붕괴 잦음)</li>
+<li>손만 나올 땐 "no face visible, no full body (hand and sleeve only)" + 네거티브에 "no extra fingers, no distorted hand, no plastic CG-looking skin"</li>
+</ul>
+<h3>카메라</h3>
+<ul>
+<li><b>카메라 모션은 1개만</b> 지정, 반대 모션 전부 네거티브에 (예: static camera면 "no camera movement, no shaky cam, no camera spinning")</li>
+<li>마지막 프레임은 항상 "stable final frame" — 오버레이/프리즈용</li>
+</ul>
+</div>
+
+<div class="card">
+<h3>네거티브 프롬프트 표준 세트 (여기서 골라 조합)</h3>
+<div class="preblock"><pre>NO text anywhere, no letters, no logos, no watermark, no price tags in frame,
+no extra fingers, no distorted hand, no face visible (손만 나올 때),
+no second [제품], no multiple [제품]s, no different product shape than Reference 1, no different color than Reference 1,
+no cheap plastic toy look, no clutter, no messy background,
+no dull muted colors (must be [브랜드컬러]), no dark moody tone (밝은 컷일 때),
+no fast throwing motion, no dropping the product,
+no shaky cam, no camera movement (static일 때), no vertical format, no cartoon style</pre></div>
+<p class="sub">네거티브 ~40개 넘으면 뒷부분 무시되는 듯 — 핵심만 짧게.</p>
+</div>
+
+<h2>3. 톤 공식 (다른 브랜드에 이식 가능)</h2>
+<table>
+<tr><th>요소</th><th>공식</th></tr>
+<tr><td>세계관</td><td>"inside a bold [컬러1] and [컬러2] [세계관] world" — 브랜드 컬러 2개로 세계 전체를 칠함</td></tr>
+<tr><td>주체 성격</td><td>제스처에 성격 부여: "picky perfectionist curator", "nudges its angle with one fingertip"</td></tr>
+<tr><td>위트</td><td>스케일 대비, 기믹 반복 (돋보기 오프닝→클로징 회수 같은 수미상관)</td></tr>
+<tr><td>연속성</td><td>"The SAME [세트] as before", 이전 컷 제품을 "softly blurred in background (continuity)"</td></tr>
+<tr><td>마무리</td><td>감성 클로징 1컷 (야간/여운) + "freeze-friendly ending"</td></tr>
+<tr><td>길이</td><td>인서트 2초, 씬 3-4초. 타임라인은 0.5초 단위로 쪼갬</td></tr>
+</table>
+
+<h2>4. 심화 테크닉 10</h2>
+<div class="card">
+<h3>① 훅 3초 법칙 (퍼포먼스 광고용)</h3>
+<ul><li>첫 컷 0-1초 안에 "스크롤 멈추는 순간" 배치: 스케일 붕괴 / 예상 밖 물성 / 극단 클로즈업 중 하나</li>
+<li>프롬프트에 명시: "The FIRST FRAME must already contain [훅 요소] — no slow buildup before it"</li>
+<li>15초 구조: 훅(0-3s) → 문제/데모(3-9s) → 히어로+오퍼 여백(9-13s) → 클로징(13-15s)</li></ul>
+<h3>② 매치컷 설계</h3>
+<ul><li>앞 컷 마지막 프레임과 뒷 컷 첫 프레임의 <b>형태/모션/컬러 중 1개를 일치</b></li>
+<li>앞 컷: "ends with [원형 오브젝트] centered, stable final frame" / 뒷 컷: "opens with [다른 원형 오브젝트] in the SAME center position, same scale"</li>
+<li>모션 매치: 앞 컷 "hand exits frame upward" → 뒷 컷 "hand enters frame from below"</li></ul>
+<h3>③ 컬러 스크립트 (감정 아크를 색온도로)</h3>
+<ul><li>전체 필름의 색온도 곡선을 먼저 정하고 컷별 LIGHTING에 반영 (예: 쿨 화이트 → 밝은 뉴트럴 → 골든아워 → 웜 앰버 나이트)</li>
+<li>켈빈 앵커: "cool 5600K studio daylight" / "warm 3200K tungsten glow"</li></ul>
+<h3>④ 사운드 싱크 설계</h3>
+<ul><li>효과음 붙일 순간을 "딱 떨어지는 모션"으로 설계: "a single crisp SNAP motion at exactly 1.0s"</li>
+<li>반복 컷은 동작 리듬 통일 → 몽타주가 음악 비트에 자동으로 맞음</li></ul>
+<h3>⑤ 렌즈 언어 사전</h3>
+<table>
+<tr><th>목적</th><th>렌즈 지정</th></tr>
+<tr><td>제품 히어로/질감</td><td>"100mm macro at f/2.8"</td></tr>
+<tr><td>공간/세계관 소개</td><td>"24mm wide at f/5.6, deep focus"</td></tr>
+<tr><td>인물+제품</td><td>"50mm cinema prime at f/2.0"</td></tr>
+<tr><td>압축/고급감</td><td>"135mm telephoto at f/2.8, compressed background"</td></tr>
+<tr><td>미니어처 강조</td><td>"tilt-shift lens, sharp band of focus"</td></tr>
+</table>
+<h3>⑥ 퍼스트 프레임 기법</h3>
+<ul><li>복잡한 장면은 <b>이미지 먼저 생성 → 그 이미지를 Reference로 영상 생성</b></li>
+<li>이미지 프롬프트 = 영상 프롬프트에서 ACTION 블록 빼고 "single frame, first frame of the shot" 추가</li></ul>
+<h3>⑦ A/B 배리에이션 프로토콜</h3>
+<ul><li>재생성 시 <b>변수 1개만</b> 바꿔 원인 추적: (a) 카메라 모션 (b) 조명 무드 (c) 액션 타이밍 — 한 번에 하나만</li></ul>
+<h3>⑧ 고실패 요소 취급법 (물리 시뮬레이션)</h3>
+<ul><li><b>액체/스팀/천</b>은 붕괴 1순위 — 수치 앵커 + 슬로우 지정 필수</li>
+<li>물: "a single thin steady stream of water, 2mm wide, falling straight down" / 스팀: "a faint wisp of steam, barely visible, rising slowly" / 천: "heavy fabric, drapes slowly, no fluttering"</li>
+<li>기계 동작: "in ONE smooth continuous motion" + 네거티브에 "no snapping back, no tangling"</li></ul>
+<h3>⑨ 포맷 변환 (16:9 → 9:16 릴스)</h3>
+<ul><li>구도만 바꾸지 말고 <b>여백 방향 재설계</b>: "CLEAN NEGATIVE SPACE in the UPPER THIRD"</li>
+<li>"no vertical format" 제거 + "9:16 vertical format" 명시 + 히어로를 "center of the lower half"에, 손은 위에서 진입</li></ul>
+<h3>⑩ 브랜드 킷 슬롯 (새 브랜드 이식 체크리스트)</h3>
+<div class="preblock"><pre>- 브랜드 컬러 2개 (자연어로): 예) "bold OA red" + "pure white"
+- 컬러 비유 앵커: 예) "warm beige like coffee with milk"
+- 세계관 한 줄: 예) "miniature dollhouse world"
+- 주체 성격: 예) "picky perfectionist giant curator"
+- 반복 기믹: 예) "magnifying glass opening→closing"
+- 금기: 예) 경쟁사 연상 컬러, 저가 토이 룩</pre></div>
+</div>
+
+<h2>5. AD-GRADE DETAIL 스타일 블록 5종 (Style: 라인 앞에 삽입, 브랜드 컬러만 교체)</h2>
+
+<h3>① 기본 (제품 + 손 등장 컷)</h3>
+<div class="preblock"><pre>★★★ AD-GRADE DETAIL (premium commercial polish):
+- Shot on a 100mm macro lens at f/2.8 — creamy cinematic depth of field, 8K commercial sharpness on the hero subject
+- Crisp specular highlights tracing the product edges, soft wraparound softbox light, gentle gradient shadows with clean falloff
+- Tactile micro-detail: fine premium matte texture on the product surface, visible fabric weave on the crisp red suit sleeve, subtle healthy sheen on the natural nails
+- Color graded like a high-end Korean CF: bold saturated brand color, pure bright white, zero color cast
+- Every motion luxuriously eased (soft ease-in ease-out) — confident, unhurried, expensive-feeling timing
+- The product reads instantly as the hero of the frame — catalog-perfect styling, nothing competing for attention</pre></div>
+
+<h3>② 무인물 세트/공간 컷</h3>
+<div class="preblock"><pre>★★★ AD-GRADE DETAIL (premium commercial polish):
+- Shot on a 100mm macro lens at f/2.8 — creamy cinematic depth of field, 8K commercial sharpness
+- Crisp specular highlights on set accent edges, soft wraparound softbox light filling the space, gentle gradient shadows
+- Tactile micro-detail: readable material textures (wood grain, paint edges, fabric weave) — architectural-model / set-design precision in every corner
+- Color graded like a high-end Korean CF: bold saturated brand color, pure bright white, zero color cast
+- Camera motion luxuriously eased (soft ease-in ease-out) — confident, unhurried, expensive-feeling timing
+- The frame feels art-directed, not vacant — catalog-perfect styling</pre></div>
+
+<h3>③ 인물 등장 컷</h3>
+<div class="preblock"><pre>★★★ AD-GRADE DETAIL (premium commercial polish):
+- Shot on a cinema prime at f/2.8 — creamy depth of field, 8K commercial sharpness on subject and set
+- Crisp specular highlights on the product, soft wraparound softbox key light, gentle gradient shadows with clean falloff
+- Tactile micro-detail: realistic natural skin texture (pores visible, NOT airbrushed plastic), sharp tailored fabric weave, product catalog-styled
+- Color graded like a high-end Korean CF: bold saturated brand color, pure bright white, zero color cast
+- Camera motion luxuriously eased (soft ease-in ease-out) — confident, unhurried, expensive-feeling timing
+- Reads like a premium brand catalog cover — everything intentional, nothing competing for attention</pre></div>
+
+<h3>④ 유리/렌즈/반사 소품 컷</h3>
+<div class="preblock"><pre>★★★ AD-GRADE DETAIL (premium commercial polish):
+- Shot on a 100mm macro lens at f/2.8 — creamy cinematic depth of field, 8K commercial sharpness
+- Elegant real-glass behavior: one clean subtle reflection sweeping across the glass as it moves, crisp optical edge, zero smudges
+- Tactile micro-detail: premium matte handle/frame texture, fine surface finish on every hero object
+- Color graded like a high-end Korean CF: bold saturated brand color, pure bright white, zero color cast
+- Motion luxuriously eased (soft ease-in ease-out), settling with a confident soft stop
+- The hero product reads catalog-perfect — hero-shot quality</pre></div>
+
+<h3>⑤ 야간/감성 클로징 컷</h3>
+<div class="preblock"><pre>★★★ AD-GRADE DETAIL (premium commercial polish):
+- Shot on a 100mm macro lens at f/2.8 — creamy cinematic depth of field, 8K commercial sharpness
+- Warm practical-light bokeh, soft golden glow spilling onto surfaces, gentle cinematic contrast (never crushed blacks)
+- Tactile micro-detail: warm light catching fine material textures, cozy silhouettes in the glow
+- Color graded like a high-end Korean CF night scene: rich warm amber glow against deep dusk blue-grey, brand color staying rich and saturated
+- Every gesture luxuriously eased (soft ease-in ease-out) — tender, unhurried, expensive-feeling timing
+- Reads like the emotional closing frame of a premium brand film — warm, quiet, complete</pre></div>
+
+<div class="card">
+<h3>스타일 블록이 광고 느낌을 내는 원리</h3>
+<ul>
+<li><b>렌즈/조리개 수치 명시</b> → 심도와 선명도가 광고 제품컷처럼 고정 (숫자 앵커링)</li>
+<li><b>스펙큘러 + 소프트박스</b> → 제품 엣지 광택 = 카탈로그 룩의 핵심</li>
+<li><b>질감 마이크로 디테일</b> → 싸구려 CG 느낌 제거 (원단 짜임, 매트 표면, 피부 포어)</li>
+<li><b>"zero color cast" + 브랜드 컬러 채도 지정</b> → 색이 탁해지는 것 방지</li>
+<li><b>ease-in/ease-out + "unhurried, expensive-feeling"</b> → 모션의 급/싼 느낌 제거</li>
+<li><b>"nothing competing for attention"</b> → 프레임 정리, 주인공 고정</li>
+</ul>
+</div>
+
+<div class="footer">OA 광고 영상 프롬프트 제조 가이드 · 2026</div>
+</div>
+
+<script>
+document.querySelectorAll('.preblock').forEach(function(block){
+  var btn=document.createElement('button');
+  btn.className='copy';btn.textContent='복사';
+  btn.onclick=function(){
+    navigator.clipboard.writeText(block.querySelector('pre').innerText).then(function(){
+      btn.textContent='복사됨!';setTimeout(function(){btn.textContent='복사'},1500);
+    });
+  };
+  block.appendChild(btn);
+});
+</script>
+</body>
+</html>
