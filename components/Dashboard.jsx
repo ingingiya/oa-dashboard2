@@ -1893,6 +1893,16 @@ function ThumbPreview({ url, name }) {
   );
 }
 
+// GFA 소재 썸네일 셀 — 모듈 레벨(IIFE 내부 정의 시 리렌더마다 remount되어 호버 상태 유실)
+function GfaThumbCell({ name, url, size = 48, onFile, borderColor = "#E4E4E7", plusColor = "#A1A1AA" }) {
+  if (url) return <ThumbPreview url={url} name={name}/>;
+  return (
+    <label title="소재 이미지 업로드" style={{width:size,height:size,borderRadius:8,border:`1px dashed ${borderColor}`,display:"inline-flex",alignItems:"center",justifyContent:"center",cursor:"pointer",color:plusColor,fontSize:16,fontWeight:800,flexShrink:0}}>
+      +<input type="file" accept="image/*" onChange={onFile} style={{display:"none"}}/>
+    </label>
+  );
+}
+
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // 기본 로컬 데이터
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -8297,13 +8307,9 @@ export default function OaDashboard(){
       const key=gfaBestMatch(name,Object.keys(t));
       return key?t[key]:null;
     };
-    const GThumb=({name,size=48})=>{
-      const u=gfaResolveThumb(name);
-      if(u) return <ThumbPreview url={u} name={name}/>; // 마우스 오버 시 크게 미리보기
-      return(<label title="소재 이미지 업로드" style={{width:size,height:size,borderRadius:8,border:`1px dashed ${C.border}`,display:"inline-flex",alignItems:"center",justifyContent:"center",cursor:"pointer",color:C.inkLt,fontSize:16,fontWeight:800,flexShrink:0}}>
-        +<input type="file" accept="image/*" onChange={ev=>onGfaThumbRow(name,ev)} style={{display:"none"}}/>
-      </label>);
-    };
+    const GThumb=({name,size=48})=>(
+      <GfaThumbCell name={name} size={size} url={gfaResolveThumb(name)} onFile={ev=>onGfaThumbRow(name,ev)} borderColor={C.border} plusColor={C.inkLt}/>
+    );
 
     const rows=gfaReport?.rows||[];
     // 운영 경과일 — "2026.07.23." → 일수
@@ -8416,7 +8422,7 @@ export default function OaDashboard(){
               <div style={{fontSize:14,fontWeight:900,color:C.good,marginBottom:8}}>🏆 위너 소재 — 증액 대상 (지출 1만↑ & ROAS {TARGET}%↑)</div>
               {winners.length?winners.map(r=>(
                 <div key={r.name+r.camp} style={{display:"flex",alignItems:"center",gap:8,padding:"6px 0",borderBottom:"1px solid rgba(0,0,0,.04)",fontSize:13}}>
-                  <GThumb name={r.name}/>
+                  {GThumb({name:r.name})}
                   <span style={{flex:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",fontWeight:600}}>{r.name}{r.days!=null&&<span style={{color:C.inkLt}}> · {r.days}일차</span>}</span>
                   <span style={{fontWeight:900,color:C.good,whiteSpace:"nowrap"}}>ROAS {r.roas.toFixed(0)}% · {fmtW(r.cost)}원</span>
                 </div>
@@ -8426,7 +8432,7 @@ export default function OaDashboard(){
               <div style={{fontSize:14,fontWeight:900,color:C.bad,marginBottom:8}}>🔻 루저 소재 — 교체/중단 (지출 5만↑ & ROAS 50%↓)</div>
               {losers.length?losers.map(r=>(
                 <div key={r.name+r.camp} style={{display:"flex",alignItems:"center",gap:8,padding:"6px 0",borderBottom:"1px solid rgba(0,0,0,.04)",fontSize:13}}>
-                  <GThumb name={r.name}/>
+                  {GThumb({name:r.name})}
                   <span style={{flex:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",fontWeight:600}}>{r.name} <span style={{color:C.inkLt}}>({r.camp}{r.days!=null?` · ${r.days}일차`:""})</span></span>
                   <span style={{fontWeight:900,color:C.bad,whiteSpace:"nowrap"}}>ROAS {r.roas.toFixed(0)}% · {fmtW(r.cost)}원</span>
                 </div>
@@ -8443,7 +8449,7 @@ export default function OaDashboard(){
                   <thead><tr>{["","소재","캠페인","운영","지출","노출","클릭","CTR","구매완료","구매당비용","매출","ROAS"].map((h,i)=><th key={i} style={th}>{h}</th>)}</tr></thead>
                   <tbody>{creas.map((r,i)=>(
                     <tr key={i} style={{borderBottom:"1px solid rgba(0,0,0,.04)"}}>
-                      <td style={td}><GThumb name={r.name} size={30}/></td>
+                      <td style={td}>{GThumb({name:r.name,size:30})}</td>
                       <td style={{...td,fontWeight:600,maxWidth:240,overflow:"hidden",textOverflow:"ellipsis"}}>{r.name}</td>
                       <td style={{...td,color:C.inkMid}}>{r.camp}</td>
                       <td style={{...td,color:C.inkMid}}>{r.days!=null?`${r.days}일차`:"—"}</td>
