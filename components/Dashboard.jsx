@@ -1895,7 +1895,14 @@ function ThumbPreview({ url, name }) {
 
 // GFA 소재 썸네일 셀 — 모듈 레벨(IIFE 내부 정의 시 리렌더마다 remount되어 호버 상태 유실)
 function GfaThumbCell({ name, url, size = 48, onFile, borderColor = "#E4E4E7", plusColor = "#A1A1AA" }) {
-  if (url) return <ThumbPreview url={url} name={name}/>;
+  if (url) return (
+    <span style={{display:"inline-flex",alignItems:"center",gap:3}}>
+      <ThumbPreview url={url} name={name}/>
+      <label title="이미지 직접 넣기 (교체)" style={{width:18,height:18,borderRadius:5,border:`1px dashed ${borderColor}`,display:"inline-flex",alignItems:"center",justifyContent:"center",cursor:"pointer",color:plusColor,fontSize:11,fontWeight:800,flexShrink:0}}>
+        ↻<input type="file" accept="image/*" onChange={onFile} style={{display:"none"}}/>
+      </label>
+    </span>
+  );
   return (
     <label title="소재 이미지 업로드" style={{width:size,height:size,borderRadius:8,border:`1px dashed ${borderColor}`,display:"inline-flex",alignItems:"center",justifyContent:"center",cursor:"pointer",color:plusColor,fontSize:16,fontWeight:800,flexShrink:0}}>
       +<input type="file" accept="image/*" onChange={onFile} style={{display:"none"}}/>
