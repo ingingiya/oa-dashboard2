@@ -8387,6 +8387,16 @@ export default function OaDashboard(){
     };
 
     const tot=withM(camps.reduce((a,c)=>({cost:a.cost+c.cost,imp:a.imp+c.imp,clk:a.clk+c.clk,conv:a.conv+c.conv,buy:a.buy+c.buy,rev:a.rev+c.rev}),{cost:0,imp:0,clk:0,conv:0,buy:0,rev:0}));
+
+    // 제품별 합산 — 소재명 첫 토큰(제품명) 기준
+    const prodMap={};
+    rows.forEach(r=>{
+      const prod=String(r.name||"").split(/[_ ]/)[0]||"(기타)";
+      const p=prodMap[prod]=prodMap[prod]||{prod,cost:0,imp:0,clk:0,conv:0,buy:0,rev:0,cnt:0,start:null};
+      p.cost+=r.cost;p.imp+=r.imp;p.clk+=r.clk;p.conv+=r.conv;p.buy+=r.buy;p.rev+=r.rev;p.cnt++;
+      const d=parseGDate(r.start); if(d&&(!p.start||d<p.start)) p.start=d;
+    });
+    const prods=Object.values(prodMap).map(p=>withM({...p,days:p.start?Math.max(1,Math.floor((Date.now()-p.start.getTime())/86400000)+1):null})).sort((a,b)=>b.cost-a.cost);
     const winners=creas.filter(r=>r.cost>=10000&&r.roas>=TARGET).sort((a,b)=>b.roas-a.roas).slice(0,8);
     const losers =creas.filter(r=>r.cost>=50000&&r.roas<50).slice(0,8);
 
@@ -8459,6 +8469,30 @@ export default function OaDashboard(){
                     <td style={{...td,fontWeight:900,color:c.roas>=TARGET?C.good:c.roas>=100?C.rose:c.roas>0?C.warn:C.bad}}>{c.roas.toFixed(0)}%</td>
                     <td style={td}>{chip(j)}</td>
                     <td style={{...td,fontSize:12.5,color:C.inkMid}}>{j.d}</td>
+                  </tr>);})}
+                </tbody>
+              </table>
+            </div>
+          </Card>
+
+          {/* 제품별 합산 — 구매완료 ROAS */}
+          <Card>
+            <div style={{fontSize:14,fontWeight:900,color:C.ink,marginBottom:10}}>제품별 합산 ROAS <span style={{fontSize:12,fontWeight:700,color:C.inkLt}}>— 소재 전체 합산 · 구매완료 기준</span></div>
+            <div style={{overflowX:"auto"}}>
+              <table style={{width:"100%",borderCollapse:"collapse",fontSize:13}}>
+                <thead><tr>{["제품","소재수","운영","지출","CTR","구매완료","구매당비용","매출","ROAS","판정"].map(h=><th key={h} style={th}>{h}</th>)}</tr></thead>
+                <tbody>{prods.map(p=>{const j=judge(p);return(
+                  <tr key={p.prod} style={{borderBottom:`1px solid rgba(0,0,0,.04)`}}>
+                    <td style={{...td,fontWeight:800}}>{p.prod}</td>
+                    <td style={{...td,color:C.inkMid}}>{p.cnt}개</td>
+                    <td style={{...td,color:C.inkMid}}>{p.days!=null?`${p.days}일차`:"—"}</td>
+                    <td style={td}>{fmtW(p.cost)}</td>
+                    <td style={td}>{p.ctr.toFixed(2)}%</td>
+                    <td style={{...td,fontWeight:800}}>{p.buy}</td>
+                    <td style={td}>{p.cpa?`${fmtW(p.cpa)}원`:"—"}</td>
+                    <td style={td}>{fmtW(p.rev)}</td>
+                    <td style={{...td,fontWeight:900,color:p.roas>=TARGET?C.good:p.roas>=100?C.rose:p.roas>0?C.warn:C.bad}}>{p.roas.toFixed(0)}%</td>
+                    <td style={td}>{chip(j)}</td>
                   </tr>);})}
                 </tbody>
               </table>
