@@ -8248,11 +8248,15 @@ export default function OaDashboard(){
       setGfaReport(prev=>prev?{...prev,targetRoas:n2}:prev);
     };
 
-    // 소재 이미지 — 파일명 ↔ 소재명 유사도 매칭 (이름이 비슷하기만 해도 매칭)
+    // 소재 이미지 매칭 — 제품명(첫 토큰) 제외, 뒤에 붙는 컨셉명 기준
     const gfaNorm=s=>String(s||"").replace(/\.[a-zA-Z0-9]+$/,"").replace(/[\s_\-():.]/g,"").toLowerCase();
+    const gfaCore=s=>{ // "소닉플로우_초등학생_전환 4_피드형" → "초등학생_전환 4_피드형" (제품명 접두 제거)
+      const p=String(s||"").replace(/\.[a-zA-Z0-9]+$/,"").split("_");
+      return p.length>1?p.slice(1).join("_"):p[0];
+    };
     const gfaBigrams=s=>{const b=new Set();for(let i=0;i<s.length-1;i++)b.add(s.slice(i,i+2));return b;};
-    const gfaSim=(a,b)=>{ // Dice 계수 (0~1) — 부분포함이면 보너스
-      const na=gfaNorm(a),nb=gfaNorm(b);
+    const gfaSim=(fileName,creaName)=>{ // 파일명 vs 소재명 뒷부분 (0~1)
+      const na=gfaNorm(gfaCore(fileName)),nb=gfaNorm(gfaCore(creaName));
       if(!na||!nb) return 0;
       if(na.includes(nb)||nb.includes(na)) return 1;
       const A=gfaBigrams(na),B=gfaBigrams(nb);
@@ -8262,7 +8266,7 @@ export default function OaDashboard(){
     const gfaBestMatch=(fileName,names)=>{
       let best=null,bs=0;
       names.forEach(n2=>{const s=gfaSim(fileName,n2);if(s>bs){bs=s;best=n2;}});
-      return bs>=0.25?best:null; // 25% 이상 비슷하면 매칭
+      return bs>=0.35?best:null;
     };
     const onGfaThumbBulk=async(e)=>{
       const files=[...(e.target.files||[])]; e.target.value="";
@@ -8270,10 +8274,15 @@ export default function OaDashboard(){
       const names=[...new Set((gfaReport?.rows||[]).map(r=>r.name))];
       let ok=[],miss=[];
       for(const f of files){
-        const hit=gfaBestMatch(f.name,names);
-        if(!hit){ miss.push(f.name); continue; }
-        try{ const up=await uploadAdImage(f,`gfa_${hit}`); setGfaThumbs(prev=>({...(prev||{}),[hit]:up.url})); ok.push(`${f.name} → ${hit}`); }
-        catch(err){ miss.push(f.name); }
+        // 컨셉명이 포함 관계(=1)면 같은 컨셉의 지면 배리에이션 전부에 적용, 아니면 최고 유사 1개
+        let hits=names.filter(n2=>gfaSim(f.name,n2)>=0.99);
+        if(!hits.length){ const b=gfaBestMatch(f.name,names); if(b) hits=[b]; }
+        if(!hits.length){ miss.push(f.name); continue; }
+        try{
+          const up=await uploadAdImage(f,`gfa_${hits[0]}`);
+          setGfaThumbs(prev=>{const nx={...(prev||{})};hits.forEach(h=>{nx[h]=up.url;});return nx;});
+          ok.push(`${f.name} → ${hits.length>1?`${hits.length}개 배리에이션`:hits[0]}`);
+        }catch(err){ miss.push(f.name); }
       }
       window.alert(`매칭 업로드 ${ok.length}건 완료${ok.length?`\n${ok.slice(0,6).join("\n")}${ok.length>6?"\n…":""}`:""}${miss.length?`\n\n미매칭/실패 ${miss.length}건: ${miss.slice(0,5).join(", ")}${miss.length>5?" …":""}\n(미매칭은 소재 전체 표에서 개별 업로드)`:""}`);
     };
@@ -8288,10 +8297,10 @@ export default function OaDashboard(){
       const key=gfaBestMatch(name,Object.keys(t));
       return key?t[key]:null;
     };
-    const GThumb=({name,size=34})=>{
+    const GThumb=({name,size=48})=>{
       const u=gfaResolveThumb(name);
-      if(u) return <img src={u} alt="" onClick={()=>window.open(u,"_blank")} style={{width:size,height:size,objectFit:"cover",borderRadius:6,cursor:"zoom-in",border:"1px solid rgba(0,0,0,.08)",flexShrink:0}}/>;
-      return(<label title="소재 이미지 업로드" style={{width:size,height:size,borderRadius:6,border:`1px dashed ${C.border}`,display:"inline-flex",alignItems:"center",justifyContent:"center",cursor:"pointer",color:C.inkLt,fontSize:14,fontWeight:800,flexShrink:0}}>
+      if(u) return <ThumbPreview url={u} name={name}/>; // 마우스 오버 시 크게 미리보기
+      return(<label title="소재 이미지 업로드" style={{width:size,height:size,borderRadius:8,border:`1px dashed ${C.border}`,display:"inline-flex",alignItems:"center",justifyContent:"center",cursor:"pointer",color:C.inkLt,fontSize:16,fontWeight:800,flexShrink:0}}>
         +<input type="file" accept="image/*" onChange={ev=>onGfaThumbRow(name,ev)} style={{display:"none"}}/>
       </label>);
     };
@@ -8326,9 +8335,9 @@ export default function OaDashboard(){
     const winners=creas.filter(r=>r.cost>=10000&&r.roas>=TARGET).sort((a,b)=>b.roas-a.roas).slice(0,8);
     const losers =creas.filter(r=>r.cost>=50000&&r.roas<50).slice(0,8);
 
-    const th={padding:"6px 8px",textAlign:"left",fontWeight:700,color:C.inkMid,borderBottom:`1px solid ${C.border}`,whiteSpace:"nowrap"};
-    const td={padding:"6px 8px",whiteSpace:"nowrap"};
-    const chip=(j)=>(<span style={{fontSize:10,fontWeight:800,color:j.color,background:j.bg,padding:"3px 8px",borderRadius:20,whiteSpace:"nowrap"}}>{j.t}</span>);
+    const th={padding:"9px 10px",textAlign:"left",fontWeight:700,fontSize:12,color:C.inkMid,borderBottom:`1px solid ${C.border}`,whiteSpace:"nowrap"};
+    const td={padding:"9px 10px",whiteSpace:"nowrap"};
+    const chip=(j)=>(<span style={{fontSize:12,fontWeight:800,color:j.color,background:j.bg,padding:"3px 8px",borderRadius:20,whiteSpace:"nowrap"}}>{j.t}</span>);
 
     return(
       <div style={{display:"flex",flexDirection:"column",gap:14}}>
@@ -8337,7 +8346,7 @@ export default function OaDashboard(){
           <div style={{display:"flex",alignItems:"center",gap:10,flexWrap:"wrap"}}>
             <div style={{flex:1,minWidth:200}}>
               <div style={{fontSize:15,fontWeight:900,color:C.ink}}>GFA 소재 판정</div>
-              <div style={{fontSize:11,color:C.inkMid,marginTop:2}}>
+              <div style={{fontSize:12,color:C.inkMid,marginTop:2}}>
                 광고주센터(ads.naver.com) → 보고서 → <b>소재별</b> CSV 다운로드 후 업로드하면 소재변경/증액을 자동 판정합니다
                 {gfaReport&&<span> · 현재: <b>{gfaReport.fileName}</b> ({(gfaReport.uploadedAt||"").slice(0,10)})</span>}
               </div>
@@ -8369,17 +8378,17 @@ export default function OaDashboard(){
           <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(120px,1fr))",gap:10}}>
             {[["총 지출",`${fmtW(tot.cost)}원`],["구매완료",`${tot.buy}건`],["구매 매출",`${fmtW(tot.rev)}원`],["ROAS",`${tot.roas.toFixed(0)}%`],["구매당 비용",tot.cpa?`${fmtW(tot.cpa)}원`:"—"],["CTR",`${tot.ctr.toFixed(2)}%`]].map(([l,v])=>(
               <Card key={l} style={{padding:"14px 16px"}}>
-                <div style={{fontSize:10,fontWeight:700,color:C.inkLt}}>{l}</div>
-                <div style={{fontSize:18,fontWeight:900,color:C.ink,marginTop:2}}>{v}</div>
+                <div style={{fontSize:12,fontWeight:700,color:C.inkLt}}>{l}</div>
+                <div style={{fontSize:21,fontWeight:900,color:C.ink,marginTop:2}}>{v}</div>
               </Card>
             ))}
           </div>
 
           {/* 캠페인 판정 */}
           <Card>
-            <div style={{fontSize:13,fontWeight:900,color:C.ink,marginBottom:10}}>캠페인별 판정</div>
+            <div style={{fontSize:14,fontWeight:900,color:C.ink,marginBottom:10}}>캠페인별 판정</div>
             <div style={{overflowX:"auto"}}>
-              <table style={{width:"100%",borderCollapse:"collapse",fontSize:11}}>
+              <table style={{width:"100%",borderCollapse:"collapse",fontSize:13}}>
                 <thead><tr>{["캠페인","운영","지출","노출","클릭","CTR","구매완료","구매당비용","매출","ROAS","판정",""].map(h=><th key={h} style={th}>{h}</th>)}</tr></thead>
                 <tbody>{camps.map(c=>{const j=judge(c);return(
                   <tr key={c.camp} style={{borderBottom:`1px solid rgba(0,0,0,.04)`}}>
@@ -8394,7 +8403,7 @@ export default function OaDashboard(){
                     <td style={td}>{fmtW(c.rev)}</td>
                     <td style={{...td,fontWeight:900,color:c.roas>=TARGET?C.good:c.roas>=100?C.rose:c.roas>0?C.warn:C.bad}}>{c.roas.toFixed(0)}%</td>
                     <td style={td}>{chip(j)}</td>
-                    <td style={{...td,fontSize:10,color:C.inkMid}}>{j.d}</td>
+                    <td style={{...td,fontSize:11.5,color:C.inkMid}}>{j.d}</td>
                   </tr>);})}
                 </tbody>
               </table>
@@ -8404,33 +8413,33 @@ export default function OaDashboard(){
           {/* 위너/루저 */}
           <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(280px,1fr))",gap:10}}>
             <Card>
-              <div style={{fontSize:13,fontWeight:900,color:C.good,marginBottom:8}}>🏆 위너 소재 — 증액 대상 (지출 1만↑ & ROAS {TARGET}%↑)</div>
+              <div style={{fontSize:14,fontWeight:900,color:C.good,marginBottom:8}}>🏆 위너 소재 — 증액 대상 (지출 1만↑ & ROAS {TARGET}%↑)</div>
               {winners.length?winners.map(r=>(
-                <div key={r.name+r.camp} style={{display:"flex",alignItems:"center",gap:8,padding:"6px 0",borderBottom:"1px solid rgba(0,0,0,.04)",fontSize:11}}>
+                <div key={r.name+r.camp} style={{display:"flex",alignItems:"center",gap:8,padding:"6px 0",borderBottom:"1px solid rgba(0,0,0,.04)",fontSize:13}}>
                   <GThumb name={r.name}/>
                   <span style={{flex:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",fontWeight:600}}>{r.name}{r.days!=null&&<span style={{color:C.inkLt}}> · {r.days}일차</span>}</span>
                   <span style={{fontWeight:900,color:C.good,whiteSpace:"nowrap"}}>ROAS {r.roas.toFixed(0)}% · {fmtW(r.cost)}원</span>
                 </div>
-              )):<div style={{fontSize:11,color:C.inkLt}}>해당 없음</div>}
+              )):<div style={{fontSize:12,color:C.inkLt}}>해당 없음</div>}
             </Card>
             <Card>
-              <div style={{fontSize:13,fontWeight:900,color:C.bad,marginBottom:8}}>🔻 루저 소재 — 교체/중단 (지출 5만↑ & ROAS 50%↓)</div>
+              <div style={{fontSize:14,fontWeight:900,color:C.bad,marginBottom:8}}>🔻 루저 소재 — 교체/중단 (지출 5만↑ & ROAS 50%↓)</div>
               {losers.length?losers.map(r=>(
-                <div key={r.name+r.camp} style={{display:"flex",alignItems:"center",gap:8,padding:"6px 0",borderBottom:"1px solid rgba(0,0,0,.04)",fontSize:11}}>
+                <div key={r.name+r.camp} style={{display:"flex",alignItems:"center",gap:8,padding:"6px 0",borderBottom:"1px solid rgba(0,0,0,.04)",fontSize:13}}>
                   <GThumb name={r.name}/>
                   <span style={{flex:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",fontWeight:600}}>{r.name} <span style={{color:C.inkLt}}>({r.camp}{r.days!=null?` · ${r.days}일차`:""})</span></span>
                   <span style={{fontWeight:900,color:C.bad,whiteSpace:"nowrap"}}>ROAS {r.roas.toFixed(0)}% · {fmtW(r.cost)}원</span>
                 </div>
-              )):<div style={{fontSize:11,color:C.inkLt}}>해당 없음</div>}
+              )):<div style={{fontSize:12,color:C.inkLt}}>해당 없음</div>}
             </Card>
           </div>
 
           {/* 소재 전체 */}
           <Card>
             <details>
-              <summary style={{fontSize:13,fontWeight:900,color:C.ink,cursor:"pointer"}}>소재 전체 ({creas.length}개) — 비용순</summary>
+              <summary style={{fontSize:14,fontWeight:900,color:C.ink,cursor:"pointer"}}>소재 전체 ({creas.length}개) — 비용순</summary>
               <div style={{overflowX:"auto",marginTop:10}}>
-                <table style={{width:"100%",borderCollapse:"collapse",fontSize:11}}>
+                <table style={{width:"100%",borderCollapse:"collapse",fontSize:13}}>
                   <thead><tr>{["","소재","캠페인","운영","지출","노출","클릭","CTR","구매완료","구매당비용","매출","ROAS"].map((h,i)=><th key={i} style={th}>{h}</th>)}</tr></thead>
                   <tbody>{creas.map((r,i)=>(
                     <tr key={i} style={{borderBottom:"1px solid rgba(0,0,0,.04)"}}>
@@ -8453,7 +8462,7 @@ export default function OaDashboard(){
             </details>
           </Card>
 
-          <div style={{fontSize:10,color:C.inkLt,padding:"0 4px"}}>
+          <div style={{fontSize:11.5,color:C.inkLt,padding:"0 4px"}}>
             ※ 모든 지표는 <b>구매완료 기준</b> (장바구니 제외) · 운영 3일 미만·지출 3만 미만은 판단 보류 · 증액은 2배씩 점진 (급증 시 ROAS 하락 위험) · 소재 이미지는 파일명↔소재명 자동 매칭, 업로드하면 팀 전체 공유
           </div>
         </>)}
