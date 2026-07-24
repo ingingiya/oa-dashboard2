@@ -7241,6 +7241,8 @@ export default function OaDashboard(){
   const [pfTeams, setPfTeams]     = useSyncState("oa_teams_v1", []);   // [{id,name,keywords:[]}]
   const [pfBudgets, setPfBudgets] = useSyncState("oa_budget_v1", []);  // [{id,month,teamId,source,budget,targetRoas,spent}]
   const [pfMonth, setPfMonth]     = useState(()=>{const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}`;});
+  // GFA 리포트 (소재별 CSV 업로드 → 자동 판정) — {fileName,uploadedAt,targetRoas,rows:[]}
+  const [gfaReport, setGfaReport] = useSyncState("oa_gfa_report_v1", null);
   // 우선순위 탭 (scripts/sync-priority.js 로컬 크론이 기록 — 읽기 전용)
   const [prioData] = useSyncState("oa_priority_v1", null);
   const [prioCat, setPrioCat] = useState("전체");
@@ -8198,6 +8200,194 @@ export default function OaDashboard(){
   })();
 
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  // 📊 GFA — 소재별 CSV 업로드 → 소재변경/예산증가 자동 판정
+  //    (GFA API는 파트너사 전용이라 광고주센터에서 다운받은 CSV를 수동 인입)
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  const GfaSection=(()=>{
+    const fmtW=n=>Math.abs(n)>=10000?`${Math.round(n/10000).toLocaleString()}만`:`${Math.round(n||0).toLocaleString()}`;
+    const num=v=>parseFloat(String(v??"0").replace(/,/g,""))||0;
+    const TARGET=gfaReport?.targetRoas||300; // 목표 ROAS %
+
+    // CSV 업로드 — 광고주센터 "소재별 성과" 다운로드 파일 (UTF-8 BOM, EUC-KR 폴백)
+    const onGfaFile=async(e)=>{
+      const f=e.target.files?.[0]; if(!f) return; e.target.value="";
+      const buf=await f.arrayBuffer();
+      let text=new TextDecoder("utf-8").decode(buf);
+      if(text.includes("\uFFFD")){ try{ text=new TextDecoder("euc-kr").decode(buf); }catch(_){} }
+      const parsed=parseCSV(text.replace(/^\uFEFF/,""));
+      const rows=parsed.map(r=>({
+        name:  r["광고 소재 이름"]||"",
+        group: r["광고 그룹 이름"]||"",
+        camp:  r["캠페인 이름"]||"",
+        cost:  num(r["총비용"]),
+        imp:   num(r["노출수"]),
+        clk:   num(r["클릭수"]),
+        conv:  num(r["총 전환수"]),
+        buy:   num(r["구매완료 수"]),
+        rev:   num(r["구매완료 전환매출액"]),
+        cart:  num(r["장바구니 담기 수"]),
+        start: r["시작일"]||"",
+      })).filter(r=>r.name&&r.camp);
+      if(!rows.length){ window.alert("파싱 실패 — GFA 광고주센터 '소재별' 보고서 CSV인지 확인해주세요."); return; }
+      setGfaReport({fileName:f.name,uploadedAt:new Date().toISOString(),targetRoas:TARGET,rows});
+    };
+    const setTarget=()=>{
+      const v=window.prompt("목표 ROAS (%) — 이 값 이상이면 '증액 검토' 판정",String(TARGET));
+      if(v==null) return; const n2=Number(v);
+      if(!n2||n2<=0){ window.alert("숫자를 입력해주세요"); return; }
+      setGfaReport(prev=>prev?{...prev,targetRoas:n2}:prev);
+    };
+
+    const rows=gfaReport?.rows||[];
+    // 캠페인 집계
+    const campMap={};
+    rows.forEach(r=>{
+      const c=campMap[r.camp]=campMap[r.camp]||{camp:r.camp,cost:0,imp:0,clk:0,conv:0,buy:0,rev:0,cart:0};
+      c.cost+=r.cost;c.imp+=r.imp;c.clk+=r.clk;c.conv+=r.conv;c.buy+=r.buy;c.rev+=r.rev;c.cart+=r.cart;
+    });
+    const withM=o=>({...o,ctr:o.imp?o.clk/o.imp*100:0,roas:o.cost?o.rev/o.cost*100:0});
+    const camps=Object.values(campMap).map(withM).sort((a,b)=>b.cost-a.cost);
+    const creas=rows.map(withM).sort((a,b)=>b.cost-a.cost);
+
+    // 판정 — 소재변경 / 예산증가 / OFF / 유지
+    const judge=c=>{
+      if(c.cost<30000)                return {t:"판단 보류",  d:"지출 3만 미만 — 데이터 더 필요",              color:C.inkLt, bg:"rgba(0,0,0,.05)"};
+      if(c.roas>=TARGET)              return {t:"증액 검토",  d:`목표 ROAS ${TARGET}% 이상 — 2배씩 점진 증액`,  color:C.good,  bg:"#EDF7EF"};
+      if(c.roas>=100)                 return {t:"유지",       d:"흑자권 — 추이 관찰",                          color:C.rose,  bg:"#EAF3FD"};
+      if(c.buy===0&&c.cost>=100000)   return {t:"OFF 추천",   d:`${fmtW(c.cost)}원 쓰고 구매 0`,               color:C.bad,   bg:"#FEF0F0"};
+      if(c.ctr>=0.3)                  return {t:"랜딩 점검",  d:"클릭은 나오는데 구매 없음 — 소재보다 랜딩/가격", color:C.warn,  bg:"#FFF8EC"};
+      return                                 {t:"소재 변경",  d:"CTR·ROAS 모두 저조 — 소재 교체",              color:C.warn,  bg:"#FFF8EC"};
+    };
+
+    const tot=withM(camps.reduce((a,c)=>({cost:a.cost+c.cost,imp:a.imp+c.imp,clk:a.clk+c.clk,conv:a.conv+c.conv,buy:a.buy+c.buy,rev:a.rev+c.rev,cart:a.cart+c.cart}),{cost:0,imp:0,clk:0,conv:0,buy:0,rev:0,cart:0}));
+    const winners=creas.filter(r=>r.cost>=10000&&r.roas>=TARGET).sort((a,b)=>b.roas-a.roas).slice(0,8);
+    const losers =creas.filter(r=>r.cost>=50000&&r.roas<50).slice(0,8);
+
+    const th={padding:"6px 8px",textAlign:"left",fontWeight:700,color:C.inkMid,borderBottom:`1px solid ${C.border}`,whiteSpace:"nowrap"};
+    const td={padding:"6px 8px",whiteSpace:"nowrap"};
+    const chip=(j)=>(<span style={{fontSize:10,fontWeight:800,color:j.color,background:j.bg,padding:"3px 8px",borderRadius:20,whiteSpace:"nowrap"}}>{j.t}</span>);
+
+    return(
+      <div style={{display:"flex",flexDirection:"column",gap:14}}>
+        {/* 헤더 — 업로드/목표 */}
+        <Card>
+          <div style={{display:"flex",alignItems:"center",gap:10,flexWrap:"wrap"}}>
+            <div style={{flex:1,minWidth:200}}>
+              <div style={{fontSize:15,fontWeight:900,color:C.ink}}>GFA 소재 판정</div>
+              <div style={{fontSize:11,color:C.inkMid,marginTop:2}}>
+                광고주센터(ads.naver.com) → 보고서 → <b>소재별</b> CSV 다운로드 후 업로드하면 소재변경/증액을 자동 판정합니다
+                {gfaReport&&<span> · 현재: <b>{gfaReport.fileName}</b> ({(gfaReport.uploadedAt||"").slice(0,10)})</span>}
+              </div>
+            </div>
+            <button onClick={setTarget} style={{padding:"8px 14px",borderRadius:10,border:`1px solid ${C.border}`,background:"#fff",fontWeight:800,fontSize:12,cursor:"pointer",fontFamily:"inherit",color:C.ink}}>
+              목표 ROAS {TARGET}%
+            </button>
+            <label style={{padding:"8px 16px",borderRadius:10,background:C.rose,color:"#fff",fontWeight:800,fontSize:12,cursor:"pointer"}}>
+              CSV 업로드
+              <input type="file" accept=".csv" onChange={onGfaFile} style={{display:"none"}}/>
+            </label>
+          </div>
+        </Card>
+
+        {!rows.length&&(
+          <Card><div style={{textAlign:"center",padding:"40px 0",color:C.inkLt,fontSize:13,fontWeight:600}}>
+            아직 업로드된 리포트가 없습니다 — GFA 소재별 CSV를 올려주세요
+          </div></Card>
+        )}
+
+        {rows.length>0&&(<>
+          {/* 요약 */}
+          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(120px,1fr))",gap:10}}>
+            {[["총 지출",`${fmtW(tot.cost)}원`],["구매 매출",`${fmtW(tot.rev)}원`],["ROAS",`${tot.roas.toFixed(0)}%`],["구매",`${tot.buy}건`],["CTR",`${tot.ctr.toFixed(2)}%`],["장바구니",`${tot.cart}건`]].map(([l,v])=>(
+              <Card key={l} style={{padding:"14px 16px"}}>
+                <div style={{fontSize:10,fontWeight:700,color:C.inkLt}}>{l}</div>
+                <div style={{fontSize:18,fontWeight:900,color:C.ink,marginTop:2}}>{v}</div>
+              </Card>
+            ))}
+          </div>
+
+          {/* 캠페인 판정 */}
+          <Card>
+            <div style={{fontSize:13,fontWeight:900,color:C.ink,marginBottom:10}}>캠페인별 판정</div>
+            <div style={{overflowX:"auto"}}>
+              <table style={{width:"100%",borderCollapse:"collapse",fontSize:11}}>
+                <thead><tr>{["캠페인","지출","노출","클릭","CTR","전환","구매","매출","ROAS","판정",""].map(h=><th key={h} style={th}>{h}</th>)}</tr></thead>
+                <tbody>{camps.map(c=>{const j=judge(c);return(
+                  <tr key={c.camp} style={{borderBottom:`1px solid rgba(0,0,0,.04)`}}>
+                    <td style={{...td,fontWeight:700,maxWidth:180,overflow:"hidden",textOverflow:"ellipsis"}}>{c.camp}</td>
+                    <td style={td}>{fmtW(c.cost)}</td>
+                    <td style={td}>{c.imp.toLocaleString()}</td>
+                    <td style={td}>{c.clk.toLocaleString()}</td>
+                    <td style={td}>{c.ctr.toFixed(2)}%</td>
+                    <td style={td}>{c.conv}</td>
+                    <td style={td}>{c.buy}</td>
+                    <td style={td}>{fmtW(c.rev)}</td>
+                    <td style={{...td,fontWeight:900,color:c.roas>=TARGET?C.good:c.roas>=100?C.rose:c.roas>0?C.warn:C.bad}}>{c.roas.toFixed(0)}%</td>
+                    <td style={td}>{chip(j)}</td>
+                    <td style={{...td,fontSize:10,color:C.inkMid}}>{j.d}</td>
+                  </tr>);})}
+                </tbody>
+              </table>
+            </div>
+          </Card>
+
+          {/* 위너/루저 */}
+          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(280px,1fr))",gap:10}}>
+            <Card>
+              <div style={{fontSize:13,fontWeight:900,color:C.good,marginBottom:8}}>🏆 위너 소재 — 증액 대상 (지출 1만↑ & ROAS {TARGET}%↑)</div>
+              {winners.length?winners.map(r=>(
+                <div key={r.name+r.camp} style={{display:"flex",justifyContent:"space-between",gap:8,padding:"6px 0",borderBottom:"1px solid rgba(0,0,0,.04)",fontSize:11}}>
+                  <span style={{overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",fontWeight:600}}>{r.name}</span>
+                  <span style={{fontWeight:900,color:C.good,whiteSpace:"nowrap"}}>ROAS {r.roas.toFixed(0)}% · {fmtW(r.cost)}원</span>
+                </div>
+              )):<div style={{fontSize:11,color:C.inkLt}}>해당 없음</div>}
+            </Card>
+            <Card>
+              <div style={{fontSize:13,fontWeight:900,color:C.bad,marginBottom:8}}>🔻 루저 소재 — 교체/중단 (지출 5만↑ & ROAS 50%↓)</div>
+              {losers.length?losers.map(r=>(
+                <div key={r.name+r.camp} style={{display:"flex",justifyContent:"space-between",gap:8,padding:"6px 0",borderBottom:"1px solid rgba(0,0,0,.04)",fontSize:11}}>
+                  <span style={{overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",fontWeight:600}}>{r.name} <span style={{color:C.inkLt}}>({r.camp})</span></span>
+                  <span style={{fontWeight:900,color:C.bad,whiteSpace:"nowrap"}}>ROAS {r.roas.toFixed(0)}% · {fmtW(r.cost)}원</span>
+                </div>
+              )):<div style={{fontSize:11,color:C.inkLt}}>해당 없음</div>}
+            </Card>
+          </div>
+
+          {/* 소재 전체 */}
+          <Card>
+            <details>
+              <summary style={{fontSize:13,fontWeight:900,color:C.ink,cursor:"pointer"}}>소재 전체 ({creas.length}개) — 비용순</summary>
+              <div style={{overflowX:"auto",marginTop:10}}>
+                <table style={{width:"100%",borderCollapse:"collapse",fontSize:11}}>
+                  <thead><tr>{["소재","캠페인","지출","노출","클릭","CTR","전환","구매","매출","ROAS"].map(h=><th key={h} style={th}>{h}</th>)}</tr></thead>
+                  <tbody>{creas.map((r,i)=>(
+                    <tr key={i} style={{borderBottom:"1px solid rgba(0,0,0,.04)"}}>
+                      <td style={{...td,fontWeight:600,maxWidth:240,overflow:"hidden",textOverflow:"ellipsis"}}>{r.name}</td>
+                      <td style={{...td,color:C.inkMid}}>{r.camp}</td>
+                      <td style={td}>{fmtW(r.cost)}</td>
+                      <td style={td}>{r.imp.toLocaleString()}</td>
+                      <td style={td}>{r.clk.toLocaleString()}</td>
+                      <td style={td}>{r.ctr.toFixed(2)}%</td>
+                      <td style={td}>{r.conv}</td>
+                      <td style={td}>{r.buy}</td>
+                      <td style={td}>{fmtW(r.rev)}</td>
+                      <td style={{...td,fontWeight:900,color:r.roas>=TARGET?C.good:r.roas>=100?C.rose:r.roas>0?C.warn:C.bad}}>{r.roas.toFixed(0)}%</td>
+                    </tr>))}
+                  </tbody>
+                </table>
+              </div>
+            </details>
+          </Card>
+
+          <div style={{fontSize:10,color:C.inkLt,padding:"0 4px"}}>
+            ※ ROAS는 <b>구매완료 매출 기준</b> (장바구니 매출 제외) · 지출 3만 미만 캠페인은 판단 보류 · 증액은 2배씩 점진 (급증 시 ROAS 하락 위험)
+          </div>
+        </>)}
+      </div>
+    );
+  })();
+
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   // 🔥 우선순위 — 전제품(보아르 제외) 매출 기반 화력 배분
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   const PrioritySection=(()=>{
@@ -8605,6 +8795,7 @@ export default function OaDashboard(){
     {id:"priority",  icon:"local_fire_department", label:"우선순위"},
     {id:"naver",     icon:"ads_click",      label:"네이버광고"},
     {id:"meta",      icon:"campaign",       label:"메타광고"},
+    {id:"gfa",       icon:"insights",       label:"GFA"},
     {id:"adschedule",icon:"schedule",       label:"광고 스케줄"},
     {id:"guide",     icon:"menu_book",      label:"가이드"},
     {id:"inf_archive",icon:"photo_library", label:"아카이브"},
@@ -17792,6 +17983,7 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
           {sec==="insight"     && InsightSection}
           {sec==="coupang"     && CoupangSection}
           {sec==="portfolio"   && PortfolioSection}
+          {sec==="gfa"         && GfaSection}
           {sec==="priority"    && PrioritySection}
           {sec==="guide"       && <iframe src="/oa-guide.html" title="업무 가이드" style={{width:"100%",height:"calc(100vh - 150px)",border:`1px solid ${C.border}`,borderRadius:14,background:"#fff"}}/>}
         </main>
