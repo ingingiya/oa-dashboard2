@@ -7243,6 +7243,7 @@ export default function OaDashboard(){
   const [pfMonth, setPfMonth]     = useState(()=>{const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}`;});
   // GFA 리포트 (소재별 CSV 업로드 → 자동 판정) — {fileName,uploadedAt,targetRoas,rows:[]}
   const [gfaReport, setGfaReport] = useSyncState("oa_gfa_report_v1", null);
+  const [gfaThumbs, setGfaThumbs] = useSyncState("oa_gfa_thumbs_v1", {}); // {소재이름: 이미지URL}
   // 우선순위 탭 (scripts/sync-priority.js 로컬 크론이 기록 — 읽기 전용)
   const [prioData] = useSyncState("oa_priority_v1", null);
   const [prioCat, setPrioCat] = useState("전체");
@@ -8225,7 +8226,6 @@ export default function OaDashboard(){
         conv:  num(r["총 전환수"]),
         buy:   num(r["구매완료 수"]),
         rev:   num(r["구매완료 전환매출액"]),
-        cart:  num(r["장바구니 담기 수"]),
         start: r["시작일"]||"",
       })).filter(r=>r.name&&r.camp);
       if(!rows.length){ window.alert("파싱 실패 — GFA 광고주센터 '소재별' 보고서 CSV인지 확인해주세요."); return; }
@@ -8238,28 +8238,62 @@ export default function OaDashboard(){
       setGfaReport(prev=>prev?{...prev,targetRoas:n2}:prev);
     };
 
+    // 소재 이미지 — 파일명 ↔ 소재명 자동 매칭 일괄 업로드
+    const gfaNorm=s=>String(s||"").replace(/\.[a-zA-Z0-9]+$/,"").replace(/[\s_\-()]/g,"").toLowerCase();
+    const onGfaThumbBulk=async(e)=>{
+      const files=[...(e.target.files||[])]; e.target.value="";
+      if(!files.length) return;
+      const names=[...new Set((gfaReport?.rows||[]).map(r=>r.name))];
+      let ok=0,miss=[];
+      for(const f of files){
+        const base=gfaNorm(f.name);
+        const hit=names.find(n2=>{const nn=gfaNorm(n2);return nn.includes(base)||base.includes(nn);});
+        if(!hit){ miss.push(f.name); continue; }
+        try{ const up=await uploadAdImage(f,`gfa_${hit}`); setGfaThumbs(prev=>({...(prev||{}),[hit]:up.url})); ok++; }
+        catch(err){ miss.push(f.name); }
+      }
+      window.alert(`매칭 업로드 ${ok}건 완료${miss.length?`\n미매칭/실패 ${miss.length}건: ${miss.slice(0,5).join(", ")}${miss.length>5?" …":""}\n(미매칭은 소재 전체 표에서 개별 업로드)`:""}`);
+    };
+    const onGfaThumbRow=async(name,e)=>{
+      const f=e.target.files?.[0]; e.target.value=""; if(!f) return;
+      try{ const up=await uploadAdImage(f,`gfa_${name}`); setGfaThumbs(prev=>({...(prev||{}),[name]:up.url})); }
+      catch(err){ window.alert("업로드 실패: "+err.message); }
+    };
+    const GThumb=({name,size=34})=>{
+      const u=(gfaThumbs||{})[name];
+      if(u) return <img src={u} alt="" onClick={()=>window.open(u,"_blank")} style={{width:size,height:size,objectFit:"cover",borderRadius:6,cursor:"zoom-in",border:"1px solid rgba(0,0,0,.08)",flexShrink:0}}/>;
+      return(<label title="소재 이미지 업로드" style={{width:size,height:size,borderRadius:6,border:`1px dashed ${C.border}`,display:"inline-flex",alignItems:"center",justifyContent:"center",cursor:"pointer",color:C.inkLt,fontSize:14,fontWeight:800,flexShrink:0}}>
+        +<input type="file" accept="image/*" onChange={ev=>onGfaThumbRow(name,ev)} style={{display:"none"}}/>
+      </label>);
+    };
+
     const rows=gfaReport?.rows||[];
-    // 캠페인 집계
+    // 운영 경과일 — "2026.07.23." → 일수
+    const parseGDate=s=>{const m=String(s||"").match(/(\d{4})\.(\d{1,2})\.(\d{1,2})/);return m?new Date(+m[1],+m[2]-1,+m[3]):null;};
+    const daysRun=s=>{const d=parseGDate(s);return d?Math.max(1,Math.floor((Date.now()-d.getTime())/86400000)+1):null;};
+    // 캠페인 집계 (시작일은 가장 이른 소재 기준)
     const campMap={};
     rows.forEach(r=>{
-      const c=campMap[r.camp]=campMap[r.camp]||{camp:r.camp,cost:0,imp:0,clk:0,conv:0,buy:0,rev:0,cart:0};
-      c.cost+=r.cost;c.imp+=r.imp;c.clk+=r.clk;c.conv+=r.conv;c.buy+=r.buy;c.rev+=r.rev;c.cart+=r.cart;
+      const c=campMap[r.camp]=campMap[r.camp]||{camp:r.camp,cost:0,imp:0,clk:0,conv:0,buy:0,rev:0,start:null};
+      c.cost+=r.cost;c.imp+=r.imp;c.clk+=r.clk;c.conv+=r.conv;c.buy+=r.buy;c.rev+=r.rev;
+      const d=parseGDate(r.start); if(d&&(!c.start||d<c.start)) c.start=d;
     });
-    const withM=o=>({...o,ctr:o.imp?o.clk/o.imp*100:0,roas:o.cost?o.rev/o.cost*100:0});
-    const camps=Object.values(campMap).map(withM).sort((a,b)=>b.cost-a.cost);
-    const creas=rows.map(withM).sort((a,b)=>b.cost-a.cost);
+    const withM=o=>({...o,ctr:o.imp?o.clk/o.imp*100:0,roas:o.cost?o.rev/o.cost*100:0,cpa:o.buy?o.cost/o.buy:null});
+    const camps=Object.values(campMap).map(c=>withM({...c,days:c.start?Math.max(1,Math.floor((Date.now()-c.start.getTime())/86400000)+1):null})).sort((a,b)=>b.cost-a.cost);
+    const creas=rows.map(r=>withM({...r,days:daysRun(r.start)})).sort((a,b)=>b.cost-a.cost);
 
-    // 판정 — 소재변경 / 예산증가 / OFF / 유지
+    // 판정 — 구매완료 기준 (장바구니 제외) · 운영기간 반영
     const judge=c=>{
+      if(c.days!=null&&c.days<3&&c.buy===0) return {t:"판단 보류",  d:`운영 ${c.days}일차 — 3일은 지켜보기`,          color:C.inkLt, bg:"rgba(0,0,0,.05)"};
       if(c.cost<30000)                return {t:"판단 보류",  d:"지출 3만 미만 — 데이터 더 필요",              color:C.inkLt, bg:"rgba(0,0,0,.05)"};
       if(c.roas>=TARGET)              return {t:"증액 검토",  d:`목표 ROAS ${TARGET}% 이상 — 2배씩 점진 증액`,  color:C.good,  bg:"#EDF7EF"};
       if(c.roas>=100)                 return {t:"유지",       d:"흑자권 — 추이 관찰",                          color:C.rose,  bg:"#EAF3FD"};
-      if(c.buy===0&&c.cost>=100000)   return {t:"OFF 추천",   d:`${fmtW(c.cost)}원 쓰고 구매 0`,               color:C.bad,   bg:"#FEF0F0"};
+      if(c.buy===0&&c.cost>=100000)   return {t:"OFF 추천",   d:`${fmtW(c.cost)}원 쓰고 구매완료 0`,           color:C.bad,   bg:"#FEF0F0"};
       if(c.ctr>=0.3)                  return {t:"랜딩 점검",  d:"클릭은 나오는데 구매 없음 — 소재보다 랜딩/가격", color:C.warn,  bg:"#FFF8EC"};
       return                                 {t:"소재 변경",  d:"CTR·ROAS 모두 저조 — 소재 교체",              color:C.warn,  bg:"#FFF8EC"};
     };
 
-    const tot=withM(camps.reduce((a,c)=>({cost:a.cost+c.cost,imp:a.imp+c.imp,clk:a.clk+c.clk,conv:a.conv+c.conv,buy:a.buy+c.buy,rev:a.rev+c.rev,cart:a.cart+c.cart}),{cost:0,imp:0,clk:0,conv:0,buy:0,rev:0,cart:0}));
+    const tot=withM(camps.reduce((a,c)=>({cost:a.cost+c.cost,imp:a.imp+c.imp,clk:a.clk+c.clk,conv:a.conv+c.conv,buy:a.buy+c.buy,rev:a.rev+c.rev}),{cost:0,imp:0,clk:0,conv:0,buy:0,rev:0}));
     const winners=creas.filter(r=>r.cost>=10000&&r.roas>=TARGET).sort((a,b)=>b.roas-a.roas).slice(0,8);
     const losers =creas.filter(r=>r.cost>=50000&&r.roas<50).slice(0,8);
 
@@ -8282,6 +8316,12 @@ export default function OaDashboard(){
             <button onClick={setTarget} style={{padding:"8px 14px",borderRadius:10,border:`1px solid ${C.border}`,background:"#fff",fontWeight:800,fontSize:12,cursor:"pointer",fontFamily:"inherit",color:C.ink}}>
               목표 ROAS {TARGET}%
             </button>
+            {rows.length>0&&(
+              <label style={{padding:"8px 14px",borderRadius:10,border:`1px solid ${C.border}`,background:"#fff",fontWeight:800,fontSize:12,cursor:"pointer",color:C.ink}}>
+                소재 이미지 업로드
+                <input type="file" accept="image/*" multiple onChange={onGfaThumbBulk} style={{display:"none"}}/>
+              </label>
+            )}
             <label style={{padding:"8px 16px",borderRadius:10,background:C.rose,color:"#fff",fontWeight:800,fontSize:12,cursor:"pointer"}}>
               CSV 업로드
               <input type="file" accept=".csv" onChange={onGfaFile} style={{display:"none"}}/>
@@ -8298,7 +8338,7 @@ export default function OaDashboard(){
         {rows.length>0&&(<>
           {/* 요약 */}
           <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(120px,1fr))",gap:10}}>
-            {[["총 지출",`${fmtW(tot.cost)}원`],["구매 매출",`${fmtW(tot.rev)}원`],["ROAS",`${tot.roas.toFixed(0)}%`],["구매",`${tot.buy}건`],["CTR",`${tot.ctr.toFixed(2)}%`],["장바구니",`${tot.cart}건`]].map(([l,v])=>(
+            {[["총 지출",`${fmtW(tot.cost)}원`],["구매완료",`${tot.buy}건`],["구매 매출",`${fmtW(tot.rev)}원`],["ROAS",`${tot.roas.toFixed(0)}%`],["구매당 비용",tot.cpa?`${fmtW(tot.cpa)}원`:"—"],["CTR",`${tot.ctr.toFixed(2)}%`]].map(([l,v])=>(
               <Card key={l} style={{padding:"14px 16px"}}>
                 <div style={{fontSize:10,fontWeight:700,color:C.inkLt}}>{l}</div>
                 <div style={{fontSize:18,fontWeight:900,color:C.ink,marginTop:2}}>{v}</div>
@@ -8311,16 +8351,17 @@ export default function OaDashboard(){
             <div style={{fontSize:13,fontWeight:900,color:C.ink,marginBottom:10}}>캠페인별 판정</div>
             <div style={{overflowX:"auto"}}>
               <table style={{width:"100%",borderCollapse:"collapse",fontSize:11}}>
-                <thead><tr>{["캠페인","지출","노출","클릭","CTR","전환","구매","매출","ROAS","판정",""].map(h=><th key={h} style={th}>{h}</th>)}</tr></thead>
+                <thead><tr>{["캠페인","운영","지출","노출","클릭","CTR","구매완료","구매당비용","매출","ROAS","판정",""].map(h=><th key={h} style={th}>{h}</th>)}</tr></thead>
                 <tbody>{camps.map(c=>{const j=judge(c);return(
                   <tr key={c.camp} style={{borderBottom:`1px solid rgba(0,0,0,.04)`}}>
                     <td style={{...td,fontWeight:700,maxWidth:180,overflow:"hidden",textOverflow:"ellipsis"}}>{c.camp}</td>
+                    <td style={{...td,color:c.days!=null&&c.days<3?C.warn:C.inkMid,fontWeight:700}}>{c.days!=null?`${c.days}일차`:"—"}</td>
                     <td style={td}>{fmtW(c.cost)}</td>
                     <td style={td}>{c.imp.toLocaleString()}</td>
                     <td style={td}>{c.clk.toLocaleString()}</td>
                     <td style={td}>{c.ctr.toFixed(2)}%</td>
-                    <td style={td}>{c.conv}</td>
-                    <td style={td}>{c.buy}</td>
+                    <td style={{...td,fontWeight:800}}>{c.buy}</td>
+                    <td style={td}>{c.cpa?`${fmtW(c.cpa)}원`:"—"}</td>
                     <td style={td}>{fmtW(c.rev)}</td>
                     <td style={{...td,fontWeight:900,color:c.roas>=TARGET?C.good:c.roas>=100?C.rose:c.roas>0?C.warn:C.bad}}>{c.roas.toFixed(0)}%</td>
                     <td style={td}>{chip(j)}</td>
@@ -8336,8 +8377,9 @@ export default function OaDashboard(){
             <Card>
               <div style={{fontSize:13,fontWeight:900,color:C.good,marginBottom:8}}>🏆 위너 소재 — 증액 대상 (지출 1만↑ & ROAS {TARGET}%↑)</div>
               {winners.length?winners.map(r=>(
-                <div key={r.name+r.camp} style={{display:"flex",justifyContent:"space-between",gap:8,padding:"6px 0",borderBottom:"1px solid rgba(0,0,0,.04)",fontSize:11}}>
-                  <span style={{overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",fontWeight:600}}>{r.name}</span>
+                <div key={r.name+r.camp} style={{display:"flex",alignItems:"center",gap:8,padding:"6px 0",borderBottom:"1px solid rgba(0,0,0,.04)",fontSize:11}}>
+                  <GThumb name={r.name}/>
+                  <span style={{flex:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",fontWeight:600}}>{r.name}{r.days!=null&&<span style={{color:C.inkLt}}> · {r.days}일차</span>}</span>
                   <span style={{fontWeight:900,color:C.good,whiteSpace:"nowrap"}}>ROAS {r.roas.toFixed(0)}% · {fmtW(r.cost)}원</span>
                 </div>
               )):<div style={{fontSize:11,color:C.inkLt}}>해당 없음</div>}
@@ -8345,8 +8387,9 @@ export default function OaDashboard(){
             <Card>
               <div style={{fontSize:13,fontWeight:900,color:C.bad,marginBottom:8}}>🔻 루저 소재 — 교체/중단 (지출 5만↑ & ROAS 50%↓)</div>
               {losers.length?losers.map(r=>(
-                <div key={r.name+r.camp} style={{display:"flex",justifyContent:"space-between",gap:8,padding:"6px 0",borderBottom:"1px solid rgba(0,0,0,.04)",fontSize:11}}>
-                  <span style={{overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",fontWeight:600}}>{r.name} <span style={{color:C.inkLt}}>({r.camp})</span></span>
+                <div key={r.name+r.camp} style={{display:"flex",alignItems:"center",gap:8,padding:"6px 0",borderBottom:"1px solid rgba(0,0,0,.04)",fontSize:11}}>
+                  <GThumb name={r.name}/>
+                  <span style={{flex:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",fontWeight:600}}>{r.name} <span style={{color:C.inkLt}}>({r.camp}{r.days!=null?` · ${r.days}일차`:""})</span></span>
                   <span style={{fontWeight:900,color:C.bad,whiteSpace:"nowrap"}}>ROAS {r.roas.toFixed(0)}% · {fmtW(r.cost)}원</span>
                 </div>
               )):<div style={{fontSize:11,color:C.inkLt}}>해당 없음</div>}
@@ -8359,17 +8402,19 @@ export default function OaDashboard(){
               <summary style={{fontSize:13,fontWeight:900,color:C.ink,cursor:"pointer"}}>소재 전체 ({creas.length}개) — 비용순</summary>
               <div style={{overflowX:"auto",marginTop:10}}>
                 <table style={{width:"100%",borderCollapse:"collapse",fontSize:11}}>
-                  <thead><tr>{["소재","캠페인","지출","노출","클릭","CTR","전환","구매","매출","ROAS"].map(h=><th key={h} style={th}>{h}</th>)}</tr></thead>
+                  <thead><tr>{["","소재","캠페인","운영","지출","노출","클릭","CTR","구매완료","구매당비용","매출","ROAS"].map((h,i)=><th key={i} style={th}>{h}</th>)}</tr></thead>
                   <tbody>{creas.map((r,i)=>(
                     <tr key={i} style={{borderBottom:"1px solid rgba(0,0,0,.04)"}}>
+                      <td style={td}><GThumb name={r.name} size={30}/></td>
                       <td style={{...td,fontWeight:600,maxWidth:240,overflow:"hidden",textOverflow:"ellipsis"}}>{r.name}</td>
                       <td style={{...td,color:C.inkMid}}>{r.camp}</td>
+                      <td style={{...td,color:C.inkMid}}>{r.days!=null?`${r.days}일차`:"—"}</td>
                       <td style={td}>{fmtW(r.cost)}</td>
                       <td style={td}>{r.imp.toLocaleString()}</td>
                       <td style={td}>{r.clk.toLocaleString()}</td>
                       <td style={td}>{r.ctr.toFixed(2)}%</td>
-                      <td style={td}>{r.conv}</td>
-                      <td style={td}>{r.buy}</td>
+                      <td style={{...td,fontWeight:800}}>{r.buy}</td>
+                      <td style={td}>{r.cpa?`${fmtW(r.cpa)}원`:"—"}</td>
                       <td style={td}>{fmtW(r.rev)}</td>
                       <td style={{...td,fontWeight:900,color:r.roas>=TARGET?C.good:r.roas>=100?C.rose:r.roas>0?C.warn:C.bad}}>{r.roas.toFixed(0)}%</td>
                     </tr>))}
@@ -8380,7 +8425,7 @@ export default function OaDashboard(){
           </Card>
 
           <div style={{fontSize:10,color:C.inkLt,padding:"0 4px"}}>
-            ※ ROAS는 <b>구매완료 매출 기준</b> (장바구니 매출 제외) · 지출 3만 미만 캠페인은 판단 보류 · 증액은 2배씩 점진 (급증 시 ROAS 하락 위험)
+            ※ 모든 지표는 <b>구매완료 기준</b> (장바구니 제외) · 운영 3일 미만·지출 3만 미만은 판단 보류 · 증액은 2배씩 점진 (급증 시 ROAS 하락 위험) · 소재 이미지는 파일명↔소재명 자동 매칭, 업로드하면 팀 전체 공유
           </div>
         </>)}
       </div>
@@ -8802,7 +8847,6 @@ export default function OaDashboard(){
     {id:"launch",    icon:"rocket_launch",  label:"런칭"},
     {id:"schedule",  icon:"calendar_month", label:"스케줄"},
     {id:"creative",  icon:"palette",        label:"소재"},
-    {id:"hypothesis",icon:"psychology",     label:"가설"},
     {id:"insight",   icon:"edit_note",      label:"팀 노트"},
   ];
   const NAVS_WIP=[
@@ -17979,7 +18023,6 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
           {sec==="market"      && KeywordSection}
           {sec==="review"      && ReviewSection}
           {sec==="naver_review" && <NaverReviewSection/>}
-          {sec==="hypothesis"  && HypothesisSection}
           {sec==="insight"     && InsightSection}
           {sec==="coupang"     && CoupangSection}
           {sec==="portfolio"   && PortfolioSection}
