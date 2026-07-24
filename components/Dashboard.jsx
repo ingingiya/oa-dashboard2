@@ -6564,6 +6564,16 @@ export default function OaDashboard(){
       if (manual.length !== imgs.length) saveAdImagesMeta(manual).catch(() => {});
     }).catch(() => {});
     getSetting("oa_meta_thumbs_v1").then(v => { if (v && typeof v === "object") setMetaThumbs(v); }).catch(() => {});
+    // 메타 소재 썸네일 자동 가져오기 — 접속 시 백그라운드로 최신화 (실패 무시)
+    fetch("/api/meta-thumbs").then(r=>r.json()).then(data=>{
+      const thumbs=data?.thumbs||{};
+      if(!Object.keys(thumbs).length) return;
+      setMetaThumbs(prev=>{
+        const merged={...prev,...thumbs};
+        setSetting("oa_meta_thumbs_v1", merged).catch(()=>{});
+        return merged;
+      });
+    }).catch(()=>{});
   }, []);
 
   // ── 데이터 에이전트 컨텍스트 빌더 ────────────────
@@ -9707,11 +9717,16 @@ export default function OaDashboard(){
           );
         })()}
 
-        {/* 광고 소재 이미지/영상 업로드 — 드래그앤드롭 */}
-        <div style={{background:C.white,border:`1px solid ${C.border}`,borderRadius:12,padding:"14px 16px"}}>
-          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:10}}>
-            <div style={{fontWeight:700,fontSize:13,color:C.ink}}>🎬 광고 소재</div>
-            <div style={{display:"flex",gap:6,alignItems:"center"}}>
+        {/* 광고 소재 이미지/영상 업로드 — 토글 (기본 접힘, 썸네일은 접속 시 자동 연동) */}
+        <details style={{background:C.white,border:`1px solid ${C.border}`,borderRadius:12,padding:"14px 16px"}}>
+          <summary style={{fontWeight:700,fontSize:13,color:C.ink,cursor:"pointer",listStyle:"revert"}}>
+            🎬 광고 소재
+            <span style={{fontSize:10,color:C.inkLt,fontWeight:600,marginLeft:8}}>
+              {Object.keys(metaThumbs).length>0?`메타 자동 연동 ${Object.keys(metaThumbs).length}개`:"자동 연동 중…"}{adImages.length>0?` · 수동 ${adImages.length}개`:""} — 펼쳐서 관리
+            </span>
+          </summary>
+          <div style={{display:"flex",alignItems:"center",justifyContent:"flex-end",margin:"10px 0"}}>
+            <div style={{display:"flex",gap:6,alignItems:"center",flexWrap:"wrap"}}>
               {imgUploading&&<span style={{fontSize:10,color:C.inkLt}}><MI n="hourglass_empty" size={13}/> 업로드 중...</span>}
               {imgError&&<span style={{fontSize:10,color:C.bad,maxWidth:200,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}} title={imgError}><MI n="cancel" size={13}/> {imgError}</span>}
               <input ref={fileInputRef} type="file" accept="image/*,video/*" multiple style={{display:"none"}}
@@ -9802,7 +9817,7 @@ export default function OaDashboard(){
               </div>
             )}
           </div>
-        </div>
+        </details>
 
         {/* 시트 데이터 누락 경고/보완 배너 */}
         {hasSheet&&(()=>{
