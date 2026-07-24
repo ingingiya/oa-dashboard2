@@ -8248,29 +8248,48 @@ export default function OaDashboard(){
       setGfaReport(prev=>prev?{...prev,targetRoas:n2}:prev);
     };
 
-    // 소재 이미지 — 파일명 ↔ 소재명 자동 매칭 일괄 업로드
-    const gfaNorm=s=>String(s||"").replace(/\.[a-zA-Z0-9]+$/,"").replace(/[\s_\-()]/g,"").toLowerCase();
+    // 소재 이미지 — 파일명 ↔ 소재명 유사도 매칭 (이름이 비슷하기만 해도 매칭)
+    const gfaNorm=s=>String(s||"").replace(/\.[a-zA-Z0-9]+$/,"").replace(/[\s_\-():.]/g,"").toLowerCase();
+    const gfaBigrams=s=>{const b=new Set();for(let i=0;i<s.length-1;i++)b.add(s.slice(i,i+2));return b;};
+    const gfaSim=(a,b)=>{ // Dice 계수 (0~1) — 부분포함이면 보너스
+      const na=gfaNorm(a),nb=gfaNorm(b);
+      if(!na||!nb) return 0;
+      if(na.includes(nb)||nb.includes(na)) return 1;
+      const A=gfaBigrams(na),B=gfaBigrams(nb);
+      let inter=0; A.forEach(x=>{if(B.has(x))inter++;});
+      return (2*inter)/(A.size+B.size||1);
+    };
+    const gfaBestMatch=(fileName,names)=>{
+      let best=null,bs=0;
+      names.forEach(n2=>{const s=gfaSim(fileName,n2);if(s>bs){bs=s;best=n2;}});
+      return bs>=0.25?best:null; // 25% 이상 비슷하면 매칭
+    };
     const onGfaThumbBulk=async(e)=>{
       const files=[...(e.target.files||[])]; e.target.value="";
       if(!files.length) return;
       const names=[...new Set((gfaReport?.rows||[]).map(r=>r.name))];
-      let ok=0,miss=[];
+      let ok=[],miss=[];
       for(const f of files){
-        const base=gfaNorm(f.name);
-        const hit=names.find(n2=>{const nn=gfaNorm(n2);return nn.includes(base)||base.includes(nn);});
+        const hit=gfaBestMatch(f.name,names);
         if(!hit){ miss.push(f.name); continue; }
-        try{ const up=await uploadAdImage(f,`gfa_${hit}`); setGfaThumbs(prev=>({...(prev||{}),[hit]:up.url})); ok++; }
+        try{ const up=await uploadAdImage(f,`gfa_${hit}`); setGfaThumbs(prev=>({...(prev||{}),[hit]:up.url})); ok.push(`${f.name} → ${hit}`); }
         catch(err){ miss.push(f.name); }
       }
-      window.alert(`매칭 업로드 ${ok}건 완료${miss.length?`\n미매칭/실패 ${miss.length}건: ${miss.slice(0,5).join(", ")}${miss.length>5?" …":""}\n(미매칭은 소재 전체 표에서 개별 업로드)`:""}`);
+      window.alert(`매칭 업로드 ${ok.length}건 완료${ok.length?`\n${ok.slice(0,6).join("\n")}${ok.length>6?"\n…":""}`:""}${miss.length?`\n\n미매칭/실패 ${miss.length}건: ${miss.slice(0,5).join(", ")}${miss.length>5?" …":""}\n(미매칭은 소재 전체 표에서 개별 업로드)`:""}`);
     };
     const onGfaThumbRow=async(name,e)=>{
       const f=e.target.files?.[0]; e.target.value=""; if(!f) return;
       try{ const up=await uploadAdImage(f,`gfa_${name}`); setGfaThumbs(prev=>({...(prev||{}),[name]:up.url})); }
       catch(err){ window.alert("업로드 실패: "+err.message); }
     };
+    const gfaResolveThumb=name=>{
+      const t=gfaThumbs||{};
+      if(t[name]) return t[name];
+      const key=gfaBestMatch(name,Object.keys(t));
+      return key?t[key]:null;
+    };
     const GThumb=({name,size=34})=>{
-      const u=(gfaThumbs||{})[name];
+      const u=gfaResolveThumb(name);
       if(u) return <img src={u} alt="" onClick={()=>window.open(u,"_blank")} style={{width:size,height:size,objectFit:"cover",borderRadius:6,cursor:"zoom-in",border:"1px solid rgba(0,0,0,.08)",flexShrink:0}}/>;
       return(<label title="소재 이미지 업로드" style={{width:size,height:size,borderRadius:6,border:`1px dashed ${C.border}`,display:"inline-flex",alignItems:"center",justifyContent:"center",cursor:"pointer",color:C.inkLt,fontSize:14,fontWeight:800,flexShrink:0}}>
         +<input type="file" accept="image/*" onChange={ev=>onGfaThumbRow(name,ev)} style={{display:"none"}}/>
