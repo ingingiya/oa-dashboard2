@@ -253,7 +253,7 @@ function NaverReviewSection() {
     <div style={{display:"flex",flexDirection:"column",gap:16}}>
       <div>
         <div style={{fontSize:20,fontWeight:900,color:C.ink}}>리뷰 분석</div>
-        <div style={{fontSize:12,color:C.inkMid,marginTop:2}}>네이버 스마트스토어 리뷰 엑셀 업로드 → AI 자동 분석</div>
+        <div style={{fontSize:13,color:C.inkMid,marginTop:2}}>네이버 스마트스토어 리뷰 엑셀 업로드 → AI 자동 분석</div>
       </div>
 
       {/* 업로드 */}
@@ -269,10 +269,10 @@ function NaverReviewSection() {
         <div style={{marginTop:8,fontSize:13,fontWeight:700,color:C.inkMid}}>
           {parsing ? "⏳ 파일 읽는 중..." : products.length > 0 ? "+ 제품 추가 업로드 (엑셀)" : "엑셀 파일을 드래그하거나 클릭해서 업로드"}
         </div>
-        {rows.length > 0 && <div style={{marginTop:4,fontSize:11,color:C.inkMid}}>총 {rows.length}개 리뷰 · {products.length}종 제품</div>}
+        {rows.length > 0 && <div style={{marginTop:4,fontSize:12,color:C.inkMid}}>총 {rows.length}개 리뷰 · {products.length}종 제품</div>}
       </div>
 
-      {error && <div style={{background:"#fff5f5",border:"1px solid #fca5a5",borderRadius:8,padding:"10px 14px",fontSize:12,color:"#dc2626",whiteSpace:"pre-wrap"}}>{error}</div>}
+      {error && <div style={{background:"#fff5f5",border:"1px solid #fca5a5",borderRadius:8,padding:"10px 14px",fontSize:13,color:"#dc2626",whiteSpace:"pre-wrap"}}>{error}</div>}
 
       {/* 제품 탭 */}
       {products.length > 0 && (
@@ -286,10 +286,10 @@ function NaverReviewSection() {
               return (
                 <div key={p} style={{display:"flex",alignItems:"center",borderRadius:"8px 8px 0 0",border:`1px solid ${active?C.border:"transparent"}`,borderBottom:active?"1px solid #fff":"none",background:active?"#fff":"transparent",marginBottom:active?-1:0,overflow:"hidden"}}>
                   <button onClick={()=>{setSelProd(p);setKwTab("all");setExpandKw(null);}}
-                    style={{padding:"7px 10px 7px 14px",background:"transparent",border:"none",color:active?C.ink:C.inkMid,fontSize:12,fontWeight:active?800:500,cursor:"pointer",fontFamily:"inherit",display:"flex",alignItems:"center",gap:5}}>
+                    style={{padding:"7px 10px 7px 14px",background:"transparent",border:"none",color:active?C.ink:C.inkMid,fontSize:13,fontWeight:active?800:500,cursor:"pointer",fontFamily:"inherit",display:"flex",alignItems:"center",gap:5}}>
                     {label}
-                    <span style={{fontSize:10,background:active?C.blush:"#f4f4f5",color:active?C.rose:C.inkLt,padding:"1px 6px",borderRadius:8,fontWeight:700}}>{cnt}</span>
-                    {done && <span style={{fontSize:10}}>✅</span>}
+                    <span style={{fontSize:12,background:active?C.blush:"#f4f4f5",color:active?C.rose:C.inkLt,padding:"1px 6px",borderRadius:8,fontWeight:700}}>{cnt}</span>
+                    {done && <span style={{fontSize:12}}>✅</span>}
                   </button>
                   {p !== "__all__" && (
                     <button onClick={e=>{e.stopPropagation();removeProduct(p);}}
@@ -300,11 +300,11 @@ function NaverReviewSection() {
             })}
           </div>
           <div style={{padding:"12px 14px",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
-            <span style={{fontSize:11,color:C.inkMid}}>
+            <span style={{fontSize:12,color:C.inkMid}}>
               {selProd==="__all__"?"전체 제품 합산":(prodNames[selProd]||selProd)} · {filteredRows.length.toLocaleString()}개 리뷰
             </span>
             <button onClick={analyze} disabled={analyzing}
-              style={{padding:"7px 18px",borderRadius:8,border:"none",background:analyzing?"#e5e7eb":result?"#16a34a":C.rose,color:analyzing?"#9ca3af":"#fff",fontSize:12,fontWeight:800,cursor:analyzing?"not-allowed":"pointer",fontFamily:"inherit",display:"flex",alignItems:"center",gap:6}}>
+              style={{padding:"7px 18px",borderRadius:8,border:"none",background:analyzing?"#e5e7eb":result?"#16a34a":C.rose,color:analyzing?"#9ca3af":"#fff",fontSize:13,fontWeight:800,cursor:analyzing?"not-allowed":"pointer",fontFamily:"inherit",display:"flex",alignItems:"center",gap:6}}>
               {analyzing ? "⏳ 분석 중..." : result ? "✅ 재분석" : "✨ AI 분석하기"}
             </button>
           </div>
@@ -322,7 +322,7 @@ function NaverReviewSection() {
             {label:"부정 리뷰 (★1-2)",value:`${negRows.length.toLocaleString()}개 (${filteredRows.length?Math.round(negRows.length/filteredRows.length*100):0}%)`,color:"#dc2626"},
           ].map((s,i)=>(
             <div key={i} style={{background:C.white,border:`1px solid ${C.border}`,borderRadius:10,padding:"12px 14px"}}>
-              <div style={{fontSize:10,color:C.inkMid,marginBottom:4}}>{s.label}</div>
+              <div style={{fontSize:12,color:C.inkMid,marginBottom:4}}>{s.label}</div>
               <div style={{fontSize:15,fontWeight:900,color:s.color}}>{s.value}</div>
             </div>
           ))}
@@ -334,7 +334,7 @@ function NaverReviewSection() {
         <div style={{background:C.white,border:`1px solid ${C.border}`,borderRadius:12,padding:"16px 20px"}}>
           <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:12}}>
             <div style={{fontSize:13,fontWeight:800,color:C.ink}}>📅 월별 리뷰 작성 수</div>
-            <span style={{fontSize:11,color:"#0891b2",fontWeight:700,marginLeft:"auto"}}>월평균 {avgMonthly.toLocaleString()}개</span>
+            <span style={{fontSize:12,color:"#0891b2",fontWeight:700,marginLeft:"auto"}}>월평균 {avgMonthly.toLocaleString()}개</span>
           </div>
           <div style={{display:"flex",gap:8,alignItems:"flex-end",height:90}}>
             {months.map(m=>{
@@ -342,9 +342,9 @@ function NaverReviewSection() {
               const isLatest = m === months[months.length-1];
               return(
                 <div key={m} style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",gap:3}}>
-                  <span style={{fontSize:10,fontWeight:700,color:isLatest?C.rose:C.inkMid}}>{cnt}</span>
+                  <span style={{fontSize:12,fontWeight:700,color:isLatest?C.rose:C.inkMid}}>{cnt}</span>
                   <div style={{width:"100%",height:`${Math.max(pct,4)}%`,background:isLatest?C.rose:"#93c5fd",borderRadius:"4px 4px 0 0",minHeight:4}}/>
-                  <span style={{fontSize:9,color:isLatest?C.rose:C.inkMid,whiteSpace:"nowrap",fontWeight:isLatest?700:400}}>{m.slice(0,4).slice(2)}년 {m.slice(5)}월</span>
+                  <span style={{fontSize:11,color:isLatest?C.rose:C.inkMid,whiteSpace:"nowrap",fontWeight:isLatest?700:400}}>{m.slice(0,4).slice(2)}년 {m.slice(5)}월</span>
                 </div>
               );
             })}
@@ -360,13 +360,13 @@ function NaverReviewSection() {
             <div style={{display:"flex",gap:4,marginLeft:"auto"}}>
               {[{id:"all",label:"전체"},{id:"pos",label:"👍 긍정"},{id:"neg",label:"👎 부정"}].map(t=>(
                 <button key={t.id} onClick={()=>{setKwTab(t.id);setExpandKw(null);}}
-                  style={{padding:"3px 10px",borderRadius:12,border:`1px solid ${kwTab===t.id?C.rose:C.border}`,background:kwTab===t.id?C.blush:"#fff",color:kwTab===t.id?C.rose:C.inkMid,fontSize:10,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
+                  style={{padding:"3px 10px",borderRadius:12,border:`1px solid ${kwTab===t.id?C.rose:C.border}`,background:kwTab===t.id?C.blush:"#fff",color:kwTab===t.id?C.rose:C.inkMid,fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
                   {t.label}
                 </button>
               ))}
             </div>
           </div>
-          {kwData.length === 0 && <div style={{fontSize:12,color:C.inkMid}}>키워드 없음</div>}
+          {kwData.length === 0 && <div style={{fontSize:13,color:C.inkMid}}>키워드 없음</div>}
           <div style={{display:"flex",flexDirection:"column",gap:4}}>
             {kwData.slice(0,20).map((kw,i)=>{
               const pct = Math.round(kw.count/kwMax*100);
@@ -376,20 +376,20 @@ function NaverReviewSection() {
                 <div key={i}>
                   <div onClick={()=>setExpandKw(isOpen?null:kw.word)}
                     style={{display:"flex",alignItems:"center",gap:8,cursor:"pointer",padding:"4px 0"}}>
-                    <span style={{width:18,fontSize:10,color:C.inkLt,textAlign:"right"}}>{i+1}</span>
-                    <span style={{width:80,fontSize:12,fontWeight:700,color:C.ink,flexShrink:0}}>{kw.word}</span>
+                    <span style={{width:18,fontSize:12,color:C.inkLt,textAlign:"right"}}>{i+1}</span>
+                    <span style={{width:80,fontSize:13,fontWeight:700,color:C.ink,flexShrink:0}}>{kw.word}</span>
                     <div style={{flex:1,height:12,background:"#f3f4f6",borderRadius:6,overflow:"hidden"}}>
                       <div style={{width:`${pct}%`,height:"100%",background:kwTab==="neg"?"#ef4444":kwTab==="pos"?"#22c55e":C.rose,borderRadius:6}}/>
                     </div>
-                    <span style={{width:50,fontSize:11,fontWeight:700,color:C.inkMid,textAlign:"right"}}>{kw.count}건</span>
-                    <span style={{fontSize:10,color:C.inkLt}}>{isOpen?"▲":"▼"}</span>
+                    <span style={{width:50,fontSize:12,fontWeight:700,color:C.inkMid,textAlign:"right"}}>{kw.count}건</span>
+                    <span style={{fontSize:12,color:C.inkLt}}>{isOpen?"▲":"▼"}</span>
                   </div>
                   {isOpen && (
                     <div style={{marginLeft:26,marginBottom:6,display:"flex",flexDirection:"column",gap:4}}>
                       {samples.map((r,j)=>(
-                        <div key={j} style={{background:C.cream,borderRadius:6,padding:"6px 10px",fontSize:11,color:C.ink,lineHeight:1.5}}>
+                        <div key={j} style={{background:C.cream,borderRadius:6,padding:"6px 10px",fontSize:12,color:C.ink,lineHeight:1.5}}>
                           <span style={{color:STAR_COLORS[r.rating]||C.inkMid,fontWeight:700,marginRight:6}}>★{r.rating}</span>
-                          {r.date&&<span style={{fontSize:10,color:C.inkLt,marginRight:6}}>{r.date}</span>}
+                          {r.date&&<span style={{fontSize:12,color:C.inkLt,marginRight:6}}>{r.date}</span>}
                           {r.content.length>150?r.content.slice(0,150)+"…":r.content}
                         </div>
                       ))}
@@ -407,23 +407,23 @@ function NaverReviewSection() {
         <div style={{display:"flex",flexDirection:"column",gap:14}}>
           {/* 별점 분포 */}
           <div style={{background:C.white,border:`1px solid ${C.border}`,borderRadius:12,padding:"16px 20px"}}>
-            <div style={{fontSize:13,fontWeight:800,color:C.ink,marginBottom:12}}>⭐ 별점 분포 <span style={{fontSize:11,fontWeight:400,color:C.inkMid}}>총 {total.toLocaleString()}개</span></div>
+            <div style={{fontSize:13,fontWeight:800,color:C.ink,marginBottom:12}}>⭐ 별점 분포 <span style={{fontSize:12,fontWeight:400,color:C.inkMid}}>총 {total.toLocaleString()}개</span></div>
             {[5,4,3,2,1].map(s=>{
               const cnt=starDist[s]||0, pct=total>0?Math.round(cnt/total*100):0;
               return(
                 <div key={s} style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
-                  <span style={{width:24,fontSize:11,fontWeight:700,color:STAR_COLORS[s],textAlign:"right"}}>★{s}</span>
+                  <span style={{width:24,fontSize:12,fontWeight:700,color:STAR_COLORS[s],textAlign:"right"}}>★{s}</span>
                   <div style={{flex:1,height:14,background:"#f3f4f6",borderRadius:7,overflow:"hidden"}}>
                     <div style={{width:`${pct}%`,height:"100%",background:STAR_COLORS[s],borderRadius:7}}/>
                   </div>
-                  <span style={{width:70,fontSize:11,color:C.inkMid}}>{cnt.toLocaleString()}개 ({pct}%)</span>
+                  <span style={{width:70,fontSize:12,color:C.inkMid}}>{cnt.toLocaleString()}개 ({pct}%)</span>
                 </div>
               );
             })}
           </div>
 
           {/* 요약 */}
-          <div style={{background:"#eff6ff",border:"1px solid #bfdbfe",borderRadius:12,padding:"14px 18px",fontSize:12,color:"#1e40af",lineHeight:1.7}}>
+          <div style={{background:"#eff6ff",border:"1px solid #bfdbfe",borderRadius:12,padding:"14px 18px",fontSize:13,color:"#1e40af",lineHeight:1.7}}>
             💬 {result.analysis?.summary}
           </div>
 
@@ -433,13 +433,13 @@ function NaverReviewSection() {
               <div style={{fontSize:13,fontWeight:800,color:"#16a34a",marginBottom:10}}>👍 좋은 리뷰</div>
               {(result.analysis?.positive||[]).map((p,i)=>(
                 <div key={i} style={{marginBottom:8,paddingBottom:8,borderBottom:i<(result.analysis.positive.length-1)?`1px solid ${C.border}`:"none"}}>
-                  <div style={{fontSize:12,fontWeight:700,color:C.ink}}>{p.title} <span style={{fontSize:10,color:"#16a34a",fontWeight:400}}>({p.count}건)</span></div>
-                  <div style={{fontSize:11,color:C.inkMid,marginTop:2,lineHeight:1.5}}>{p.desc}</div>
+                  <div style={{fontSize:13,fontWeight:700,color:C.ink}}>{p.title} <span style={{fontSize:12,color:"#16a34a",fontWeight:400}}>({p.count}건)</span></div>
+                  <div style={{fontSize:12,color:C.inkMid,marginTop:2,lineHeight:1.5}}>{p.desc}</div>
                 </div>
               ))}
               <div style={{marginTop:8,display:"flex",flexWrap:"wrap",gap:4}}>
                 {(result.analysis?.keywords?.positive||[]).map((k,i)=>(
-                  <span key={i} style={{fontSize:10,background:"#dcfce7",color:"#15803d",padding:"2px 8px",borderRadius:10,fontWeight:700}}>#{k}</span>
+                  <span key={i} style={{fontSize:12,background:"#dcfce7",color:"#15803d",padding:"2px 8px",borderRadius:10,fontWeight:700}}>#{k}</span>
                 ))}
               </div>
             </div>
@@ -447,13 +447,13 @@ function NaverReviewSection() {
               <div style={{fontSize:13,fontWeight:800,color:"#dc2626",marginBottom:10}}>👎 나쁜 리뷰</div>
               {(result.analysis?.negative||[]).map((n,i)=>(
                 <div key={i} style={{marginBottom:8,paddingBottom:8,borderBottom:i<(result.analysis.negative.length-1)?`1px solid ${C.border}`:"none"}}>
-                  <div style={{fontSize:12,fontWeight:700,color:C.ink}}>{n.title} <span style={{fontSize:10,color:"#dc2626",fontWeight:400}}>({n.count}건)</span></div>
-                  <div style={{fontSize:11,color:C.inkMid,marginTop:2,lineHeight:1.5}}>{n.desc}</div>
+                  <div style={{fontSize:13,fontWeight:700,color:C.ink}}>{n.title} <span style={{fontSize:12,color:"#dc2626",fontWeight:400}}>({n.count}건)</span></div>
+                  <div style={{fontSize:12,color:C.inkMid,marginTop:2,lineHeight:1.5}}>{n.desc}</div>
                 </div>
               ))}
               <div style={{marginTop:8,display:"flex",flexWrap:"wrap",gap:4}}>
                 {(result.analysis?.keywords?.negative||[]).map((k,i)=>(
-                  <span key={i} style={{fontSize:10,background:"#fee2e2",color:"#dc2626",padding:"2px 8px",borderRadius:10,fontWeight:700}}>#{k}</span>
+                  <span key={i} style={{fontSize:12,background:"#fee2e2",color:"#dc2626",padding:"2px 8px",borderRadius:10,fontWeight:700}}>#{k}</span>
                 ))}
               </div>
             </div>
@@ -466,8 +466,8 @@ function NaverReviewSection() {
               <div key={i} style={{display:"flex",gap:10,padding:"10px 12px",background:"#f5f3ff",borderRadius:8,alignItems:"flex-start",marginBottom:6}}>
                 <span style={{fontSize:16,flexShrink:0}}>{["🔧","📦","📝","🎯"][i]||"•"}</span>
                 <div>
-                  <div style={{fontSize:12,fontWeight:700,color:"#5b21b6"}}>{s.title}</div>
-                  <div style={{fontSize:11,color:C.inkMid,marginTop:2,lineHeight:1.5}}>{s.desc}</div>
+                  <div style={{fontSize:13,fontWeight:700,color:"#5b21b6"}}>{s.title}</div>
+                  <div style={{fontSize:12,color:C.inkMid,marginTop:2,lineHeight:1.5}}>{s.desc}</div>
                 </div>
               </div>
             ))}
@@ -551,7 +551,7 @@ function LaunchSection() {
   const doneCount = sel ? LAUNCH_STAGE_DEFS.filter(s=>sel.stages?.[s.key]?.status==="완료").length : 0;
   const dday = sel?.targetDate ? Math.ceil((new Date(sel.targetDate+"T00:00:00+09:00") - Date.now())/86400000) : null;
 
-  if (!loaded) return <Card><div style={{fontSize:11,color:C.inkLt,padding:"20px 0",textAlign:"center"}}>런칭 데이터 로딩 중…</div></Card>;
+  if (!loaded) return <Card><div style={{fontSize:12,color:C.inkLt,padding:"20px 0",textAlign:"center"}}>런칭 데이터 로딩 중…</div></Card>;
 
   return (
     <div style={{display:"flex",flexDirection:"column",gap:14}}>
@@ -560,15 +560,15 @@ function LaunchSection() {
         <CardTitle title="🚀 신제품 런칭" sub="광고 소재 → 상세페이지 → 스토어 등록 → 네이버 광고 → 시딩 · 스킬(런칭 ㄱㄱ)과 상태 공유"
           action={<Btn small onClick={()=>setAddOpen(v=>!v)}>{addOpen?"닫기":"+ 새 런칭"}</Btn>}/>
         <div style={{display:"flex",gap:8,flexWrap:"wrap",alignItems:"center"}}>
-          {launches.length===0 && !addOpen && <div style={{fontSize:11,color:C.inkLt}}>진행 중인 런칭이 없어요 — "새 런칭"으로 시작하세요</div>}
+          {launches.length===0 && !addOpen && <div style={{fontSize:12,color:C.inkLt}}>진행 중인 런칭이 없어요 — "새 런칭"으로 시작하세요</div>}
           {launches.map(l=>{
             const active = sel?.id===l.id;
             const done = LAUNCH_STAGE_DEFS.filter(s=>l.stages?.[s.key]?.status==="완료").length;
             return (
               <button key={l.id} onClick={()=>setSelId(l.id)} style={{
-                padding:"6px 14px",borderRadius:20,cursor:"pointer",fontFamily:"inherit",fontSize:11,fontWeight:700,
+                padding:"6px 14px",borderRadius:20,cursor:"pointer",fontFamily:"inherit",fontSize:12,fontWeight:700,
                 border:`1.5px solid ${active?C.rose:C.border}`,background:active?C.rose:C.white,color:active?"#fff":C.inkMid}}>
-                {l.name} <span style={{fontSize:9,opacity:0.8}}>{done}/5</span>
+                {l.name} <span style={{fontSize:11,opacity:0.8}}>{done}/5</span>
               </button>
             );
           })}
@@ -576,24 +576,24 @@ function LaunchSection() {
         {addOpen && (
           <div style={{marginTop:12,padding:"12px 14px",background:C.cream,borderRadius:12,display:"flex",gap:8,flexWrap:"wrap",alignItems:"flex-end"}}>
             <div>
-              <div style={{fontSize:10,fontWeight:700,color:C.inkLt,marginBottom:3}}>제품명</div>
+              <div style={{fontSize:12,fontWeight:700,color:C.inkLt,marginBottom:3}}>제품명</div>
               <input value={form.name} onChange={e=>setForm(f=>({...f,name:e.target.value}))} placeholder="예: 소닉 플로우 2"
-                style={{padding:"7px 10px",border:`1px solid ${C.border}`,borderRadius:8,fontSize:12,outline:"none",width:180,fontFamily:"inherit"}}/>
+                style={{padding:"7px 10px",border:`1px solid ${C.border}`,borderRadius:8,fontSize:13,outline:"none",width:180,fontFamily:"inherit"}}/>
             </div>
             <div>
-              <div style={{fontSize:10,fontWeight:700,color:C.inkLt,marginBottom:3}}>카테고리</div>
+              <div style={{fontSize:12,fontWeight:700,color:C.inkLt,marginBottom:3}}>카테고리</div>
               <div style={{display:"flex",gap:4}}>
                 {LAUNCH_CATS.map(c=>(
                   <button key={c} onClick={()=>setForm(f=>({...f,category:c}))} style={{
-                    padding:"6px 10px",borderRadius:8,cursor:"pointer",fontFamily:"inherit",fontSize:10,fontWeight:700,
+                    padding:"6px 10px",borderRadius:8,cursor:"pointer",fontFamily:"inherit",fontSize:12,fontWeight:700,
                     border:`1.5px solid ${form.category===c?C.rose:C.border}`,background:form.category===c?C.rose:C.white,color:form.category===c?"#fff":C.inkMid}}>{c}</button>
                 ))}
               </div>
             </div>
             <div>
-              <div style={{fontSize:10,fontWeight:700,color:C.inkLt,marginBottom:3}}>목표일</div>
+              <div style={{fontSize:12,fontWeight:700,color:C.inkLt,marginBottom:3}}>목표일</div>
               <input type="date" value={form.targetDate} onChange={e=>setForm(f=>({...f,targetDate:e.target.value}))}
-                style={{padding:"6px 10px",border:`1px solid ${C.border}`,borderRadius:8,fontSize:12,outline:"none",fontFamily:"inherit"}}/>
+                style={{padding:"6px 10px",border:`1px solid ${C.border}`,borderRadius:8,fontSize:13,outline:"none",fontFamily:"inherit"}}/>
             </div>
             <Btn small onClick={addLaunch}>생성</Btn>
           </div>
@@ -611,7 +611,7 @@ function LaunchSection() {
               ["카테고리",sel.category||"—",C.ink,"#fff"],
             ].map(([l,v,fg,bg])=>(
               <div key={l} style={{flex:1,minWidth:130,background:bg,border:`1px solid ${C.border}`,borderRadius:12,padding:"12px 14px"}}>
-                <div style={{fontSize:10,fontWeight:700,color:C.inkLt}}>{l}</div>
+                <div style={{fontSize:12,fontWeight:700,color:C.inkLt}}>{l}</div>
                 <div style={{fontSize:19,fontWeight:800,color:fg}}>{v}</div>
               </div>
             ))}
@@ -626,16 +626,16 @@ function LaunchSection() {
                 <div key={def.key} style={{background:C.white,border:`1px solid ${st.status==="진행"?C.rose+"66":C.border}`,borderRadius:14,padding:"14px 16px"}}>
                   <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10}}>
                     <MI n={def.icon} size={16} style={{color:sty.fg}}/>
-                    <div style={{fontSize:12,fontWeight:800,color:C.ink,flex:1}}>{i+1}. {def.label}</div>
+                    <div style={{fontSize:13,fontWeight:800,color:C.ink,flex:1}}>{i+1}. {def.label}</div>
                     <button onClick={()=>{
                       const next = LAUNCH_STATUS_CYCLE[(LAUNCH_STATUS_CYCLE.indexOf(st.status)+1)%LAUNCH_STATUS_CYCLE.length];
                       patchSel(l=>{ l.stages[def.key].status = next; return l; });
                     }} style={{padding:"3px 12px",borderRadius:20,border:"none",cursor:"pointer",fontFamily:"inherit",
-                      fontSize:10,fontWeight:800,background:sty.bg,color:sty.fg}}>{st.status}</button>
+                      fontSize:12,fontWeight:800,background:sty.bg,color:sty.fg}}>{st.status}</button>
                   </div>
                   <div style={{display:"flex",flexDirection:"column",gap:5}}>
                     {def.checks.map(([k,label])=>(
-                      <label key={k} style={{display:"flex",alignItems:"center",gap:7,fontSize:11,color:st.checklist?.[k]?C.inkLt:C.inkMid,cursor:"pointer",
+                      <label key={k} style={{display:"flex",alignItems:"center",gap:7,fontSize:12,color:st.checklist?.[k]?C.inkLt:C.inkMid,cursor:"pointer",
                         textDecoration:st.checklist?.[k]?"line-through":"none"}}>
                         <input type="checkbox" checked={!!st.checklist?.[k]} onChange={e=>{
                           const v = e.target.checked;
@@ -648,7 +648,7 @@ function LaunchSection() {
                   {(st.artifacts||[]).length>0 && (
                     <div style={{marginTop:10,display:"flex",flexDirection:"column",gap:4}}>
                       {st.artifacts.map((a,ai)=>(
-                        <div key={ai} style={{display:"flex",alignItems:"center",gap:6,fontSize:10.5,background:C.cream,borderRadius:8,padding:"5px 8px"}}>
+                        <div key={ai} style={{display:"flex",alignItems:"center",gap:6,fontSize:12,background:C.cream,borderRadius:8,padding:"5px 8px"}}>
                           <MI n="attach_file" size={12} style={{color:C.inkLt}}/>
                           {/^https?:\/\//.test(a.url||"")
                             ? <a href={a.url} target="_blank" rel="noreferrer" style={{color:C.rose,fontWeight:700,textDecoration:"none",flex:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{a.label||a.url}</a>
@@ -662,9 +662,9 @@ function LaunchSection() {
                   {artInput?.stage===def.key ? (
                     <div style={{marginTop:8,display:"flex",gap:4,flexWrap:"wrap"}}>
                       <input value={artInput.label} onChange={e=>setArtInput(v=>({...v,label:e.target.value}))} placeholder="이름"
-                        style={{padding:"5px 8px",border:`1px solid ${C.border}`,borderRadius:8,fontSize:10.5,outline:"none",width:80,fontFamily:"inherit"}}/>
+                        style={{padding:"5px 8px",border:`1px solid ${C.border}`,borderRadius:8,fontSize:12,outline:"none",width:80,fontFamily:"inherit"}}/>
                       <input value={artInput.url} onChange={e=>setArtInput(v=>({...v,url:e.target.value}))} placeholder="URL 또는 파일경로"
-                        style={{padding:"5px 8px",border:`1px solid ${C.border}`,borderRadius:8,fontSize:10.5,outline:"none",flex:1,minWidth:100,fontFamily:"inherit"}}/>
+                        style={{padding:"5px 8px",border:`1px solid ${C.border}`,borderRadius:8,fontSize:12,outline:"none",flex:1,minWidth:100,fontFamily:"inherit"}}/>
                       <Btn small onClick={()=>{
                         if (!artInput.url.trim()) return;
                         const a = {label:artInput.label.trim()||artInput.url.trim(), url:artInput.url.trim()};
@@ -676,7 +676,7 @@ function LaunchSection() {
                   ) : (
                     <button onClick={()=>setArtInput({stage:def.key,label:"",url:""})}
                       style={{marginTop:8,border:"none",background:"transparent",cursor:"pointer",fontFamily:"inherit",
-                        fontSize:10,fontWeight:700,color:C.inkLt,padding:0,display:"flex",alignItems:"center",gap:3}}>
+                        fontSize:12,fontWeight:700,color:C.inkLt,padding:0,display:"flex",alignItems:"center",gap:3}}>
                       <MI n="add" size={12}/> 링크 추가
                     </button>
                   )}
@@ -691,7 +691,7 @@ function LaunchSection() {
             <textarea key={sel.id} defaultValue={sel.notes||""} placeholder="런칭 관련 메모 (포커스 벗어나면 저장)"
               onBlur={e=>{ const v=e.target.value; if(v!==(sel.notes||"")) patchSel(l=>{ l.notes=v; return l; }); }}
               style={{width:"100%",minHeight:70,padding:"10px 12px",border:`1px solid ${C.border}`,borderRadius:10,
-                fontSize:12,fontFamily:"inherit",color:C.ink,outline:"none",resize:"vertical",boxSizing:"border-box"}}/>
+                fontSize:13,fontFamily:"inherit",color:C.ink,outline:"none",resize:"vertical",boxSizing:"border-box"}}/>
           </Card>
         </>
       )}
@@ -709,12 +709,12 @@ function LaunchSection() {
             ["5. 시딩 (반자동)","아카이브에서 후보 선정 → 발송 엑셀+후보 리스트+DM 문안 자동 생성 (~/Downloads). 실제 발송·DM은 수동"],
           ].map(([t,d])=>(
             <div key={t} style={{border:`1px solid ${C.border}`,borderRadius:12,padding:"12px 14px",background:C.cream}}>
-              <div style={{fontSize:11,fontWeight:800,color:C.ink,marginBottom:4}}>{t}</div>
-              <div style={{fontSize:10.5,color:C.inkMid,lineHeight:1.6}}>{d}</div>
+              <div style={{fontSize:12,fontWeight:800,color:C.ink,marginBottom:4}}>{t}</div>
+              <div style={{fontSize:12,color:C.inkMid,lineHeight:1.6}}>{d}</div>
             </div>
           ))}
         </div>
-        <div style={{marginTop:10,padding:"10px 12px",background:C.blush,borderRadius:10,fontSize:10.5,color:C.inkMid,lineHeight:1.6}}>
+        <div style={{marginTop:10,padding:"10px 12px",background:C.blush,borderRadius:10,fontSize:12,color:C.inkMid,lineHeight:1.6}}>
           <b style={{color:C.ink}}>규칙:</b> 스토어·광고는 실행 전 미리보기를 텔레그램으로 받고, 승인해야 실제 반영.
           각 단계가 끝나면 텔레그램 알림 + 이 탭의 상태·체크리스트·산출물 링크가 자동 업데이트돼요.
           수동 항목(Figma, 판매중 전환, 발송 완료)은 여기서 직접 체크.
@@ -941,11 +941,11 @@ function InfluencerArchiveSection() {
       <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:8}}>
         <div>
           <div style={{fontSize:20,fontWeight:900,color:C.ink}}>인플루언서 아카이브</div>
-          <div style={{fontSize:12,color:C.inkMid,marginTop:2}}>공동구매·뷰티릴스·협업 후보 인플루언서를 분류·저장합니다</div>
+          <div style={{fontSize:13,color:C.inkMid,marginTop:2}}>공동구매·뷰티릴스·협업 후보 인플루언서를 분류·저장합니다</div>
         </div>
         <div style={{display:"flex",gap:8,alignItems:"center"}}>
           {Object.keys(seedSelected).length > 0 && (
-            <span style={{fontSize:11,color:C.inkMid}}>{Object.keys(seedSelected).length}명 선택</span>
+            <span style={{fontSize:12,color:C.inkMid}}>{Object.keys(seedSelected).length}명 선택</span>
           )}
           <button onClick={()=>{
             const sel = Object.keys(seedSelected);
@@ -954,7 +954,7 @@ function InfluencerArchiveSection() {
               : items.filter(x => x.address);
             if (targets.length === 0) { alert("주소가 입력된 인플루언서가 없어요"); return; }
             exportSeedingXlsx(targets);
-          }} style={{padding:"8px 14px",borderRadius:9,border:`1px solid ${C.border}`,background:C.white,color:C.ink,fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
+          }} style={{padding:"8px 14px",borderRadius:9,border:`1px solid ${C.border}`,background:C.white,color:C.ink,fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
             📦 {Object.keys(seedSelected).length > 0 ? `선택(${Object.keys(seedSelected).length}) 시딩 엑셀` : "전체 시딩 엑셀"}
           </button>
           <button onClick={()=>{
@@ -962,7 +962,7 @@ function InfluencerArchiveSection() {
             filtered.forEach(p=>{ sel[p.id]=true; });
             setSeedSelected(sel);
           }} style={{padding:"8px 12px",borderRadius:9,border:`1px solid ${C.border}`,background:Object.keys(seedSelected).length===filtered.length?"#2563eb":C.white,
-            color:Object.keys(seedSelected).length===filtered.length?"#fff":C.inkMid,fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
+            color:Object.keys(seedSelected).length===filtered.length?"#fff":C.inkMid,fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
             {Object.keys(seedSelected).length===filtered.length&&filtered.length>0?"✓ 전체 해제":"☐ 전체 선택"}
           </button>
           <button onClick={()=>{
@@ -972,7 +972,7 @@ function InfluencerArchiveSection() {
             targets.forEach(p=>rows.push([p.account,p.name,p.platform,p.followers,(p.categories||[]).join("/"),p.status,p.assignee,p.dealFee,p.uploadDate,p.address,p.notes?.replace(/,/g," ")].map(v=>`"${v||""}"`).join(",")));
             const blob = new Blob(["\uFEFF"+rows.join("\n")],{type:"text/csv"});
             const a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download=`인플루언서_${statusFilter}_${new Date().toISOString().slice(0,10)}.csv`; a.click();
-          }} style={{padding:"8px 12px",borderRadius:9,border:`1px solid ${C.border}`,background:C.white,color:C.inkMid,fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
+          }} style={{padding:"8px 12px",borderRadius:9,border:`1px solid ${C.border}`,background:C.white,color:C.inkMid,fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
             📥 엑셀 다운
           </button>
           <button onClick={openAdd} style={{padding:"8px 18px",borderRadius:9,border:"none",background:C.rose,color:"#fff",fontSize:13,fontWeight:800,cursor:"pointer",fontFamily:"inherit"}}>+ 추가</button>
@@ -991,7 +991,7 @@ function InfluencerArchiveSection() {
         const keys = Object.keys(byMonth).sort((a,b)=>a==="일정미정"?1:b==="일정미정"?-1:a.localeCompare(b));
         return (
           <div style={{background:C.white,border:`1px solid ${C.border}`,borderRadius:12,padding:"14px 16px",display:"flex",flexDirection:"column",gap:8}}>
-            <div style={{fontSize:13,fontWeight:800,color:C.ink}}>📅 월별 업로드 예정 <span style={{fontSize:11,fontWeight:600,color:C.inkMid}}>(컨택중 {active.length}건)</span></div>
+            <div style={{fontSize:13,fontWeight:800,color:C.ink}}>📅 월별 업로드 예정 <span style={{fontSize:12,fontWeight:600,color:C.inkMid}}>(컨택중 {active.length}건)</span></div>
             {keys.map(k=>{
               const list = byMonth[k];
               const shipped = list.filter(x=>x.shippingDone).length;
@@ -1000,10 +1000,10 @@ function InfluencerArchiveSection() {
               const label = k==="일정미정" ? "일정미정" : `${Number(k.slice(0,4))!==new Date().getFullYear()?k.slice(0,4)+"년 ":""}${Number(k.slice(5,7))}월`;
               return (
                 <div key={k} style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap",borderTop:`1px solid #f3f4f6`,paddingTop:8}}>
-                  <span style={{fontSize:12,fontWeight:800,color:C.ink}}>{label} · {list.length}건</span>
-                  <span style={{fontSize:10,fontWeight:700,padding:"1px 8px",borderRadius:10,background:shipped===list.length?"#dcfce7":"#fef9c3",color:shipped===list.length?"#16a34a":"#854d0e"}}>발송 {shipped}/{list.length}</span>
+                  <span style={{fontSize:13,fontWeight:800,color:C.ink}}>{label} · {list.length}건</span>
+                  <span style={{fontSize:12,fontWeight:700,padding:"1px 8px",borderRadius:10,background:shipped===list.length?"#dcfce7":"#fef9c3",color:shipped===list.length?"#16a34a":"#854d0e"}}>발송 {shipped}/{list.length}</span>
                   {Object.entries(prodCnt).map(([pr,c])=>(
-                    <span key={pr} style={{fontSize:10,background:"#f0fdf4",color:"#16a34a",padding:"1px 8px",borderRadius:10,fontWeight:700}}>📦 {pr} {c}</span>
+                    <span key={pr} style={{fontSize:12,background:"#f0fdf4",color:"#16a34a",padding:"1px 8px",borderRadius:10,fontWeight:700}}>📦 {pr} {c}</span>
                   ))}
                 </div>
               );
@@ -1015,25 +1015,25 @@ function InfluencerArchiveSection() {
       {/* 필터 바 */}
       <div style={{display:"flex",flexDirection:"column",gap:6}}>
         <div style={{display:"flex",gap:8,flexWrap:"wrap",alignItems:"center"}}>
-          <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="🔍 검색..." style={{padding:"6px 12px",borderRadius:8,border:`1px solid ${C.border}`,fontSize:12,fontFamily:"inherit",outline:"none",width:160}}/>
+          <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="🔍 검색..." style={{padding:"6px 12px",borderRadius:8,border:`1px solid ${C.border}`,fontSize:13,fontFamily:"inherit",outline:"none",width:160}}/>
         </div>
         <div style={{display:"flex",gap:4,flexWrap:"wrap",alignItems:"center"}}>
-          <span style={{fontSize:11,color:C.inkMid,fontWeight:700}}>카테고리:</span>
+          <span style={{fontSize:12,color:C.inkMid,fontWeight:700}}>카테고리:</span>
           {["전체",...INF_CATS].map(c=>(
-            <button key={c} onClick={()=>setCatFilter(c)} style={{padding:"4px 12px",borderRadius:20,border:"none",background:catFilter===c?C.rose:"#e5e7eb",color:catFilter===c?"#fff":C.inkMid,fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>{c}</button>
+            <button key={c} onClick={()=>setCatFilter(c)} style={{padding:"4px 12px",borderRadius:20,border:"none",background:catFilter===c?C.rose:"#e5e7eb",color:catFilter===c?"#fff":C.inkMid,fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>{c}</button>
           ))}
         </div>
         <div style={{display:"flex",gap:4,flexWrap:"wrap",alignItems:"center"}}>
-          <span style={{fontSize:11,color:C.inkMid,fontWeight:700}}>상태:</span>
+          <span style={{fontSize:12,color:C.inkMid,fontWeight:700}}>상태:</span>
           {["전체",...INF_STATUSES].map(s=>(
-            <button key={s} onClick={()=>setStatusFilter(s)} style={{padding:"4px 12px",borderRadius:20,border:"none",background:statusFilter===s?"#374151":"#e5e7eb",color:statusFilter===s?"#fff":C.inkMid,fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>{s}</button>
+            <button key={s} onClick={()=>setStatusFilter(s)} style={{padding:"4px 12px",borderRadius:20,border:"none",background:statusFilter===s?"#374151":"#e5e7eb",color:statusFilter===s?"#fff":C.inkMid,fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>{s}</button>
           ))}
         </div>
         {assignees.length > 1 && (
           <div style={{display:"flex",gap:4,flexWrap:"wrap",alignItems:"center"}}>
-            <span style={{fontSize:11,color:C.inkMid,fontWeight:700}}>담당:</span>
+            <span style={{fontSize:12,color:C.inkMid,fontWeight:700}}>담당:</span>
             {assignees.map(a=>(
-              <button key={a} onClick={()=>setAssigneeFilter(a)} style={{padding:"4px 12px",borderRadius:20,border:"none",background:assigneeFilter===a?"#7c3aed":"#e5e7eb",color:assigneeFilter===a?"#fff":C.inkMid,fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>{a}</button>
+              <button key={a} onClick={()=>setAssigneeFilter(a)} style={{padding:"4px 12px",borderRadius:20,border:"none",background:assigneeFilter===a?"#7c3aed":"#e5e7eb",color:assigneeFilter===a?"#fff":C.inkMid,fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>{a}</button>
             ))}
           </div>
         )}
@@ -1056,33 +1056,33 @@ function InfluencerArchiveSection() {
                   <div style={{width:36,height:36,borderRadius:"50%",background:"#e5e7eb",flexShrink:0,display:p.profilePicUrl?"none":"flex",alignItems:"center",justifyContent:"center",fontSize:16}}>👤</div>
                   <div style={{flex:1,minWidth:0}}>
                     <div style={{fontSize:14,fontWeight:800,color:C.ink,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.account||p.name||"(이름없음)"}</div>
-                    {p.name && p.account && <div style={{fontSize:11,color:C.inkMid}}>{p.name}</div>}
+                    {p.name && p.account && <div style={{fontSize:12,color:C.inkMid}}>{p.name}</div>}
                   </div>
                 </div>
-                <span style={{fontSize:10,background:INF_STATUS_COLORS[p.status]||"#f3f4f6",color:INF_STATUS_TEXT[p.status]||C.inkMid,padding:"2px 8px",borderRadius:10,fontWeight:700,whiteSpace:"nowrap"}}>{p.status}</span>
+                <span style={{fontSize:12,background:INF_STATUS_COLORS[p.status]||"#f3f4f6",color:INF_STATUS_TEXT[p.status]||C.inkMid,padding:"2px 8px",borderRadius:10,fontWeight:700,whiteSpace:"nowrap"}}>{p.status}</span>
               </div>
-              <div style={{display:"flex",alignItems:"center",gap:8,fontSize:11,color:C.inkMid}}>
+              <div style={{display:"flex",alignItems:"center",gap:8,fontSize:12,color:C.inkMid}}>
                 <span style={{fontWeight:700,color:C.ink}}>{p.platform}</span>
                 {p.followers && <span>👥 {fmtFollowers(p.followers)}</span>}
-                {p.assignee && <span style={{background:"#f3f4f6",padding:"1px 7px",borderRadius:10,fontSize:10,fontWeight:700,color:C.ink}}>{p.assignee}</span>}
+                {p.assignee && <span style={{background:"#f3f4f6",padding:"1px 7px",borderRadius:10,fontSize:12,fontWeight:700,color:C.ink}}>{p.assignee}</span>}
                 {p.profileUrl && <a href={p.profileUrl} target="_blank" rel="noreferrer" style={{color:C.rose,textDecoration:"none",marginLeft:"auto"}}><MI n="open_in_new" size={13}/></a>}
               </div>
               {(p.categories||[]).length > 0 && (
                 <div style={{display:"flex",gap:4,flexWrap:"wrap"}}>
-                  {p.categories.map(c=><span key={c} style={{fontSize:10,background:"#eff6ff",color:"#2563eb",padding:"2px 8px",borderRadius:10,fontWeight:700}}>#{c}</span>)}
+                  {p.categories.map(c=><span key={c} style={{fontSize:12,background:"#eff6ff",color:"#2563eb",padding:"2px 8px",borderRadius:10,fontWeight:700}}>#{c}</span>)}
                 </div>
               )}
               {(p.products||[]).length > 0 && (
                 <div style={{display:"flex",gap:4,flexWrap:"wrap"}}>
-                  {(p.products||[]).map((prod,i)=><span key={i} style={{fontSize:10,background:"#f0fdf4",color:"#16a34a",padding:"2px 8px",borderRadius:10,fontWeight:700}}>📦 {prod}</span>)}
+                  {(p.products||[]).map((prod,i)=><span key={i} style={{fontSize:12,background:"#f0fdf4",color:"#16a34a",padding:"2px 8px",borderRadius:10,fontWeight:700}}>📦 {prod}</span>)}
                 </div>
               )}
               {(p.notes||p.dealFee||p.dealUsagePeriod||p.dealContent) && (
-                <div style={{fontSize:11,color:C.inkMid,borderTop:`1px solid ${C.border}`,paddingTop:6,display:"flex",flexDirection:"column",gap:4}}>
+                <div style={{fontSize:12,color:C.inkMid,borderTop:`1px solid ${C.border}`,paddingTop:6,display:"flex",flexDirection:"column",gap:4}}>
                   {p.notes && <div>{p.notes}</div>}
                   {(p.dealFee||p.dealUsagePeriod||p.dealContent) && (
                     <div style={{background:"#f0fdf4",border:`1px solid #bbf7d0`,borderRadius:7,padding:"6px 10px",display:"flex",flexDirection:"column",gap:3}}>
-                      <div style={{fontSize:10,fontWeight:800,color:"#16a34a"}}>💬 협의</div>
+                      <div style={{fontSize:12,fontWeight:800,color:"#16a34a"}}>💬 협의</div>
                       {p.dealFee && <div><span style={{color:C.inkLt}}>금액: </span>{p.dealFee}</div>}
                       {p.dealUsagePeriod && <div><span style={{color:C.inkLt}}>2차활용: </span>{p.dealUsagePeriod}</div>}
                       {p.uploadDate && <div><span style={{color:C.inkLt}}>업로드일: </span>{p.uploadDate}</div>}
@@ -1092,31 +1092,31 @@ function InfluencerArchiveSection() {
                 </div>
               )}
               {p.address && (
-                <div style={{fontSize:10,color:"#6b7280",background:p.shippingDone?"#f0fdf4":"#f9fafb",border:`1px solid ${p.shippingDone?"#bbf7d0":C.border}`,borderRadius:6,padding:"3px 8px",display:"flex",gap:4,alignItems:"center",justifyContent:"space-between"}}>
+                <div style={{fontSize:12,color:"#6b7280",background:p.shippingDone?"#f0fdf4":"#f9fafb",border:`1px solid ${p.shippingDone?"#bbf7d0":C.border}`,borderRadius:6,padding:"3px 8px",display:"flex",gap:4,alignItems:"center",justifyContent:"space-between"}}>
                   <div style={{display:"flex",gap:4,alignItems:"center",minWidth:0}}>
                     <span>{p.shippingDone?"✅":"📮"}</span>
                     <span style={{overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.address}{p.addressDetail ? ` ${p.addressDetail}` : ""}</span>
                   </div>
-                  {p.shippingDone && p.shippingDate && <span style={{fontSize:9,color:"#16a34a",flexShrink:0}}>{p.shippingDate}</span>}
+                  {p.shippingDone && p.shippingDate && <span style={{fontSize:11,color:"#16a34a",flexShrink:0}}>{p.shippingDate}</span>}
                 </div>
               )}
               <div style={{display:"flex",gap:6,marginTop:2,alignItems:"center"}}>
                 {p.address && (
                   <label style={{display:"flex",alignItems:"center",gap:3,cursor:"pointer",padding:"5px 6px",borderRadius:7,border:`1px solid ${seedSelected[p.id]?"#2563eb":C.border}`,background:seedSelected[p.id]?"#eff6ff":"transparent",flexShrink:0}} title="시딩 엑셀에 포함">
                     <input type="checkbox" checked={!!seedSelected[p.id]} onChange={e=>setSeedSelected(s=>e.target.checked?{...s,[p.id]:true}:(({[p.id]:_,...rest})=>rest)(s))} style={{width:12,height:12,accentColor:"#2563eb",margin:0}}/>
-                    <span style={{fontSize:9,color:"#2563eb",fontWeight:700}}>시딩</span>
+                    <span style={{fontSize:11,color:"#2563eb",fontWeight:700}}>시딩</span>
                   </label>
                 )}
-                <button onClick={()=>openEdit(p)} style={{flex:1,padding:"5px 0",borderRadius:7,border:`1px solid ${C.border}`,background:C.white,color:C.ink,fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>편집</button>
-                <button onClick={()=>openSettle(p)} style={{flex:1,padding:"5px 0",borderRadius:7,border:"none",background:"#eff6ff",color:"#2563eb",fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>정산·배송</button>
+                <button onClick={()=>openEdit(p)} style={{flex:1,padding:"5px 0",borderRadius:7,border:`1px solid ${C.border}`,background:C.white,color:C.ink,fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>편집</button>
+                <button onClick={()=>openSettle(p)} style={{flex:1,padding:"5px 0",borderRadius:7,border:"none",background:"#eff6ff",color:"#2563eb",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>정산·배송</button>
                 <button onClick={()=>{
                   const done = !p.shippingDone;
                   const updated = items.map(x => x.id===p.id ? {...x, shippingDone:done, shippingDate: done ? new Date().toISOString().slice(0,10) : ""} : x);
                   setArchive(updated);
-                }} style={{padding:"5px 8px",borderRadius:7,border:"none",background:p.shippingDone?"#dcfce7":"#f3f4f6",color:p.shippingDone?"#16a34a":C.inkMid,fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit",whiteSpace:"nowrap"}}>
+                }} style={{padding:"5px 8px",borderRadius:7,border:"none",background:p.shippingDone?"#dcfce7":"#f3f4f6",color:p.shippingDone?"#16a34a":C.inkMid,fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit",whiteSpace:"nowrap"}}>
                   {p.shippingDone?"✅발송":"배송완료"}
                 </button>
-                <button onClick={()=>deleteItem(p.id)} style={{padding:"5px 10px",borderRadius:7,border:"none",background:"#fee2e2",color:"#dc2626",fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>삭제</button>
+                <button onClick={()=>deleteItem(p.id)} style={{padding:"5px 10px",borderRadius:7,border:"none",background:"#fee2e2",color:"#dc2626",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>삭제</button>
               </div>
             </div>
           ))}
@@ -1130,7 +1130,7 @@ function InfluencerArchiveSection() {
             <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
               <div>
                 <div style={{fontSize:16,fontWeight:900,color:C.ink}}>정산·배송 정보</div>
-                <div style={{fontSize:11,color:C.inkMid,marginTop:2}}>{settleModal.account||settleModal.name}</div>
+                <div style={{fontSize:12,color:C.inkMid,marginTop:2}}>{settleModal.account||settleModal.name}</div>
               </div>
               <button onClick={()=>setSettleModal(null)} style={{border:"none",background:"none",fontSize:18,cursor:"pointer",color:C.inkMid}}>✕</button>
             </div>
@@ -1138,7 +1138,7 @@ function InfluencerArchiveSection() {
             {/* 탭 */}
             <div style={{display:"flex",gap:4,borderBottom:`2px solid ${C.border}`,paddingBottom:0}}>
               {[{id:"shipping",label:"📮 배송·시딩"},{id:"tax",label:"💳 정산정보"}].map(t=>(
-                <button key={t.id} onClick={()=>setSettleTab(t.id)} style={{padding:"8px 16px",border:"none",background:"none",fontFamily:"inherit",fontSize:12,fontWeight:700,cursor:"pointer",
+                <button key={t.id} onClick={()=>setSettleTab(t.id)} style={{padding:"8px 16px",border:"none",background:"none",fontFamily:"inherit",fontSize:13,fontWeight:700,cursor:"pointer",
                   color:settleTab===t.id?C.rose:C.inkMid,
                   borderBottom:settleTab===t.id?`2px solid ${C.rose}`:"2px solid transparent",
                   marginBottom:-2,
@@ -1151,17 +1151,17 @@ function InfluencerArchiveSection() {
               <div style={{display:"flex",flexDirection:"column",gap:12}}>
                 <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
                   <div>
-                    <div style={{fontSize:11,color:C.inkMid,marginBottom:4,fontWeight:700}}>수령인</div>
-                    <input value={settleForm.recipientName} onChange={e=>setSettleForm(f=>({...f,recipientName:e.target.value}))} placeholder="홍길동" style={{width:"100%",padding:"7px 10px",border:`1px solid ${C.border}`,borderRadius:7,fontSize:12,fontFamily:"inherit",boxSizing:"border-box"}}/>
+                    <div style={{fontSize:12,color:C.inkMid,marginBottom:4,fontWeight:700}}>수령인</div>
+                    <input value={settleForm.recipientName} onChange={e=>setSettleForm(f=>({...f,recipientName:e.target.value}))} placeholder="홍길동" style={{width:"100%",padding:"7px 10px",border:`1px solid ${C.border}`,borderRadius:7,fontSize:13,fontFamily:"inherit",boxSizing:"border-box"}}/>
                   </div>
                   <div>
-                    <div style={{fontSize:11,color:C.inkMid,marginBottom:4,fontWeight:700}}>연락처</div>
-                    <input value={settleForm.phone} onChange={e=>setSettleForm(f=>({...f,phone:e.target.value}))} placeholder="010-0000-0000" style={{width:"100%",padding:"7px 10px",border:`1px solid ${C.border}`,borderRadius:7,fontSize:12,fontFamily:"inherit",boxSizing:"border-box"}}/>
+                    <div style={{fontSize:12,color:C.inkMid,marginBottom:4,fontWeight:700}}>연락처</div>
+                    <input value={settleForm.phone} onChange={e=>setSettleForm(f=>({...f,phone:e.target.value}))} placeholder="010-0000-0000" style={{width:"100%",padding:"7px 10px",border:`1px solid ${C.border}`,borderRadius:7,fontSize:13,fontFamily:"inherit",boxSizing:"border-box"}}/>
                   </div>
                 </div>
                 <div>
                   <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:4}}>
-                    <div style={{fontSize:11,color:C.inkMid,fontWeight:700}}>주소</div>
+                    <div style={{fontSize:12,color:C.inkMid,fontWeight:700}}>주소</div>
                     <button onClick={()=>{
                       const script = document.createElement("script");
                       script.src = "https://t1.daumcdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js";
@@ -1181,46 +1181,46 @@ function InfluencerArchiveSection() {
                       } else {
                         document.head.appendChild(script);
                       }
-                    }} style={{padding:"3px 10px",borderRadius:6,border:`1px solid ${C.rose}`,background:"#fff0f0",color:C.rose,fontSize:10,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
+                    }} style={{padding:"3px 10px",borderRadius:6,border:`1px solid ${C.rose}`,background:"#fff0f0",color:C.rose,fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
                       🔍 주소 검색
                     </button>
                   </div>
                   <div style={{display:"flex",gap:6}}>
-                    <input value={settleForm.postCode} onChange={e=>setSettleForm(f=>({...f,postCode:e.target.value}))} placeholder="우편번호" style={{width:90,padding:"7px 10px",border:`1px solid ${C.border}`,borderRadius:7,fontSize:12,fontFamily:"inherit",flexShrink:0}}/>
-                    <input value={settleForm.address} onChange={e=>setSettleForm(f=>({...f,address:e.target.value}))} placeholder="도로명 주소" style={{flex:1,padding:"7px 10px",border:`1px solid ${C.border}`,borderRadius:7,fontSize:12,fontFamily:"inherit"}}/>
+                    <input value={settleForm.postCode} onChange={e=>setSettleForm(f=>({...f,postCode:e.target.value}))} placeholder="우편번호" style={{width:90,padding:"7px 10px",border:`1px solid ${C.border}`,borderRadius:7,fontSize:13,fontFamily:"inherit",flexShrink:0}}/>
+                    <input value={settleForm.address} onChange={e=>setSettleForm(f=>({...f,address:e.target.value}))} placeholder="도로명 주소" style={{flex:1,padding:"7px 10px",border:`1px solid ${C.border}`,borderRadius:7,fontSize:13,fontFamily:"inherit"}}/>
                   </div>
-                  <input value={settleForm.addressDetail||""} onChange={e=>setSettleForm(f=>({...f,addressDetail:e.target.value}))} placeholder="상세주소 (동/호수 등)" style={{width:"100%",padding:"7px 10px",border:`1px solid ${C.border}`,borderRadius:7,fontSize:12,fontFamily:"inherit",boxSizing:"border-box",marginTop:6}}/>
+                  <input value={settleForm.addressDetail||""} onChange={e=>setSettleForm(f=>({...f,addressDetail:e.target.value}))} placeholder="상세주소 (동/호수 등)" style={{width:"100%",padding:"7px 10px",border:`1px solid ${C.border}`,borderRadius:7,fontSize:13,fontFamily:"inherit",boxSizing:"border-box",marginTop:6}}/>
                 </div>
 
                 {/* 제품별 수량 */}
                 {(settleModal.products||[]).length > 0 && (
                   <div>
-                    <div style={{fontSize:11,color:C.inkMid,marginBottom:6,fontWeight:700}}>📦 제품별 수량</div>
+                    <div style={{fontSize:12,color:C.inkMid,marginBottom:6,fontWeight:700}}>📦 제품별 수량</div>
                     <div style={{display:"flex",flexDirection:"column",gap:6}}>
                       {(settleModal.products||[]).map((prod,i)=>(
                         <div key={i} style={{display:"flex",alignItems:"center",gap:8,background:"#f9fafb",borderRadius:7,padding:"6px 10px"}}>
-                          <span style={{flex:1,fontSize:12,color:C.ink,fontWeight:600}}>{prod}</span>
+                          <span style={{flex:1,fontSize:13,color:C.ink,fontWeight:600}}>{prod}</span>
                           <input
                             type="number" min={0}
                             value={(settleForm.productQtys||{})[prod] ?? 1}
                             onChange={e=>setSettleForm(f=>({...f,productQtys:{...(f.productQtys||{}),[prod]:Number(e.target.value)||0}}))}
-                            style={{width:64,padding:"4px 8px",border:`1px solid ${C.border}`,borderRadius:6,fontSize:12,fontFamily:"inherit",textAlign:"center"}}
+                            style={{width:64,padding:"4px 8px",border:`1px solid ${C.border}`,borderRadius:6,fontSize:13,fontFamily:"inherit",textAlign:"center"}}
                           />
-                          <span style={{fontSize:11,color:C.inkMid}}>개</span>
+                          <span style={{fontSize:12,color:C.inkMid}}>개</span>
                         </div>
                       ))}
                     </div>
                   </div>
                 )}
                 {(settleModal.products||[]).length === 0 && (
-                  <div style={{fontSize:12,color:"#f59e0b",background:"#fef9c3",borderRadius:7,padding:"8px 12px"}}>⚠️ 편집에서 제품을 먼저 등록해주세요</div>
+                  <div style={{fontSize:13,color:"#f59e0b",background:"#fef9c3",borderRadius:7,padding:"8px 12px"}}>⚠️ 편집에서 제품을 먼저 등록해주세요</div>
                 )}
 
                 {/* 개별 시딩 엑셀 */}
                 <button
                   onClick={()=>exportSeedingXlsx([{...settleModal,...settleForm}])}
                   disabled={!settleForm.address}
-                  style={{padding:"9px",borderRadius:8,border:"none",background:settleForm.address?"#16a34a":"#e5e7eb",color:settleForm.address?"#fff":"#9ca3af",fontSize:12,fontWeight:800,cursor:settleForm.address?"pointer":"not-allowed",fontFamily:"inherit"}}
+                  style={{padding:"9px",borderRadius:8,border:"none",background:settleForm.address?"#16a34a":"#e5e7eb",color:settleForm.address?"#fff":"#9ca3af",fontSize:13,fontWeight:800,cursor:settleForm.address?"pointer":"not-allowed",fontFamily:"inherit"}}
                 >
                   📥 이 인플루언서 시딩 엑셀 다운로드
                 </button>
@@ -1239,58 +1239,58 @@ function InfluencerArchiveSection() {
               return (
               <div style={{display:"flex",flexDirection:"column",gap:12}}>
                 <div>
-                  <div style={{fontSize:11,color:C.inkMid,marginBottom:6,fontWeight:700}}>사업자 유형</div>
+                  <div style={{fontSize:12,color:C.inkMid,marginBottom:6,fontWeight:700}}>사업자 유형</div>
                   <div style={{display:"flex",gap:8}}>
                     {["개인","사업자"].map(t=>(
-                      <button key={t} onClick={()=>setSettleForm(f=>({...f,taxType:t}))} style={{padding:"6px 20px",borderRadius:8,border:`1px solid ${settleForm.taxType===t?C.rose:C.border}`,background:settleForm.taxType===t?"#fff0f0":C.white,color:settleForm.taxType===t?C.rose:C.ink,fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>{t}</button>
+                      <button key={t} onClick={()=>setSettleForm(f=>({...f,taxType:t}))} style={{padding:"6px 20px",borderRadius:8,border:`1px solid ${settleForm.taxType===t?C.rose:C.border}`,background:settleForm.taxType===t?"#fff0f0":C.white,color:settleForm.taxType===t?C.rose:C.ink,fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>{t}</button>
                     ))}
                   </div>
                 </div>
                 <div>
-                  <div style={{fontSize:11,color:C.inkMid,marginBottom:4,fontWeight:700}}>{settleForm.taxType==="개인"?"주민등록번호":"사업자등록번호"}</div>
+                  <div style={{fontSize:12,color:C.inkMid,marginBottom:4,fontWeight:700}}>{settleForm.taxType==="개인"?"주민등록번호":"사업자등록번호"}</div>
                   <input value={settleForm.idNumber} onChange={e=>setSettleForm(f=>({...f,idNumber:e.target.value}))}
                     placeholder={settleForm.taxType==="개인"?"000000-0000000":"000-00-00000"}
-                    style={{width:"100%",padding:"7px 10px",border:`1px solid ${C.border}`,borderRadius:7,fontSize:12,fontFamily:"inherit",boxSizing:"border-box"}}/>
+                    style={{width:"100%",padding:"7px 10px",border:`1px solid ${C.border}`,borderRadius:7,fontSize:13,fontFamily:"inherit",boxSizing:"border-box"}}/>
                 </div>
                 <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
                   <div>
-                    <div style={{fontSize:11,color:C.inkMid,marginBottom:4,fontWeight:700}}>은행명</div>
-                    <input value={settleForm.bankName} onChange={e=>setSettleForm(f=>({...f,bankName:e.target.value}))} placeholder="국민은행" style={{width:"100%",padding:"7px 10px",border:`1px solid ${C.border}`,borderRadius:7,fontSize:12,fontFamily:"inherit",boxSizing:"border-box"}}/>
+                    <div style={{fontSize:12,color:C.inkMid,marginBottom:4,fontWeight:700}}>은행명</div>
+                    <input value={settleForm.bankName} onChange={e=>setSettleForm(f=>({...f,bankName:e.target.value}))} placeholder="국민은행" style={{width:"100%",padding:"7px 10px",border:`1px solid ${C.border}`,borderRadius:7,fontSize:13,fontFamily:"inherit",boxSizing:"border-box"}}/>
                   </div>
                   <div>
-                    <div style={{fontSize:11,color:C.inkMid,marginBottom:4,fontWeight:700}}>예금주</div>
-                    <input value={settleForm.bankHolder} onChange={e=>setSettleForm(f=>({...f,bankHolder:e.target.value}))} placeholder="홍길동" style={{width:"100%",padding:"7px 10px",border:`1px solid ${C.border}`,borderRadius:7,fontSize:12,fontFamily:"inherit",boxSizing:"border-box"}}/>
+                    <div style={{fontSize:12,color:C.inkMid,marginBottom:4,fontWeight:700}}>예금주</div>
+                    <input value={settleForm.bankHolder} onChange={e=>setSettleForm(f=>({...f,bankHolder:e.target.value}))} placeholder="홍길동" style={{width:"100%",padding:"7px 10px",border:`1px solid ${C.border}`,borderRadius:7,fontSize:13,fontFamily:"inherit",boxSizing:"border-box"}}/>
                   </div>
                 </div>
                 <div>
-                  <div style={{fontSize:11,color:C.inkMid,marginBottom:4,fontWeight:700}}>계좌번호</div>
-                  <input value={settleForm.bankAccount} onChange={e=>setSettleForm(f=>({...f,bankAccount:e.target.value}))} placeholder="123-456-789012" style={{width:"100%",padding:"7px 10px",border:`1px solid ${C.border}`,borderRadius:7,fontSize:12,fontFamily:"inherit",boxSizing:"border-box"}}/>
+                  <div style={{fontSize:12,color:C.inkMid,marginBottom:4,fontWeight:700}}>계좌번호</div>
+                  <input value={settleForm.bankAccount} onChange={e=>setSettleForm(f=>({...f,bankAccount:e.target.value}))} placeholder="123-456-789012" style={{width:"100%",padding:"7px 10px",border:`1px solid ${C.border}`,borderRadius:7,fontSize:13,fontFamily:"inherit",boxSizing:"border-box"}}/>
                 </div>
 
                 <div style={{borderTop:`1px solid ${C.border}`,paddingTop:12,display:"flex",flexDirection:"column",gap:10}}>
-                  <div style={{fontSize:11,fontWeight:800,color:C.ink}}>💸 이번 정산</div>
+                  <div style={{fontSize:12,fontWeight:800,color:C.ink}}>💸 이번 정산</div>
                   <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
                     <div>
-                      <div style={{fontSize:11,color:C.inkMid,marginBottom:4,fontWeight:700}}>정산금액 (원)</div>
-                      <input value={settleForm.settleFee} onChange={e=>setSettleForm(f=>({...f,settleFee:e.target.value}))} placeholder="200000" style={{width:"100%",padding:"7px 10px",border:`1px solid ${C.border}`,borderRadius:7,fontSize:12,fontFamily:"inherit",boxSizing:"border-box"}}/>
+                      <div style={{fontSize:12,color:C.inkMid,marginBottom:4,fontWeight:700}}>정산금액 (원)</div>
+                      <input value={settleForm.settleFee} onChange={e=>setSettleForm(f=>({...f,settleFee:e.target.value}))} placeholder="200000" style={{width:"100%",padding:"7px 10px",border:`1px solid ${C.border}`,borderRadius:7,fontSize:13,fontFamily:"inherit",boxSizing:"border-box"}}/>
                     </div>
                     <div>
-                      <div style={{fontSize:11,color:C.inkMid,marginBottom:4,fontWeight:700}}>발생일자</div>
-                      <input type="date" value={settleForm.settleDate} onChange={e=>setSettleForm(f=>({...f,settleDate:e.target.value}))} style={{width:"100%",padding:"7px 10px",border:`1px solid ${C.border}`,borderRadius:7,fontSize:12,fontFamily:"inherit",boxSizing:"border-box"}}/>
+                      <div style={{fontSize:12,color:C.inkMid,marginBottom:4,fontWeight:700}}>발생일자</div>
+                      <input type="date" value={settleForm.settleDate} onChange={e=>setSettleForm(f=>({...f,settleDate:e.target.value}))} style={{width:"100%",padding:"7px 10px",border:`1px solid ${C.border}`,borderRadius:7,fontSize:13,fontFamily:"inherit",boxSizing:"border-box"}}/>
                     </div>
                   </div>
                   <div>
-                    <div style={{fontSize:11,color:C.inkMid,marginBottom:4,fontWeight:700}}>사유 및 상세내역</div>
-                    <input value={settleForm.settleDetail} onChange={e=>setSettleForm(f=>({...f,settleDetail:e.target.value}))} placeholder="에어리소닉 인스타그램 광고비 지급" style={{width:"100%",padding:"7px 10px",border:`1px solid ${C.border}`,borderRadius:7,fontSize:12,fontFamily:"inherit",boxSizing:"border-box"}}/>
+                    <div style={{fontSize:12,color:C.inkMid,marginBottom:4,fontWeight:700}}>사유 및 상세내역</div>
+                    <input value={settleForm.settleDetail} onChange={e=>setSettleForm(f=>({...f,settleDetail:e.target.value}))} placeholder="에어리소닉 인스타그램 광고비 지급" style={{width:"100%",padding:"7px 10px",border:`1px solid ${C.border}`,borderRadius:7,fontSize:13,fontFamily:"inherit",boxSizing:"border-box"}}/>
                   </div>
                   <div>
-                    <div style={{fontSize:11,color:C.inkMid,marginBottom:4,fontWeight:700}}>콘텐츠 URL</div>
-                    <input value={settleForm.settleUrl} onChange={e=>setSettleForm(f=>({...f,settleUrl:e.target.value}))} placeholder="https://www.instagram.com/reel/..." style={{width:"100%",padding:"7px 10px",border:`1px solid ${C.border}`,borderRadius:7,fontSize:12,fontFamily:"inherit",boxSizing:"border-box"}}/>
+                    <div style={{fontSize:12,color:C.inkMid,marginBottom:4,fontWeight:700}}>콘텐츠 URL</div>
+                    <input value={settleForm.settleUrl} onChange={e=>setSettleForm(f=>({...f,settleUrl:e.target.value}))} placeholder="https://www.instagram.com/reel/..." style={{width:"100%",padding:"7px 10px",border:`1px solid ${C.border}`,borderRadius:7,fontSize:13,fontFamily:"inherit",boxSizing:"border-box"}}/>
                   </div>
 
                   {/* ERP 입력 요약 */}
                   {fee > 0 && settleForm.idNumber && (
-                    <div style={{background:"#f0f9ff",border:"1px solid #bae6fd",borderRadius:8,padding:"10px 12px",fontSize:11,display:"flex",flexDirection:"column",gap:4}}>
+                    <div style={{background:"#f0f9ff",border:"1px solid #bae6fd",borderRadius:8,padding:"10px 12px",fontSize:12,display:"flex",flexDirection:"column",gap:4}}>
                       <div style={{fontWeight:800,color:"#0369a1",marginBottom:2}}>📋 ERP 입력 정보</div>
                       <div><span style={{color:"#64748b"}}>거래처명/업체명: </span><b>{erpName}</b></div>
                       <div><span style={{color:"#64748b"}}>증빙구분: </span>{settleForm.taxType==="개인"?"지출증빙":"세금계산서"}</div>
@@ -1304,7 +1304,7 @@ function InfluencerArchiveSection() {
                   {/* 원천징수 엑셀 — 개인만 */}
                   {settleForm.taxType==="개인" && fee > 0 && (
                     <button onClick={()=>exportWithholdingXlsx(settleModal,settleForm)}
-                      style={{padding:"9px",borderRadius:8,border:"none",background:"#7c3aed",color:"#fff",fontSize:12,fontWeight:800,cursor:"pointer",fontFamily:"inherit"}}>
+                      style={{padding:"9px",borderRadius:8,border:"none",background:"#7c3aed",color:"#fff",fontSize:13,fontWeight:800,cursor:"pointer",fontFamily:"inherit"}}>
                       📥 사업소득자 원천징수 엑셀 다운로드 ({netPay.toLocaleString()}원 지급)
                     </button>
                   )}
@@ -1312,27 +1312,27 @@ function InfluencerArchiveSection() {
 
                 {/* 파일 첨부 */}
                 <div style={{borderTop:`1px solid ${C.border}`,paddingTop:12}}>
-                  <div style={{fontSize:11,fontWeight:800,color:C.ink,marginBottom:8}}>📎 서류 첨부</div>
+                  <div style={{fontSize:12,fontWeight:800,color:C.ink,marginBottom:8}}>📎 서류 첨부</div>
                   {[
                     {key:"fileId",   label: settleForm.taxType==="개인"?"주민등록증":"사업자등록증"},
                     {key:"fileBankbook", label:"통장사본"},
                     {key:"fileEtc",  label:"기타"},
                   ].map(({key,label})=>(
                     <div key={key} style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
-                      <span style={{fontSize:11,color:C.inkMid,width:80,flexShrink:0}}>{label}</span>
+                      <span style={{fontSize:12,color:C.inkMid,width:80,flexShrink:0}}>{label}</span>
                       {settleForm[key] ? (
                         <div style={{flex:1,display:"flex",alignItems:"center",gap:6}}>
                           {/\.(pdf)$/i.test(settleForm[key]) ? (
-                            <span onClick={()=>window.open(settleForm[key],"_blank")} style={{padding:"6px 10px",background:"#f1f5f9",borderRadius:4,border:`1px solid ${C.border}`,cursor:"pointer",fontSize:11,fontWeight:700,color:C.ink}}>📄 PDF</span>
+                            <span onClick={()=>window.open(settleForm[key],"_blank")} style={{padding:"6px 10px",background:"#f1f5f9",borderRadius:4,border:`1px solid ${C.border}`,cursor:"pointer",fontSize:12,fontWeight:700,color:C.ink}}>📄 PDF</span>
                           ) : (
                             <img src={settleForm[key]} alt={label} style={{height:36,borderRadius:4,border:`1px solid ${C.border}`,cursor:"pointer"}} onClick={()=>window.open(settleForm[key],"_blank")} onError={e=>{e.target.style.display="none"}}/>
                           )}
-                          <span style={{fontSize:10,color:"#16a34a",fontWeight:700}}>✓ 첨부됨</span>
-                          <a href={settleForm[key]+(settleForm[key].includes('?')?'&':'?')+'download='+encodeURIComponent((settleForm.bankHolder?(settleForm.bankHolder+"_"):"")+label+"."+(settleForm[key].split('.').pop().split('?')[0]||"jpg"))} style={{fontSize:10,color:"#2563eb",fontWeight:700,textDecoration:"none",padding:"2px 7px",border:"1px solid #2563eb",borderRadius:5}}>다운로드</a>
-                          <button onClick={()=>setSettleForm(f=>({...f,[key]:""}))} style={{border:"none",background:"none",color:"#dc2626",fontSize:11,cursor:"pointer",fontWeight:700}}>삭제</button>
+                          <span style={{fontSize:12,color:"#16a34a",fontWeight:700}}>✓ 첨부됨</span>
+                          <a href={settleForm[key]+(settleForm[key].includes('?')?'&':'?')+'download='+encodeURIComponent((settleForm.bankHolder?(settleForm.bankHolder+"_"):"")+label+"."+(settleForm[key].split('.').pop().split('?')[0]||"jpg"))} style={{fontSize:12,color:"#2563eb",fontWeight:700,textDecoration:"none",padding:"2px 7px",border:"1px solid #2563eb",borderRadius:5}}>다운로드</a>
+                          <button onClick={()=>setSettleForm(f=>({...f,[key]:""}))} style={{border:"none",background:"none",color:"#dc2626",fontSize:12,cursor:"pointer",fontWeight:700}}>삭제</button>
                         </div>
                       ) : (
-                        <label style={{flex:1,padding:"5px 12px",borderRadius:7,border:`1px dashed ${C.border}`,background:"#f9fafb",fontSize:11,color:C.inkMid,cursor:"pointer",textAlign:"center"}}>
+                        <label style={{flex:1,padding:"5px 12px",borderRadius:7,border:`1px dashed ${C.border}`,background:"#f9fafb",fontSize:12,color:C.inkMid,cursor:"pointer",textAlign:"center"}}>
                           + 파일 선택
                           <input type="file" accept="image/*,.pdf" style={{display:"none"}} onChange={async e=>{
                             const file = e.target.files?.[0];
@@ -1349,7 +1349,7 @@ function InfluencerArchiveSection() {
                   ))}
                 </div>
 
-                <div style={{fontSize:10,color:"#9ca3af",background:"#f9fafb",borderRadius:7,padding:"8px 12px"}}>
+                <div style={{fontSize:12,color:"#9ca3af",background:"#f9fafb",borderRadius:7,padding:"8px 12px"}}>
                   🔒 주민번호·계좌정보·첨부파일은 본인 Supabase DB에만 저장됩니다.
                 </div>
               </div>
@@ -1372,81 +1372,81 @@ function InfluencerArchiveSection() {
 
             {/* URL 자동 조회 */}
             <div>
-              <div style={{fontSize:11,color:C.inkMid,marginBottom:4,fontWeight:700}}>프로필/릴스 URL <span style={{color:C.inkLt}}>(붙여넣으면 자동 조회)</span></div>
+              <div style={{fontSize:12,color:C.inkMid,marginBottom:4,fontWeight:700}}>프로필/릴스 URL <span style={{color:C.inkLt}}>(붙여넣으면 자동 조회)</span></div>
               <div style={{display:"flex",gap:6}}>
-                <input value={form.profileUrl} onChange={e=>setForm(f=>({...f,profileUrl:e.target.value}))} placeholder="https://www.instagram.com/..." style={{flex:1,padding:"7px 10px",border:`1px solid ${C.border}`,borderRadius:7,fontSize:12,fontFamily:"inherit"}}/>
-                <button onClick={fetchFromUrl} disabled={fetching||!form.profileUrl.trim()} style={{padding:"7px 14px",borderRadius:7,border:"none",background:fetching?"#e5e7eb":C.rose,color:fetching?"#9ca3af":"#fff",fontSize:11,fontWeight:800,cursor:fetching?"not-allowed":"pointer",fontFamily:"inherit",whiteSpace:"nowrap"}}>
+                <input value={form.profileUrl} onChange={e=>setForm(f=>({...f,profileUrl:e.target.value}))} placeholder="https://www.instagram.com/..." style={{flex:1,padding:"7px 10px",border:`1px solid ${C.border}`,borderRadius:7,fontSize:13,fontFamily:"inherit"}}/>
+                <button onClick={fetchFromUrl} disabled={fetching||!form.profileUrl.trim()} style={{padding:"7px 14px",borderRadius:7,border:"none",background:fetching?"#e5e7eb":C.rose,color:fetching?"#9ca3af":"#fff",fontSize:12,fontWeight:800,cursor:fetching?"not-allowed":"pointer",fontFamily:"inherit",whiteSpace:"nowrap"}}>
                   {fetching?"조회중...":"조회"}
                 </button>
               </div>
-              {fetchError && <div style={{fontSize:11,color:C.warn,marginTop:4}}>{fetchError}</div>}
+              {fetchError && <div style={{fontSize:12,color:C.warn,marginTop:4}}>{fetchError}</div>}
             </div>
 
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
               <div>
-                <div style={{fontSize:11,color:C.inkMid,marginBottom:4,fontWeight:700}}>계정명</div>
-                <input value={form.account} onChange={e=>setForm(f=>({...f,account:e.target.value}))} placeholder="@username" style={{width:"100%",padding:"7px 10px",border:`1px solid ${C.border}`,borderRadius:7,fontSize:12,fontFamily:"inherit",boxSizing:"border-box"}}/>
+                <div style={{fontSize:12,color:C.inkMid,marginBottom:4,fontWeight:700}}>계정명</div>
+                <input value={form.account} onChange={e=>setForm(f=>({...f,account:e.target.value}))} placeholder="@username" style={{width:"100%",padding:"7px 10px",border:`1px solid ${C.border}`,borderRadius:7,fontSize:13,fontFamily:"inherit",boxSizing:"border-box"}}/>
               </div>
               <div>
-                <div style={{fontSize:11,color:C.inkMid,marginBottom:4,fontWeight:700}}>이름</div>
-                <input value={form.name} onChange={e=>setForm(f=>({...f,name:e.target.value}))} placeholder="김OO" style={{width:"100%",padding:"7px 10px",border:`1px solid ${C.border}`,borderRadius:7,fontSize:12,fontFamily:"inherit",boxSizing:"border-box"}}/>
+                <div style={{fontSize:12,color:C.inkMid,marginBottom:4,fontWeight:700}}>이름</div>
+                <input value={form.name} onChange={e=>setForm(f=>({...f,name:e.target.value}))} placeholder="김OO" style={{width:"100%",padding:"7px 10px",border:`1px solid ${C.border}`,borderRadius:7,fontSize:13,fontFamily:"inherit",boxSizing:"border-box"}}/>
               </div>
             </div>
 
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
               <div>
-                <div style={{fontSize:11,color:C.inkMid,marginBottom:4,fontWeight:700}}>플랫폼</div>
-                <select value={form.platform} onChange={e=>setForm(f=>({...f,platform:e.target.value}))} style={{width:"100%",padding:"7px 10px",border:`1px solid ${C.border}`,borderRadius:7,fontSize:12,fontFamily:"inherit"}}>
+                <div style={{fontSize:12,color:C.inkMid,marginBottom:4,fontWeight:700}}>플랫폼</div>
+                <select value={form.platform} onChange={e=>setForm(f=>({...f,platform:e.target.value}))} style={{width:"100%",padding:"7px 10px",border:`1px solid ${C.border}`,borderRadius:7,fontSize:13,fontFamily:"inherit"}}>
                   {INF_PLATFORMS.map(p=><option key={p}>{p}</option>)}
                 </select>
               </div>
               <div>
-                <div style={{fontSize:11,color:C.inkMid,marginBottom:4,fontWeight:700}}>팔로워</div>
-                <input value={form.followers} onChange={e=>setForm(f=>({...f,followers:e.target.value}))} placeholder="50000" style={{width:"100%",padding:"7px 10px",border:`1px solid ${C.border}`,borderRadius:7,fontSize:12,fontFamily:"inherit",boxSizing:"border-box"}}/>
+                <div style={{fontSize:12,color:C.inkMid,marginBottom:4,fontWeight:700}}>팔로워</div>
+                <input value={form.followers} onChange={e=>setForm(f=>({...f,followers:e.target.value}))} placeholder="50000" style={{width:"100%",padding:"7px 10px",border:`1px solid ${C.border}`,borderRadius:7,fontSize:13,fontFamily:"inherit",boxSizing:"border-box"}}/>
               </div>
             </div>
 
             <div>
-              <div style={{fontSize:11,color:C.inkMid,marginBottom:6,fontWeight:700}}>카테고리 <span style={{color:C.inkLt}}>(복수 선택)</span></div>
+              <div style={{fontSize:12,color:C.inkMid,marginBottom:6,fontWeight:700}}>카테고리 <span style={{color:C.inkLt}}>(복수 선택)</span></div>
               <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
                 {INF_CATS.map(c=>(
-                  <button key={c} onClick={()=>toggleCat(c)} style={{padding:"4px 12px",borderRadius:20,border:`1px solid ${form.categories.includes(c)?C.rose:C.border}`,background:form.categories.includes(c)?"#eff6ff":"#fff",color:form.categories.includes(c)?"#2563eb":C.inkMid,fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>{c}</button>
+                  <button key={c} onClick={()=>toggleCat(c)} style={{padding:"4px 12px",borderRadius:20,border:`1px solid ${form.categories.includes(c)?C.rose:C.border}`,background:form.categories.includes(c)?"#eff6ff":"#fff",color:form.categories.includes(c)?"#2563eb":C.inkMid,fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>{c}</button>
                 ))}
               </div>
             </div>
 
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
               <div>
-                <div style={{fontSize:11,color:C.inkMid,marginBottom:4,fontWeight:700}}>담당자</div>
+                <div style={{fontSize:12,color:C.inkMid,marginBottom:4,fontWeight:700}}>담당자</div>
                 <div style={{display:"flex",gap:4,flexWrap:"wrap"}}>
                   {["지원","경은","소리","지수","영서","행사"].map(a=>(
-                    <button key={a} onClick={()=>setForm(f=>({...f,assignee:f.assignee===a?"":a}))} style={{padding:"4px 10px",borderRadius:20,border:"none",background:form.assignee===a?"#374151":"#e5e7eb",color:form.assignee===a?"#fff":C.inkMid,fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>{a}</button>
+                    <button key={a} onClick={()=>setForm(f=>({...f,assignee:f.assignee===a?"":a}))} style={{padding:"4px 10px",borderRadius:20,border:"none",background:form.assignee===a?"#374151":"#e5e7eb",color:form.assignee===a?"#fff":C.inkMid,fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>{a}</button>
                   ))}
                 </div>
               </div>
               <div>
-                <div style={{fontSize:11,color:C.inkMid,marginBottom:4,fontWeight:700}}>상태</div>
+                <div style={{fontSize:12,color:C.inkMid,marginBottom:4,fontWeight:700}}>상태</div>
                 <div style={{display:"flex",gap:4,flexWrap:"wrap"}}>
                   {INF_STATUSES.map(s=>(
-                    <button key={s} onClick={()=>setForm(f=>({...f,status:s}))} style={{padding:"4px 10px",borderRadius:20,border:"none",background:form.status===s?(INF_STATUS_COLORS[s]||"#e5e7eb"):"#e5e7eb",color:form.status===s?(INF_STATUS_TEXT[s]||C.ink):C.inkMid,fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>{s}</button>
+                    <button key={s} onClick={()=>setForm(f=>({...f,status:s}))} style={{padding:"4px 10px",borderRadius:20,border:"none",background:form.status===s?(INF_STATUS_COLORS[s]||"#e5e7eb"):"#e5e7eb",color:form.status===s?(INF_STATUS_TEXT[s]||C.ink):C.inkMid,fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>{s}</button>
                   ))}
                 </div>
               </div>
             </div>
 
             <div>
-              <div style={{fontSize:11,color:C.inkMid,marginBottom:4,fontWeight:700}}>메모</div>
-              <textarea value={form.notes} onChange={e=>setForm(f=>({...f,notes:e.target.value}))} placeholder="릴스 퀄리티 좋음, 뷰티 전문, 공동구매 의향 있음..." rows={2} style={{width:"100%",padding:"7px 10px",border:`1px solid ${C.border}`,borderRadius:7,fontSize:12,fontFamily:"inherit",resize:"vertical",boxSizing:"border-box"}}/>
+              <div style={{fontSize:12,color:C.inkMid,marginBottom:4,fontWeight:700}}>메모</div>
+              <textarea value={form.notes} onChange={e=>setForm(f=>({...f,notes:e.target.value}))} placeholder="릴스 퀄리티 좋음, 뷰티 전문, 공동구매 의향 있음..." rows={2} style={{width:"100%",padding:"7px 10px",border:`1px solid ${C.border}`,borderRadius:7,fontSize:13,fontFamily:"inherit",resize:"vertical",boxSizing:"border-box"}}/>
             </div>
 
             <div>
-              <div style={{fontSize:11,color:C.inkMid,marginBottom:4,fontWeight:700}}>연결 제품 <span style={{color:C.inkLt}}>(ERP 재고 검색)</span></div>
+              <div style={{fontSize:12,color:C.inkMid,marginBottom:4,fontWeight:700}}>연결 제품 <span style={{color:C.inkLt}}>(ERP 재고 검색)</span></div>
               <div style={{position:"relative"}}>
-                <input value={productSearch} onChange={e=>{setProductSearch(e.target.value);searchProducts(e.target.value);}} placeholder="제품명 검색..." style={{width:"100%",padding:"7px 10px",border:`1px solid ${C.border}`,borderRadius:7,fontSize:12,fontFamily:"inherit",boxSizing:"border-box"}}/>
+                <input value={productSearch} onChange={e=>{setProductSearch(e.target.value);searchProducts(e.target.value);}} placeholder="제품명 검색..." style={{width:"100%",padding:"7px 10px",border:`1px solid ${C.border}`,borderRadius:7,fontSize:13,fontFamily:"inherit",boxSizing:"border-box"}}/>
                 {productResults.length>0 && (
                   <div style={{position:"absolute",top:"100%",left:0,right:0,background:"#fff",border:`1px solid ${C.border}`,borderRadius:7,zIndex:1000,maxHeight:160,overflowY:"auto",boxShadow:"0 4px 12px rgba(0,0,0,0.1)"}}>
                     {productResults.map((p,i)=>(
-                      <div key={i} onClick={()=>{if(!(form.products||[]).includes(p.name))setForm(f=>({...f,products:[...(f.products||[]),p.name]}));setProductSearch("");setProductResults([]);}} style={{padding:"7px 12px",cursor:"pointer",fontSize:11,borderBottom:`1px solid ${C.border}`,color:C.ink}} onMouseEnter={e=>e.currentTarget.style.background="#f9fafb"} onMouseLeave={e=>e.currentTarget.style.background="#fff"}>
+                      <div key={i} onClick={()=>{if(!(form.products||[]).includes(p.name))setForm(f=>({...f,products:[...(f.products||[]),p.name]}));setProductSearch("");setProductResults([]);}} style={{padding:"7px 12px",cursor:"pointer",fontSize:12,borderBottom:`1px solid ${C.border}`,color:C.ink}} onMouseEnter={e=>e.currentTarget.style.background="#f9fafb"} onMouseLeave={e=>e.currentTarget.style.background="#fff"}>
                         {p.name}
                       </div>
                     ))}
@@ -1456,7 +1456,7 @@ function InfluencerArchiveSection() {
               {(form.products||[]).length>0 && (
                 <div style={{display:"flex",gap:4,flexWrap:"wrap",marginTop:6}}>
                   {(form.products||[]).map((p,i)=>(
-                    <span key={i} onClick={()=>setForm(f=>({...f,products:(f.products||[]).filter((_,j)=>j!==i)}))} style={{fontSize:10,background:"#f0fdf4",color:"#16a34a",padding:"2px 8px",borderRadius:10,fontWeight:700,cursor:"pointer"}}>
+                    <span key={i} onClick={()=>setForm(f=>({...f,products:(f.products||[]).filter((_,j)=>j!==i)}))} style={{fontSize:12,background:"#f0fdf4",color:"#16a34a",padding:"2px 8px",borderRadius:10,fontWeight:700,cursor:"pointer"}}>
                       📦 {p} ✕
                     </span>
                   ))}
@@ -1466,24 +1466,24 @@ function InfluencerArchiveSection() {
 
             {form.status==="컨택중" && (
               <div style={{background:"#f0fdf4",border:`1px solid #bbf7d0`,borderRadius:10,padding:"12px 14px",display:"flex",flexDirection:"column",gap:10}}>
-                <div style={{fontSize:11,fontWeight:800,color:"#16a34a"}}>💬 협의 내용</div>
+                <div style={{fontSize:12,fontWeight:800,color:"#16a34a"}}>💬 협의 내용</div>
                 <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:10}}>
                   <div>
-                    <div style={{fontSize:11,color:C.inkMid,marginBottom:4,fontWeight:700}}>협의 금액</div>
-                    <input value={form.dealFee} onChange={e=>setForm(f=>({...f,dealFee:e.target.value}))} placeholder="예) 30만원, 제품협찬" style={{width:"100%",padding:"7px 10px",border:`1px solid ${C.border}`,borderRadius:7,fontSize:12,fontFamily:"inherit",boxSizing:"border-box"}}/>
+                    <div style={{fontSize:12,color:C.inkMid,marginBottom:4,fontWeight:700}}>협의 금액</div>
+                    <input value={form.dealFee} onChange={e=>setForm(f=>({...f,dealFee:e.target.value}))} placeholder="예) 30만원, 제품협찬" style={{width:"100%",padding:"7px 10px",border:`1px solid ${C.border}`,borderRadius:7,fontSize:13,fontFamily:"inherit",boxSizing:"border-box"}}/>
                   </div>
                   <div>
-                    <div style={{fontSize:11,color:C.inkMid,marginBottom:4,fontWeight:700}}>2차 활용 기간</div>
-                    <input value={form.dealUsagePeriod} onChange={e=>setForm(f=>({...f,dealUsagePeriod:e.target.value}))} placeholder="예) 6개월, 1년, 무제한" style={{width:"100%",padding:"7px 10px",border:`1px solid ${C.border}`,borderRadius:7,fontSize:12,fontFamily:"inherit",boxSizing:"border-box"}}/>
+                    <div style={{fontSize:12,color:C.inkMid,marginBottom:4,fontWeight:700}}>2차 활용 기간</div>
+                    <input value={form.dealUsagePeriod} onChange={e=>setForm(f=>({...f,dealUsagePeriod:e.target.value}))} placeholder="예) 6개월, 1년, 무제한" style={{width:"100%",padding:"7px 10px",border:`1px solid ${C.border}`,borderRadius:7,fontSize:13,fontFamily:"inherit",boxSizing:"border-box"}}/>
                   </div>
                   <div>
-                    <div style={{fontSize:11,color:C.inkMid,marginBottom:4,fontWeight:700}}>업로드일</div>
-                    <input type="date" value={form.uploadDate||""} onChange={e=>setForm(f=>({...f,uploadDate:e.target.value}))} style={{width:"100%",padding:"7px 10px",border:`1px solid ${C.border}`,borderRadius:7,fontSize:12,fontFamily:"inherit",boxSizing:"border-box"}}/>
+                    <div style={{fontSize:12,color:C.inkMid,marginBottom:4,fontWeight:700}}>업로드일</div>
+                    <input type="date" value={form.uploadDate||""} onChange={e=>setForm(f=>({...f,uploadDate:e.target.value}))} style={{width:"100%",padding:"7px 10px",border:`1px solid ${C.border}`,borderRadius:7,fontSize:13,fontFamily:"inherit",boxSizing:"border-box"}}/>
                   </div>
                 </div>
                 <div>
-                  <div style={{fontSize:11,color:C.inkMid,marginBottom:4,fontWeight:700}}>협의 세부 내용</div>
-                  <textarea value={form.dealContent} onChange={e=>setForm(f=>({...f,dealContent:e.target.value}))} placeholder="게시물 형태, 업로드 일정, 요청사항 등..." rows={3} style={{width:"100%",padding:"7px 10px",border:`1px solid ${C.border}`,borderRadius:7,fontSize:12,fontFamily:"inherit",resize:"vertical",boxSizing:"border-box"}}/>
+                  <div style={{fontSize:12,color:C.inkMid,marginBottom:4,fontWeight:700}}>협의 세부 내용</div>
+                  <textarea value={form.dealContent} onChange={e=>setForm(f=>({...f,dealContent:e.target.value}))} placeholder="게시물 형태, 업로드 일정, 요청사항 등..." rows={3} style={{width:"100%",padding:"7px 10px",border:`1px solid ${C.border}`,borderRadius:7,fontSize:13,fontFamily:"inherit",resize:"vertical",boxSizing:"border-box"}}/>
                 </div>
               </div>
             )}
@@ -1618,7 +1618,7 @@ function ProductTrackerSection() {
     <div style={{display:"flex",flexDirection:"column",gap:16}}>
       <div>
         <div style={{fontSize:20,fontWeight:900,color:C.ink}}>제품 트래킹</div>
-        <div style={{fontSize:12,color:C.inkMid,marginTop:2}}>특정 제품의 날짜별 순위·가격·리뷰 변화를 기록합니다</div>
+        <div style={{fontSize:13,color:C.inkMid,marginTop:2}}>특정 제품의 날짜별 순위·가격·리뷰 변화를 기록합니다</div>
       </div>
 
       {/* 제품 추가 */}
@@ -1627,7 +1627,7 @@ function ProductTrackerSection() {
         <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
           {[{id:"naver",label:"🔍 네이버"},{id:"musinsa",label:"👟 무신사"},{id:"coupang",label:"📦 쿠팡"},{id:"oliveyoung",label:"🌿 올리브영"},{id:"zigzag",label:"👗 지그재그"}].map(p=>(
             <button key={p.id} onClick={()=>setAddPlatform(p.id)}
-              style={{padding:"4px 12px",borderRadius:16,border:`1.5px solid ${addPlatform===p.id?C.rose:C.border}`,background:addPlatform===p.id?C.blush:"#fff",color:addPlatform===p.id?C.rose:C.inkMid,fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
+              style={{padding:"4px 12px",borderRadius:16,border:`1.5px solid ${addPlatform===p.id?C.rose:C.border}`,background:addPlatform===p.id?C.blush:"#fff",color:addPlatform===p.id?C.rose:C.inkMid,fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
               {p.label}
             </button>
           ))}
@@ -1635,52 +1635,52 @@ function ProductTrackerSection() {
         <div style={{display:"flex",gap:8,flexWrap:"wrap",alignItems:"flex-end"}}>
           {addPlatform === "naver" ? (<>
             <div style={{flex:1,minWidth:120}}>
-              <div style={{fontSize:10,color:C.inkMid,marginBottom:4,fontWeight:700}}>제품명</div>
+              <div style={{fontSize:12,color:C.inkMid,marginBottom:4,fontWeight:700}}>제품명</div>
               <input value={addName} onChange={e=>setAddName(e.target.value)} placeholder="예: 소닉플로우 드라이기"
-                style={{width:"100%",padding:"7px 10px",border:`1px solid ${C.border}`,borderRadius:7,fontSize:12,fontFamily:"inherit",boxSizing:"border-box"}}/>
+                style={{width:"100%",padding:"7px 10px",border:`1px solid ${C.border}`,borderRadius:7,fontSize:13,fontFamily:"inherit",boxSizing:"border-box"}}/>
             </div>
             <div style={{flex:1,minWidth:130}}>
-              <div style={{fontSize:10,color:C.inkMid,marginBottom:4,fontWeight:700}}>검색 키워드</div>
+              <div style={{fontSize:12,color:C.inkMid,marginBottom:4,fontWeight:700}}>검색 키워드</div>
               <input value={addKeyword} onChange={e=>setAddKeyword(e.target.value)} placeholder="예: 헤어드라이기"
-                style={{width:"100%",padding:"7px 10px",border:`1px solid ${C.border}`,borderRadius:7,fontSize:12,fontFamily:"inherit",boxSizing:"border-box"}}/>
+                style={{width:"100%",padding:"7px 10px",border:`1px solid ${C.border}`,borderRadius:7,fontSize:13,fontFamily:"inherit",boxSizing:"border-box"}}/>
             </div>
             <div style={{flex:1,minWidth:120}}>
-              <div style={{fontSize:10,color:C.inkMid,marginBottom:4,fontWeight:700}}>식별 키워드 (브랜드/제품명)</div>
+              <div style={{fontSize:12,color:C.inkMid,marginBottom:4,fontWeight:700}}>식별 키워드 (브랜드/제품명)</div>
               <input value={addBrand} onChange={e=>setAddBrand(e.target.value)} placeholder="예: 소닉플로우"
-                style={{width:"100%",padding:"7px 10px",border:`1px solid ${C.border}`,borderRadius:7,fontSize:12,fontFamily:"inherit",boxSizing:"border-box"}}/>
+                style={{width:"100%",padding:"7px 10px",border:`1px solid ${C.border}`,borderRadius:7,fontSize:13,fontFamily:"inherit",boxSizing:"border-box"}}/>
             </div>
             <div style={{flex:2,minWidth:160}}>
-              <div style={{fontSize:10,color:C.inkMid,marginBottom:4,fontWeight:700}}>스마트스토어 URL <span style={{color:C.inkLt}}>(선택 · 리뷰/별점 수집용)</span></div>
+              <div style={{fontSize:12,color:C.inkMid,marginBottom:4,fontWeight:700}}>스마트스토어 URL <span style={{color:C.inkLt}}>(선택 · 리뷰/별점 수집용)</span></div>
               <input value={addUrl} onChange={e=>setAddUrl(e.target.value)} placeholder="https://smartstore.naver.com/..."
-                style={{width:"100%",padding:"7px 10px",border:`1px solid ${C.border}`,borderRadius:7,fontSize:12,fontFamily:"inherit",boxSizing:"border-box"}}
+                style={{width:"100%",padding:"7px 10px",border:`1px solid ${C.border}`,borderRadius:7,fontSize:13,fontFamily:"inherit",boxSizing:"border-box"}}
                 onKeyDown={e=>e.key==="Enter"&&addProduct()}/>
             </div>
           </>) : (<>
             <div style={{flex:2,minWidth:200}}>
-              <div style={{fontSize:10,color:C.inkMid,marginBottom:4,fontWeight:700}}>제품 URL</div>
+              <div style={{fontSize:12,color:C.inkMid,marginBottom:4,fontWeight:700}}>제품 URL</div>
               <input value={addUrl} onChange={e=>setAddUrl(e.target.value)} placeholder={`https://www.${addPlatform}.com/...`}
-                style={{width:"100%",padding:"7px 10px",border:`1px solid ${C.border}`,borderRadius:7,fontSize:12,fontFamily:"inherit",boxSizing:"border-box"}}/>
+                style={{width:"100%",padding:"7px 10px",border:`1px solid ${C.border}`,borderRadius:7,fontSize:13,fontFamily:"inherit",boxSizing:"border-box"}}/>
             </div>
             <div style={{flex:1,minWidth:120}}>
-              <div style={{fontSize:10,color:C.inkMid,marginBottom:4,fontWeight:700}}>제품명</div>
+              <div style={{fontSize:12,color:C.inkMid,marginBottom:4,fontWeight:700}}>제품명</div>
               <input value={addName} onChange={e=>setAddName(e.target.value)} placeholder="이름 설정"
-                style={{width:"100%",padding:"7px 10px",border:`1px solid ${C.border}`,borderRadius:7,fontSize:12,fontFamily:"inherit",boxSizing:"border-box"}}
+                style={{width:"100%",padding:"7px 10px",border:`1px solid ${C.border}`,borderRadius:7,fontSize:13,fontFamily:"inherit",boxSizing:"border-box"}}
                 onKeyDown={e=>e.key==="Enter"&&addProduct()}/>
             </div>
           </>)}
-          <button onClick={addProduct} style={{padding:"7px 16px",borderRadius:7,border:"none",background:C.rose,color:"#fff",fontSize:12,fontWeight:800,cursor:"pointer",fontFamily:"inherit",whiteSpace:"nowrap"}}>
+          <button onClick={addProduct} style={{padding:"7px 16px",borderRadius:7,border:"none",background:C.rose,color:"#fff",fontSize:13,fontWeight:800,cursor:"pointer",fontFamily:"inherit",whiteSpace:"nowrap"}}>
             + 추가
           </button>
         </div>
       </div>
 
-      {error && <div style={{background:"#fff5f5",border:"1px solid #fca5a5",borderRadius:8,padding:"8px 12px",fontSize:12,color:"#dc2626"}}>{error}</div>}
+      {error && <div style={{background:"#fff5f5",border:"1px solid #fca5a5",borderRadius:8,padding:"8px 12px",fontSize:13,color:"#dc2626"}}>{error}</div>}
 
       <div style={{display:"flex",gap:14}}>
         {/* 왼쪽: 제품 목록 */}
         <div style={{width:200,flexShrink:0,display:"flex",flexDirection:"column",gap:6}}>
-          <div style={{fontSize:11,fontWeight:700,color:C.inkMid}}>추적 중인 제품 ({products.length})</div>
-          {products.length === 0 && <div style={{fontSize:12,color:C.inkLt,padding:"10px 0"}}>제품을 추가해주세요</div>}
+          <div style={{fontSize:12,fontWeight:700,color:C.inkMid}}>추적 중인 제품 ({products.length})</div>
+          {products.length === 0 && <div style={{fontSize:13,color:C.inkLt,padding:"10px 0"}}>제품을 추가해주세요</div>}
           {products.map(p=>{
             const pHistory = history.filter(h=>h.productId===p.id);
             const active = selProduct === p.id;
@@ -1688,13 +1688,13 @@ function ProductTrackerSection() {
               <div key={p.id} onClick={()=>setSelProduct(p.id)}
                 style={{background:active?C.blush:C.white,border:`1.5px solid ${active?C.rose:C.border}`,borderRadius:10,padding:"10px 12px",cursor:"pointer",position:"relative"}}>
                 <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:3}}>
-                  <span style={{fontSize:10,background:PLATFORM_COLORS[p.platform]||"#e5e7eb",color:"#374151",padding:"1px 6px",borderRadius:6,fontWeight:700,flexShrink:0}}>
+                  <span style={{fontSize:12,background:PLATFORM_COLORS[p.platform]||"#e5e7eb",color:"#374151",padding:"1px 6px",borderRadius:6,fontWeight:700,flexShrink:0}}>
                     {PLATFORM_LABELS[p.platform]||p.platform}
                   </span>
                 </div>
-                <div style={{fontSize:12,fontWeight:700,color:active?C.rose:C.ink,lineHeight:1.3}}>{p.name}</div>
-                {p.platform==="naver" && p.keyword && <div style={{fontSize:10,color:C.inkLt,marginTop:1}}>키워드: {p.keyword}</div>}
-                <div style={{fontSize:10,color:C.inkLt,marginTop:2}}>{pHistory.length}개 기록</div>
+                <div style={{fontSize:13,fontWeight:700,color:active?C.rose:C.ink,lineHeight:1.3}}>{p.name}</div>
+                {p.platform==="naver" && p.keyword && <div style={{fontSize:12,color:C.inkLt,marginTop:1}}>키워드: {p.keyword}</div>}
+                <div style={{fontSize:12,color:C.inkLt,marginTop:2}}>{pHistory.length}개 기록</div>
                 <button onClick={e=>{e.stopPropagation();removeProduct(p.id);}}
                   style={{position:"absolute",top:6,right:8,background:"none",border:"none",color:C.inkLt,cursor:"pointer",fontSize:14,lineHeight:1}}>×</button>
               </div>
@@ -1712,21 +1712,21 @@ function ProductTrackerSection() {
             <div style={{display:"flex",flexDirection:"column",gap:12}}>
               {/* 제품 헤더 */}
               <div style={{background:C.white,border:`1px solid ${C.border}`,borderRadius:12,padding:"14px 16px",display:"flex",alignItems:"center",gap:10}}>
-                <span style={{fontSize:11,background:PLATFORM_COLORS[selProd.platform],color:"#374151",padding:"2px 8px",borderRadius:6,fontWeight:700}}>
+                <span style={{fontSize:12,background:PLATFORM_COLORS[selProd.platform],color:"#374151",padding:"2px 8px",borderRadius:6,fontWeight:700}}>
                   {PLATFORM_LABELS[selProd.platform]}
                 </span>
                 <div style={{flex:1}}>
                   <div style={{fontSize:14,fontWeight:800,color:C.ink}}>{selProd.name}</div>
                   {selProd.platform==="naver"
-                    ? <span style={{fontSize:10,color:C.inkLt}}>키워드: {selProd.keyword} · 식별: {selProd.brand}</span>
-                    : <a href={selProd.url} target="_blank" rel="noreferrer" style={{fontSize:10,color:C.inkLt,textDecoration:"none"}} onClick={e=>e.stopPropagation()}>
+                    ? <span style={{fontSize:12,color:C.inkLt}}>키워드: {selProd.keyword} · 식별: {selProd.brand}</span>
+                    : <a href={selProd.url} target="_blank" rel="noreferrer" style={{fontSize:12,color:C.inkLt,textDecoration:"none"}} onClick={e=>e.stopPropagation()}>
                         {(selProd.url||"").slice(0,60)}{(selProd.url||"").length>60?"...":""}
                       </a>
                   }
                 </div>
                 {selProd.platform === "naver" && (
                   <button onClick={()=>fetchNow(selProd)} disabled={fetching===selProd.id}
-                    style={{padding:"7px 14px",borderRadius:8,border:"none",background:fetching===selProd.id?"#e5e7eb":C.rose,color:fetching===selProd.id?"#9ca3af":"#fff",fontSize:12,fontWeight:800,cursor:fetching===selProd.id?"not-allowed":"pointer",fontFamily:"inherit",whiteSpace:"nowrap"}}>
+                    style={{padding:"7px 14px",borderRadius:8,border:"none",background:fetching===selProd.id?"#e5e7eb":C.rose,color:fetching===selProd.id?"#9ca3af":"#fff",fontSize:13,fontWeight:800,cursor:fetching===selProd.id?"not-allowed":"pointer",fontFamily:"inherit",whiteSpace:"nowrap"}}>
                     {fetching===selProd.id?"⏳ 조회 중...":"🔄 순위 체크"}
                   </button>
                 )}
@@ -1740,11 +1740,11 @@ function ProductTrackerSection() {
                     } catch(e) { setError(e.message); }
                     setFetching(null);
                   }} disabled={fetching===selProd.id}
-                    style={{padding:"7px 14px",borderRadius:8,border:"none",background:fetching===selProd.id?"#e5e7eb":"#1f6feb",color:fetching===selProd.id?"#9ca3af":"#fff",fontSize:12,fontWeight:800,cursor:fetching===selProd.id?"not-allowed":"pointer",fontFamily:"inherit",whiteSpace:"nowrap",display:"flex",alignItems:"center",gap:5}}>
+                    style={{padding:"7px 14px",borderRadius:8,border:"none",background:fetching===selProd.id?"#e5e7eb":"#1f6feb",color:fetching===selProd.id?"#9ca3af":"#fff",fontSize:13,fontWeight:800,cursor:fetching===selProd.id?"not-allowed":"pointer",fontFamily:"inherit",whiteSpace:"nowrap",display:"flex",alignItems:"center",gap:5}}>
                     {fetching===selProd.id?"⏳ 실행 중...":"▶ GitHub Actions 실행"}
                   </button>
                 <button onClick={()=>setManualEntry({productId:selProd.id,date:new Date().toISOString().slice(0,10),rank:"",price:"",reviews:"",rating:"",likes:"",notes:""})}
-                  style={{padding:"7px 14px",borderRadius:8,border:`1px solid ${C.border}`,background:C.white,color:C.ink,fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit",whiteSpace:"nowrap"}}>
+                  style={{padding:"7px 14px",borderRadius:8,border:`1px solid ${C.border}`,background:C.white,color:C.ink,fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"inherit",whiteSpace:"nowrap"}}>
                   ✏️ 직접 입력
                 </button>
               </div>
@@ -1752,7 +1752,7 @@ function ProductTrackerSection() {
               {/* 직접 입력 폼 */}
               {manualEntry && (
                 <div style={{background:"#fffbeb",border:"1px solid #fde68a",borderRadius:12,padding:"14px 16px"}}>
-                  <div style={{fontSize:12,fontWeight:800,color:"#92400e",marginBottom:10}}>✏️ 데이터 직접 입력</div>
+                  <div style={{fontSize:13,fontWeight:800,color:"#92400e",marginBottom:10}}>✏️ 데이터 직접 입력</div>
                   <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(110px,1fr))",gap:8}}>
                     {[
                       {key:"date",label:"날짜",type:"date"},
@@ -1763,22 +1763,22 @@ function ProductTrackerSection() {
                       {key:"likes",label:"좋아요",placeholder:"예: 520"},
                     ].map(f=>(
                       <div key={f.key}>
-                        <div style={{fontSize:10,color:"#92400e",marginBottom:3,fontWeight:700}}>{f.label}</div>
+                        <div style={{fontSize:12,color:"#92400e",marginBottom:3,fontWeight:700}}>{f.label}</div>
                         <input type={f.type||"text"} value={manualEntry[f.key]} onChange={e=>setManualEntry({...manualEntry,[f.key]:e.target.value})}
                           placeholder={f.placeholder||""}
-                          style={{width:"100%",padding:"6px 8px",border:"1px solid #fde68a",borderRadius:6,fontSize:12,fontFamily:"inherit",boxSizing:"border-box",background:"#fffdf0"}}/>
+                          style={{width:"100%",padding:"6px 8px",border:"1px solid #fde68a",borderRadius:6,fontSize:13,fontFamily:"inherit",boxSizing:"border-box",background:"#fffdf0"}}/>
                       </div>
                     ))}
                   </div>
                   <div style={{marginTop:8}}>
-                    <div style={{fontSize:10,color:"#92400e",marginBottom:3,fontWeight:700}}>메모</div>
+                    <div style={{fontSize:12,color:"#92400e",marginBottom:3,fontWeight:700}}>메모</div>
                     <input value={manualEntry.notes} onChange={e=>setManualEntry({...manualEntry,notes:e.target.value})}
                       placeholder="특이사항, 프로모션 등"
-                      style={{width:"100%",padding:"6px 8px",border:"1px solid #fde68a",borderRadius:6,fontSize:12,fontFamily:"inherit",boxSizing:"border-box",background:"#fffdf0"}}/>
+                      style={{width:"100%",padding:"6px 8px",border:"1px solid #fde68a",borderRadius:6,fontSize:13,fontFamily:"inherit",boxSizing:"border-box",background:"#fffdf0"}}/>
                   </div>
                   <div style={{display:"flex",gap:8,marginTop:10}}>
-                    <button onClick={saveManual} style={{padding:"6px 16px",borderRadius:7,border:"none",background:"#d97706",color:"#fff",fontSize:12,fontWeight:800,cursor:"pointer",fontFamily:"inherit"}}>저장</button>
-                    <button onClick={()=>setManualEntry(null)} style={{padding:"6px 12px",borderRadius:7,border:`1px solid ${C.border}`,background:C.white,fontSize:12,cursor:"pointer",fontFamily:"inherit"}}>취소</button>
+                    <button onClick={saveManual} style={{padding:"6px 16px",borderRadius:7,border:"none",background:"#d97706",color:"#fff",fontSize:13,fontWeight:800,cursor:"pointer",fontFamily:"inherit"}}>저장</button>
+                    <button onClick={()=>setManualEntry(null)} style={{padding:"6px 12px",borderRadius:7,border:`1px solid ${C.border}`,background:C.white,fontSize:13,cursor:"pointer",fontFamily:"inherit"}}>취소</button>
                   </div>
                 </div>
               )}
@@ -1786,15 +1786,15 @@ function ProductTrackerSection() {
               {/* 미니 차트 (가격/순위 추이) */}
               {chartData.length >= 2 && (
                 <div style={{background:C.white,border:`1px solid ${C.border}`,borderRadius:12,padding:"14px 16px"}}>
-                  <div style={{fontSize:12,fontWeight:800,color:C.ink,marginBottom:10}}>📈 추이</div>
+                  <div style={{fontSize:13,fontWeight:800,color:C.ink,marginBottom:10}}>📈 추이</div>
                   <ResponsiveContainer width="100%" height={140}>
                     <LineChart data={chartData} margin={{top:4,right:8,left:-20,bottom:0}}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0"/>
-                      <XAxis dataKey="date" tick={{fontSize:9}} tickFormatter={v=>v.slice(5)}/>
-                      <YAxis yAxisId="price" orientation="left" tick={{fontSize:9}} tickFormatter={v=>`${(v/1000).toFixed(0)}k`}/>
-                      <YAxis yAxisId="reviews" orientation="right" tick={{fontSize:9}}/>
+                      <XAxis dataKey="date" tick={{fontSize:11}} tickFormatter={v=>v.slice(5)}/>
+                      <YAxis yAxisId="price" orientation="left" tick={{fontSize:11}} tickFormatter={v=>`${(v/1000).toFixed(0)}k`}/>
+                      <YAxis yAxisId="reviews" orientation="right" tick={{fontSize:11}}/>
                       <Tooltip formatter={(v,n)=>n==="price"?`₩${v?.toLocaleString()}`:v} labelFormatter={l=>l}/>
-                      <Legend wrapperStyle={{fontSize:10}}/>
+                      <Legend wrapperStyle={{fontSize:12}}/>
                       {chartData.some(d=>d.price) && <Line yAxisId="price" type="monotone" dataKey="price" name="가격" stroke={C.rose} strokeWidth={2} dot={{r:3}} connectNulls/>}
                       {chartData.some(d=>d.reviews) && <Line yAxisId="reviews" type="monotone" dataKey="reviews" name="리뷰수" stroke="#7c3aed" strokeWidth={2} dot={{r:3}} connectNulls/>}
                     </LineChart>
@@ -1804,20 +1804,20 @@ function ProductTrackerSection() {
 
               {/* 히스토리 테이블 */}
               <div style={{background:C.white,border:`1px solid ${C.border}`,borderRadius:12,overflow:"hidden"}}>
-                <div style={{padding:"12px 16px",borderBottom:`1px solid ${C.border}`,fontSize:12,fontWeight:800,color:C.ink}}>
+                <div style={{padding:"12px 16px",borderBottom:`1px solid ${C.border}`,fontSize:13,fontWeight:800,color:C.ink}}>
                   기록 ({selHistory.length}개)
                 </div>
                 {selHistory.length === 0 ? (
-                  <div style={{padding:"24px",textAlign:"center",fontSize:12,color:C.inkLt}}>
+                  <div style={{padding:"24px",textAlign:"center",fontSize:13,color:C.inkLt}}>
                     "지금 체크" 또는 "직접 입력"으로 데이터를 추가하세요
                   </div>
                 ) : (
                   <div style={{overflowX:"auto"}}>
-                    <table style={{width:"100%",borderCollapse:"collapse",fontSize:12}}>
+                    <table style={{width:"100%",borderCollapse:"collapse",fontSize:13}}>
                       <thead>
                         <tr style={{background:C.cream}}>
                           {["날짜","순위","가격","리뷰수","별점","좋아요","메모",""].map((h,i)=>(
-                            <th key={i} style={{padding:"8px 12px",textAlign:"left",fontSize:10,fontWeight:700,color:C.inkMid,whiteSpace:"nowrap"}}>{h}</th>
+                            <th key={i} style={{padding:"8px 12px",textAlign:"left",fontSize:12,fontWeight:700,color:C.inkMid,whiteSpace:"nowrap"}}>{h}</th>
                           ))}
                         </tr>
                       </thead>
@@ -1826,7 +1826,7 @@ function ProductTrackerSection() {
                           <tr key={h.id} style={{borderBottom:`1px solid ${C.border}`,background:i%2===0?C.white:C.cream}}>
                             <td style={{padding:"8px 12px",fontWeight:700,whiteSpace:"nowrap"}}>
                               {h.date}
-                              {!h.auto && <span style={{fontSize:9,color:"#d97706",marginLeft:4}}>수동</span>}
+                              {!h.auto && <span style={{fontSize:11,color:"#d97706",marginLeft:4}}>수동</span>}
                             </td>
                             <td style={{padding:"8px 12px"}}>{h.rank ? `${h.rank}위` : "-"}</td>
                             <td style={{padding:"8px 12px"}}>{h.price ? `₩${h.price.toLocaleString()}` : "-"}</td>
@@ -1886,7 +1886,7 @@ function ThumbPreview({ url, name }) {
           ) : (
             <img src={url} alt={name} style={{width:280,height:280,objectFit:"cover",display:"block"}}/>
           )}
-          <div style={{padding:"6px 10px",background:"#fff",fontSize:10,color:"#52525B",fontWeight:600}}>{name}</div>
+          <div style={{padding:"6px 10px",background:"#fff",fontSize:12,color:"#52525B",fontWeight:600}}>{name}</div>
         </div>
       )}
     </span>
@@ -1898,7 +1898,7 @@ function GfaThumbCell({ name, url, size = 48, onFile, borderColor = "#E4E4E7", p
   if (url) return (
     <span style={{display:"inline-flex",alignItems:"center",gap:3}}>
       <ThumbPreview url={url} name={name}/>
-      <label title="이미지 직접 넣기 (교체)" style={{width:18,height:18,borderRadius:5,border:`1px dashed ${borderColor}`,display:"inline-flex",alignItems:"center",justifyContent:"center",cursor:"pointer",color:plusColor,fontSize:11,fontWeight:800,flexShrink:0}}>
+      <label title="이미지 직접 넣기 (교체)" style={{width:18,height:18,borderRadius:5,border:`1px dashed ${borderColor}`,display:"inline-flex",alignItems:"center",justifyContent:"center",cursor:"pointer",color:plusColor,fontSize:12,fontWeight:800,flexShrink:0}}>
         ↻<input type="file" accept="image/*" onChange={onFile} style={{display:"none"}}/>
       </label>
     </span>
@@ -2308,7 +2308,7 @@ const CardTitle=({title,sub,action})=>(
   <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:14}}>
     <div>
       <div style={{fontSize:14,fontWeight:800,color:C.ink,letterSpacing:"-0.02em"}}>{title}</div>
-      {sub&&<div style={{fontSize:10.5,color:C.inkLt,marginTop:2}}>{sub}</div>}
+      {sub&&<div style={{fontSize:12,color:C.inkLt,marginTop:2}}>{sub}</div>}
     </div>
     {action}
   </div>
@@ -2318,7 +2318,7 @@ const PfNumIn=({val,onCommit,w=76})=>(
   <input key={String(val)} defaultValue={val||""} inputMode="numeric"
     onBlur={e=>{const v=Number(String(e.target.value).replace(/[^0-9.]/g,""))||0; if(v!==(val||0)) onCommit(v);}}
     onKeyDown={e=>{ if(e.key==="Enter") e.currentTarget.blur(); }}
-    style={{width:w,padding:"5px 7px",border:`1.5px solid ${C.border}`,borderRadius:8,fontSize:11.5,fontWeight:700,
+    style={{width:w,padding:"5px 7px",border:`1.5px solid ${C.border}`,borderRadius:8,fontSize:12.5,fontWeight:700,
       fontFamily:"inherit",textAlign:"right",background:"#FAFBFF",color:C.ink,outline:"none"}}/>
 );
 const Btn=({children,onClick,variant="primary",small=false,disabled=false,style={}})=>{
@@ -2342,13 +2342,13 @@ const Btn=({children,onClick,variant="primary",small=false,disabled=false,style=
 const Inp=({value,onChange,placeholder,type="text",style={}})=>(
   <input type={type} value={value||""} onChange={e=>onChange(e.target.value)} placeholder={placeholder}
     style={{width:"100%",padding:"9px 12px",border:`1px solid ${C.border}`,borderRadius:9,
-      fontSize:12,color:C.ink,background:C.cream,outline:"none",fontFamily:"inherit",...style}}
+      fontSize:13,color:C.ink,background:C.cream,outline:"none",fontFamily:"inherit",...style}}
     onFocus={e=>e.target.style.borderColor=C.rose} onBlur={e=>e.target.style.borderColor=C.border}/>
 );
 const Sel=({value,onChange,options,style={}})=>(
   <select value={value} onChange={e=>onChange(e.target.value)}
     style={{width:"100%",padding:"9px 12px",border:`1px solid ${C.border}`,borderRadius:9,
-      fontSize:12,color:C.ink,background:C.cream,outline:"none",fontFamily:"inherit",...style}}>
+      fontSize:13,color:C.ink,background:C.cream,outline:"none",fontFamily:"inherit",...style}}>
     {options.map(o=><option key={o.value||o} value={o.value||o}>{o.label||o}</option>)}
   </select>
 );
@@ -2369,7 +2369,7 @@ const Modal=({title,onClose,children,wide=false})=>(
 );
 const FR=({label,children})=>(
   <div style={{marginBottom:12}}>
-    <div style={{fontSize:11,fontWeight:700,color:C.inkMid,marginBottom:5}}>{label}</div>
+    <div style={{fontSize:12,fontWeight:700,color:C.inkMid,marginBottom:5}}>{label}</div>
     {children}
   </div>
 );
@@ -2377,7 +2377,7 @@ const BeautyTooltip=({active,payload,label,fmt})=>{
   if(!active||!payload?.length) return null;
   return(
     <div style={{background:C.white,border:`1px solid ${C.border}`,borderRadius:10,padding:"10px 14px",
-      boxShadow:`0 8px 24px rgba(43,31,46,0.12)`,fontSize:11,minWidth:140}}>
+      boxShadow:`0 8px 24px rgba(43,31,46,0.12)`,fontSize:12,minWidth:140}}>
       <p style={{color:C.rose,fontWeight:700,marginBottom:5}}>{label}</p>
       {payload.map((p,i)=>(
         <p key={i} style={{color:C.inkMid,margin:"2px 0"}}>{p.name}:{" "}
@@ -2404,14 +2404,14 @@ const KpiGrid=({items,cols=6})=>(
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:6}}>
             <div style={{fontSize:18}}>{k.icon&&typeof k.icon==="string"&&k.icon.length<30?<MI n={k.icon} size={18}/>:k.icon}</div>
             {k.change!==0&&(
-              <span style={{fontSize:10,fontWeight:700,color:good?C.good:C.bad,
+              <span style={{fontSize:12,fontWeight:700,color:good?C.good:C.bad,
                 background:good?"#EDF7F1":"#FEF0F0",padding:"2px 6px",borderRadius:20}}>
                 {k.change>0?"↑":"↓"}{Math.abs(k.change)}%</span>
             )}
           </div>
-          <div style={{fontSize:9,color:C.inkLt,fontWeight:700,letterSpacing:"0.1em",marginBottom:3}}>{k.label.toUpperCase()}</div>
+          <div style={{fontSize:11,color:C.inkLt,fontWeight:700,letterSpacing:"0.1em",marginBottom:3}}>{k.label.toUpperCase()}</div>
           <div style={{fontSize:18,fontWeight:900,color:C.ink,letterSpacing:"-0.02em",lineHeight:1}}>{k.value}</div>
-          <div style={{fontSize:9,color:C.inkLt,marginTop:4}}>{k.note}</div>
+          <div style={{fontSize:11,color:C.inkLt,marginTop:4}}>{k.note}</div>
         </div>
       );
     })}
@@ -2452,11 +2452,11 @@ function InfModalComp({mode, initial, onSave, onClose}){
       <FR label="메모"><Inp value={f.note||""} onChange={v=>set("note",v)} placeholder="릴스/2차활용가능 3개월"/></FR>
       {f.tier==="유료"&&(
       <div style={{borderTop:`1px solid ${C.border}`,margin:"12px 0 8px",paddingTop:10}}>
-        <div style={{fontSize:11,fontWeight:800,color:C.ink,marginBottom:8}}>📹 콘텐츠 활용</div>
+        <div style={{fontSize:12,fontWeight:800,color:C.ink,marginBottom:8}}>📹 콘텐츠 활용</div>
         {[{key:"videoReceived",label:"🎬 영상 수령 완료"},{key:"reusable",label:"♻️ 2차 활용 가능"},{key:"metaUsed",label:"📣 메타 광고 소재 활용"},{key:"paid",label:"💰 2차활용 비용 입금 완료"}].map(({key,label})=>(
           <label key={key} style={{display:"flex",alignItems:"center",gap:8,marginBottom:8,cursor:"pointer"}}>
             <input type="checkbox" checked={!!f[key]} onChange={e=>set(key,e.target.checked)} style={{width:15,height:15,accentColor:C.rose}}/>
-            <span style={{fontSize:11,color:C.ink}}>{label}</span>
+            <span style={{fontSize:12,color:C.ink}}>{label}</span>
           </label>
         ))}
       </div>
@@ -2474,7 +2474,7 @@ function InsModalComp({initial, onSave, onClose}){
   const set = (k,v) => setF(p=>({...p,[k]:v}));
   return(
     <Modal title={<><MI n="bar_chart"/> 인사이트 기록</>} onClose={onClose}>
-      <div style={{fontSize:12,fontWeight:700,color:C.ink,marginBottom:12}}>{f.name}</div>
+      <div style={{fontSize:13,fontWeight:700,color:C.ink,marginBottom:12}}>{f.name}</div>
       <FR label="도달(Reach)"><Inp type="number" value={f.reach} onChange={v=>set("reach",v)} placeholder="0"/></FR>
       <FR label="저장수"><Inp type="number" value={f.saves} onChange={v=>set("saves",v)} placeholder="0"/></FR>
       <FR label="링크 클릭"><Inp type="number" value={f.clicks} onChange={v=>set("clicks",v)} placeholder="0"/></FR>
@@ -2528,7 +2528,7 @@ function SchModalComp({mode, initial, onSave, onClose}){
       <FR label="메모">
         <textarea value={f.note||""} onChange={e=>set("note",e.target.value)} placeholder="한도 수량, 할인율, 주의사항 등 자유롭게 입력"
           style={{width:"100%",padding:"9px 12px",border:`1px solid ${C.border}`,borderRadius:9,
-            fontSize:12,color:C.ink,background:C.cream,outline:"none",fontFamily:"inherit",
+            fontSize:13,color:C.ink,background:C.cream,outline:"none",fontFamily:"inherit",
             resize:"vertical",minHeight:100,lineHeight:1.7,boxSizing:"border-box"}}
           onFocus={e=>e.target.style.borderColor=C.rose} onBlur={e=>e.target.style.borderColor=C.border}/>
       </FR>
@@ -2717,7 +2717,7 @@ function AdSchedulePanel({C, getSetting}) {
       setPromoTarget(id);
       document.getElementById("__sch_form")?.scrollIntoView({behavior:"smooth",block:"start"});
     }}
-      style={{padding:"3px 8px",borderRadius:6,border:`1px solid ${C.border}`,background:C.white,fontSize:9,fontWeight:700,cursor:"pointer",color:C.inkMid}}>
+      style={{padding:"3px 8px",borderRadius:6,border:`1px solid ${C.border}`,background:C.white,fontSize:11,fontWeight:700,cursor:"pointer",color:C.inkMid}}>
       예약
     </button>
   );
@@ -2729,18 +2729,18 @@ function AdSchedulePanel({C, getSetting}) {
     {/* 필터 */}
     <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
       <button onClick={()=>setShowAll(!showAll)} style={{padding:"5px 12px",borderRadius:8,border:`1.5px solid ${showAll?C.border:C.rose}`,
-        background:showAll?C.white:C.blush,color:showAll?C.inkMid:C.rose,fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
+        background:showAll?C.white:C.blush,color:showAll?C.inkMid:C.rose,fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
         {showAll?"전체 캠페인":"이미용만"}
       </button>
       <div style={{position:"relative",flex:1,minWidth:160,maxWidth:280}}>
         <span className="material-symbols-outlined" style={{position:"absolute",left:9,top:"50%",transform:"translateY(-50%)",fontSize:14,color:C.inkLt}}>search</span>
         <input value={campQ} onChange={e=>setCampQ(e.target.value)} placeholder="캠페인 검색"
-          style={{width:"100%",padding:"6px 26px 6px 28px",borderRadius:8,border:`1px solid ${C.border}`,fontSize:11,fontFamily:"inherit",background:C.white,boxSizing:"border-box"}}/>
+          style={{width:"100%",padding:"6px 26px 6px 28px",borderRadius:8,border:`1px solid ${C.border}`,fontSize:12,fontFamily:"inherit",background:C.white,boxSizing:"border-box"}}/>
         {campQ&&<button onClick={()=>setCampQ("")} style={{position:"absolute",right:4,top:"50%",transform:"translateY(-50%)",border:"none",background:"none",cursor:"pointer",padding:2,display:"flex"}}>
           <span className="material-symbols-outlined" style={{fontSize:14,color:C.inkLt}}>close</span>
         </button>}
       </div>
-      <span style={{fontSize:10,color:C.inkLt}}>{filteredCamps.length}개 캠페인 · 꺼진 캠페인은 맨 아래</span>
+      <span style={{fontSize:12,color:C.inkLt}}>{filteredCamps.length}개 캠페인 · 꺼진 캠페인은 맨 아래</span>
     </div>
 
     {/* 캠페인 트리 (접기 가능) */}
@@ -2748,11 +2748,11 @@ function AdSchedulePanel({C, getSetting}) {
       <button onClick={()=>setTreeOpen(p=>!p)}
         style={{width:"100%",display:"flex",alignItems:"center",justifyContent:"space-between",padding:"10px 14px",
           border:"none",background:C.bg,cursor:"pointer",fontFamily:"inherit"}}>
-        <span style={{fontSize:12,fontWeight:800,color:C.ink}}>광고 소재 ({filteredCamps.length}개 캠페인)</span>
+        <span style={{fontSize:13,fontWeight:800,color:C.ink}}>광고 소재 ({filteredCamps.length}개 캠페인)</span>
         <span className="material-symbols-outlined" style={{fontSize:16,color:C.inkLt}}>{treeOpen?"expand_less":"expand_more"}</span>
       </button>
-      {filteredCamps.length===0&&(treeOpen||cq)&&<div style={{padding:20,fontSize:11,color:C.inkLt,textAlign:"center"}}>캠페인 없음</div>}
-      {!treeOpen&&!cq&&<div style={{fontSize:10,color:C.inkLt,padding:"6px 14px"}}>펼치기를 누르거나 검색하면 캠페인 목록이 나옵니다</div>}
+      {filteredCamps.length===0&&(treeOpen||cq)&&<div style={{padding:20,fontSize:12,color:C.inkLt,textAlign:"center"}}>캠페인 없음</div>}
+      {!treeOpen&&!cq&&<div style={{fontSize:12,color:C.inkLt,padding:"6px 14px"}}>펼치기를 누르거나 검색하면 캠페인 목록이 나옵니다</div>}
       {(treeOpen||cq)&&filteredCamps.map(c=>(
         <div key={c.id}>
           {/* 캠페인 행 */}
@@ -2762,8 +2762,8 @@ function AdSchedulePanel({C, getSetting}) {
             <span className="material-symbols-outlined" style={{fontSize:14,color:C.inkLt}}>{expandCamp===c.id?"expand_more":"chevron_right"}</span>
             <StatusDot status={c.status}/>
             <div style={{flex:1,minWidth:0}}>
-              <div style={{fontSize:12,fontWeight:700,color:C.ink,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{c.name}</div>
-              <div style={{fontSize:9,color:C.inkMid}}>{c.objective}{c.daily_budget?` · 일예산 ${Math.round(c.daily_budget).toLocaleString()}원`:""}</div>
+              <div style={{fontSize:13,fontWeight:700,color:C.ink,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{c.name}</div>
+              <div style={{fontSize:11,color:C.inkMid}}>{c.objective}{c.daily_budget?` · 일예산 ${Math.round(c.daily_budget).toLocaleString()}원`:""}</div>
             </div>
             <SchBtn id={c.id} name={c.name} type="campaign"/>
             <ToggleBtn id={c.id} status={c.status}/>
@@ -2775,12 +2775,12 @@ function AdSchedulePanel({C, getSetting}) {
               <div onClick={()=>loadAds(as.id)}
                 style={{display:"flex",alignItems:"center",gap:8,padding:"8px 14px 8px 40px",cursor:"pointer",
                   borderBottom:`1px solid ${C.border}11`,background:expandAdset===as.id?"#fafafa":C.white}}>
-                <span className="material-symbols-outlined" style={{fontSize:12,color:C.inkLt}}>{expandAdset===as.id?"expand_more":"chevron_right"}</span>
+                <span className="material-symbols-outlined" style={{fontSize:13,color:C.inkLt}}>{expandAdset===as.id?"expand_more":"chevron_right"}</span>
                 <StatusDot status={as.status}/>
                 <Thumb src={as.thumb}/>
                 <div style={{flex:1,minWidth:0}}>
-                  <div style={{fontSize:11,fontWeight:600,color:C.ink,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{as.name}</div>
-                  {as.daily_budget&&<div style={{fontSize:9,color:C.inkMid}}>일예산 {Math.round(as.daily_budget).toLocaleString()}원</div>}
+                  <div style={{fontSize:12,fontWeight:600,color:C.ink,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{as.name}</div>
+                  {as.daily_budget&&<div style={{fontSize:11,color:C.inkMid}}>일예산 {Math.round(as.daily_budget).toLocaleString()}원</div>}
                 </div>
                 <SchBtn id={as.id} name={`${c.name} > ${as.name}`} type="adset"/>
                 <ToggleBtn id={as.id} status={as.status}/>
@@ -2793,29 +2793,29 @@ function AdSchedulePanel({C, getSetting}) {
                   <StatusDot status={ad.status}/>
                   <Thumb src={ad.thumb}/>
                   <div style={{flex:1,minWidth:0}}>
-                    <div style={{fontSize:10,fontWeight:600,color:C.ink,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{ad.name}</div>
+                    <div style={{fontSize:12,fontWeight:600,color:C.ink,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{ad.name}</div>
                   </div>
                   <SchBtn id={ad.id} name={ad.name} type="ad"/>
                   <ToggleBtn id={ad.id} status={ad.status}/>
                 </div>
               ))}
-              {expandAdset===as.id&&!ads[as.id]&&<div style={{padding:"8px 70px",fontSize:10,color:C.inkLt}}>로딩...</div>}
+              {expandAdset===as.id&&!ads[as.id]&&<div style={{padding:"8px 70px",fontSize:12,color:C.inkLt}}>로딩...</div>}
             </div>
           ))}
-          {expandCamp===c.id&&!adsets[c.id]&&<div style={{padding:"8px 40px",fontSize:10,color:C.inkLt}}>로딩...</div>}
+          {expandCamp===c.id&&!adsets[c.id]&&<div style={{padding:"8px 40px",fontSize:12,color:C.inkLt}}>로딩...</div>}
         </div>
       ))}
     </div>
 
     {/* 스케줄 추가 — 3탭 */}
     <div id="__sch_form"/>
-    {newSch.targetId&&<div style={{fontSize:11,fontWeight:800,color:C.rose,padding:"4px 0"}}>선택: {newSch.targetName} ({newSch.targetType})</div>}
+    {newSch.targetId&&<div style={{fontSize:12,fontWeight:800,color:C.rose,padding:"4px 0"}}>선택: {newSch.targetName} ({newSch.targetType})</div>}
     <div style={{background:C.white,border:`1px solid ${C.border}`,borderRadius:12,overflow:"hidden"}}>
       <div style={{display:"flex",borderBottom:`1px solid ${C.border}`}}>
         {[{id:"once",label:"1회 예약"},{id:"repeat",label:"요일 반복"},{id:"promo",label:"행사 연동"}].map(t=>(
           <button key={t.id} onClick={()=>setSchTab(t.id)} style={{flex:1,padding:"9px",border:"none",
             background:schTab===t.id?C.rose:"transparent",color:schTab===t.id?"#fff":C.inkMid,
-            fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>{t.label}</button>
+            fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>{t.label}</button>
         ))}
       </div>
       <div style={{padding:14}}>
@@ -2823,16 +2823,16 @@ function AdSchedulePanel({C, getSetting}) {
         {/* 1회 예약 */}
         {schTab==="once"&&(
           <div style={{display:"flex",flexDirection:"column",gap:8}}>
-            {!newSch.targetId&&<div style={{fontSize:11,color:C.inkLt,padding:8,textAlign:"center",background:C.bg,borderRadius:8}}>위 캠페인 목록에서 "예약" 버튼을 눌러 대상을 선택하세요</div>}
+            {!newSch.targetId&&<div style={{fontSize:12,color:C.inkLt,padding:8,textAlign:"center",background:C.bg,borderRadius:8}}>위 캠페인 목록에서 "예약" 버튼을 눌러 대상을 선택하세요</div>}
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
               <div>
-                <label style={{fontSize:10,fontWeight:700,color:C.inkMid}}>대상</label>
-                <div style={{fontSize:12,fontWeight:700,color:newSch.targetId?C.ink:C.inkLt,marginTop:4,padding:"6px 8px",background:C.bg,borderRadius:6}}>{newSch.targetName||"미선택"}</div>
+                <label style={{fontSize:12,fontWeight:700,color:C.inkMid}}>대상</label>
+                <div style={{fontSize:13,fontWeight:700,color:newSch.targetId?C.ink:C.inkLt,marginTop:4,padding:"6px 8px",background:C.bg,borderRadius:6}}>{newSch.targetName||"미선택"}</div>
               </div>
               <div>
-                <label style={{fontSize:10,fontWeight:700,color:C.inkMid}}>액션</label>
+                <label style={{fontSize:12,fontWeight:700,color:C.inkMid}}>액션</label>
                 <select value={newSch.action} onChange={e=>setNewSch(p=>({...p,action:e.target.value}))}
-                  style={{width:"100%",padding:"6px 8px",border:`1px solid ${C.border}`,borderRadius:6,fontSize:11,fontFamily:"inherit",marginTop:4}}>
+                  style={{width:"100%",padding:"6px 8px",border:`1px solid ${C.border}`,borderRadius:6,fontSize:12,fontFamily:"inherit",marginTop:4}}>
                   <option value="on">켜기</option>
                   <option value="off">끄기</option>
                   <option value="budget">예산 변경</option>
@@ -2841,17 +2841,17 @@ function AdSchedulePanel({C, getSetting}) {
             </div>
             {newSch.action==="budget"&&(
               <div>
-                <label style={{fontSize:10,fontWeight:700,color:C.inkMid}}>일예산 (원)</label>
+                <label style={{fontSize:12,fontWeight:700,color:C.inkMid}}>일예산 (원)</label>
                 <input type="number" value={newSch.budget} onChange={e=>setNewSch(p=>({...p,budget:e.target.value}))} placeholder="30000"
-                  style={{width:"100%",padding:"6px 8px",border:`1px solid ${C.border}`,borderRadius:6,fontSize:11,fontFamily:"inherit",marginTop:4,boxSizing:"border-box"}}/>
+                  style={{width:"100%",padding:"6px 8px",border:`1px solid ${C.border}`,borderRadius:6,fontSize:12,fontFamily:"inherit",marginTop:4,boxSizing:"border-box"}}/>
               </div>
             )}
             <div>
-              <label style={{fontSize:10,fontWeight:700,color:C.inkMid}}>예약 시간</label>
+              <label style={{fontSize:12,fontWeight:700,color:C.inkMid}}>예약 시간</label>
               <input type="datetime-local" value={newSch.datetime} onChange={e=>setNewSch(p=>({...p,datetime:e.target.value}))}
-                style={{width:"100%",padding:"6px 8px",border:`1px solid ${C.border}`,borderRadius:6,fontSize:11,fontFamily:"inherit",marginTop:4,boxSizing:"border-box"}}/>
+                style={{width:"100%",padding:"6px 8px",border:`1px solid ${C.border}`,borderRadius:6,fontSize:12,fontFamily:"inherit",marginTop:4,boxSizing:"border-box"}}/>
             </div>
-            <button onClick={addSchedule} style={{padding:"8px",background:C.rose,color:"#fff",border:"none",borderRadius:8,fontSize:12,fontWeight:800,cursor:"pointer",fontFamily:"inherit"}}>예약 추가</button>
+            <button onClick={addSchedule} style={{padding:"8px",background:C.rose,color:"#fff",border:"none",borderRadius:8,fontSize:13,fontWeight:800,cursor:"pointer",fontFamily:"inherit"}}>예약 추가</button>
           </div>
         )}
 
@@ -2859,34 +2859,34 @@ function AdSchedulePanel({C, getSetting}) {
         {schTab==="repeat"&&(
           <div style={{display:"flex",flexDirection:"column",gap:10}}>
             <div>
-              <label style={{fontSize:10,fontWeight:700,color:C.inkMid}}>캠페인</label>
+              <label style={{fontSize:12,fontWeight:700,color:C.inkMid}}>캠페인</label>
               <select value={repeatTarget} onChange={e=>setRepeatTarget(e.target.value)}
-                style={{width:"100%",padding:"6px 8px",border:`1px solid ${C.border}`,borderRadius:6,fontSize:11,fontFamily:"inherit",marginTop:4}}>
+                style={{width:"100%",padding:"6px 8px",border:`1px solid ${C.border}`,borderRadius:6,fontSize:12,fontFamily:"inherit",marginTop:4}}>
                 <option value="">선택</option>
                 {filteredCamps.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}
               </select>
             </div>
             <div>
-              <label style={{fontSize:10,fontWeight:700,color:C.inkMid,marginBottom:6,display:"block"}}>요일 선택</label>
+              <label style={{fontSize:12,fontWeight:700,color:C.inkMid,marginBottom:6,display:"block"}}>요일 선택</label>
               <div style={{display:"flex",gap:4}}>
                 {[["mon","월"],["tue","화"],["wed","수"],["thu","목"],["fri","금"],["sat","토"],["sun","일"]].map(([k,l])=>(
                   <button key={k} onClick={()=>setRepeatDays(p=>({...p,[k]:!p[k]}))}
                     style={{width:32,height:32,borderRadius:8,border:`1.5px solid ${repeatDays[k]?C.rose:C.border}`,
                       background:repeatDays[k]?C.rose:C.white,color:repeatDays[k]?"#fff":C.inkMid,
-                      fontSize:11,fontWeight:800,cursor:"pointer"}}>{l}</button>
+                      fontSize:12,fontWeight:800,cursor:"pointer"}}>{l}</button>
                 ))}
               </div>
             </div>
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8}}>
               <div>
-                <label style={{fontSize:10,fontWeight:700,color:C.inkMid}}>시간</label>
+                <label style={{fontSize:12,fontWeight:700,color:C.inkMid}}>시간</label>
                 <input type="time" value={repeatTime} onChange={e=>setRepeatTime(e.target.value)}
-                  style={{width:"100%",padding:"6px 8px",border:`1px solid ${C.border}`,borderRadius:6,fontSize:11,fontFamily:"inherit",marginTop:4,boxSizing:"border-box"}}/>
+                  style={{width:"100%",padding:"6px 8px",border:`1px solid ${C.border}`,borderRadius:6,fontSize:12,fontFamily:"inherit",marginTop:4,boxSizing:"border-box"}}/>
               </div>
               <div>
-                <label style={{fontSize:10,fontWeight:700,color:C.inkMid}}>액션</label>
+                <label style={{fontSize:12,fontWeight:700,color:C.inkMid}}>액션</label>
                 <select value={repeatAction} onChange={e=>setRepeatAction(e.target.value)}
-                  style={{width:"100%",padding:"6px 8px",border:`1px solid ${C.border}`,borderRadius:6,fontSize:11,fontFamily:"inherit",marginTop:4}}>
+                  style={{width:"100%",padding:"6px 8px",border:`1px solid ${C.border}`,borderRadius:6,fontSize:12,fontFamily:"inherit",marginTop:4}}>
                   <option value="on">켜기</option>
                   <option value="off">끄기</option>
                   <option value="budget">예산 변경</option>
@@ -2894,9 +2894,9 @@ function AdSchedulePanel({C, getSetting}) {
               </div>
               {repeatAction==="budget"&&(
                 <div>
-                  <label style={{fontSize:10,fontWeight:700,color:C.inkMid}}>일예산</label>
+                  <label style={{fontSize:12,fontWeight:700,color:C.inkMid}}>일예산</label>
                   <input type="number" value={repeatBudget} onChange={e=>setRepeatBudget(e.target.value)} placeholder="30000"
-                    style={{width:"100%",padding:"6px 8px",border:`1px solid ${C.border}`,borderRadius:6,fontSize:11,fontFamily:"inherit",marginTop:4,boxSizing:"border-box"}}/>
+                    style={{width:"100%",padding:"6px 8px",border:`1px solid ${C.border}`,borderRadius:6,fontSize:12,fontFamily:"inherit",marginTop:4,boxSizing:"border-box"}}/>
                 </div>
               )}
             </div>
@@ -2924,7 +2924,7 @@ function AdSchedulePanel({C, getSetting}) {
               await fetch("/api/meta-schedule",{method:"POST",headers:{"Content-Type":"application/json"},
                 body:JSON.stringify({action:"save_schedules",schedules:next})});
               alert(`${items.length}개 스케줄 추가됨 (4주간 ${days.map(d=>({mon:"월",tue:"화",wed:"수",thu:"목",fri:"금",sat:"토",sun:"일"}[d])).join("")} ${repeatTime})`);
-            }} style={{padding:"8px",background:"#2563eb",color:"#fff",border:"none",borderRadius:8,fontSize:12,fontWeight:800,cursor:"pointer",fontFamily:"inherit"}}>
+            }} style={{padding:"8px",background:"#2563eb",color:"#fff",border:"none",borderRadius:8,fontSize:13,fontWeight:800,cursor:"pointer",fontFamily:"inherit"}}>
               반복 스케줄 생성 (4주)
             </button>
           </div>
@@ -2935,7 +2935,7 @@ function AdSchedulePanel({C, getSetting}) {
           <div style={{display:"flex",flexDirection:"column",gap:10}}>
             {/* 캠페인 → 광고세트 → 광고 드릴다운 */}
             <div>
-              <label style={{fontSize:10,fontWeight:700,color:C.inkMid}}>캠페인</label>
+              <label style={{fontSize:12,fontWeight:700,color:C.inkMid}}>캠페인</label>
               <select value={promoTarget} onChange={async e=>{
                 setPromoTarget(e.target.value);setPromoAdsetId("");setPromoAdId("");setPromoAdsets2([]);setPromoAds2([]);
                 if(e.target.value){
@@ -2943,14 +2943,14 @@ function AdSchedulePanel({C, getSetting}) {
                   if(r.ok) setPromoAdsets2(r.adsets||[]);
                 }
               }}
-                style={{width:"100%",padding:"6px 8px",border:`1px solid ${C.border}`,borderRadius:6,fontSize:11,fontFamily:"inherit",marginTop:4}}>
+                style={{width:"100%",padding:"6px 8px",border:`1px solid ${C.border}`,borderRadius:6,fontSize:12,fontFamily:"inherit",marginTop:4}}>
                 <option value="">선택</option>
                 {filteredCamps.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}
               </select>
             </div>
             {promoAdsets2.length>0&&(
               <div>
-                <label style={{fontSize:10,fontWeight:700,color:C.inkMid}}>광고세트 (선택)</label>
+                <label style={{fontSize:12,fontWeight:700,color:C.inkMid}}>광고세트 (선택)</label>
                 <select value={promoAdsetId} onChange={async e=>{
                   setPromoAdsetId(e.target.value);setPromoAdId("");setPromoAds2([]);
                   if(e.target.value){
@@ -2958,7 +2958,7 @@ function AdSchedulePanel({C, getSetting}) {
                     if(r.ok) setPromoAds2(r.ads||[]);
                   }
                 }}
-                  style={{width:"100%",padding:"6px 8px",border:`1px solid ${C.border}`,borderRadius:6,fontSize:11,fontFamily:"inherit",marginTop:4}}>
+                  style={{width:"100%",padding:"6px 8px",border:`1px solid ${C.border}`,borderRadius:6,fontSize:12,fontFamily:"inherit",marginTop:4}}>
                   <option value="">전체 (캠페인 단위)</option>
                   {promoAdsets2.map(a=><option key={a.id} value={a.id}>{a.name}</option>)}
                 </select>
@@ -2966,27 +2966,27 @@ function AdSchedulePanel({C, getSetting}) {
             )}
             {promoAds2.length>0&&(
               <div>
-                <label style={{fontSize:10,fontWeight:700,color:C.inkMid}}>광고 (선택)</label>
+                <label style={{fontSize:12,fontWeight:700,color:C.inkMid}}>광고 (선택)</label>
                 <select value={promoAdId} onChange={e=>setPromoAdId(e.target.value)}
-                  style={{width:"100%",padding:"6px 8px",border:`1px solid ${C.border}`,borderRadius:6,fontSize:11,fontFamily:"inherit",marginTop:4}}>
+                  style={{width:"100%",padding:"6px 8px",border:`1px solid ${C.border}`,borderRadius:6,fontSize:12,fontFamily:"inherit",marginTop:4}}>
                   <option value="">전체 (광고세트 단위)</option>
                   {promoAds2.map(a=><option key={a.id} value={a.id}>{a.name}</option>)}
                 </select>
               </div>
             )}
-            {promoTarget&&<div style={{fontSize:10,color:C.rose,fontWeight:700}}>
+            {promoTarget&&<div style={{fontSize:12,color:C.rose,fontWeight:700}}>
               적용 대상: {promoAdId?promoAds2.find(a=>a.id===promoAdId)?.name:promoAdsetId?promoAdsets2.find(a=>a.id===promoAdsetId)?.name:camps.find(c=>c.id===promoTarget)?.name}
             </div>}
             <div>
-              <label style={{fontSize:10,fontWeight:700,color:C.inkMid}}>프로모션 선택</label>
+              <label style={{fontSize:12,fontWeight:700,color:C.inkMid}}>프로모션 선택</label>
               <div style={{maxHeight:150,overflowY:"auto",border:`1px solid ${C.border}`,borderRadius:8,marginTop:4}}>
-                {promos.length===0&&<div style={{padding:10,fontSize:11,color:C.inkLt}}>예정된 프로모션 없음</div>}
+                {promos.length===0&&<div style={{padding:10,fontSize:12,color:C.inkLt}}>예정된 프로모션 없음</div>}
                 {promos.map(p=>(
                   <div key={p.promo_id} onClick={()=>setSelectedPromo(selectedPromo?.promo_id===p.promo_id?null:p)}
-                    style={{padding:"8px 10px",cursor:"pointer",fontSize:11,borderBottom:`1px solid ${C.border}22`,
+                    style={{padding:"8px 10px",cursor:"pointer",fontSize:12,borderBottom:`1px solid ${C.border}22`,
                       background:selectedPromo?.promo_id===p.promo_id?"#eff6ff":C.white}}>
                     <div style={{fontWeight:700,color:C.ink}}>{p.promo_name}</div>
-                    <div style={{fontSize:10,color:C.inkMid}}>{p.channel} · {p.start_date} ~ {p.end_date}</div>
+                    <div style={{fontSize:12,color:C.inkMid}}>{p.channel} · {p.start_date} ~ {p.end_date}</div>
                   </div>
                 ))}
               </div>
@@ -2999,28 +2999,28 @@ function AdSchedulePanel({C, getSetting}) {
               <>
                 {curBudget&&(
                   <div style={{background:"#eff6ff",border:"1px solid #93c5fd",borderRadius:8,padding:"8px 12px",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
-                    <span style={{fontSize:11,fontWeight:700,color:"#2563eb"}}>현재 일예산: {curBudget.toLocaleString()}원</span>
+                    <span style={{fontSize:12,fontWeight:700,color:"#2563eb"}}>현재 일예산: {curBudget.toLocaleString()}원</span>
                     <button onClick={()=>setPromoBudget(p=>({...p,after:String(curBudget)}))}
-                      style={{fontSize:10,fontWeight:700,padding:"3px 10px",borderRadius:6,border:"1px solid #93c5fd",background:"#fff",color:"#2563eb",cursor:"pointer",fontFamily:"inherit"}}>
+                      style={{fontSize:12,fontWeight:700,padding:"3px 10px",borderRadius:6,border:"1px solid #93c5fd",background:"#fff",color:"#2563eb",cursor:"pointer",fontFamily:"inherit"}}>
                       행사 후 예산에 적용
                     </button>
                   </div>
                 )}
                 <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8}}>
                   <div>
-                    <label style={{fontSize:10,fontWeight:700,color:C.inkMid}}>행사 전 예산</label>
+                    <label style={{fontSize:12,fontWeight:700,color:C.inkMid}}>행사 전 예산</label>
                     <input type="number" value={promoBudget.before} onChange={e=>setPromoBudget(p=>({...p,before:e.target.value}))} placeholder={curBudget?String(curBudget):"30000"}
-                      style={{width:"100%",padding:"6px 8px",border:`1px solid ${C.border}`,borderRadius:6,fontSize:11,fontFamily:"inherit",marginTop:4,boxSizing:"border-box"}}/>
+                      style={{width:"100%",padding:"6px 8px",border:`1px solid ${C.border}`,borderRadius:6,fontSize:12,fontFamily:"inherit",marginTop:4,boxSizing:"border-box"}}/>
                   </div>
                   <div>
-                    <label style={{fontSize:10,fontWeight:700,color:"#16a34a"}}>행사 중 예산</label>
+                    <label style={{fontSize:12,fontWeight:700,color:"#16a34a"}}>행사 중 예산</label>
                     <input type="number" value={promoBudget.during} onChange={e=>setPromoBudget(p=>({...p,during:e.target.value}))} placeholder="80000"
-                      style={{width:"100%",padding:"6px 8px",border:`1px solid #16a34a`,borderRadius:6,fontSize:11,fontFamily:"inherit",marginTop:4,boxSizing:"border-box"}}/>
+                      style={{width:"100%",padding:"6px 8px",border:`1px solid #16a34a`,borderRadius:6,fontSize:12,fontFamily:"inherit",marginTop:4,boxSizing:"border-box"}}/>
                   </div>
                   <div>
-                    <label style={{fontSize:10,fontWeight:700,color:C.inkMid}}>행사 후 예산 (복구)</label>
+                    <label style={{fontSize:12,fontWeight:700,color:C.inkMid}}>행사 후 예산 (복구)</label>
                     <input type="number" value={promoBudget.after} onChange={e=>setPromoBudget(p=>({...p,after:e.target.value}))} placeholder={curBudget?String(curBudget):"30000"}
-                      style={{width:"100%",padding:"6px 8px",border:`1px solid ${C.border}`,borderRadius:6,fontSize:11,fontFamily:"inherit",marginTop:4,boxSizing:"border-box"}}/>
+                      style={{width:"100%",padding:"6px 8px",border:`1px solid ${C.border}`,borderRadius:6,fontSize:12,fontFamily:"inherit",marginTop:4,boxSizing:"border-box"}}/>
                   </div>
                 </div>
                 <button onClick={async()=>{
@@ -3054,7 +3054,7 @@ function AdSchedulePanel({C, getSetting}) {
                   alert(`${sp.promo_name} 행사 연동 완료! ${items.length}개 스케줄 추가`);
                   setSelectedPromo(null);
                   setPromoBudget({before:"",during:"",after:""});
-                }} style={{padding:"8px",background:"#16a34a",color:"#fff",border:"none",borderRadius:8,fontSize:12,fontWeight:800,cursor:"pointer",fontFamily:"inherit"}}>
+                }} style={{padding:"8px",background:"#16a34a",color:"#fff",border:"none",borderRadius:8,fontSize:13,fontWeight:800,cursor:"pointer",fontFamily:"inherit"}}>
                   행사 연동 스케줄 생성
                 </button>
               </>);
@@ -3068,11 +3068,11 @@ function AdSchedulePanel({C, getSetting}) {
     {schList.filter(s=>!s.executed).length>0&&(
       <div style={{background:C.white,border:`1px solid ${C.border}`,borderRadius:12,padding:14}}>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
-          <div style={{fontSize:12,fontWeight:800,color:C.ink}}>예약 ({schList.filter(s=>!s.executed).length}건)</div>
+          <div style={{fontSize:13,fontWeight:800,color:C.ink}}>예약 ({schList.filter(s=>!s.executed).length}건)</div>
           {schList.filter(s=>!s.executed).length>3&&(
             <button onClick={async()=>{if(!confirm("미실행 예약을 모두 삭제할까요?"))return;const next=schList.filter(s=>s.executed);setSchList(next);
               await fetch("/api/meta-schedule",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"save_schedules",schedules:next})});}}
-              style={{fontSize:10,fontWeight:700,color:C.bad,background:"#fef2f2",border:"none",padding:"3px 8px",borderRadius:6,cursor:"pointer"}}>전체 삭제</button>
+              style={{fontSize:12,fontWeight:700,color:C.bad,background:"#fef2f2",border:"none",padding:"3px 8px",borderRadius:6,cursor:"pointer"}}>전체 삭제</button>
           )}
         </div>
         {schList.filter(s=>!s.executed).sort((a,b)=>(a.datetime||"").localeCompare(b.datetime||"")).map(s=>(
@@ -3081,14 +3081,14 @@ function AdSchedulePanel({C, getSetting}) {
               {s.action==="on"?"▶":s.action==="budget"?"💰":"⏸"}
             </span>
             <div style={{flex:1}}>
-              <div style={{fontSize:11,fontWeight:700,color:C.ink}}>{s.targetName}{s.promo?` · ${s.promo}`:""}</div>
-              <div style={{fontSize:10,color:C.inkMid}}>
+              <div style={{fontSize:12,fontWeight:700,color:C.ink}}>{s.targetName}{s.promo?` · ${s.promo}`:""}</div>
+              <div style={{fontSize:12,color:C.inkMid}}>
                 {s.datetime?.replace("T"," ")}
                 {s.action==="budget"&&s.budget?` · ${Math.round(s.budget).toLocaleString()}원`:""}
                 {s.repeat?" · 반복":""}
               </div>
             </div>
-            <button onClick={()=>removeSch(s.id)} style={{border:"none",background:"#fef2f2",color:"#dc2626",padding:"3px 8px",borderRadius:6,fontSize:10,fontWeight:700,cursor:"pointer"}}>삭제</button>
+            <button onClick={()=>removeSch(s.id)} style={{border:"none",background:"#fef2f2",color:"#dc2626",padding:"3px 8px",borderRadius:6,fontSize:12,fontWeight:700,cursor:"pointer"}}>삭제</button>
           </div>
         ))}
       </div>
@@ -3376,14 +3376,14 @@ function NaverSection() {
       <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:8}}>
         <div>
           <div style={{fontSize:16,fontWeight:900,color:C.ink}}>📊 네이버 광고 · <span style={{color:"#03C75A"}}>이미용</span></div>
-          <div style={{fontSize:11,color:C.inkLt,marginTop:2}}>API 자동 수집 · 매일 오전 9시 동기화{allRows.length>0&&` · ${availableDates[0]} ~ ${availableDates[availableDates.length-1]}`}</div>
+          <div style={{fontSize:12,color:C.inkLt,marginTop:2}}>API 자동 수집 · 매일 오전 9시 동기화{allRows.length>0&&` · ${availableDates[0]} ~ ${availableDates[availableDates.length-1]}`}</div>
         </div>
         <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}>
           {[7,14,30,90].map(d=>(
-            <button key={d} onClick={()=>setDays(d)} style={{padding:"5px 12px",borderRadius:8,fontSize:11,fontWeight:700,cursor:"pointer",
+            <button key={d} onClick={()=>setDays(d)} style={{padding:"5px 12px",borderRadius:8,fontSize:12,fontWeight:700,cursor:"pointer",
               border:`1.5px solid ${days===d?"#03C75A":C.border}`,background:days===d?"#E8FBF0":C.white,color:days===d?"#03C75A":C.inkMid}}>{d}일</button>
           ))}
-          <button onClick={()=>setShowFix(p=>!p)} style={{display:"flex",alignItems:"center",gap:5,padding:"7px 12px",borderRadius:8,background:"#FEF3C7",border:`1.5px solid #F59E0B`,color:"#92400E",fontSize:11,fontWeight:800,cursor:"pointer"}}><span className="material-symbols-outlined" style={{fontSize:14}}>flag</span>수정 체크{Object.keys(fixList).length>0?` ${Object.keys(fixList).length}건`:""}</button>
+          <button onClick={()=>setShowFix(p=>!p)} style={{display:"flex",alignItems:"center",gap:5,padding:"7px 12px",borderRadius:8,background:"#FEF3C7",border:`1.5px solid #F59E0B`,color:"#92400E",fontSize:12,fontWeight:800,cursor:"pointer"}}><span className="material-symbols-outlined" style={{fontSize:14}}>flag</span>수정 체크{Object.keys(fixList).length>0?` ${Object.keys(fixList).length}건`:""}</button>
         </div>
       </div>
 
@@ -3391,21 +3391,21 @@ function NaverSection() {
       {allRows.length > 0 && (
         <div style={{display:"flex",flexDirection:"column",gap:8}}>
           <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
-            <span style={{fontSize:11,color:C.inkLt,fontWeight:700}}>조회 기간:</span>
-            <input type="date" value={dateFilter.from} min={minDate||undefined} max={dateFilter.to||maxDate||undefined} onChange={e=>setDateFilter(p=>({...p,from:e.target.value}))} style={{padding:"4px 8px",borderRadius:7,border:`1.5px solid ${dateFilter.from?"#03C75A":C.border}`,fontSize:11,fontFamily:"inherit",outline:"none"}}/>
-            <span style={{fontSize:11,color:C.inkLt}}>~</span>
-            <input type="date" value={dateFilter.to} min={dateFilter.from||minDate||undefined} max={maxDate||undefined} onChange={e=>setDateFilter(p=>({...p,to:e.target.value}))} style={{padding:"4px 8px",borderRadius:7,border:`1.5px solid ${dateFilter.to?"#03C75A":C.border}`,fontSize:11,fontFamily:"inherit",outline:"none"}}/>
-            {(dateFilter.from||dateFilter.to)&&<button onClick={()=>setDateFilter({from:"",to:""})} style={{padding:"4px 10px",borderRadius:7,border:`1px solid ${C.border}`,background:"none",color:C.inkMid,fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>전체</button>}
-            <button onClick={()=>{setShowCompare(p=>!p);if(showCompare)setCompareDateFilter({from:"",to:""});}} style={{marginLeft:"auto",padding:"4px 12px",borderRadius:7,border:`1.5px solid ${showCompare?"#7C3AED":C.border}`,background:showCompare?"#F5F3FF":"none",color:showCompare?"#7C3AED":C.inkMid,fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>{showCompare?"비교 닫기":"기간 비교"}</button>
+            <span style={{fontSize:12,color:C.inkLt,fontWeight:700}}>조회 기간:</span>
+            <input type="date" value={dateFilter.from} min={minDate||undefined} max={dateFilter.to||maxDate||undefined} onChange={e=>setDateFilter(p=>({...p,from:e.target.value}))} style={{padding:"4px 8px",borderRadius:7,border:`1.5px solid ${dateFilter.from?"#03C75A":C.border}`,fontSize:12,fontFamily:"inherit",outline:"none"}}/>
+            <span style={{fontSize:12,color:C.inkLt}}>~</span>
+            <input type="date" value={dateFilter.to} min={dateFilter.from||minDate||undefined} max={maxDate||undefined} onChange={e=>setDateFilter(p=>({...p,to:e.target.value}))} style={{padding:"4px 8px",borderRadius:7,border:`1.5px solid ${dateFilter.to?"#03C75A":C.border}`,fontSize:12,fontFamily:"inherit",outline:"none"}}/>
+            {(dateFilter.from||dateFilter.to)&&<button onClick={()=>setDateFilter({from:"",to:""})} style={{padding:"4px 10px",borderRadius:7,border:`1px solid ${C.border}`,background:"none",color:C.inkMid,fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>전체</button>}
+            <button onClick={()=>{setShowCompare(p=>!p);if(showCompare)setCompareDateFilter({from:"",to:""});}} style={{marginLeft:"auto",padding:"4px 12px",borderRadius:7,border:`1.5px solid ${showCompare?"#7C3AED":C.border}`,background:showCompare?"#F5F3FF":"none",color:showCompare?"#7C3AED":C.inkMid,fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>{showCompare?"비교 닫기":"기간 비교"}</button>
           </div>
           {showCompare&&(
             <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
-              <span style={{fontSize:11,color:"#7C3AED",fontWeight:700}}>비교 기간:</span>
-              <input type="date" value={compareDateFilter.from} min={minDate||undefined} max={compareDateFilter.to||maxDate||undefined} onChange={e=>setCompareDateFilter(p=>({...p,from:e.target.value}))} style={{padding:"4px 8px",borderRadius:7,border:`1.5px solid ${compareDateFilter.from?"#7C3AED":C.border}`,fontSize:11,fontFamily:"inherit",outline:"none"}}/>
-              <span style={{fontSize:11,color:C.inkLt}}>~</span>
-              <input type="date" value={compareDateFilter.to} min={compareDateFilter.from||minDate||undefined} max={maxDate||undefined} onChange={e=>setCompareDateFilter(p=>({...p,to:e.target.value}))} style={{padding:"4px 8px",borderRadius:7,border:`1.5px solid ${compareDateFilter.to?"#7C3AED":C.border}`,fontSize:11,fontFamily:"inherit",outline:"none"}}/>
-              {(compareDateFilter.from||compareDateFilter.to)&&<button onClick={()=>setCompareDateFilter({from:"",to:""})} style={{padding:"4px 10px",borderRadius:7,border:`1px solid ${C.border}`,background:"none",color:C.inkMid,fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>초기화</button>}
-              {compareRows.length>0&&<span style={{fontSize:10,color:"#7C3AED",fontWeight:700}}>✓ {compareRows.length}개 행</span>}
+              <span style={{fontSize:12,color:"#7C3AED",fontWeight:700}}>비교 기간:</span>
+              <input type="date" value={compareDateFilter.from} min={minDate||undefined} max={compareDateFilter.to||maxDate||undefined} onChange={e=>setCompareDateFilter(p=>({...p,from:e.target.value}))} style={{padding:"4px 8px",borderRadius:7,border:`1.5px solid ${compareDateFilter.from?"#7C3AED":C.border}`,fontSize:12,fontFamily:"inherit",outline:"none"}}/>
+              <span style={{fontSize:12,color:C.inkLt}}>~</span>
+              <input type="date" value={compareDateFilter.to} min={compareDateFilter.from||minDate||undefined} max={maxDate||undefined} onChange={e=>setCompareDateFilter(p=>({...p,to:e.target.value}))} style={{padding:"4px 8px",borderRadius:7,border:`1.5px solid ${compareDateFilter.to?"#7C3AED":C.border}`,fontSize:12,fontFamily:"inherit",outline:"none"}}/>
+              {(compareDateFilter.from||compareDateFilter.to)&&<button onClick={()=>setCompareDateFilter({from:"",to:""})} style={{padding:"4px 10px",borderRadius:7,border:`1px solid ${C.border}`,background:"none",color:C.inkMid,fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>초기화</button>}
+              {compareRows.length>0&&<span style={{fontSize:12,color:"#7C3AED",fontWeight:700}}>✓ {compareRows.length}개 행</span>}
             </div>
           )}
         </div>
@@ -3415,7 +3415,7 @@ function NaverSection() {
         <div style={{background:C.white,border:`2px dashed ${C.border}`,borderRadius:14,padding:"60px 20px",textAlign:"center"}}>
           <div style={{fontSize:32,marginBottom:12}}>📂</div>
           <div style={{fontSize:14,fontWeight:800,color:C.inkMid}}>이미용 광고 데이터 없음</div>
-          <div style={{fontSize:11,color:C.inkLt,marginTop:6}}>API 동기화가 실행되면 자동으로 표시됩니다</div>
+          <div style={{fontSize:12,color:C.inkLt,marginTop:6}}>API 동기화가 실행되면 자동으로 표시됩니다</div>
         </div>
       )}
 
@@ -3430,7 +3430,7 @@ function NaverSection() {
               {label:"평균 CPC",   value:fmtN(avgCpc)+"원",     color:C.ink},
             ].map(k=>(
               <div key={k.label} style={{background:C.white,border:`1px solid ${C.border}`,borderRadius:10,padding:"12px 14px"}}>
-                <div style={{fontSize:10,color:C.inkLt,fontWeight:700}}>{k.label}</div>
+                <div style={{fontSize:12,color:C.inkLt,fontWeight:700}}>{k.label}</div>
                 <div style={{fontSize:17,fontWeight:900,color:k.color,marginTop:4}}>{k.value}</div>
               </div>
             ))}
@@ -3444,7 +3444,7 @@ function NaverSection() {
               {key:"highcpc", label:"💰 CPC 500원+", color:"#EA580C"},
             ].map(f=>(
               <button key={f.key} onClick={()=>setQuickFilter(f.key)} style={{
-                padding:"5px 14px",borderRadius:20,fontSize:11,fontWeight:700,cursor:"pointer",
+                padding:"5px 14px",borderRadius:20,fontSize:12,fontWeight:700,cursor:"pointer",
                 border:`1.5px solid ${quickFilter===f.key?f.color:C.border}`,
                 background:quickFilter===f.key? (f.key==="warn"?"#FEF2F2":"#F1F5F9") :C.white,
                 color:quickFilter===f.key?f.color:C.inkMid,
@@ -3456,19 +3456,19 @@ function NaverSection() {
           <div style={{display:"flex",gap:8,flexWrap:"wrap",alignItems:"center"}}>
             {[{k:"campaign",l:"캠페인"},{k:"adgroup",l:"광고그룹"},{k:"keyword",l:"키워드"},{k:"date",l:"날짜별"}].map(g=>(
               <button key={g.k} onClick={()=>setGroupBy(g.k)} style={{
-                padding:"5px 12px",borderRadius:8,fontSize:11,fontWeight:700,cursor:"pointer",
+                padding:"5px 12px",borderRadius:8,fontSize:12,fontWeight:700,cursor:"pointer",
                 border:`1px solid ${groupBy===g.k?"#03C75A":C.border}`,
                 background:groupBy===g.k?"#E8FBF0":C.white,
                 color:groupBy===g.k?"#03C75A":C.inkMid,
               }}>{g.l}</button>
             ))}
             <input value={search} onChange={e=>setSearch(e.target.value)}
-              placeholder="검색..." style={{padding:"5px 10px",borderRadius:8,fontSize:11,
+              placeholder="검색..." style={{padding:"5px 10px",borderRadius:8,fontSize:12,
                 border:`1px solid ${C.border}`,outline:"none",width:140}}/>
             <div style={{display:"flex",alignItems:"center",gap:6,marginLeft:"auto"}}>
-              <span style={{fontSize:11,color:C.inkMid}}>최소 광고비</span>
+              <span style={{fontSize:12,color:C.inkMid}}>최소 광고비</span>
               <select value={minCost} onChange={e=>setMinCost(Number(e.target.value))}
-                style={{padding:"4px 8px",borderRadius:6,fontSize:11,border:`1px solid ${C.border}`,outline:"none"}}>
+                style={{padding:"4px 8px",borderRadius:6,fontSize:12,border:`1px solid ${C.border}`,outline:"none"}}>
                 {[0,1000,5000,10000,50000,100000].map(v=>(
                   <option key={v} value={v}>{v===0?"전체":fmtW(v)+" 이상"}</option>
                 ))}
@@ -3479,13 +3479,13 @@ function NaverSection() {
           {/* 테이블 */}
           <div style={{background:C.white,border:`1px solid ${C.border}`,borderRadius:12,overflow:"hidden"}}>
             <div style={{overflowX:"auto"}}>
-              <table style={{width:"100%",borderCollapse:"collapse",fontSize:11}}>
+              <table style={{width:"100%",borderCollapse:"collapse",fontSize:12}}>
                 <thead>
                   <tr style={{background:C.bg}}>
                     {COLS.map(c=>(
                       <th key={c.key} onClick={()=>thClick(c.key)}
                         style={{padding:"9px 12px",textAlign:c.align,fontWeight:700,color:C.inkMid,
-                          borderBottom:`1px solid ${C.border}`,fontSize:10,whiteSpace:"nowrap",
+                          borderBottom:`1px solid ${C.border}`,fontSize:12,whiteSpace:"nowrap",
                           cursor:c.key==="label"?"default":"pointer",userSelect:"none"}}>
                         {c.label}{sortCol===c.key?(sortAsc?"▲":"▼"):""}
                       </th>
@@ -3502,7 +3502,7 @@ function NaverSection() {
                         if(c.key==="_fix") return (
                           <td key="_fix" style={{padding:"6px 10px",textAlign:"center"}}>
                             <button onClick={()=>toggleFix(r)} title={isFixed?"체크 해제":"수정 필요 체크"} style={{
-                              padding:"3px 8px",borderRadius:6,fontSize:10,fontWeight:700,cursor:"pointer",
+                              padding:"3px 8px",borderRadius:6,fontSize:12,fontWeight:700,cursor:"pointer",
                               border:`1.5px solid ${isFixed?"#F59E0B":C.border}`,
                               background:isFixed?"#FEF3C7":C.white,color:isFixed?"#92400E":C.inkMid,
                             }}>{isFixed?"✓수정중":"체크"}</button>
@@ -3510,17 +3510,17 @@ function NaverSection() {
                         );
                         if(c.key==="_cmp_cost") {
                           const p = prevAggMap[r.label];
-                          return <td key={c.key} style={{padding:"9px 12px",textAlign:"right",fontSize:11,color:C.inkMid}}>{p?fmtW(p.cost):<span style={{color:C.inkLt}}>—</span>}</td>;
+                          return <td key={c.key} style={{padding:"9px 12px",textAlign:"right",fontSize:12,color:C.inkMid}}>{p?fmtW(p.cost):<span style={{color:C.inkLt}}>—</span>}</td>;
                         }
                         if(c.key==="_cmp_roas") {
                           const p = prevAggMap[r.label];
-                          return <td key={c.key} style={{padding:"9px 12px",textAlign:"right",fontSize:11,fontWeight:700,color:p?roasColor(p.roas):C.inkLt}}>{p?`${fmtN(p.roas)}%`:"—"}</td>;
+                          return <td key={c.key} style={{padding:"9px 12px",textAlign:"right",fontSize:12,fontWeight:700,color:p?roasColor(p.roas):C.inkLt}}>{p?`${fmtN(p.roas)}%`:"—"}</td>;
                         }
                         if(c.key==="_diff") {
                           const p = prevAggMap[r.label];
                           const diff = p ? r.roas - p.roas : null;
                           return (
-                            <td key="_diff" style={{padding:"9px 12px",textAlign:"right",fontWeight:800,fontSize:11}}>
+                            <td key="_diff" style={{padding:"9px 12px",textAlign:"right",fontWeight:800,fontSize:12}}>
                               {diff===null ? <span style={{color:C.inkLt}}>—</span> : (
                                 <span style={{color:diff>0?C.good:diff<0?C.bad:C.inkMid}}>
                                   {diff>0?"+":""}{Math.round(diff)}%p
@@ -3545,7 +3545,7 @@ function NaverSection() {
                 </tbody>
                 <tfoot>
                   <tr style={{background:C.bg,borderTop:`2px solid ${C.border}`}}>
-                    <td style={{padding:"9px 12px",fontWeight:800,fontSize:11}}>합계 ({filtered.length}건)</td>
+                    <td style={{padding:"9px 12px",fontWeight:800,fontSize:12}}>합계 ({filtered.length}건)</td>
                     <td style={{padding:"9px 12px",textAlign:"right",fontWeight:700}}>{fmtN(total.imp)}</td>
                     <td style={{padding:"9px 12px",textAlign:"right",fontWeight:700}}>{fmtN(total.click)}</td>
                     <td style={{padding:"9px 12px",textAlign:"right",fontWeight:700}}>{avgCtr}%</td>
@@ -3557,7 +3557,7 @@ function NaverSection() {
                       const cmpTotal = Object.values(prevAggMap).reduce((acc,p)=>({cost:acc.cost+p.cost}),{cost:0});
                       const cmpWeightedRoas = Object.values(prevAggMap).reduce((s,p)=>s+(p.roas*p.cost),0);
                       const cmpRoas = cmpTotal.cost>0?Math.round(cmpWeightedRoas/cmpTotal.cost):0;
-                      return(<><td style={{padding:"9px 12px",textAlign:"right",fontWeight:700,fontSize:11,color:C.inkMid}}>{fmtW(cmpTotal.cost)}</td><td style={{padding:"9px 12px",textAlign:"right",fontWeight:900,fontSize:11,color:roasColor(cmpRoas)}}>{cmpRoas}%</td><td/></>);
+                      return(<><td style={{padding:"9px 12px",textAlign:"right",fontWeight:700,fontSize:12,color:C.inkMid}}>{fmtW(cmpTotal.cost)}</td><td style={{padding:"9px 12px",textAlign:"right",fontWeight:900,fontSize:12,color:roasColor(cmpRoas)}}>{cmpRoas}%</td><td/></>);
                     })()}
                     <td/>
                   </tr>
@@ -3582,21 +3582,21 @@ function NaverSection() {
             {showFix && (
               <div style={{padding:"12px 16px",display:"flex",flexDirection:"column",gap:10}}>
                 <div style={{background:"#FFFBEB",border:`1px dashed #F59E0B`,borderRadius:8,padding:"10px 14px",display:"flex",flexDirection:"column",gap:8}}>
-                  <div style={{fontSize:11,fontWeight:800,color:"#92400E"}}>+ 항목 추가</div>
+                  <div style={{fontSize:12,fontWeight:800,color:"#92400E"}}>+ 항목 추가</div>
                   <input value={fixAddInput.label} onChange={e=>setFixAddInput(p=>({...p,label:e.target.value}))}
                     placeholder="항목명 (캠페인명)"
-                    style={{padding:"6px 10px",borderRadius:6,fontSize:11,border:`1px solid ${C.border}`,outline:"none",width:"100%",boxSizing:"border-box",fontFamily:"inherit"}}/>
+                    style={{padding:"6px 10px",borderRadius:6,fontSize:12,border:`1px solid ${C.border}`,outline:"none",width:"100%",boxSizing:"border-box",fontFamily:"inherit"}}/>
                   <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}>
                     <input value={fixAddInput.memo} onChange={e=>setFixAddInput(p=>({...p,memo:e.target.value}))}
                       placeholder="메모"
-                      style={{flex:1,minWidth:120,padding:"6px 10px",borderRadius:6,fontSize:11,border:`1px solid ${C.border}`,outline:"none",fontFamily:"inherit"}}/>
+                      style={{flex:1,minWidth:120,padding:"6px 10px",borderRadius:6,fontSize:12,border:`1px solid ${C.border}`,outline:"none",fontFamily:"inherit"}}/>
                     <button onClick={async()=>{
                       if(!fixAddInput.label.trim()) return;
                       const item = {label:fixAddInput.label.trim(), cost:0, roas:0, checked_at:fixAddInput.checked_at||new Date().toLocaleDateString("ko-KR"), memo:fixAddInput.memo};
                       setFixList(p=>({...p,[item.label]:item}));
                       setFixAddInput({label:"",checked_at:new Date().toISOString().slice(0,10),memo:""});
                       await fetch(`${SURL}/rest/v1/naver_ads_fixlist`,{method:"POST",headers:{...sh,Prefer:"resolution=merge-duplicates"},body:JSON.stringify(item)});
-                    }} style={{padding:"6px 14px",borderRadius:6,border:"none",background:"#F59E0B",color:"#fff",fontSize:11,fontWeight:800,cursor:"pointer",fontFamily:"inherit"}}>추가</button>
+                    }} style={{padding:"6px 14px",borderRadius:6,border:"none",background:"#F59E0B",color:"#fff",fontSize:12,fontWeight:800,cursor:"pointer",fontFamily:"inherit"}}>추가</button>
                   </div>
                 </div>
                 {Object.values(fixList).map(f=>{
@@ -3605,27 +3605,27 @@ function NaverSection() {
                   return (
                     <div key={f.label} style={{background:"#FFFDF0",border:`1px solid ${C.border}`,borderRadius:8,padding:"10px 14px",display:"flex",flexDirection:"column",gap:6}}>
                       <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
-                        <div style={{fontWeight:800,fontSize:12,color:C.ink,flex:1,marginRight:8}}>{f.label}</div>
-                        <button onClick={()=>toggleFix({label:f.label})} style={{padding:"2px 8px",borderRadius:6,fontSize:10,border:`1px solid ${C.border}`,background:C.white,color:C.inkMid,cursor:"pointer",flexShrink:0}}>해제</button>
+                        <div style={{fontWeight:800,fontSize:13,color:C.ink,flex:1,marginRight:8}}>{f.label}</div>
+                        <button onClick={()=>toggleFix({label:f.label})} style={{padding:"2px 8px",borderRadius:6,fontSize:12,border:`1px solid ${C.border}`,background:C.white,color:C.inkMid,cursor:"pointer",flexShrink:0}}>해제</button>
                       </div>
-                      <div style={{display:"flex",gap:16,fontSize:11,flexWrap:"wrap"}}>
+                      <div style={{display:"flex",gap:16,fontSize:12,flexWrap:"wrap"}}>
                         <div><span style={{color:C.inkLt}}>체크 당시 ROAS </span><span style={{fontWeight:700,color:roasColor(f.roas)}}>{f.roas}%</span></div>
                         {curRoas!==null && <div><span style={{color:C.inkLt}}>현재 ROAS </span><span style={{fontWeight:700,color:roasColor(curRoas)}}>{curRoas}%</span></div>}
                         <div style={{display:"flex",alignItems:"center",gap:4,flexWrap:"wrap"}}>
                           <span style={{color:C.inkLt,marginRight:2}}>체크일</span>
                           {(f.checked_at||"").split("|").filter(Boolean).map(d=>(
-                            <span key={d} style={{display:"inline-flex",alignItems:"center",gap:3,background:"#FEF9C3",border:"1px solid #FDE68A",borderRadius:10,padding:"1px 7px",fontSize:11,fontWeight:600}}>
-                              {d}<span onClick={()=>removeCheckDate(f.label,d)} style={{cursor:"pointer",color:"#92400E",fontSize:12,lineHeight:1,marginLeft:1}}>×</span>
+                            <span key={d} style={{display:"inline-flex",alignItems:"center",gap:3,background:"#FEF9C3",border:"1px solid #FDE68A",borderRadius:10,padding:"1px 7px",fontSize:12,fontWeight:600}}>
+                              {d}<span onClick={()=>removeCheckDate(f.label,d)} style={{cursor:"pointer",color:"#92400E",fontSize:13,lineHeight:1,marginLeft:1}}>×</span>
                             </span>
                           ))}
                           {fixDateAdd[f.label]!==undefined ? (
                             <span style={{display:"inline-flex",alignItems:"center",gap:4}}>
-                              <input type="date" value={fixDateAdd[f.label]||""} onChange={e=>setFixDateAdd(p=>({...p,[f.label]:e.target.value}))} style={{fontSize:11,padding:"1px 6px",borderRadius:6,border:`1px solid ${C.border}`,outline:"none"}}/>
-                              <button onClick={()=>addCheckDate(f.label,fixDateAdd[f.label])} style={{padding:"1px 8px",borderRadius:6,border:"none",background:"#03C75A",color:"#fff",fontSize:11,fontWeight:700,cursor:"pointer"}}>확인</button>
-                              <button onClick={()=>setFixDateAdd(p=>{const n={...p};delete n[f.label];return n;})} style={{padding:"1px 6px",borderRadius:6,border:`1px solid ${C.border}`,background:C.white,fontSize:11,cursor:"pointer"}}>취소</button>
+                              <input type="date" value={fixDateAdd[f.label]||""} onChange={e=>setFixDateAdd(p=>({...p,[f.label]:e.target.value}))} style={{fontSize:12,padding:"1px 6px",borderRadius:6,border:`1px solid ${C.border}`,outline:"none"}}/>
+                              <button onClick={()=>addCheckDate(f.label,fixDateAdd[f.label])} style={{padding:"1px 8px",borderRadius:6,border:"none",background:"#03C75A",color:"#fff",fontSize:12,fontWeight:700,cursor:"pointer"}}>확인</button>
+                              <button onClick={()=>setFixDateAdd(p=>{const n={...p};delete n[f.label];return n;})} style={{padding:"1px 6px",borderRadius:6,border:`1px solid ${C.border}`,background:C.white,fontSize:12,cursor:"pointer"}}>취소</button>
                             </span>
                           ) : (
-                            <button onClick={()=>setFixDateAdd(p=>({...p,[f.label]:new Date().toISOString().slice(0,10)}))} style={{padding:"1px 7px",borderRadius:10,border:`1px solid #FDE68A`,background:"#FFFBEB",fontSize:11,fontWeight:700,cursor:"pointer",color:"#92400E"}}>+ 날짜</button>
+                            <button onClick={()=>setFixDateAdd(p=>({...p,[f.label]:new Date().toISOString().slice(0,10)}))} style={{padding:"1px 7px",borderRadius:10,border:`1px solid #FDE68A`,background:"#FFFBEB",fontSize:12,fontWeight:700,cursor:"pointer",color:"#92400E"}}>+ 날짜</button>
                           )}
                         </div>
                       </div>
@@ -3633,13 +3633,13 @@ function NaverSection() {
                         <input autoFocus value={f.memo||""} onChange={e=>updateMemo(f.label, e.target.value)}
                           onBlur={()=>setFixMemoEdit(p=>{const n={...p};delete n[f.label];return n;})}
                           placeholder="메모 (수정 내용, 조치사항...)"
-                          style={{padding:"6px 10px",borderRadius:6,fontSize:11,border:`1.5px solid #F59E0B`,outline:"none",background:"#fff",boxSizing:"border-box"}}/>
+                          style={{padding:"6px 10px",borderRadius:6,fontSize:12,border:`1.5px solid #F59E0B`,outline:"none",background:"#fff",boxSizing:"border-box"}}/>
                       ) : (
                         <div onClick={()=>setFixMemoEdit(p=>({...p,[f.label]:true}))}
-                          style={{minHeight:30,padding:"6px 10px",borderRadius:6,fontSize:11,border:`1px solid ${C.border}`,background:"#fff",cursor:"text",display:"flex",flexWrap:"wrap",alignItems:"center",gap:4}}>
+                          style={{minHeight:30,padding:"6px 10px",borderRadius:6,fontSize:12,border:`1px solid ${C.border}`,background:"#fff",cursor:"text",display:"flex",flexWrap:"wrap",alignItems:"center",gap:4}}>
                           {f.memo ? f.memo.split(/(\[[^\]]+\])/).map((part,i)=>
                             /^\[\d{4}-\d{2}-\d{2}\]$/.test(part) ? (
-                              <span key={i} style={{background:"#FEF9C3",border:"1px solid #FDE68A",borderRadius:10,padding:"1px 7px",fontSize:11,fontWeight:600,color:"#92400E"}}>{part.slice(1,-1)}</span>
+                              <span key={i} style={{background:"#FEF9C3",border:"1px solid #FDE68A",borderRadius:10,padding:"1px 7px",fontSize:12,fontWeight:600,color:"#92400E"}}>{part.slice(1,-1)}</span>
                             ) : (<span key={i} style={{color:C.inkMid,whiteSpace:"pre-wrap"}}>{part}</span>)
                           ) : (<span style={{color:C.inkLt}}>메모 (수정 내용, 조치사항...)</span>)}
                         </div>
@@ -3734,21 +3734,21 @@ function DetailPlanSection() {
     return m[t]||"#64748b";
   };
 
-  const inputStyle = {width:"100%",padding:"8px 10px",border:`1px solid ${C.border}`,borderRadius:8,fontSize:12,fontFamily:"inherit",outline:"none",boxSizing:"border-box"};
+  const inputStyle = {width:"100%",padding:"8px 10px",border:`1px solid ${C.border}`,borderRadius:8,fontSize:13,fontFamily:"inherit",outline:"none",boxSizing:"border-box"};
 
   return (
     <div style={{padding:"24px 0"}}>
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:20}}>
         <div>
           <div style={{fontSize:20,fontWeight:900,color:C.ink}}>상세페이지 기획안</div>
-          <div style={{fontSize:12,color:C.inkMid,marginTop:2}}>AI 자동 생성 · 경쟁사 분석 · OA 표준 템플릿 기반</div>
+          <div style={{fontSize:13,color:C.inkMid,marginTop:2}}>AI 자동 생성 · 경쟁사 분석 · OA 표준 템플릿 기반</div>
         </div>
       </div>
 
       {/* 탭 */}
       <div style={{display:"flex",gap:4,marginBottom:16}}>
         {[{id:"generate",label:"기획안 생성",icon:"auto_awesome"},{id:"analysis",label:"경쟁사 분석",icon:"compare"},{id:"history",label:`히스토리 (${history.length})`,icon:"history"}].map(t=>(
-          <button key={t.id} onClick={()=>setTab(t.id)} style={{padding:"7px 14px",border:"none",borderRadius:8,fontSize:11,fontWeight:700,cursor:"pointer",
+          <button key={t.id} onClick={()=>setTab(t.id)} style={{padding:"7px 14px",border:"none",borderRadius:8,fontSize:12,fontWeight:700,cursor:"pointer",
             background:tab===t.id?C.rose:"transparent",color:tab===t.id?"#fff":C.inkMid,fontFamily:"inherit",display:"flex",alignItems:"center",gap:4}}>
             <span className="material-symbols-outlined" style={{fontSize:14}}>{t.icon}</span>{t.label}
           </button>
@@ -3760,29 +3760,29 @@ function DetailPlanSection() {
         <div style={{background:C.white,border:`1px solid ${C.border}`,borderRadius:12,padding:16,marginBottom:16}}>
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
             <div>
-              <label style={{fontSize:10,fontWeight:700,color:C.inkMid}}>제품명 *</label>
+              <label style={{fontSize:12,fontWeight:700,color:C.inkMid}}>제품명 *</label>
               <input value={form.productName} onChange={e=>setForm({...form,productName:e.target.value})} placeholder="예: 에어스트레이트" style={inputStyle}/>
             </div>
             <div>
-              <label style={{fontSize:10,fontWeight:700,color:C.inkMid}}>카테고리</label>
+              <label style={{fontSize:12,fontWeight:700,color:C.inkMid}}>카테고리</label>
               <select value={form.category} onChange={e=>setForm({...form,category:e.target.value})} style={inputStyle}>
                 {["이미용가전","생활가전","건강가전","계절가전","뷰티디바이스"].map(c=><option key={c}>{c}</option>)}
               </select>
             </div>
             <div style={{gridColumn:"span 2"}}>
-              <label style={{fontSize:10,fontWeight:700,color:C.inkMid}}>핵심 기능 (쉼표 구분)</label>
+              <label style={{fontSize:12,fontWeight:700,color:C.inkMid}}>핵심 기능 (쉼표 구분)</label>
               <input value={form.features} onChange={e=>setForm({...form,features:e.target.value})} placeholder="예: 듀얼모드, 적외선케어, 97000RPM 항공모터, 글로우코팅" style={inputStyle}/>
             </div>
             <div>
-              <label style={{fontSize:10,fontWeight:700,color:C.inkMid}}>타겟</label>
+              <label style={{fontSize:12,fontWeight:700,color:C.inkMid}}>타겟</label>
               <input value={form.targetAudience} onChange={e=>setForm({...form,targetAudience:e.target.value})} style={inputStyle}/>
             </div>
             <div>
-              <label style={{fontSize:10,fontWeight:700,color:C.inkMid}}>가격대</label>
+              <label style={{fontSize:12,fontWeight:700,color:C.inkMid}}>가격대</label>
               <input value={form.priceRange} onChange={e=>setForm({...form,priceRange:e.target.value})} placeholder="예: 5-8만원" style={inputStyle}/>
             </div>
             <div style={{gridColumn:"span 2"}}>
-              <label style={{fontSize:10,fontWeight:700,color:C.inkMid}}>경쟁사/경쟁 제품</label>
+              <label style={{fontSize:12,fontWeight:700,color:C.inkMid}}>경쟁사/경쟁 제품</label>
               <input value={form.competitors} onChange={e=>setForm({...form,competitors:e.target.value})} placeholder="예: 다이슨 에어랩, 샤오미 H501, 유닉스" style={inputStyle}/>
             </div>
           </div>
@@ -3804,11 +3804,11 @@ function DetailPlanSection() {
       {/* 스트리밍 중 실시간 표시 */}
       {loading&&streamText&&(
         <div style={{background:C.white,border:`1px solid ${C.border}`,borderRadius:12,padding:16,marginBottom:12}}>
-          <div style={{fontSize:11,fontWeight:700,color:C.rose,marginBottom:8,display:"flex",alignItems:"center",gap:6}}>
+          <div style={{fontSize:12,fontWeight:700,color:C.rose,marginBottom:8,display:"flex",alignItems:"center",gap:6}}>
             <span style={{display:"inline-block",width:8,height:8,borderRadius:"50%",background:C.rose,animation:"pulse 1s infinite"}}/>
             AI 생성 중...
           </div>
-          <pre style={{fontSize:11,color:C.ink,whiteSpace:"pre-wrap",wordBreak:"break-word",lineHeight:1.6,maxHeight:400,overflowY:"auto",fontFamily:"inherit"}}>{streamText}</pre>
+          <pre style={{fontSize:12,color:C.ink,whiteSpace:"pre-wrap",wordBreak:"break-word",lineHeight:1.6,maxHeight:400,overflowY:"auto",fontFamily:"inherit"}}>{streamText}</pre>
         </div>
       )}
 
@@ -3819,9 +3819,9 @@ function DetailPlanSection() {
           <div style={{background:"linear-gradient(135deg,#7c3aed11,#ec489811)",border:`1px solid #e9d5ff`,borderRadius:12,padding:16}}>
             <div style={{fontSize:18,fontWeight:900,color:C.ink}}>{plan.productName||form.productName}</div>
             <div style={{fontSize:14,fontWeight:700,color:C.rose,marginTop:4}}>{plan.mainCopy}</div>
-            {plan.subCopy&&<div style={{fontSize:12,color:C.inkMid,marginTop:2}}>{plan.subCopy}</div>}
-            {plan.techBranding&&<div style={{marginTop:8,display:"inline-block",padding:"4px 10px",background:"#1d4ed811",border:"1px solid #93c5fd",borderRadius:20,fontSize:11,fontWeight:700,color:"#2563eb"}}>{plan.techBranding}</div>}
-            <div style={{display:"flex",gap:8,marginTop:10,fontSize:10,color:C.inkMid}}>
+            {plan.subCopy&&<div style={{fontSize:13,color:C.inkMid,marginTop:2}}>{plan.subCopy}</div>}
+            {plan.techBranding&&<div style={{marginTop:8,display:"inline-block",padding:"4px 10px",background:"#1d4ed811",border:"1px solid #93c5fd",borderRadius:20,fontSize:12,fontWeight:700,color:"#2563eb"}}>{plan.techBranding}</div>}
+            <div style={{display:"flex",gap:8,marginTop:10,fontSize:12,color:C.inkMid}}>
               {plan.copyTone&&<span>카피톤: {plan.copyTone}</span>}
               {plan.designTone&&<span>디자인: {plan.designTone}</span>}
             </div>
@@ -3835,7 +3835,7 @@ function DetailPlanSection() {
                 if(data.ok) alert("피그마에 기획안이 코멘트로 추가되었습니다!");
                 else alert("오류: "+(data.error||"알 수 없는 오류"));
               } catch(e) { alert("오류: "+e.message); }
-            }} style={{marginTop:10,padding:"6px 14px",background:"#1d1d1d",color:"#fff",border:"none",borderRadius:8,fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit",display:"flex",alignItems:"center",gap:4}}>
+            }} style={{marginTop:10,padding:"6px 14px",background:"#1d1d1d",color:"#fff",border:"none",borderRadius:8,fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit",display:"flex",alignItems:"center",gap:4}}>
               <svg width="14" height="14" viewBox="0 0 38 57" fill="none"><path d="M10 28.5a9.5 9.5 0 0 1 9.5-9.5h9.5v19H19.5A9.5 9.5 0 0 1 10 28.5Z" fill="#1ABCFE"/><path d="M1 47.5A9.5 9.5 0 0 1 10.5 38H20v9.5a9.5 9.5 0 0 1-19 0Z" fill="#0ACF83"/><path d="M20 1v19h9.5a9.5 9.5 0 0 0 0-19H20Z" fill="#FF7262"/><path d="M1 9.5A9.5 9.5 0 0 0 10.5 19H20V1H10.5A9.5 9.5 0 0 0 1 9.5Z" fill="#F24E1E"/><path d="M1 28.5A9.5 9.5 0 0 0 10.5 38H20V19H10.5A9.5 9.5 0 0 0 1 28.5Z" fill="#A259FF"/></svg>
               피그마로 보내기
             </button>
@@ -3844,13 +3844,13 @@ function DetailPlanSection() {
           {/* 핵심 기능 픽토그램 */}
           {plan.features&&plan.features.length>0&&(
             <div style={{background:C.white,border:`1px solid ${C.border}`,borderRadius:12,padding:16}}>
-              <div style={{fontSize:12,fontWeight:800,color:C.inkMid,marginBottom:10}}>핵심 기능 ({plan.features.length})</div>
+              <div style={{fontSize:13,fontWeight:800,color:C.inkMid,marginBottom:10}}>핵심 기능 ({plan.features.length})</div>
               <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(140px,1fr))",gap:8}}>
                 {plan.features.map((f,i)=>(
                   <div key={i} style={{background:C.bg,borderRadius:8,padding:"10px 12px",textAlign:"center"}}>
                     <div style={{fontSize:20,marginBottom:4}}>{f.icon||"⚡"}</div>
-                    <div style={{fontSize:11,fontWeight:800,color:C.ink}}>{f.title}</div>
-                    <div style={{fontSize:10,color:C.inkMid,marginTop:2}}>{f.description}</div>
+                    <div style={{fontSize:12,fontWeight:800,color:C.ink}}>{f.title}</div>
+                    <div style={{fontSize:12,color:C.inkMid,marginTop:2}}>{f.description}</div>
                   </div>
                 ))}
               </div>
@@ -3860,8 +3860,8 @@ function DetailPlanSection() {
           {/* 비교표 */}
           {plan.comparisonTable&&(
             <div style={{background:C.white,border:`1px solid ${C.border}`,borderRadius:12,padding:16}}>
-              <div style={{fontSize:12,fontWeight:800,color:C.inkMid,marginBottom:10}}>비교표</div>
-              <table style={{width:"100%",borderCollapse:"collapse",fontSize:11}}>
+              <div style={{fontSize:13,fontWeight:800,color:C.inkMid,marginBottom:10}}>비교표</div>
+              <table style={{width:"100%",borderCollapse:"collapse",fontSize:12}}>
                 <thead>
                   <tr style={{background:C.bg}}>
                     {(plan.comparisonTable.headers||[]).map((h,i)=>(
@@ -3888,7 +3888,7 @@ function DetailPlanSection() {
             <div style={{background:C.white,border:`1px solid ${C.border}`,borderRadius:12,overflow:"hidden"}}>
               {/* 헤더 + 네비게이션 */}
               <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"10px 16px",borderBottom:`1px solid ${C.border}`,background:C.bg}}>
-                <div style={{fontSize:12,fontWeight:800,color:C.inkMid}}>슬라이드 {(expandSlide||0)+1} / {plan.slides.length}</div>
+                <div style={{fontSize:13,fontWeight:800,color:C.inkMid}}>슬라이드 {(expandSlide||0)+1} / {plan.slides.length}</div>
                 <div style={{display:"flex",gap:4,alignItems:"center"}}>
                   <button onClick={()=>setExpandSlide(Math.max(0,(expandSlide||0)-1))} disabled={!expandSlide} style={{width:28,height:28,border:`1px solid ${C.border}`,borderRadius:6,background:C.white,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",opacity:expandSlide?1:0.3}}>
                     <span className="material-symbols-outlined" style={{fontSize:16}}>chevron_left</span>
@@ -3911,7 +3911,7 @@ function DetailPlanSection() {
                       *{margin:0;padding:0;box-sizing:border-box}body{font-family:Pretendard Variable,sans-serif;background:#fff}
                       @media print{div{page-break-inside:avoid}}</style></head><body>${slides}</body></html>`);
                     w.document.close();
-                  }} style={{padding:"4px 10px",border:`1px solid ${C.border}`,borderRadius:6,background:C.white,fontSize:10,fontWeight:700,cursor:"pointer",color:C.inkMid,fontFamily:"inherit"}}>
+                  }} style={{padding:"4px 10px",border:`1px solid ${C.border}`,borderRadius:6,background:C.white,fontSize:12,fontWeight:700,cursor:"pointer",color:C.inkMid,fontFamily:"inherit"}}>
                     PDF 저장
                   </button>
                 </div>
@@ -3924,8 +3924,8 @@ function DetailPlanSection() {
                 return (
                 <div style={{padding:"40px",minHeight:300,display:"flex",flexDirection:"column",gap:16}}>
                   <div style={{display:"flex",alignItems:"center",gap:8}}>
-                    <span style={{fontSize:11,fontWeight:800,color:tc,background:tc+"15",padding:"2px 8px",borderRadius:6}}>p{s.page||((expandSlide||0)+1)}</span>
-                    <span style={{fontSize:11,fontWeight:700,color:tc}}>{s.type}</span>
+                    <span style={{fontSize:12,fontWeight:800,color:tc,background:tc+"15",padding:"2px 8px",borderRadius:6}}>p{s.page||((expandSlide||0)+1)}</span>
+                    <span style={{fontSize:12,fontWeight:700,color:tc}}>{s.type}</span>
                   </div>
                   <div style={{fontSize:22,fontWeight:900,color:C.ink,lineHeight:1.4}}>{s.title}</div>
                   {s.copy&&<div style={{fontSize:15,color:"#333",lineHeight:1.8,whiteSpace:"pre-wrap"}}>{s.copy}</div>}
@@ -3935,7 +3935,7 @@ function DetailPlanSection() {
                       <div style={{fontSize:13,color:"#888",fontWeight:600}}>{s.imageGuide}</div>
                     </div>
                   )}
-                  {s.notes&&<div style={{fontSize:12,color:C.inkMid,borderTop:`1px solid ${C.border}`,paddingTop:12,marginTop:"auto"}}>💡 {s.notes}</div>}
+                  {s.notes&&<div style={{fontSize:13,color:C.inkMid,borderTop:`1px solid ${C.border}`,paddingTop:12,marginTop:"auto"}}>💡 {s.notes}</div>}
                 </div>);
               })()}
               {/* 썸네일 네비게이션 */}
@@ -3944,7 +3944,7 @@ function DetailPlanSection() {
                   <button key={i} onClick={()=>setExpandSlide(i)} style={{
                     minWidth:36,height:28,borderRadius:4,border:`1.5px solid ${(expandSlide||0)===i?C.rose:C.border}`,
                     background:(expandSlide||0)===i?C.rose+"15":C.white,color:(expandSlide||0)===i?C.rose:C.inkLt,
-                    fontSize:9,fontWeight:800,cursor:"pointer",flexShrink:0,
+                    fontSize:11,fontWeight:800,cursor:"pointer",flexShrink:0,
                   }}>{s.page||i+1}</button>
                 ))}
               </div>
@@ -3954,10 +3954,10 @@ function DetailPlanSection() {
           {/* 스펙 */}
           {plan.specs&&plan.specs.length>0&&(
             <div style={{background:C.white,border:`1px solid ${C.border}`,borderRadius:12,padding:16}}>
-              <div style={{fontSize:12,fontWeight:800,color:C.inkMid,marginBottom:10}}>스펙표</div>
+              <div style={{fontSize:13,fontWeight:800,color:C.inkMid,marginBottom:10}}>스펙표</div>
               <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:4}}>
                 {plan.specs.map((s,i)=>(
-                  <div key={i} style={{display:"flex",padding:"4px 0",fontSize:11,borderBottom:`1px solid ${C.border}22`}}>
+                  <div key={i} style={{display:"flex",padding:"4px 0",fontSize:12,borderBottom:`1px solid ${C.border}22`}}>
                     <span style={{width:80,color:C.inkMid,fontWeight:600,flexShrink:0}}>{s.label}</span>
                     <span style={{color:C.ink,fontWeight:700}}>{s.value}</span>
                   </div>
@@ -3974,7 +3974,7 @@ function DetailPlanSection() {
           {/* 후킹 카피 추천 */}
           {analysis.hookCopies&&(
             <div style={{background:"#fef3c7",border:"1px solid #fde68a",borderRadius:12,padding:16}}>
-              <div style={{fontSize:12,fontWeight:800,color:"#92400e",marginBottom:8}}>추천 후킹 카피</div>
+              <div style={{fontSize:13,fontWeight:800,color:"#92400e",marginBottom:8}}>추천 후킹 카피</div>
               {analysis.hookCopies.map((c,i)=>(
                 <div key={i} style={{fontSize:13,fontWeight:700,color:C.ink,padding:"4px 0"}}>{i+1}. {c}</div>
               ))}
@@ -3984,9 +3984,9 @@ function DetailPlanSection() {
           {/* 차별화 포인트 */}
           {analysis.differentiators&&(
             <div style={{background:"#f0fdf4",border:"1px solid #bbf7d0",borderRadius:12,padding:16}}>
-              <div style={{fontSize:12,fontWeight:800,color:"#16a34a",marginBottom:8}}>오아 차별화 포인트</div>
+              <div style={{fontSize:13,fontWeight:800,color:"#16a34a",marginBottom:8}}>오아 차별화 포인트</div>
               {analysis.differentiators.map((d,i)=>(
-                <div key={i} style={{fontSize:11,color:C.ink,padding:"3px 0"}}>✅ {d}</div>
+                <div key={i} style={{fontSize:12,color:C.ink,padding:"3px 0"}}>✅ {d}</div>
               ))}
             </div>
           )}
@@ -3997,12 +3997,12 @@ function DetailPlanSection() {
               <div style={{fontSize:13,fontWeight:800,color:C.ink,marginBottom:8}}>{comp.name}</div>
               <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
                 <div>
-                  <div style={{fontSize:10,fontWeight:700,color:"#16a34a",marginBottom:4}}>강점</div>
-                  {(comp.strengths||[]).map((s,j)=><div key={j} style={{fontSize:11,color:C.ink,padding:"2px 0"}}>• {s}</div>)}
+                  <div style={{fontSize:12,fontWeight:700,color:"#16a34a",marginBottom:4}}>강점</div>
+                  {(comp.strengths||[]).map((s,j)=><div key={j} style={{fontSize:12,color:C.ink,padding:"2px 0"}}>• {s}</div>)}
                 </div>
                 <div>
-                  <div style={{fontSize:10,fontWeight:700,color:"#dc2626",marginBottom:4}}>약점</div>
-                  {(comp.weaknesses||[]).map((w,j)=><div key={j} style={{fontSize:11,color:C.ink,padding:"2px 0"}}>• {w}</div>)}
+                  <div style={{fontSize:12,fontWeight:700,color:"#dc2626",marginBottom:4}}>약점</div>
+                  {(comp.weaknesses||[]).map((w,j)=><div key={j} style={{fontSize:12,color:C.ink,padding:"2px 0"}}>• {w}</div>)}
                 </div>
               </div>
             </div>
@@ -4011,10 +4011,10 @@ function DetailPlanSection() {
           {/* 비교표 항목 추천 */}
           {analysis.comparisonItems&&(
             <div style={{background:C.white,border:`1px solid ${C.border}`,borderRadius:12,padding:16}}>
-              <div style={{fontSize:12,fontWeight:800,color:C.inkMid,marginBottom:8}}>비교표 추천 항목</div>
+              <div style={{fontSize:13,fontWeight:800,color:C.inkMid,marginBottom:8}}>비교표 추천 항목</div>
               <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
                 {analysis.comparisonItems.map((item,i)=>(
-                  <span key={i} style={{padding:"4px 10px",background:C.bg,borderRadius:20,fontSize:11,fontWeight:600,color:C.ink}}>{item}</span>
+                  <span key={i} style={{padding:"4px 10px",background:C.bg,borderRadius:20,fontSize:12,fontWeight:600,color:C.ink}}>{item}</span>
                 ))}
               </div>
             </div>
@@ -4023,8 +4023,8 @@ function DetailPlanSection() {
           {/* 인사이트 */}
           {analysis.insights&&(
             <div style={{background:C.bg,borderRadius:12,padding:16}}>
-              <div style={{fontSize:12,fontWeight:800,color:C.inkMid,marginBottom:6}}>종합 인사이트</div>
-              <div style={{fontSize:12,color:C.ink,lineHeight:1.7}}>{analysis.insights}</div>
+              <div style={{fontSize:13,fontWeight:800,color:C.inkMid,marginBottom:6}}>종합 인사이트</div>
+              <div style={{fontSize:13,color:C.ink,lineHeight:1.7}}>{analysis.insights}</div>
             </div>
           )}
         </div>
@@ -4033,15 +4033,15 @@ function DetailPlanSection() {
       {/* 히스토리 */}
       {tab==="history"&&(
         <div style={{display:"flex",flexDirection:"column",gap:8}}>
-          {history.length===0&&<div style={{textAlign:"center",padding:40,color:C.inkLt,fontSize:12}}>생성된 기획안이 없어요</div>}
+          {history.length===0&&<div style={{textAlign:"center",padding:40,color:C.inkLt,fontSize:13}}>생성된 기획안이 없어요</div>}
           {history.map((h,i)=>(
             <div key={i} onClick={()=>{setPlan(h);setTab("generate");}} style={{background:C.white,border:`1px solid ${C.border}`,borderRadius:10,padding:"12px 14px",cursor:"pointer"}}>
               <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
                 <div>
                   <div style={{fontSize:13,fontWeight:800,color:C.ink}}>{h.productName}</div>
-                  <div style={{fontSize:11,color:C.rose,fontWeight:600}}>{h.mainCopy}</div>
+                  <div style={{fontSize:12,color:C.rose,fontWeight:600}}>{h.mainCopy}</div>
                 </div>
-                <div style={{fontSize:10,color:C.inkLt}}>{h.createdAt?.slice(0,10)}</div>
+                <div style={{fontSize:12,color:C.inkLt}}>{h.createdAt?.slice(0,10)}</div>
               </div>
             </div>
           ))}
@@ -4653,10 +4653,10 @@ function ProjectSection() {
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:20,flexWrap:"wrap",gap:12}}>
         <div>
           <div style={{fontSize:20,fontWeight:900,color:C.ink}}>프로젝트 관리</div>
-          <div style={{fontSize:12,color:C.inkMid,marginTop:2}}>진행중 프로젝트 현황</div>
+          <div style={{fontSize:13,color:C.inkMid,marginTop:2}}>진행중 프로젝트 현황</div>
         </div>
         <button onClick={()=>{setShowForm(true);setEditId(null);setForm(emptyForm);}}
-          style={{padding:"8px 16px",background:C.rose,color:"#fff",border:"none",borderRadius:8,fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit",display:"flex",alignItems:"center",gap:4}}>
+          style={{padding:"8px 16px",background:C.rose,color:"#fff",border:"none",borderRadius:8,fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"inherit",display:"flex",alignItems:"center",gap:4}}>
           <MI n="add" size={16}/> 새 프로젝트
         </button>
       </div>
@@ -4672,7 +4672,7 @@ function ProjectSection() {
           <div key={s.label} onClick={()=>setFilterStatus(filterStatus===s.filter?"all":s.filter)}
             style={{background:filterStatus===s.filter?s.color+"11":C.white,borderRadius:10,padding:"12px",
               border:`1.5px solid ${filterStatus===s.filter?s.color:C.border}`,cursor:"pointer",transition:"all 0.15s"}}>
-            <div style={{fontSize:10,color:C.inkMid,fontWeight:600}}>{s.label}</div>
+            <div style={{fontSize:12,color:C.inkMid,fontWeight:600}}>{s.label}</div>
             <div style={{fontSize:22,fontWeight:900,color:s.color}}>{s.count}</div>
           </div>
         ))}
@@ -4688,11 +4688,11 @@ function ProjectSection() {
         if(!deadline.length&&!todos.length) return null;
         return(
         <div style={{background:"#fffbeb",border:"1px solid #fde68a",borderRadius:10,padding:"12px 14px",marginBottom:16}}>
-          <div style={{fontSize:12,fontWeight:800,color:"#b45309",marginBottom:8}}><MI_S n="bolt" size={14}/> 액션 필요</div>
+          <div style={{fontSize:13,fontWeight:800,color:"#b45309",marginBottom:8}}><MI_S n="bolt" size={14}/> 액션 필요</div>
           {deadline.map(p=>(
             <div key={p.id} onClick={()=>setExpandId(expandId===p.id?null:p.id)}
-              style={{display:"flex",alignItems:"center",gap:6,padding:"3px 0",cursor:"pointer",fontSize:11}}>
-              <span style={{fontSize:10,fontWeight:800,color:dday(p)<0?"#dc2626":"#ea580c",
+              style={{display:"flex",alignItems:"center",gap:6,padding:"3px 0",cursor:"pointer",fontSize:12}}>
+              <span style={{fontSize:12,fontWeight:800,color:dday(p)<0?"#dc2626":"#ea580c",
                 background:dday(p)<0?"#fef2f2":"#fff7ed",padding:"2px 6px",borderRadius:8}}>
                 {dday(p)<0?`+${-dday(p)}일`:dday(p)===0?"오늘":`D-${dday(p)}`}
               </span>
@@ -4700,7 +4700,7 @@ function ProjectSection() {
             </div>
           ))}
           {todos.map((t,i)=>(
-            <div key={i} style={{display:"flex",alignItems:"center",gap:6,fontSize:11,padding:"2px 0"}}>
+            <div key={i} style={{display:"flex",alignItems:"center",gap:6,fontSize:12,padding:"2px 0"}}>
               <MI_S n="radio_button_unchecked" size={12} color={C.inkLt}/>
               <span style={{color:C.inkMid}}>{t.proj.name}:</span>
               <span style={{color:C.ink}}>{t.text}</span>
@@ -4735,11 +4735,11 @@ function ProjectSection() {
               <div style={{flex:1,minWidth:0}}>
                 <div style={{display:"flex",alignItems:"center",gap:6,flexWrap:"wrap"}}>
                   <span style={{fontSize:14,fontWeight:800,color:C.ink}}>{p.name}</span>
-                  <span style={{fontSize:9,fontWeight:700,color:st.color,background:st.bg,padding:"1px 6px",borderRadius:6}}>{st.label}</span>
-                  {p.priority==="urgent"&&<span style={{fontSize:9,fontWeight:700,color:"#dc2626",background:"#fef2f2",padding:"1px 6px",borderRadius:6}}>긴급</span>}
-                  {p.priority==="high"&&<span style={{fontSize:9,fontWeight:700,color:"#ea580c",background:"#fff7ed",padding:"1px 6px",borderRadius:6}}>높음</span>}
+                  <span style={{fontSize:11,fontWeight:700,color:st.color,background:st.bg,padding:"1px 6px",borderRadius:6}}>{st.label}</span>
+                  {p.priority==="urgent"&&<span style={{fontSize:11,fontWeight:700,color:"#dc2626",background:"#fef2f2",padding:"1px 6px",borderRadius:6}}>긴급</span>}
+                  {p.priority==="high"&&<span style={{fontSize:11,fontWeight:700,color:"#ea580c",background:"#fff7ed",padding:"1px 6px",borderRadius:6}}>높음</span>}
                 </div>
-                <div style={{display:"flex",gap:12,marginTop:4,fontSize:10,color:C.inkMid}}>
+                <div style={{display:"flex",gap:12,marginTop:4,fontSize:12,color:C.inkMid}}>
                   {p.assignee&&<span>{p.assignee}</span>}
                   {p.start_date&&<span>{p.start_date} ~ {p.end_date||"미정"}</span>}
                   {dl!==null&&dl<=7&&<span style={{color:dl<0?"#dc2626":"#ea580c",fontWeight:700}}>
@@ -4769,7 +4769,7 @@ function ProjectSection() {
                     {id:"data",label:"데이터",icon:"bar_chart"},
                   ].map(t=>(
                     <button key={t.id} onClick={()=>setProjTab(t.id)} style={{
-                      padding:"6px 12px",border:"none",borderRadius:8,fontSize:11,fontWeight:700,cursor:"pointer",
+                      padding:"6px 12px",border:"none",borderRadius:8,fontSize:12,fontWeight:700,cursor:"pointer",
                       background:projTab===t.id?C.rose:"transparent",color:projTab===t.id?"#fff":C.inkMid,
                       display:"flex",alignItems:"center",gap:4,fontFamily:"inherit",
                     }}><MI_S n={t.icon} size={13} color={projTab===t.id?"#fff":C.inkMid}/>{t.label}</button>
@@ -4779,18 +4779,18 @@ function ProjectSection() {
                 {/* 개요 탭 */}
                 {projTab==="overview"&&(
                   <div style={{display:"flex",flexDirection:"column",gap:14}}>
-                    {p.description&&<div style={{fontSize:12,color:C.inkMid,lineHeight:1.6}}>{p.description}</div>}
+                    {p.description&&<div style={{fontSize:13,color:C.inkMid,lineHeight:1.6}}>{p.description}</div>}
 
                     {/* 일별 매출 차트 */}
-                    {projDailyLoading[p.id]&&<div style={{fontSize:11,color:C.inkLt}}>차트 로딩...</div>}
+                    {projDailyLoading[p.id]&&<div style={{fontSize:12,color:C.inkLt}}>차트 로딩...</div>}
                     {daily.length>1&&(
                       <div style={{background:C.bg,borderRadius:10,padding:12}}>
-                        <div style={{fontSize:11,fontWeight:700,color:C.inkMid,marginBottom:8}}>일별 매출 추이</div>
+                        <div style={{fontSize:12,fontWeight:700,color:C.inkMid,marginBottom:8}}>일별 매출 추이</div>
                         <ResponsiveContainer width="100%" height={180}>
                           <AreaChart data={daily}>
                             <CartesianGrid strokeDasharray="3 3" stroke={C.border}/>
-                            <XAxis dataKey="date" tick={{fontSize:9}} tickFormatter={v=>v.slice(5)}/>
-                            <YAxis tick={{fontSize:9}} tickFormatter={v=>v>=10000?(v/10000).toFixed(0)+"만":v}/>
+                            <XAxis dataKey="date" tick={{fontSize:11}} tickFormatter={v=>v.slice(5)}/>
+                            <YAxis tick={{fontSize:11}} tickFormatter={v=>v>=10000?(v/10000).toFixed(0)+"만":v}/>
                             <Tooltip formatter={v=>Number(v).toLocaleString()+"원"} labelFormatter={v=>v}/>
                             <Area type="monotone" dataKey="revenue" fill={C.rose+"33"} stroke={C.rose} strokeWidth={2}/>
                           </AreaChart>
@@ -4803,7 +4803,7 @@ function ProjectSection() {
                             {label:"총 이익",value:fmtRev(daily.reduce((s,d)=>s+d.profit,0))},
                           ].map(k=>(
                             <div key={k.label} style={{textAlign:"center"}}>
-                              <div style={{fontSize:9,color:C.inkLt}}>{k.label}</div>
+                              <div style={{fontSize:11,color:C.inkLt}}>{k.label}</div>
                               <div style={{fontSize:13,fontWeight:800,color:C.ink}}>{k.value}</div>
                             </div>
                           ))}
@@ -4814,13 +4814,13 @@ function ProjectSection() {
                     {/* 매출처 TOP */}
                     {chanData&&chanData.top&&chanData.top.length>0&&(
                       <div style={{background:C.bg,borderRadius:10,padding:12}}>
-                        <div style={{fontSize:11,fontWeight:700,color:C.inkMid,marginBottom:8}}>매출처 TOP 5</div>
+                        <div style={{fontSize:12,fontWeight:700,color:C.inkMid,marginBottom:8}}>매출처 TOP 5</div>
                         {chanData.top.map((ch,i)=>(
-                          <div key={ch.channel} style={{display:"flex",alignItems:"center",gap:8,padding:"4px 0",fontSize:11}}>
+                          <div key={ch.channel} style={{display:"flex",alignItems:"center",gap:8,padding:"4px 0",fontSize:12}}>
                             <span style={{width:16,fontWeight:800,color:C.inkLt}}>{i+1}</span>
                             <span style={{flex:1,fontWeight:600,color:C.ink}}>{ch.channel}</span>
                             <span style={{fontWeight:700,color:C.rose}}>{fmtRev(ch.recentRev)}</span>
-                            <span style={{fontSize:10,fontWeight:700,color:ch.revDiff>0?C.good:ch.revDiff<0?C.bad:C.inkLt,width:45,textAlign:"right"}}>
+                            <span style={{fontSize:12,fontWeight:700,color:ch.revDiff>0?C.good:ch.revDiff<0?C.bad:C.inkLt,width:45,textAlign:"right"}}>
                               {ch.revDiff===999?"NEW":ch.revDiff>0?`+${ch.revDiff}%`:ch.revDiff<0?`${ch.revDiff}%`:"—"}
                             </span>
                           </div>
@@ -4831,14 +4831,14 @@ function ProjectSection() {
                     {/* 검색순위 */}
                     {rankData.length>0&&(
                       <div style={{background:C.bg,borderRadius:10,padding:12}}>
-                        <div style={{fontSize:11,fontWeight:700,color:C.inkMid,marginBottom:8}}>검색순위 (전날 기준)</div>
+                        <div style={{fontSize:12,fontWeight:700,color:C.inkMid,marginBottom:8}}>검색순위 (전날 기준)</div>
                         <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(140px,1fr))",gap:6}}>
                           {rankData.slice(0,8).map(kw=>(
                             <div key={kw.keyword} style={{background:C.white,borderRadius:8,padding:"8px 10px",border:`1px solid ${C.border}`}}>
-                              <div style={{fontSize:10,color:C.inkMid,fontWeight:600,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{kw.keyword}</div>
+                              <div style={{fontSize:12,color:C.inkMid,fontWeight:600,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{kw.keyword}</div>
                               <div style={{display:"flex",alignItems:"baseline",gap:4,marginTop:2}}>
                                 <span style={{fontSize:16,fontWeight:900,color:kw.latestRank<=10?C.good:kw.latestRank<=30?"#CA8A04":C.ink}}>{kw.latestRank}위</span>
-                                {kw.diff!==0&&<span style={{fontSize:10,fontWeight:700,color:kw.diff>0?C.good:C.bad}}>
+                                {kw.diff!==0&&<span style={{fontSize:12,fontWeight:700,color:kw.diff>0?C.good:C.bad}}>
                                   {kw.diff>0?`▲${kw.diff}`:`▼${-kw.diff}`}
                                 </span>}
                               </div>
@@ -4851,10 +4851,10 @@ function ProjectSection() {
                     {/* 코멘트 */}
                     {(p.comments||[]).length>0&&(
                       <div>
-                        <div style={{fontSize:11,fontWeight:700,color:C.inkMid,marginBottom:6}}>코멘트</div>
+                        <div style={{fontSize:12,fontWeight:700,color:C.inkMid,marginBottom:6}}>코멘트</div>
                         {(p.comments||[]).slice(-3).map((c,i)=>(
-                          <div key={i} style={{fontSize:11,color:C.ink,padding:"4px 0",borderBottom:`1px solid ${C.border}22`}}>
-                            <span style={{color:C.inkLt,fontSize:10}}>{c.date} {c.by&&`· ${c.by}`}</span>
+                          <div key={i} style={{fontSize:12,color:C.ink,padding:"4px 0",borderBottom:`1px solid ${C.border}22`}}>
+                            <span style={{color:C.inkLt,fontSize:12}}>{c.date} {c.by&&`· ${c.by}`}</span>
                             <div>{c.text}</div>
                           </div>
                         ))}
@@ -4865,8 +4865,8 @@ function ProjectSection() {
                       <input value={newComment} onChange={e=>setNewComment(e.target.value)}
                         onKeyDown={e=>{if(e.key==="Enter")addComment(p);}}
                         placeholder="코멘트 추가..."
-                        style={{flex:1,padding:"6px 10px",border:`1px solid ${C.border}`,borderRadius:8,fontSize:11,outline:"none",fontFamily:"inherit"}}/>
-                      <button onClick={()=>addComment(p)} style={{padding:"6px 12px",background:C.rose,color:"#fff",border:"none",borderRadius:8,fontSize:11,fontWeight:700,cursor:"pointer"}}>추가</button>
+                        style={{flex:1,padding:"6px 10px",border:`1px solid ${C.border}`,borderRadius:8,fontSize:12,outline:"none",fontFamily:"inherit"}}/>
+                      <button onClick={()=>addComment(p)} style={{padding:"6px 12px",background:C.rose,color:"#fff",border:"none",borderRadius:8,fontSize:12,fontWeight:700,cursor:"pointer"}}>추가</button>
                     </div>
                   </div>
                 )}
@@ -4879,19 +4879,19 @@ function ProjectSection() {
                         <button onClick={()=>toggleTask(p,i)} style={{border:"none",background:"none",cursor:"pointer",padding:0}}>
                           <MI_S n={t.done?"check_circle":"radio_button_unchecked"} size={18} color={t.done?C.good:C.inkLt}/>
                         </button>
-                        <span style={{flex:1,fontSize:12,color:t.done?C.inkLt:C.ink,textDecoration:t.done?"line-through":"none"}}>{t.text}</span>
+                        <span style={{flex:1,fontSize:13,color:t.done?C.inkLt:C.ink,textDecoration:t.done?"line-through":"none"}}>{t.text}</span>
                         <button onClick={()=>removeTask(p,i)} style={{border:"none",background:"none",cursor:"pointer",padding:2}}>
                           <MI_S n="close" size={14} color={C.inkLt}/>
                         </button>
                       </div>
                     ))}
-                    {tasksTotal===0&&<div style={{fontSize:11,color:C.inkLt,padding:8}}>할일이 없어요</div>}
+                    {tasksTotal===0&&<div style={{fontSize:12,color:C.inkLt,padding:8}}>할일이 없어요</div>}
                     <div style={{display:"flex",gap:6,marginTop:4}}>
                       <input value={newTask} onChange={e=>setNewTask(e.target.value)}
                         onKeyDown={e=>{if(e.key==="Enter")addTask(p);}}
                         placeholder="할일 추가..."
-                        style={{flex:1,padding:"6px 10px",border:`1px solid ${C.border}`,borderRadius:8,fontSize:11,outline:"none",fontFamily:"inherit"}}/>
-                      <button onClick={()=>addTask(p)} style={{padding:"6px 12px",background:C.ink,color:"#fff",border:"none",borderRadius:8,fontSize:11,fontWeight:700,cursor:"pointer"}}>추가</button>
+                        style={{flex:1,padding:"6px 10px",border:`1px solid ${C.border}`,borderRadius:8,fontSize:12,outline:"none",fontFamily:"inherit"}}/>
+                      <button onClick={()=>addTask(p)} style={{padding:"6px 12px",background:C.ink,color:"#fff",border:"none",borderRadius:8,fontSize:12,fontWeight:700,cursor:"pointer"}}>추가</button>
                     </div>
                   </div>
                 )}
@@ -4906,11 +4906,11 @@ function ProjectSection() {
                       <div key={prod.id} style={{background:C.bg,borderRadius:8,padding:"10px 12px",border:`1px solid ${isSelected?C.rose:C.border}`}}>
                         <div style={{display:"flex",alignItems:"center",gap:8}}>
                           <div onClick={()=>loadSingleProduct(prod)} style={{flex:1,cursor:"pointer"}}>
-                            <div style={{fontSize:12,fontWeight:700,color:C.ink}}>{prod.name}</div>
-                            <div style={{fontSize:10,color:C.inkMid}}>{prod.brand}</div>
+                            <div style={{fontSize:13,fontWeight:700,color:C.ink}}>{prod.name}</div>
+                            <div style={{fontSize:12,color:C.inkMid}}>{prod.brand}</div>
                           </div>
                           {sd&&(
-                            <div style={{display:"flex",gap:10,fontSize:10}}>
+                            <div style={{display:"flex",gap:10,fontSize:12}}>
                               <div style={{textAlign:"center"}}><div style={{color:C.inkLt}}>수량</div><div style={{fontWeight:800,color:C.ink}}>{sd.totalQty?.toLocaleString()}</div></div>
                               <div style={{textAlign:"center"}}><div style={{color:C.inkLt}}>매출</div><div style={{fontWeight:800,color:C.rose}}>{fmtRev(sd.totalRevenue||0)}</div></div>
                               <div style={{textAlign:"center"}}><div style={{color:C.inkLt}}>주간</div><div style={{fontWeight:800,color:sd.changePct>0?C.good:sd.changePct<0?C.bad:C.inkMid}}>{sd.changePct>0?"+":""}{sd.changePct}%</div></div>
@@ -4924,8 +4924,8 @@ function ProjectSection() {
                           <div style={{marginTop:8}}>
                             <ResponsiveContainer width="100%" height={120}>
                               <AreaChart data={sd.chartData}>
-                                <XAxis dataKey="date" tick={{fontSize:8}} tickFormatter={v=>v.slice(5)}/>
-                                <YAxis tick={{fontSize:8}} tickFormatter={v=>v>=10000?(v/10000).toFixed(0)+"만":v}/>
+                                <XAxis dataKey="date" tick={{fontSize:10}} tickFormatter={v=>v.slice(5)}/>
+                                <YAxis tick={{fontSize:10}} tickFormatter={v=>v>=10000?(v/10000).toFixed(0)+"만":v}/>
                                 <Tooltip formatter={v=>Number(v).toLocaleString()+"원"}/>
                                 <Area type="monotone" dataKey="revenue" fill={C.rose+"33"} stroke={C.rose} strokeWidth={1.5}/>
                               </AreaChart>
@@ -4938,12 +4938,12 @@ function ProjectSection() {
                     <div style={{marginTop:4}}>
                       <input value={productSearch} onChange={e=>{setProductSearch(e.target.value);searchProducts(e.target.value);}}
                         placeholder="제품 검색해서 추가..."
-                        style={{width:"100%",padding:"6px 10px",border:`1px solid ${C.border}`,borderRadius:8,fontSize:11,outline:"none",fontFamily:"inherit",boxSizing:"border-box"}}/>
+                        style={{width:"100%",padding:"6px 10px",border:`1px solid ${C.border}`,borderRadius:8,fontSize:12,outline:"none",fontFamily:"inherit",boxSizing:"border-box"}}/>
                       {productResults.length>0&&(
                         <div style={{border:`1px solid ${C.border}`,borderRadius:8,marginTop:4,maxHeight:150,overflowY:"auto"}}>
                           {productResults.map(pr=>(
                             <div key={pr.id} onClick={()=>{addProductToProject(p,pr);setProductSearch("");setProductResults([]);}}
-                              style={{padding:"6px 10px",fontSize:11,cursor:"pointer",borderBottom:`1px solid ${C.border}22`,display:"flex",justifyContent:"space-between"}}>
+                              style={{padding:"6px 10px",fontSize:12,cursor:"pointer",borderBottom:`1px solid ${C.border}22`,display:"flex",justifyContent:"space-between"}}>
                               <span>{pr.name}</span><span style={{color:C.inkLt}}>{pr.brand}</span>
                             </div>
                           ))}
@@ -4960,7 +4960,7 @@ function ProjectSection() {
                     <div style={{display:"flex",gap:4}}>
                       {[7,14,30,60,90].map(d=>(
                         <button key={d} onClick={()=>{setProdDataDays(d);setProjDailyChart({});setProjChannelData({});setProjRankData({});setExpandId(null);setTimeout(()=>setExpandId(p.id),50);}}
-                          style={{padding:"4px 10px",border:"none",borderRadius:6,fontSize:10,fontWeight:700,cursor:"pointer",
+                          style={{padding:"4px 10px",border:"none",borderRadius:6,fontSize:12,fontWeight:700,cursor:"pointer",
                             background:prodDataDays===d?C.rose:C.cream,color:prodDataDays===d?"#fff":C.inkMid}}>{d}일</button>
                       ))}
                     </div>
@@ -4968,11 +4968,11 @@ function ProjectSection() {
                     {/* 광고비 요약 */}
                     {projAdData[p.id]&&(
                       <div style={{background:"#f0fdf4",borderRadius:10,padding:12}}>
-                        <div style={{fontSize:11,fontWeight:700,color:"#16a34a",marginBottom:6}}>광고 성과</div>
+                        <div style={{fontSize:12,fontWeight:700,color:"#16a34a",marginBottom:6}}>광고 성과</div>
                         <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:8}}>
-                          <div><div style={{fontSize:9,color:C.inkLt}}>광고비</div><div style={{fontSize:13,fontWeight:800}}>{fmtRev(projAdData[p.id].spend)}</div></div>
-                          <div><div style={{fontSize:9,color:C.inkLt}}>클릭</div><div style={{fontSize:13,fontWeight:800}}>{projAdData[p.id].clicks?.toLocaleString()}</div></div>
-                          <div><div style={{fontSize:9,color:C.inkLt}}>전환</div><div style={{fontSize:13,fontWeight:800}}>{projAdData[p.id].conversions?.toLocaleString()}</div></div>
+                          <div><div style={{fontSize:11,color:C.inkLt}}>광고비</div><div style={{fontSize:13,fontWeight:800}}>{fmtRev(projAdData[p.id].spend)}</div></div>
+                          <div><div style={{fontSize:11,color:C.inkLt}}>클릭</div><div style={{fontSize:13,fontWeight:800}}>{projAdData[p.id].clicks?.toLocaleString()}</div></div>
+                          <div><div style={{fontSize:11,color:C.inkLt}}>전환</div><div style={{fontSize:13,fontWeight:800}}>{projAdData[p.id].conversions?.toLocaleString()}</div></div>
                         </div>
                       </div>
                     )}
@@ -4980,10 +4980,10 @@ function ProjectSection() {
                     {/* 프로모션 */}
                     {projPromoData[p.id]&&projPromoData[p.id].length>0&&(
                       <div style={{background:"#faf5ff",borderRadius:10,padding:12}}>
-                        <div style={{fontSize:11,fontWeight:700,color:"#7c3aed",marginBottom:6}}>관련 프로모션</div>
+                        <div style={{fontSize:12,fontWeight:700,color:"#7c3aed",marginBottom:6}}>관련 프로모션</div>
                         {projPromoData[p.id].slice(0,5).map(pr=>(
-                          <div key={pr.promo_id} style={{fontSize:11,padding:"3px 0",display:"flex",gap:8}}>
-                            <span style={{color:C.inkLt,fontSize:10}}>{pr.start_date}~{pr.end_date}</span>
+                          <div key={pr.promo_id} style={{fontSize:12,padding:"3px 0",display:"flex",gap:8}}>
+                            <span style={{color:C.inkLt,fontSize:12}}>{pr.start_date}~{pr.end_date}</span>
                             <span style={{color:C.ink,fontWeight:600}}>{pr.promo_name}</span>
                             <span style={{color:C.inkMid}}>{pr.channel}</span>
                           </div>
@@ -4994,7 +4994,7 @@ function ProjectSection() {
                     {/* 시작 전/후 비교 */}
                     {p.start_date&&(p.products||[]).length>0&&!projImpact[p.id]&&(
                       <button onClick={()=>loadProjectImpact(p)}
-                        style={{padding:"8px",border:`1px dashed ${C.border}`,borderRadius:8,background:"none",fontSize:11,fontWeight:700,color:C.inkMid,cursor:"pointer",fontFamily:"inherit"}}>
+                        style={{padding:"8px",border:`1px dashed ${C.border}`,borderRadius:8,background:"none",fontSize:12,fontWeight:700,color:C.inkMid,cursor:"pointer",fontFamily:"inherit"}}>
                         프로젝트 시작 전/후 비교 보기
                       </button>
                     )}
@@ -5003,11 +5003,11 @@ function ProjectSection() {
                       const revDiff = imp.before.avgRevenue>0?Math.round((imp.after.avgRevenue-imp.before.avgRevenue)/imp.before.avgRevenue*100):0;
                       return(
                       <div style={{background:C.bg,borderRadius:10,padding:12}}>
-                        <div style={{fontSize:11,fontWeight:700,color:C.inkMid,marginBottom:8}}>시작 전/후 비교 (일평균)</div>
+                        <div style={{fontSize:12,fontWeight:700,color:C.inkMid,marginBottom:8}}>시작 전/후 비교 (일평균)</div>
                         <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8}}>
-                          <div><div style={{fontSize:9,color:C.inkLt}}>전 매출</div><div style={{fontSize:12,fontWeight:800}}>{fmtRev(imp.before.avgRevenue)}</div></div>
-                          <div><div style={{fontSize:9,color:C.inkLt}}>후 매출</div><div style={{fontSize:12,fontWeight:800,color:C.rose}}>{fmtRev(imp.after.avgRevenue)}</div></div>
-                          <div><div style={{fontSize:9,color:C.inkLt}}>변동</div><div style={{fontSize:12,fontWeight:900,color:revDiff>=0?C.good:C.bad}}>{revDiff>0?"+":""}{revDiff}%</div></div>
+                          <div><div style={{fontSize:11,color:C.inkLt}}>전 매출</div><div style={{fontSize:13,fontWeight:800}}>{fmtRev(imp.before.avgRevenue)}</div></div>
+                          <div><div style={{fontSize:11,color:C.inkLt}}>후 매출</div><div style={{fontSize:13,fontWeight:800,color:C.rose}}>{fmtRev(imp.after.avgRevenue)}</div></div>
+                          <div><div style={{fontSize:11,color:C.inkLt}}>변동</div><div style={{fontSize:13,fontWeight:900,color:revDiff>=0?C.good:C.bad}}>{revDiff>0?"+":""}{revDiff}%</div></div>
                         </div>
                       </div>);
                     })()}
@@ -5016,13 +5016,13 @@ function ProjectSection() {
 
                 {/* 하단 액션 */}
                 <div style={{display:"flex",gap:6,marginTop:14,borderTop:`1px solid ${C.border}`,paddingTop:12}}>
-                  <button onClick={()=>edit(p)} style={{padding:"5px 12px",border:`1px solid ${C.border}`,borderRadius:6,background:C.white,fontSize:10,fontWeight:700,cursor:"pointer",color:C.inkMid,fontFamily:"inherit"}}>수정</button>
+                  <button onClick={()=>edit(p)} style={{padding:"5px 12px",border:`1px solid ${C.border}`,borderRadius:6,background:C.white,fontSize:12,fontWeight:700,cursor:"pointer",color:C.inkMid,fontFamily:"inherit"}}>수정</button>
                   <button onClick={()=>{const next=p.status==="in_progress"?"done":p.status==="planning"?"in_progress":p.status==="done"?"in_progress":"in_progress";patchProject(p,{status:next});}}
-                    style={{padding:"5px 12px",border:"none",borderRadius:6,background:p.status==="done"?C.ink:C.good,fontSize:10,fontWeight:700,cursor:"pointer",color:"#fff",fontFamily:"inherit"}}>
+                    style={{padding:"5px 12px",border:"none",borderRadius:6,background:p.status==="done"?C.ink:C.good,fontSize:12,fontWeight:700,cursor:"pointer",color:"#fff",fontFamily:"inherit"}}>
                     {p.status==="done"?"다시 진행":p.status==="in_progress"?"완료":p.status==="planning"?"진행 시작":"진행"}
                   </button>
-                  <button onClick={()=>exportCSV(p)} style={{padding:"5px 12px",border:`1px solid ${C.border}`,borderRadius:6,background:C.white,fontSize:10,fontWeight:700,cursor:"pointer",color:C.inkMid,fontFamily:"inherit"}}>CSV</button>
-                  <button onClick={()=>del(p.id)} style={{marginLeft:"auto",padding:"5px 12px",border:"none",borderRadius:6,background:"#fef2f2",fontSize:10,fontWeight:700,cursor:"pointer",color:"#dc2626",fontFamily:"inherit"}}>삭제</button>
+                  <button onClick={()=>exportCSV(p)} style={{padding:"5px 12px",border:`1px solid ${C.border}`,borderRadius:6,background:C.white,fontSize:12,fontWeight:700,cursor:"pointer",color:C.inkMid,fontFamily:"inherit"}}>CSV</button>
+                  <button onClick={()=>del(p.id)} style={{marginLeft:"auto",padding:"5px 12px",border:"none",borderRadius:6,background:"#fef2f2",fontSize:12,fontWeight:700,cursor:"pointer",color:"#dc2626",fontFamily:"inherit"}}>삭제</button>
                 </div>
               </div>
             )}
@@ -5035,7 +5035,7 @@ function ProjectSection() {
         <div style={{textAlign:"center",padding:"40px 20px",color:C.inkMid}}>
           <div style={{fontSize:28,marginBottom:8}}>📂</div>
           <div style={{fontSize:13,fontWeight:700}}>프로젝트가 없어요</div>
-          <div style={{fontSize:11,color:C.inkLt,marginTop:4}}>새 프로젝트를 만들어보세요</div>
+          <div style={{fontSize:12,color:C.inkLt,marginTop:4}}>새 프로젝트를 만들어보세요</div>
         </div>
       )}
 
@@ -5047,18 +5047,18 @@ function ProjectSection() {
             <div style={{fontSize:16,fontWeight:900,marginBottom:16}}>{editId?"프로젝트 수정":"새 프로젝트"}</div>
             <div style={{display:"flex",flexDirection:"column",gap:12}}>
               <div>
-                <label style={{fontSize:11,fontWeight:700,color:C.inkMid}}>프로젝트명 *</label>
+                <label style={{fontSize:12,fontWeight:700,color:C.inkMid}}>프로젝트명 *</label>
                 <input value={form.name} onChange={e=>setForm({...form,name:e.target.value})} style={inputStyle}/>
               </div>
               <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
                 <div>
-                  <label style={{fontSize:11,fontWeight:700,color:C.inkMid}}>상태</label>
+                  <label style={{fontSize:12,fontWeight:700,color:C.inkMid}}>상태</label>
                   <select value={form.status} onChange={e=>setForm({...form,status:e.target.value})} style={{...inputStyle}}>
                     {Object.entries(STATUS_MAP).map(([k,v])=><option key={k} value={k}>{v.label}</option>)}
                   </select>
                 </div>
                 <div>
-                  <label style={{fontSize:11,fontWeight:700,color:C.inkMid}}>우선순위</label>
+                  <label style={{fontSize:12,fontWeight:700,color:C.inkMid}}>우선순위</label>
                   <select value={form.priority} onChange={e=>setForm({...form,priority:e.target.value})} style={{...inputStyle}}>
                     {Object.entries(PRIORITY_MAP).map(([k,v])=><option key={k} value={k}>{v.label}</option>)}
                   </select>
@@ -5066,23 +5066,23 @@ function ProjectSection() {
               </div>
               <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
                 <div>
-                  <label style={{fontSize:11,fontWeight:700,color:C.inkMid}}>시작일</label>
+                  <label style={{fontSize:12,fontWeight:700,color:C.inkMid}}>시작일</label>
                   <input type="date" value={form.start_date} onChange={e=>setForm({...form,start_date:e.target.value})} style={inputStyle}/>
                 </div>
                 <div>
-                  <label style={{fontSize:11,fontWeight:700,color:C.inkMid}}>종료일</label>
+                  <label style={{fontSize:12,fontWeight:700,color:C.inkMid}}>종료일</label>
                   <input type="date" value={form.end_date} onChange={e=>setForm({...form,end_date:e.target.value})} style={inputStyle}/>
                 </div>
               </div>
               <div>
-                <label style={{fontSize:11,fontWeight:700,color:C.inkMid}}>담당자</label>
+                <label style={{fontSize:12,fontWeight:700,color:C.inkMid}}>담당자</label>
                 <select value={form.assignee} onChange={e=>setForm({...form,assignee:e.target.value})} style={{...inputStyle}}>
                   <option value="">미지정</option>
                   {ASSIGNEES.map(a=><option key={a} value={a}>{a}</option>)}
                 </select>
               </div>
               <div>
-                <label style={{fontSize:11,fontWeight:700,color:C.inkMid}}>설명</label>
+                <label style={{fontSize:12,fontWeight:700,color:C.inkMid}}>설명</label>
                 <textarea value={form.description} onChange={e=>setForm({...form,description:e.target.value})}
                   rows={3} style={{...inputStyle,resize:"vertical"}}/>
               </div>
@@ -5402,7 +5402,7 @@ function ErpSection() {
     {id:"stock",   label:"📦 재고"},
   ];
 
-  const selStyle = {padding:"5px 10px",borderRadius:8,fontSize:11,fontWeight:700,cursor:"pointer",
+  const selStyle = {padding:"5px 10px",borderRadius:8,fontSize:12,fontWeight:700,cursor:"pointer",
     border:`1px solid ${C.border}`,background:C.white,color:C.ink,outline:"none"};
 
   const goalPct = monthlyGoal>0 ? Math.min(Math.round(monthRevenue/monthlyGoal*100),100) : 0;
@@ -5415,14 +5415,14 @@ function ErpSection() {
       <div style={{background:`linear-gradient(135deg,#0071E3,#2997FF)`,borderRadius:14,padding:"16px 20px",color:"#fff"}}>
         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:8}}>
           <div>
-            <div style={{fontSize:10,fontWeight:700,opacity:0.7,letterSpacing:"0.1em",marginBottom:4}}>
+            <div style={{fontSize:12,fontWeight:700,opacity:0.7,letterSpacing:"0.1em",marginBottom:4}}>
               {today.getMonth()+1}월 이미용 매출 현황
             </div>
             <div style={{fontSize:22,fontWeight:900,lineHeight:1.1}}>
               ₩{Number(monthRevenue).toLocaleString()}
             </div>
             {monthlyGoal>0 && (
-              <div style={{fontSize:11,opacity:0.8,marginTop:4}}>
+              <div style={{fontSize:12,opacity:0.8,marginTop:4}}>
                 목표까지 ₩{Number(goalRemain).toLocaleString()} 남음
               </div>
             )}
@@ -5431,7 +5431,7 @@ function ErpSection() {
             {monthlyGoal>0 ? (
               <div>
                 <div style={{fontSize:28,fontWeight:900}}>{goalPct}%</div>
-                <div style={{fontSize:10,opacity:0.7}}>목표 ₩{Number(monthlyGoal).toLocaleString()}</div>
+                <div style={{fontSize:12,opacity:0.7}}>목표 ₩{Number(monthlyGoal).toLocaleString()}</div>
               </div>
             ) : null}
             {goalEdit ? (
@@ -5439,14 +5439,14 @@ function ErpSection() {
                 <input autoFocus value={goalInput} onChange={e=>setGoalInput(e.target.value)}
                   onKeyDown={e=>{if(e.key==="Enter") saveGoal(goalInput); if(e.key==="Escape") setGoalEdit(false);}}
                   placeholder="목표 금액 (원)" style={{width:130,padding:"4px 8px",borderRadius:6,border:"none",
-                    fontSize:12,fontWeight:700,color:C.ink,outline:"none"}}/>
+                    fontSize:13,fontWeight:700,color:C.ink,outline:"none"}}/>
                 <button onClick={()=>saveGoal(goalInput)} style={{padding:"4px 10px",borderRadius:6,
-                  background:"rgba(255,255,255,0.3)",border:"none",color:"#fff",fontSize:11,fontWeight:700,cursor:"pointer"}}>저장</button>
+                  background:"rgba(255,255,255,0.3)",border:"none",color:"#fff",fontSize:12,fontWeight:700,cursor:"pointer"}}>저장</button>
               </div>
             ) : (
               <button onClick={()=>{setGoalInput(String(monthlyGoal||"")); setGoalEdit(true);}}
                 style={{marginTop:6,padding:"4px 10px",borderRadius:6,background:"rgba(255,255,255,0.2)",
-                  border:"1px solid rgba(255,255,255,0.4)",color:"#fff",fontSize:10,fontWeight:700,cursor:"pointer"}}>
+                  border:"1px solid rgba(255,255,255,0.4)",color:"#fff",fontSize:12,fontWeight:700,cursor:"pointer"}}>
                 {monthlyGoal>0?"목표 수정":"목표 설정"}
               </button>
             )}
@@ -5463,18 +5463,18 @@ function ErpSection() {
       <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",flexWrap:"wrap",gap:8}}>
         <div>
           <div style={{fontSize:16,fontWeight:900,color:C.ink}}>🗄️ ERP · <span style={{color:C.rose}}>이미용</span> 판매</div>
-          <div style={{fontSize:11,color:C.inkLt,marginTop:2}}>매일 오전 7시 자동 동기화 · {periodLabel}{effCurEnd ? ` · ${effCurEnd} 기준` : ""}</div>
+          <div style={{fontSize:12,color:C.inkLt,marginTop:2}}>매일 오전 7시 자동 동기화 · {periodLabel}{effCurEnd ? ` · ${effCurEnd} 기준` : ""}</div>
         </div>
         <div style={{display:"flex",gap:6,flexWrap:"wrap",alignItems:"center"}}>
           {!useCustom && [1,7,14,30].map(d=>(
             <button key={d} onClick={()=>setDays(d)} style={{
-              padding:"5px 12px",borderRadius:8,fontSize:11,fontWeight:700,cursor:"pointer",
+              padding:"5px 12px",borderRadius:8,fontSize:12,fontWeight:700,cursor:"pointer",
               border:`1px solid ${days===d?C.rose:C.border}`,
               background:days===d?C.blush:C.white, color:days===d?C.rose:C.inkMid,
             }}>{d===1?"어제":d+"일"}</button>
           ))}
           <button onClick={()=>{setUseCustom(p=>!p);if(useCustom){setFromDate("");setToDate("");setUseCompare(false);setCompFrom("");setCompTo("");}}}
-            style={{padding:"5px 12px",borderRadius:8,fontSize:11,fontWeight:700,cursor:"pointer",
+            style={{padding:"5px 12px",borderRadius:8,fontSize:12,fontWeight:700,cursor:"pointer",
               border:`1px solid ${useCustom?C.rose:C.border}`,background:useCustom?C.blush:C.white,
               color:useCustom?C.rose:C.inkMid}}>📅 직접선택</button>
           <select value={catId} onChange={e=>setCatId(e.target.value)} style={selStyle}>
@@ -5483,23 +5483,23 @@ function ErpSection() {
         </div>
         {useCustom && (
           <div style={{display:"flex",gap:6,alignItems:"center",flexWrap:"wrap",marginTop:6}}>
-            <span style={{fontSize:11,fontWeight:700,color:C.rose}}>기간:</span>
+            <span style={{fontSize:12,fontWeight:700,color:C.rose}}>기간:</span>
             <input type="date" value={fromDate} onChange={e=>setFromDate(e.target.value)}
-              style={{padding:"4px 8px",borderRadius:7,border:`1.5px solid ${fromDate?C.rose:C.border}`,fontSize:11,outline:"none"}}/>
-            <span style={{fontSize:11,color:C.inkMid}}>~</span>
+              style={{padding:"4px 8px",borderRadius:7,border:`1.5px solid ${fromDate?C.rose:C.border}`,fontSize:12,outline:"none"}}/>
+            <span style={{fontSize:12,color:C.inkMid}}>~</span>
             <input type="date" value={toDate} onChange={e=>setToDate(e.target.value)}
-              style={{padding:"4px 8px",borderRadius:7,border:`1.5px solid ${toDate?C.rose:C.border}`,fontSize:11,outline:"none"}}/>
+              style={{padding:"4px 8px",borderRadius:7,border:`1.5px solid ${toDate?C.rose:C.border}`,fontSize:12,outline:"none"}}/>
             <button onClick={()=>{setUseCompare(p=>!p);if(useCompare){setCompFrom("");setCompTo("");}}}
-              style={{padding:"4px 12px",borderRadius:7,fontSize:11,fontWeight:700,cursor:"pointer",
+              style={{padding:"4px 12px",borderRadius:7,fontSize:12,fontWeight:700,cursor:"pointer",
                 border:`1.5px solid ${useCompare?"#7C3AED":C.border}`,background:useCompare?"#F5F3FF":"none",
                 color:useCompare?"#7C3AED":C.inkMid}}>비교 기간</button>
             {useCompare && (<>
-              <span style={{fontSize:11,fontWeight:700,color:"#7C3AED"}}>vs</span>
+              <span style={{fontSize:12,fontWeight:700,color:"#7C3AED"}}>vs</span>
               <input type="date" value={compFrom} onChange={e=>setCompFrom(e.target.value)}
-                style={{padding:"4px 8px",borderRadius:7,border:`1.5px solid ${compFrom?"#7C3AED":C.border}`,fontSize:11,outline:"none"}}/>
-              <span style={{fontSize:11,color:C.inkMid}}>~</span>
+                style={{padding:"4px 8px",borderRadius:7,border:`1.5px solid ${compFrom?"#7C3AED":C.border}`,fontSize:12,outline:"none"}}/>
+              <span style={{fontSize:12,color:C.inkMid}}>~</span>
               <input type="date" value={compTo} onChange={e=>setCompTo(e.target.value)}
-                style={{padding:"4px 8px",borderRadius:7,border:`1.5px solid ${compTo?"#7C3AED":C.border}`,fontSize:11,outline:"none"}}/>
+                style={{padding:"4px 8px",borderRadius:7,border:`1.5px solid ${compTo?"#7C3AED":C.border}`,fontSize:12,outline:"none"}}/>
             </>)}
           </div>
         )}
@@ -5511,18 +5511,18 @@ function ErpSection() {
           width:"100%",display:"flex",alignItems:"center",justifyContent:"space-between",
           padding:"8px 14px",background:"none",border:"none",cursor:"pointer",
         }}>
-          <span style={{fontSize:11,fontWeight:700,color:C.inkMid}}>🚫 제외 목록 ({blacklist.length}개)</span>
-          <span style={{fontSize:11,color:C.inkLt}}>{showBl?"▲":"▼"}</span>
+          <span style={{fontSize:12,fontWeight:700,color:C.inkMid}}>🚫 제외 목록 ({blacklist.length}개)</span>
+          <span style={{fontSize:12,color:C.inkLt}}>{showBl?"▲":"▼"}</span>
         </button>
         {showBl && (
           <div style={{padding:"8px 14px",borderTop:`1px solid ${C.border}`,display:"flex",flexDirection:"column",gap:8}}>
             <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
               {blacklist.map(kw=>(
                 <span key={kw} style={{display:"flex",alignItems:"center",gap:4,padding:"3px 10px",
-                  background:"#FEF2F2",border:`1px solid #FECACA`,borderRadius:20,fontSize:11,color:C.bad}}>
+                  background:"#FEF2F2",border:`1px solid #FECACA`,borderRadius:20,fontSize:12,color:C.bad}}>
                   {kw}
                   <button onClick={()=>{ const next=blacklist.filter(k=>k!==kw); setBlacklist(next); setSetting("oa_erp_blacklist",next).catch(()=>{}); }}
-                    style={{background:"none",border:"none",cursor:"pointer",color:C.bad,fontSize:12,lineHeight:1,padding:0}}>✕</button>
+                    style={{background:"none",border:"none",cursor:"pointer",color:C.bad,fontSize:13,lineHeight:1,padding:0}}>✕</button>
                 </span>
               ))}
             </div>
@@ -5530,9 +5530,9 @@ function ErpSection() {
               <input value={blInput} onChange={e=>setBlInput(e.target.value)}
                 onKeyDown={e=>{ if(e.key==="Enter"&&blInput.trim()){ const next=[...blacklist,blInput.trim()]; setBlacklist(next); setSetting("oa_erp_blacklist",next).catch(()=>{}); setBlInput(""); }}}
                 placeholder="제외 키워드 입력 후 Enter"
-                style={{flex:1,padding:"5px 10px",borderRadius:7,fontSize:11,border:`1px solid ${C.border}`,outline:"none"}}/>
+                style={{flex:1,padding:"5px 10px",borderRadius:7,fontSize:12,border:`1px solid ${C.border}`,outline:"none"}}/>
               <button onClick={()=>{ if(blInput.trim()){ const next=[...blacklist,blInput.trim()]; setBlacklist(next); setSetting("oa_erp_blacklist",next).catch(()=>{}); setBlInput(""); }}}
-                style={{padding:"5px 12px",borderRadius:7,fontSize:11,fontWeight:700,cursor:"pointer",
+                style={{padding:"5px 12px",borderRadius:7,fontSize:12,fontWeight:700,cursor:"pointer",
                   background:C.rose,color:"#fff",border:"none"}}>추가</button>
             </div>
           </div>
@@ -5543,25 +5543,25 @@ function ErpSection() {
       <div style={{display:"flex",gap:8,flexWrap:"wrap",alignItems:"center"}}>
         {/* 거래처 다중 선택 (검색 가능) */}
         <div style={{display:"flex",alignItems:"center",gap:6,flexWrap:"wrap"}}>
-          <span style={{fontSize:11,color:C.inkMid,fontWeight:700,whiteSpace:"nowrap"}}>채널</span>
+          <span style={{fontSize:12,color:C.inkMid,fontWeight:700,whiteSpace:"nowrap"}}>채널</span>
           {[{label:"무신사",kws:["무신사"]},{label:"지그재그",kws:["지그재그"]},{label:"에이블리",kws:["에이블리"]},
             {label:"카카오",kws:["카카오"]},{label:"네이버",kws:["네이버","스마트스토어"]},{label:"11번가",kws:["11번가"]},
             {label:"이베이",kws:["이베이"]},{label:"쿠팡",kws:["쿠팡"]},{label:"아르고",kws:["아르고"]}].map(p=>{
             const active=p.kws.some(k=>chanPresets.includes(k));
             return <button key={p.label} onClick={()=>setChanPresets(prev=>active?prev.filter(k=>!p.kws.includes(k)):[...prev,...p.kws.filter(k=>!prev.includes(k))])}
-              style={{padding:"4px 10px",borderRadius:20,fontSize:11,fontWeight:700,cursor:"pointer",
+              style={{padding:"4px 10px",borderRadius:20,fontSize:12,fontWeight:700,cursor:"pointer",
                 border:`1px solid ${active?C.rose:C.border}`,background:active?C.blush:C.white,
                 color:active?C.rose:C.inkMid}}>{p.label}</button>;
           })}
-          {chanPresets.length>0&&<button onClick={()=>setChanPresets([])} style={{fontSize:10,padding:"3px 8px",
+          {chanPresets.length>0&&<button onClick={()=>setChanPresets([])} style={{fontSize:12,padding:"3px 8px",
             borderRadius:6,border:`1px solid ${C.border}`,background:"none",cursor:"pointer",color:C.inkMid}}>전체</button>}
         </div>
         <div style={{display:"flex",alignItems:"center",gap:6,flexWrap:"wrap"}}>
-          <span style={{fontSize:11,color:C.inkMid,fontWeight:700,whiteSpace:"nowrap"}}>거래처</span>
+          <span style={{fontSize:12,color:C.inkMid,fontWeight:700,whiteSpace:"nowrap"}}>거래처</span>
           {selChannels.map(ch=>(
             <div key={ch} style={{display:"flex",alignItems:"center",gap:4,background:C.blush,
               border:`1px solid ${C.rose}`,borderRadius:20,padding:"3px 10px 3px 12px"}}>
-              <span style={{fontSize:11,fontWeight:800,color:C.rose}}>{ch}</span>
+              <span style={{fontSize:12,fontWeight:800,color:C.rose}}>{ch}</span>
               <button onClick={()=>removeChannel(ch)} style={{background:"none",border:"none",
                 cursor:"pointer",color:C.rose,fontSize:13,lineHeight:1,padding:"0 0 0 4px",fontWeight:900}}>×</button>
             </div>
@@ -5574,7 +5574,7 @@ function ErpSection() {
               onFocus={()=>setChanOpen(true)}
               onBlur={()=>setTimeout(()=>setChanOpen(false),150)}
               placeholder={selChannels.length>0?"+ 거래처 추가":"거래처 검색..."}
-              style={{padding:"5px 10px",borderRadius:8,fontSize:11,fontWeight:600,
+              style={{padding:"5px 10px",borderRadius:8,fontSize:12,fontWeight:600,
                 border:`1px solid ${C.border}`,outline:"none",background:C.white,
                 color:C.ink,width:150}}
             />
@@ -5587,7 +5587,7 @@ function ErpSection() {
                   .slice(0,30)
                   .map(ch=>(
                     <div key={ch} onMouseDown={()=>{addChannel(ch); setChanSearch(""); setChanOpen(false);}}
-                      style={{padding:"7px 12px",fontSize:11,cursor:"pointer",color:C.ink,
+                      style={{padding:"7px 12px",fontSize:12,cursor:"pointer",color:C.ink,
                         borderBottom:`1px solid ${C.border}22`}}
                       onMouseEnter={e=>e.currentTarget.style.background=C.blush}
                       onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
@@ -5596,7 +5596,7 @@ function ErpSection() {
                   ))
                 }
                 {availChannels.filter(c=>!chanSearch||c.toLowerCase().includes(chanSearch.toLowerCase())).length===0 && (
-                  <div style={{padding:"12px",fontSize:11,color:C.inkLt,textAlign:"center"}}>검색 결과 없음</div>
+                  <div style={{padding:"12px",fontSize:12,color:C.inkLt,textAlign:"center"}}>검색 결과 없음</div>
                 )}
               </div>
             )}
@@ -5604,14 +5604,14 @@ function ErpSection() {
         </div>
         {/* 제품명 검색 */}
         <div style={{display:"flex",alignItems:"center",gap:6,flex:1,minWidth:160}}>
-          <span style={{fontSize:11,color:C.inkMid,fontWeight:700,whiteSpace:"nowrap"}}>검색</span>
+          <span style={{fontSize:12,color:C.inkMid,fontWeight:700,whiteSpace:"nowrap"}}>검색</span>
           <input value={search} onChange={e=>setSearch(e.target.value)}
             placeholder="제품명 입력..." style={{
-              flex:1, padding:"5px 10px", borderRadius:8, fontSize:11, fontWeight:600,
+              flex:1, padding:"5px 10px", borderRadius:8, fontSize:12, fontWeight:600,
               border:`1px solid ${search?C.rose:C.border}`, outline:"none",
               background:C.white, color:C.ink,
             }}/>
-          {search && <button onClick={()=>setSearch("")} style={{fontSize:10,padding:"3px 8px",borderRadius:6,
+          {search && <button onClick={()=>setSearch("")} style={{fontSize:12,padding:"3px 8px",borderRadius:6,
             border:`1px solid ${C.border}`,background:"none",cursor:"pointer",color:C.inkMid}}>✕</button>}
         </div>
       </div>
@@ -5620,7 +5620,7 @@ function ErpSection() {
       <div style={{display:"flex",gap:4}}>
         {TABS.map(t=>(
           <button key={t.id} onClick={()=>setErpTab(t.id)} style={{
-            padding:"6px 16px",borderRadius:8,fontSize:12,fontWeight:700,cursor:"pointer",
+            padding:"6px 16px",borderRadius:8,fontSize:13,fontWeight:700,cursor:"pointer",
             border:`1px solid ${erpTab===t.id?C.rose:C.border}`,
             background:erpTab===t.id?C.blush:C.white,
             color:erpTab===t.id?C.rose:C.inkMid,
@@ -5629,21 +5629,21 @@ function ErpSection() {
       </div>
 
       {loading && <div style={{textAlign:"center",padding:"60px 0",color:C.inkLt,fontSize:13}}>⏳ 불러오는 중...</div>}
-      {error   && <div style={{textAlign:"center",padding:"40px 0",color:C.bad,fontSize:12,fontWeight:700}}>⚠️ {error}</div>}
+      {error   && <div style={{textAlign:"center",padding:"40px 0",color:C.bad,fontSize:13,fontWeight:700}}>⚠️ {error}</div>}
 
       {/* 상품별 요약 */}
       {!loading && !error && erpTab==="summary" && (
         <div style={{background:C.white,border:`1px solid ${C.border}`,borderRadius:12,overflow:"hidden"}}>
-          <div style={{padding:"12px 16px",borderBottom:`1px solid ${C.border}`,fontSize:12,fontWeight:800,color:C.ink}}>
+          <div style={{padding:"12px 16px",borderBottom:`1px solid ${C.border}`,fontSize:13,fontWeight:800,color:C.ink}}>
             상품별 판매 ({useCustom&&fromDate ? `${fromDate}~${toDate||"오늘"}` : days===1?"어제":days+"일"}) · {summaryData.length}개 제품
           </div>
           <div style={{overflowX:"auto"}}>
-            <table style={{width:"100%",borderCollapse:"collapse",fontSize:11,minWidth:540}}>
+            <table style={{width:"100%",borderCollapse:"collapse",fontSize:12,minWidth:540}}>
               <thead>
                 <tr style={{background:C.bg}}>
                   {["제품명","판매수량","총매출","이익","마진율","반품률","전기간 매출","전기간 이익","이익 변동","매출 변동"].map(h=>(
                     <th key={h} style={{padding:"8px 12px",textAlign:h==="제품명"?"left":"right",
-                      fontWeight:700,color:C.inkMid,borderBottom:`1px solid ${C.border}`,fontSize:10}}>{h}</th>
+                      fontWeight:700,color:C.inkMid,borderBottom:`1px solid ${C.border}`,fontSize:12}}>{h}</th>
                   ))}
                 </tr>
               </thead>
@@ -5655,7 +5655,7 @@ function ErpSection() {
                     <td style={{padding:"9px 12px",textAlign:"right",fontWeight:700,color:C.inkMid}}>{Number(r.qty).toLocaleString()}</td>
                     <td style={{padding:"9px 12px",textAlign:"right",fontWeight:700,color:C.rose}}>
                       ₩{Number(r.revenue).toLocaleString()}
-                      {summaryTotal>0&&<div style={{fontSize:9,color:C.inkLt,fontWeight:400,marginTop:1}}>{(Number(r.revenue)/summaryTotal*100).toFixed(1)}%</div>}
+                      {summaryTotal>0&&<div style={{fontSize:11,color:C.inkLt,fontWeight:400,marginTop:1}}>{(Number(r.revenue)/summaryTotal*100).toFixed(1)}%</div>}
                     </td>
                     <td style={{padding:"9px 12px",textAlign:"right",fontWeight:700,
                       color:Number(r.profit)>0?C.good:C.bad}}>
@@ -5668,7 +5668,7 @@ function ErpSection() {
                     <td style={{padding:"9px 12px",textAlign:"right",
                       color:r.returnPct===null?C.inkLt:Number(r.returnPct)>=10?C.bad:Number(r.returnPct)>=5?C.warn:C.inkMid}}>
                       {r.returnPct===null?"-":`${r.returnPct}%`}
-                      {r.return_qty>0&&<div style={{fontSize:9,color:C.inkLt,marginTop:1}}>{Number(r.return_qty).toLocaleString()}개</div>}
+                      {r.return_qty>0&&<div style={{fontSize:11,color:C.inkLt,marginTop:1}}>{Number(r.return_qty).toLocaleString()}개</div>}
                     </td>
                     <td style={{padding:"9px 12px",textAlign:"right",color:C.inkMid}}>
                       {r.prevRevenue>0 ? `₩${Number(r.prevRevenue).toLocaleString()}` : <span style={{color:C.inkLt}}>-</span>}
@@ -5696,7 +5696,7 @@ function ErpSection() {
                   const totChg = tot.prevRevenue>0?Math.round((tot.revenue-tot.prevRevenue)/tot.prevRevenue*100):null;
                   return (
                     <tr style={{background:"#F1F5F9",borderTop:`2px solid ${C.border}`,fontWeight:800}}>
-                      <td style={{padding:"9px 12px",fontSize:11,color:C.ink}}>합계 ({summaryData.length}개)</td>
+                      <td style={{padding:"9px 12px",fontSize:12,color:C.ink}}>합계 ({summaryData.length}개)</td>
                       <td style={{padding:"9px 12px",textAlign:"right",color:C.inkMid}}>{Number(tot.qty).toLocaleString()}</td>
                       <td style={{padding:"9px 12px",textAlign:"right",color:C.rose}}>₩{Number(tot.revenue).toLocaleString()}</td>
                       <td style={{padding:"9px 12px",textAlign:"right",color:tot.profit>0?C.good:C.bad}}>₩{Number(tot.profit).toLocaleString()}</td>
@@ -5719,22 +5719,22 @@ function ErpSection() {
           <div style={{background:C.white,border:`1px solid ${C.border}`,borderRadius:12,overflow:"hidden"}}>
             <div style={{padding:"12px 16px",borderBottom:`1px solid ${C.border}`,display:"flex",alignItems:"center",gap:8}}>
               <span style={{fontSize:14}}>🚀</span>
-              <span style={{fontSize:12,fontWeight:800,color:C.good}}>급등 Top 10</span>
-              <span style={{fontSize:10,color:C.inkLt}}>{periodLabel}</span>
+              <span style={{fontSize:13,fontWeight:800,color:C.good}}>급등 Top 10</span>
+              <span style={{fontSize:12,color:C.inkLt}}>{periodLabel}</span>
             </div>
             {rising.length===0
-              ? <div style={{padding:"30px",textAlign:"center",color:C.inkLt,fontSize:12}}>데이터 없음</div>
+              ? <div style={{padding:"30px",textAlign:"center",color:C.inkLt,fontSize:13}}>데이터 없음</div>
               : rising.map((r,i)=>(
                 <div key={i} style={{padding:"10px 14px",borderBottom:`1px solid ${C.border}22`,
                   display:"flex",alignItems:"center",justifyContent:"space-between",gap:8}}>
                   <div style={{flex:1,minWidth:0}}>
-                    <div style={{fontSize:11,fontWeight:700,color:C.ink,overflow:"hidden",
+                    <div style={{fontSize:12,fontWeight:700,color:C.ink,overflow:"hidden",
                       textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{r.name}</div>
-                    <div style={{fontSize:10,color:C.inkLt}}>{r.last_p} → {r.this_p}개</div>
+                    <div style={{fontSize:12,color:C.inkLt}}>{r.last_p} → {r.this_p}개</div>
                   </div>
                   <div style={{textAlign:"right",flexShrink:0}}>
                     <div style={{fontSize:13,fontWeight:900,color:C.good}}>+{r.pct===999?"NEW":r.pct+"%"}</div>
-                    <div style={{fontSize:10,color:C.good}}>+{r.diff}개</div>
+                    <div style={{fontSize:12,color:C.good}}>+{r.diff}개</div>
                   </div>
                 </div>
               ))
@@ -5743,22 +5743,22 @@ function ErpSection() {
           <div style={{background:C.white,border:`1px solid ${C.border}`,borderRadius:12,overflow:"hidden"}}>
             <div style={{padding:"12px 16px",borderBottom:`1px solid ${C.border}`,display:"flex",alignItems:"center",gap:8}}>
               <span style={{fontSize:14}}>📉</span>
-              <span style={{fontSize:12,fontWeight:800,color:C.bad}}>급락 Top 10</span>
-              <span style={{fontSize:10,color:C.inkLt}}>{periodLabel}</span>
+              <span style={{fontSize:13,fontWeight:800,color:C.bad}}>급락 Top 10</span>
+              <span style={{fontSize:12,color:C.inkLt}}>{periodLabel}</span>
             </div>
             {falling.length===0
-              ? <div style={{padding:"30px",textAlign:"center",color:C.inkLt,fontSize:12}}>데이터 없음</div>
+              ? <div style={{padding:"30px",textAlign:"center",color:C.inkLt,fontSize:13}}>데이터 없음</div>
               : falling.map((r,i)=>(
                 <div key={i} style={{padding:"10px 14px",borderBottom:`1px solid ${C.border}22`,
                   display:"flex",alignItems:"center",justifyContent:"space-between",gap:8}}>
                   <div style={{flex:1,minWidth:0}}>
-                    <div style={{fontSize:11,fontWeight:700,color:C.ink,overflow:"hidden",
+                    <div style={{fontSize:12,fontWeight:700,color:C.ink,overflow:"hidden",
                       textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{r.name}</div>
-                    <div style={{fontSize:10,color:C.inkLt}}>{r.last_p} → {r.this_p}개</div>
+                    <div style={{fontSize:12,color:C.inkLt}}>{r.last_p} → {r.this_p}개</div>
                   </div>
                   <div style={{textAlign:"right",flexShrink:0}}>
                     <div style={{fontSize:13,fontWeight:900,color:C.bad}}>{r.pct}%</div>
-                    <div style={{fontSize:10,color:C.bad}}>{r.diff}개</div>
+                    <div style={{fontSize:12,color:C.bad}}>{r.diff}개</div>
                   </div>
                 </div>
               ))
@@ -5771,25 +5771,25 @@ function ErpSection() {
       {erpTab==="stock" && (
         <div style={{background:C.white,border:`1px solid ${C.border}`,borderRadius:12,overflow:"hidden"}}>
           <div style={{padding:"12px 16px",borderBottom:`1px solid ${C.border}`,display:"flex",alignItems:"center",justifyContent:"space-between"}}>
-            <div style={{fontSize:12,fontWeight:800,color:C.ink}}>📦 재고 현황 <span style={{fontSize:10,fontWeight:400,color:C.inkLt,marginLeft:8}}>ERP 실시간 기준</span></div>
+            <div style={{fontSize:13,fontWeight:800,color:C.ink}}>📦 재고 현황 <span style={{fontSize:12,fontWeight:400,color:C.inkLt,marginLeft:8}}>ERP 실시간 기준</span></div>
             <div style={{display:"flex",gap:8,alignItems:"center"}}>
-            <button onClick={()=>setShowZeroStock(v=>!v)} style={{fontSize:11,border:`1px solid ${C.border}`,borderRadius:6,padding:"3px 8px",background:showZeroStock?C.blush:C.white,color:showZeroStock?C.rose:C.inkMid,cursor:"pointer"}}>
+            <button onClick={()=>setShowZeroStock(v=>!v)} style={{fontSize:12,border:`1px solid ${C.border}`,borderRadius:6,padding:"3px 8px",background:showZeroStock?C.blush:C.white,color:showZeroStock?C.rose:C.inkMid,cursor:"pointer"}}>
               {showZeroStock?"품절 숨기기":"품절 보기"}
             </button>
-            <button onClick={()=>{setStockSortCol(null);setStockSortDir('asc');}} style={{fontSize:11,border:`1px solid ${C.border}`,borderRadius:6,padding:"3px 8px",background:!stockSortCol?C.blush:C.white,color:!stockSortCol?C.rose:C.inkMid,cursor:"pointer"}}>재고위험순</button>
+            <button onClick={()=>{setStockSortCol(null);setStockSortDir('asc');}} style={{fontSize:12,border:`1px solid ${C.border}`,borderRadius:6,padding:"3px 8px",background:!stockSortCol?C.blush:C.white,color:!stockSortCol?C.rose:C.inkMid,cursor:"pointer"}}>재고위험순</button>
             </div>
           </div>
-          {stockLoading && <div style={{padding:"40px",textAlign:"center",color:C.inkLt,fontSize:12}}>⏳ 불러오는 중...</div>}
+          {stockLoading && <div style={{padding:"40px",textAlign:"center",color:C.inkLt,fontSize:13}}>⏳ 불러오는 중...</div>}
           {!stockLoading && stockData && (() => {
             const EXCL = /(케이블|케이스|집게|흡입봉|커버|헤드팁|헤드|필터세트|필터|뚜껑|청소솔|실리콘|브러쉬|브러시|부속|부자재|파우치|고무마개|노즐|테이프|세트|패들|팁|리무버링|충전거치대|에어리스마트거치대|그루프롤|헤어롤|네일젤제거비트|블레이드|충전기|진동클렌저-거치대|면도망|배터리|갈바닉클렌저-거치대|갈바닉-거치대|거치대스티커|화이트거치대|에어리스마트-화이트-거치대|제품박스|택배박스|사용설명서|블리스터|속지|띠지|빗살캡|고정틀|윤활유|충전케이블|헤드캡|마사지롤러|각질제거|쉐이빙헤드|제모헤드|클리퍼헤드|코털제거|교체헤드|보관케이스|나사고무|스펀지필터|거치대스탠드|스탠딩거치대|면도날|칼날|용액통|구성품박스|종이지지대|스티로폼|완충종이|EPE포장재|포장비닐|완충제|보호필름|종이덮개|스포이드|AS부품|접착제|세척솔|열보호장갑|RRP박스|융)/i;
             const isAcc = r => EXCL.test(r.name) || /-[PCR]\d/.test(r.model||'');
             const danger = stockData.filter(r=>!isAcc(r)&&r.need_order);
             return danger.length>0?(
               <div style={{padding:"10px 16px",background:"#FEF2F2",borderBottom:`1px solid #FCA5A5`}}>
-                <div style={{fontSize:11,fontWeight:800,color:C.bad,marginBottom:6}}>⚠️ 발주 필요 ({danger.length}개)</div>
+                <div style={{fontSize:12,fontWeight:800,color:C.bad,marginBottom:6}}>⚠️ 발주 필요 ({danger.length}개)</div>
                 <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
                   {danger.map((r,i)=>(
-                    <span key={i} style={{fontSize:10,background:"white",border:`1px solid #FCA5A5`,borderRadius:4,padding:"2px 8px",color:C.bad}}>
+                    <span key={i} style={{fontSize:12,background:"white",border:`1px solid #FCA5A5`,borderRadius:4,padding:"2px 8px",color:C.bad}}>
                       {r.name} <b>{r.erp_days??r.total_days}일</b>
                     </span>
                   ))}
@@ -5799,14 +5799,14 @@ function ErpSection() {
           })()}
           {!stockLoading && stockData && (
             <div style={{overflowX:"auto"}}>
-              <table style={{width:"100%",borderCollapse:"collapse",fontSize:11,minWidth:540}}>
+              <table style={{width:"100%",borderCollapse:"collapse",fontSize:12,minWidth:540}}>
                 <thead>
                   <tr style={{background:C.bg}}>
                     {[["제품명",null],["현재고","stock"],["아르고재고","argo"],["쿠팡재고","cp_stock"],["생산중",null],["운송중",null],["발주잔량",null],["출하예정",null],["입고예정","incoming"],["생산소요일","lead"],["소진(일반)","erp_days"],["소진(쿠팡)","cp_days"],["소진(전체재고)","total_days"],["원가","cost"]].map(([h,col])=>(
                       <th key={h} onClick={col?()=>{if(stockSortCol===col)setStockSortDir(d=>d==='asc'?'desc':'asc');else{setStockSortCol(col);setStockSortDir('asc');}}:null}
                         style={{padding:"8px 12px",textAlign:h==="제품명"?"left":"right",fontWeight:700,
                           color:stockSortCol===col?C.rose:C.inkMid,borderBottom:`1px solid ${C.border}`,
-                          fontSize:10,cursor:col?"pointer":"default",userSelect:"none",whiteSpace:"nowrap"}}>
+                          fontSize:12,cursor:col?"pointer":"default",userSelect:"none",whiteSpace:"nowrap"}}>
                         {h}{col&&stockSortCol===col?(stockSortDir==='asc'?' ↑':' ↓'):col?' ↕':''}
                       </th>
                     ))}
@@ -5831,12 +5831,12 @@ function ErpSection() {
                         <td style={{padding:"9px 12px",fontWeight:700,color:stockNum===0?C.bad:C.ink,
                           maxWidth:220,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
                           {r.name}
-                          {r.model&&<div style={{fontSize:9,color:C.inkLt,fontWeight:400}}>{r.model}</div>}
+                          {r.model&&<div style={{fontSize:11,color:C.inkLt,fontWeight:400}}>{r.model}</div>}
                         </td>
                         <td style={{padding:"9px 12px",textAlign:"right",fontWeight:800,
                           color:stockNum===0?C.bad:stockNum<50?C.warn:C.good}}>
                           {stockNum.toLocaleString()}
-                          {stockNum===0&&<div style={{fontSize:9,color:C.bad}}>품절</div>}
+                          {stockNum===0&&<div style={{fontSize:11,color:C.bad}}>품절</div>}
                         </td>
                         <td style={{padding:"9px 12px",textAlign:"right",color:C.inkMid}}>
                           {(r.argo_stock||0)>0?<span style={{fontWeight:700,color:"#7c3aed"}}>{Number(r.argo_stock).toLocaleString()}</span>:"—"}
@@ -5851,11 +5851,11 @@ function ErpSection() {
                         <td style={{padding:"9px 12px",textAlign:"right"}}>
                           {r.incoming_date
                             ? <div style={{display:"flex",flexDirection:"column",alignItems:"flex-end",gap:1}}>
-                                <span style={{border:`1px solid #10b981`,borderRadius:4,padding:"1px 6px",color:"#10b981",fontWeight:800,fontSize:10}}>
+                                <span style={{border:`1px solid #10b981`,borderRadius:4,padding:"1px 6px",color:"#10b981",fontWeight:800,fontSize:12}}>
                                   📦 {r.incoming_date.slice(5).replace('-','/')}
                                 </span>
                                 {r.incoming_qty
-                                  ? <span style={{fontSize:9,color:"#6b7280"}} title="엑셀 입고리스트 기준 해당 모델 총 입고 수량">
+                                  ? <span style={{fontSize:11,color:"#6b7280"}} title="엑셀 입고리스트 기준 해당 모델 총 입고 수량">
                                       총 {Number(r.incoming_qty).toLocaleString()}개
                                     </span>
                                   : null}
@@ -5893,7 +5893,7 @@ function ErpSection() {
             </div>
           )}
           {!stockLoading && stockData && stockData.length===0 && (
-            <div style={{padding:"40px",textAlign:"center",color:C.inkLt,fontSize:12}}>재고 데이터 없음 — erp_sync.py 실행 후 확인하세요</div>
+            <div style={{padding:"40px",textAlign:"center",color:C.inkLt,fontSize:13}}>재고 데이터 없음 — erp_sync.py 실행 후 확인하세요</div>
           )}
         </div>
       )}
@@ -5903,7 +5903,7 @@ function ErpSection() {
         <div style={{display:"flex",flexDirection:"column",gap:14}}>
           {dailyLoading && <div style={{textAlign:"center",padding:"40px 0",color:C.inkLt,fontSize:13}}>⏳ 일별 데이터 로딩 중...</div>}
           <div style={{background:C.white,border:`1px solid ${C.border}`,borderRadius:12,padding:16}}>
-            <div style={{fontSize:12,fontWeight:800,color:C.ink,marginBottom:12}}>일별 매출 추이</div>
+            <div style={{fontSize:13,fontWeight:800,color:C.ink,marginBottom:12}}>일별 매출 추이</div>
             <ResponsiveContainer width="100%" height={180}>
               <AreaChart data={dailyAgg}>
                 <defs>
@@ -5913,25 +5913,25 @@ function ErpSection() {
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke={C.border}/>
-                <XAxis dataKey="date" tick={{fontSize:10,fill:C.inkLt}} tickLine={false}/>
-                <YAxis tick={{fontSize:10,fill:C.inkLt}} tickLine={false} axisLine={false} tickFormatter={v=>fmtW(v)}/>
+                <XAxis dataKey="date" tick={{fontSize:12,fill:C.inkLt}} tickLine={false}/>
+                <YAxis tick={{fontSize:12,fill:C.inkLt}} tickLine={false} axisLine={false} tickFormatter={v=>fmtW(v)}/>
                 <Tooltip formatter={v=>[fmtW(v),"매출"]}
-                  contentStyle={{background:C.white,border:`1px solid ${C.border}`,borderRadius:8,fontSize:11}}/>
+                  contentStyle={{background:C.white,border:`1px solid ${C.border}`,borderRadius:8,fontSize:12}}/>
                 <Area type="monotone" dataKey="revenue" stroke={C.rose} strokeWidth={2} fill="url(#gErp)" name="매출"/>
               </AreaChart>
             </ResponsiveContainer>
           </div>
           <div style={{background:C.white,border:`1px solid ${C.border}`,borderRadius:12,overflow:"hidden"}}>
-            <div style={{padding:"12px 16px",borderBottom:`1px solid ${C.border}`,fontSize:12,fontWeight:800,color:C.ink}}>
+            <div style={{padding:"12px 16px",borderBottom:`1px solid ${C.border}`,fontSize:13,fontWeight:800,color:C.ink}}>
               일별 판매 상세 · {curData.length}건
             </div>
             <div style={{overflowX:"auto"}}>
-              <table style={{width:"100%",borderCollapse:"collapse",fontSize:11,minWidth:480}}>
+              <table style={{width:"100%",borderCollapse:"collapse",fontSize:12,minWidth:480}}>
                 <thead>
                   <tr style={{background:C.bg}}>
                     {["날짜","제품명","거래처","수량","매출"].map(h=>(
                       <th key={h} style={{padding:"8px 12px",textAlign:["날짜","제품명","거래처"].includes(h)?"left":"right",
-                        fontWeight:700,color:C.inkMid,borderBottom:`1px solid ${C.border}`,fontSize:10}}>{h}</th>
+                        fontWeight:700,color:C.inkMid,borderBottom:`1px solid ${C.border}`,fontSize:12}}>{h}</th>
                     ))}
                   </tr>
                 </thead>
@@ -5942,7 +5942,7 @@ function ErpSection() {
                       <td style={{padding:"8px 12px",fontWeight:600,color:C.ink,maxWidth:180,
                         overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{r.name}</td>
                       <td style={{padding:"8px 12px",color:C.inkMid,maxWidth:140,
-                        overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",fontSize:10}}>{r.channel}</td>
+                        overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",fontSize:12}}>{r.channel}</td>
                       <td style={{padding:"8px 12px",textAlign:"right",color:C.inkMid}}>{Number(r.qty).toLocaleString()}</td>
                       <td style={{padding:"8px 12px",textAlign:"right",fontWeight:700,color:C.rose}}>{fmtW(r.revenue)}</td>
                     </tr>
@@ -7631,13 +7631,13 @@ export default function OaDashboard(){
       finally{ setRankFetching(false); }
     };
     const realChip=(ch,pd)=>{
-      if(!rankReal) return <span style={{fontSize:9,color:C.inkLt}}>실판매 로딩…</span>;
+      if(!rankReal) return <span style={{fontSize:11,color:C.inkLt}}>실판매 로딩…</span>;
       const cur=rankReal[`${ch}|${pd}|cur`], prv=rankReal[`${ch}|${pd}|prv`];
-      if(cur==null&&prv==null) return <span style={{fontSize:9,color:C.inkLt}}>실판매 데이터 없음</span>;
+      if(cur==null&&prv==null) return <span style={{fontSize:11,color:C.inkLt}}>실판매 데이터 없음</span>;
       const pct=prv?Math.round(((cur||0)-prv)/prv*100):null;
       const up=pct!==null&&pct>=0;
       return(
-        <span style={{fontSize:9,fontWeight:700,padding:"2px 7px",borderRadius:20,whiteSpace:"nowrap",
+        <span style={{fontSize:11,fontWeight:700,padding:"2px 7px",borderRadius:20,whiteSpace:"nowrap",
           color:up?C.good:C.bad,background:up?"#EDF7F1":"#FEF0F0",border:`1px solid ${(up?C.good:C.bad)+"33"}`}}>
           14일 {Math.round(cur||0).toLocaleString()}개{pct!==null?` (${pct>=0?"+":""}${pct}%)`:""}
         </span>
@@ -7652,27 +7652,27 @@ export default function OaDashboard(){
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:10,flexWrap:"wrap"}}>
             <div>
               <div style={{fontSize:15,fontWeight:900}}>🎯 10월 목표 — 5개 채널 랭킹 상위 노출</div>
-              <div style={{fontSize:11,opacity:.75,marginTop:4}}>드라이기 + 프리온 무선 고데기 · 네이버 / 쿠팡 / 지그재그 / 에이블리 / 무신사</div>
+              <div style={{fontSize:12,opacity:.75,marginTop:4}}>드라이기 + 프리온 무선 고데기 · 네이버 / 쿠팡 / 지그재그 / 에이블리 / 무신사</div>
               <div style={{display:"flex",gap:5,flexWrap:"wrap",marginTop:10}}>
                 {CHANNELS.map(ch=>(
-                  <span key={ch} style={{fontSize:10,fontWeight:700,padding:"3px 10px",borderRadius:20,
+                  <span key={ch} style={{fontSize:12,fontWeight:700,padding:"3px 10px",borderRadius:20,
                     background:"rgba(255,255,255,0.12)",border:"1px solid rgba(255,255,255,0.2)"}}>{ch} {SHARE[ch]}</span>
                 ))}
               </div>
             </div>
             <div style={{textAlign:"right"}}>
-              <div style={{fontSize:9,opacity:.6}}>순위 기록</div>
-              <div style={{fontSize:22,fontWeight:900}}>{trackedCells}<span style={{fontSize:12,opacity:.6}}>/10칸</span></div>
+              <div style={{fontSize:11,opacity:.6}}>순위 기록</div>
+              <div style={{fontSize:22,fontWeight:900}}>{trackedCells}<span style={{fontSize:13,opacity:.6}}>/10칸</span></div>
               <button onClick={autoFetch} disabled={rankFetching} style={{marginTop:6,padding:"5px 12px",borderRadius:20,
-                cursor:rankFetching?"wait":"pointer",fontSize:10,fontWeight:700,fontFamily:"inherit",
+                cursor:rankFetching?"wait":"pointer",fontSize:12,fontWeight:700,fontFamily:"inherit",
                 background:"rgba(255,255,255,0.15)",border:"1px solid rgba(255,255,255,0.3)",color:C.white,opacity:rankFetching?.6:1}}>
                 {rankFetching?"조회 중…":"🔄 순위 자동 조회"}</button>
             </div>
           </div>
           <div style={{marginTop:14,padding:"12px 14px",background:"rgba(255,255,255,0.08)",borderRadius:12}}>
-            <div style={{fontSize:11,fontWeight:800,marginBottom:6}}>📌 {month}월 포커스</div>
+            <div style={{fontSize:12,fontWeight:800,marginBottom:6}}>📌 {month}월 포커스</div>
             {focus.map((f,i)=>(
-              <div key={i} style={{fontSize:11,opacity:.85,padding:"2px 0"}}>· {f}</div>
+              <div key={i} style={{fontSize:12,opacity:.85,padding:"2px 0"}}>· {f}</div>
             ))}
           </div>
         </div>
@@ -7682,10 +7682,10 @@ export default function OaDashboard(){
           <Card key={pd}>
             <CardTitle title={`${pd==="드라이기"?"💨":"🔥"} ${pd}`} sub="채널별 카테고리 순위 — 주 1회 기록 권장"/>
             <div style={{overflowX:"auto"}}>
-              <table style={{width:"100%",borderCollapse:"collapse",fontSize:11,minWidth:560}}>
+              <table style={{width:"100%",borderCollapse:"collapse",fontSize:12,minWidth:560}}>
                 <thead><tr style={{borderBottom:`2px solid ${C.border}`}}>
                   {["채널","현재 순위","변화","실판매","기록 히스토리",""].map((h,i)=>(
-                    <th key={i} style={{padding:"8px",textAlign:i===0?"left":"center",color:C.inkLt,fontWeight:700,fontSize:9,whiteSpace:"nowrap"}}>{h}</th>
+                    <th key={i} style={{padding:"8px",textAlign:i===0?"left":"center",color:C.inkLt,fontWeight:700,fontSize:11,whiteSpace:"nowrap"}}>{h}</th>
                   ))}
                 </tr></thead>
                 <tbody>{CHANNELS.map(ch=>{
@@ -7695,42 +7695,42 @@ export default function OaDashboard(){
                   return(
                     <tr key={ch} style={{borderBottom:`1px solid ${C.border}`}}>
                       <td style={{padding:"10px 8px",fontWeight:800,color:C.ink,whiteSpace:"nowrap"}}>
-                        {ch} <span style={{fontSize:9,fontWeight:600,color:C.inkLt}}>{SHARE[ch]}</span>
+                        {ch} <span style={{fontSize:11,fontWeight:600,color:C.inkLt}}>{SHARE[ch]}</span>
                       </td>
                       <td style={{padding:"10px 8px",textAlign:"center"}}>
                         {latest
                           ?<>
                             {latest.rank
                               ?<span style={{fontSize:15,fontWeight:900,color:latest.rank<=10?C.good:latest.rank<=30?C.warn:C.ink}}>{latest.rank}위
-                                <span style={{fontSize:9,fontWeight:600,color:C.inkLt,marginLeft:4}}>({latest.date.slice(5).replace("-","/")})</span></span>
-                              :<span style={{fontSize:10,color:C.inkLt}}>오가닉 순위권 밖</span>}
-                            {latest.adRank&&<div style={{marginTop:3}}><span style={{fontSize:9,fontWeight:800,padding:"2px 7px",borderRadius:20,
+                                <span style={{fontSize:11,fontWeight:600,color:C.inkLt,marginLeft:4}}>({latest.date.slice(5).replace("-","/")})</span></span>
+                              :<span style={{fontSize:12,color:C.inkLt}}>오가닉 순위권 밖</span>}
+                            {latest.adRank&&<div style={{marginTop:3}}><span style={{fontSize:11,fontWeight:800,padding:"2px 7px",borderRadius:20,
                               background:"#FFF6E8",color:"#B07A1E",border:"1px solid #EFD9AE",whiteSpace:"nowrap"}}>AD 광고 {latest.adRank}위</span></div>}
                           </>
-                          :<span style={{fontSize:10,color:C.inkLt}}>기록 없음</span>}
+                          :<span style={{fontSize:12,color:C.inkLt}}>기록 없음</span>}
                       </td>
                       <td style={{padding:"10px 8px",textAlign:"center"}}>
-                        {delta==null?<span style={{color:C.inkLt,fontSize:10}}>—</span>
-                          :delta>0?<span style={{color:C.good,fontWeight:800,fontSize:11}}>▲ {delta}</span>
-                          :delta<0?<span style={{color:C.bad,fontWeight:800,fontSize:11}}>▼ {-delta}</span>
-                          :<span style={{color:C.inkMid,fontSize:10}}>0</span>}
+                        {delta==null?<span style={{color:C.inkLt,fontSize:12}}>—</span>
+                          :delta>0?<span style={{color:C.good,fontWeight:800,fontSize:12}}>▲ {delta}</span>
+                          :delta<0?<span style={{color:C.bad,fontWeight:800,fontSize:12}}>▼ {-delta}</span>
+                          :<span style={{color:C.inkMid,fontSize:12}}>0</span>}
                       </td>
                       <td style={{padding:"10px 8px",textAlign:"center"}}>{realChip(ch,pd)}</td>
                       <td style={{padding:"10px 8px",textAlign:"center"}}>
                         <div style={{display:"flex",gap:3,justifyContent:"center",flexWrap:"wrap"}}>
                           {logs.slice(0,6).map(l=>(
                             <span key={l.id} onClick={()=>delRank(l.id)} title="클릭 시 삭제"
-                              style={{fontSize:9,fontWeight:600,padding:"2px 7px",borderRadius:20,cursor:"pointer",
+                              style={{fontSize:11,fontWeight:600,padding:"2px 7px",borderRadius:20,cursor:"pointer",
                                 background:C.cream,color:C.inkMid,border:`1px solid ${C.border}`,whiteSpace:"nowrap"}}>
                               {l.date.slice(5).replace("-","/")} {l.rank?`${l.rank}위`:`AD${l.adRank}위`}{l.rank&&l.adRank?` (AD${l.adRank})`:""}
                             </span>
                           ))}
-                          {logs.length===0&&<span style={{fontSize:9,color:C.inkLt}}>—</span>}
+                          {logs.length===0&&<span style={{fontSize:11,color:C.inkLt}}>—</span>}
                         </div>
                       </td>
                       <td style={{padding:"10px 8px",textAlign:"center"}}>
                         <button onClick={()=>addRank(ch,pd)} style={{padding:"4px 10px",borderRadius:8,cursor:"pointer",
-                          fontSize:10,fontWeight:700,fontFamily:"inherit",background:C.blush,
+                          fontSize:12,fontWeight:700,fontFamily:"inherit",background:C.blush,
                           border:`1px solid ${C.rose}33`,color:C.rose,whiteSpace:"nowrap"}}>+ 기록</button>
                       </td>
                     </tr>
@@ -7740,7 +7740,7 @@ export default function OaDashboard(){
             </div>
           </Card>
         ))}
-        <div style={{fontSize:10,color:C.inkLt,padding:"0 4px"}}>
+        <div style={{fontSize:12,color:C.inkLt,padding:"0 4px"}}>
           🔄 자동 조회 = 채널 검색 결과 순위 (드라이기/무선 고데기 키워드, 네이버·지그재그·에이블리·무신사) — 쿠팡은 봇 차단으로 수동 기록 (카테고리 베스트에서 확인).
           순위 = 광고 제외 오가닉. <b style={{color:"#B07A1E"}}>AD 광고 N위</b> = 광고 슬롯 중 오아 광고 위치 (별도 표시).
           실판매 칩 = ERP 위탁 주문 기준 채널 실판매 (사입·B2B 제외), 최근 14일 vs 직전 14일 — 5개 채널 모두 자동 표시.
@@ -7757,8 +7757,8 @@ export default function OaDashboard(){
             ].map(([n,t,d])=>(
               <div key={n} style={{display:"flex",gap:10,padding:"10px 12px",background:C.cream,borderRadius:10}}>
                 <span style={{fontSize:14,fontWeight:900,color:C.rose}}>{n}</span>
-                <div><div style={{fontSize:12,fontWeight:800,color:C.ink}}>{t}</div>
-                  <div style={{fontSize:10.5,color:C.inkMid,marginTop:2,lineHeight:1.5}}>{d}</div></div>
+                <div><div style={{fontSize:13,fontWeight:800,color:C.ink}}>{t}</div>
+                  <div style={{fontSize:12,color:C.inkMid,marginTop:2,lineHeight:1.5}}>{d}</div></div>
               </div>
             ))}
           </div>
@@ -7774,23 +7774,23 @@ export default function OaDashboard(){
               const text=window.prompt("진행 내용 메모");
               if(!text||!text.trim()) return;
               setRankMemo(prev=>[{id:Date.now()+"",date:todayStr,who:who.trim()||"팀",text:text.trim()},...(prev||[])]);
-            }} style={{padding:"5px 12px",borderRadius:20,cursor:"pointer",fontSize:10,fontWeight:700,fontFamily:"inherit",
+            }} style={{padding:"5px 12px",borderRadius:20,cursor:"pointer",fontSize:12,fontWeight:700,fontFamily:"inherit",
               background:C.blush,border:`1px solid ${C.rose}33`,color:C.rose,whiteSpace:"nowrap"}}>+ 메모</button>
           </div>
           <div style={{display:"flex",flexDirection:"column",gap:8,marginTop:4}}>
             {(rankMemo||[]).slice().sort((a,b)=>b.date.localeCompare(a.date)||String(b.id).localeCompare(String(a.id))).map(m=>(
               <div key={m.id} onClick={()=>{if(window.confirm("이 메모를 삭제할까요?")) setRankMemo(prev=>(prev||[]).filter(x=>x.id!==m.id));}}
                 title="클릭 시 삭제" style={{border:`1px solid ${C.border}`,borderRadius:12,padding:"11px 14px",cursor:"pointer"}}>
-                <div style={{fontSize:11,fontWeight:900,color:C.ink}}>
+                <div style={{fontSize:12,fontWeight:900,color:C.ink}}>
                   <span style={{color:C.rose}}>{m.date.slice(5).replace("-","/")}</span>
-                  <span style={{fontSize:9.5,fontWeight:700,color:C.inkLt,marginLeft:6}}>{m.who}</span>
+                  <span style={{fontSize:11,fontWeight:700,color:C.inkLt,marginLeft:6}}>{m.who}</span>
                 </div>
-                <div style={{fontSize:11,color:C.inkMid,marginTop:3,lineHeight:1.6,whiteSpace:"pre-wrap"}}>{m.text}</div>
+                <div style={{fontSize:12,color:C.inkMid,marginTop:3,lineHeight:1.6,whiteSpace:"pre-wrap"}}>{m.text}</div>
               </div>
             ))}
-            {(!rankMemo||rankMemo.length===0)&&<div style={{fontSize:10,color:C.inkLt,padding:"6px 2px"}}>메모가 없어요 — 위 + 메모 버튼으로 기록하세요</div>}
+            {(!rankMemo||rankMemo.length===0)&&<div style={{fontSize:12,color:C.inkLt,padding:"6px 2px"}}>메모가 없어요 — 위 + 메모 버튼으로 기록하세요</div>}
           </div>
-          <div style={{marginTop:10,padding:"10px 12px",background:"#FFF6E8",border:"1px solid #EFD9AE",borderRadius:10,fontSize:11,color:"#B07A1E",fontWeight:700,lineHeight:1.6}}>
+          <div style={{marginTop:10,padding:"10px 12px",background:"#FFF6E8",border:"1px solid #EFD9AE",borderRadius:10,fontSize:12,color:"#B07A1E",fontWeight:700,lineHeight:1.6}}>
             ⚠️ 상시 체크: 광고 실집행액 주간 확인 (플랜 월 150만) · 딜·할인가는 네이버 판매가보다 낮아지지 않게 (가격 역전 주의).
           </div>
         </Card>
@@ -7799,10 +7799,10 @@ export default function OaDashboard(){
         <Card>
           <CardTitle title="📦 SKU 재고 · 소진개월" sub="현 판매 속도 월 9,703개 · 소진 12개월 초과(빨강)는 분산 대상"/>
           <div style={{overflowX:"auto"}}>
-            <table style={{width:"100%",borderCollapse:"collapse",fontSize:11,minWidth:560}}>
+            <table style={{width:"100%",borderCollapse:"collapse",fontSize:12,minWidth:560}}>
               <thead><tr style={{borderBottom:`2px solid ${C.border}`}}>
                 {["SKU","현재고","월판매","소진개월","역할"].map((h,i)=>(
-                  <th key={i} style={{padding:"8px",textAlign:i===4?"left":"center",color:C.inkLt,fontWeight:700,fontSize:9,whiteSpace:"nowrap"}}>{h}</th>
+                  <th key={i} style={{padding:"8px",textAlign:i===4?"left":"center",color:C.inkLt,fontWeight:700,fontSize:11,whiteSpace:"nowrap"}}>{h}</th>
                 ))}
               </tr></thead>
               <tbody>{[
@@ -7825,7 +7825,7 @@ export default function OaDashboard(){
               ))}</tbody>
             </table>
           </div>
-          <div style={{marginTop:10,padding:"10px 12px",background:C.cream,borderRadius:10,fontSize:11,color:C.inkMid,lineHeight:1.6}}>
+          <div style={{marginTop:10,padding:"10px 12px",background:C.cream,borderRadius:10,fontSize:12,color:C.inkMid,lineHeight:1.6}}>
             합계 재고 <b style={{color:C.ink}}>98,570개</b> · 월판매 <b style={{color:C.ink}}>9,703개</b>.
             빨간 행 = 저회전 3종 (원가 약 <b style={{color:C.bad}}>7.3억</b> 묶임) → 고마진 채널 분산으로 소진 12개월 이하가 배분 전략의 두 번째 축.
           </div>
@@ -7835,10 +7835,10 @@ export default function OaDashboard(){
         <Card>
           <CardTitle title="💰 채널 마진맵 · 월간 배분계획" sub="개당이익 배수 (쿠팡=1 기준) · 배분 합계 월 7,801개"/>
           <div style={{overflowX:"auto"}}>
-            <table style={{width:"100%",borderCollapse:"collapse",fontSize:11,minWidth:560}}>
+            <table style={{width:"100%",borderCollapse:"collapse",fontSize:12,minWidth:560}}>
               <thead><tr style={{borderBottom:`2px solid ${C.border}`}}>
                 {["채널","마진 배수","월 배분","비고"].map((h,i)=>(
-                  <th key={i} style={{padding:"8px",textAlign:i===3?"left":"center",color:C.inkLt,fontWeight:700,fontSize:9,whiteSpace:"nowrap"}}>{h}</th>
+                  <th key={i} style={{padding:"8px",textAlign:i===3?"left":"center",color:C.inkLt,fontWeight:700,fontSize:11,whiteSpace:"nowrap"}}>{h}</th>
                 ))}
               </tr></thead>
               <tbody>{[
@@ -7855,12 +7855,12 @@ export default function OaDashboard(){
                   <td style={{padding:"8px",fontWeight:800,color:C.ink,textAlign:"center",whiteSpace:"nowrap"}}>{ch}</td>
                   <td style={{padding:"8px",textAlign:"center",fontWeight:900,color:parseFloat(mult.slice(1))>=2?C.good:C.inkMid}}>{mult}</td>
                   <td style={{padding:"8px",textAlign:"center",fontWeight:800,color:C.rose}}>{vol}</td>
-                  <td style={{padding:"8px",color:C.inkMid,fontSize:10.5}}>{note}</td>
+                  <td style={{padding:"8px",color:C.inkMid,fontSize:12}}>{note}</td>
                 </tr>
               ))}</tbody>
             </table>
           </div>
-          <div style={{marginTop:10,padding:"10px 12px",background:C.cream,borderRadius:10,fontSize:11,color:C.inkMid,lineHeight:1.6}}>
+          <div style={{marginTop:10,padding:"10px 12px",background:C.cream,borderRadius:10,fontSize:12,color:C.inkMid,lineHeight:1.6}}>
             <b style={{color:C.ink}}>증분 근거:</b> 계획 7,801개 = 평상시 6,445개 + <b style={{color:C.ink}}>증분 1,356개</b> (쿠팡 딜 +331 무손실 지원, 특판 +1,050 대량 견적) — 나머지 채널은 평상시 유지.
             네이버 개당이익 1.9만원·이익률 45% = <b style={{color:C.ink}}>이익 엔진</b> / 쿠팡 = <b style={{color:C.ink}}>순위 엔진</b>.
             같은 한 개도 어디서 파느냐로 이익이 최대 3배 차이.
@@ -7877,18 +7877,18 @@ export default function OaDashboard(){
               ["C 공격","개당 지원 13,000원","3개월 -750만원",false],
             ].map(([name,cost,result,pick])=>(
               <div key={name} style={{border:`1px solid ${pick?C.rose:C.border}`,borderRadius:12,padding:"12px 14px",background:pick?C.blush:C.white}}>
-                <div style={{fontSize:12,fontWeight:900,color:pick?C.rose:C.ink}}>{name}</div>
-                <div style={{fontSize:11,color:C.inkMid,marginTop:6}}>{cost}</div>
+                <div style={{fontSize:13,fontWeight:900,color:pick?C.rose:C.ink}}>{name}</div>
+                <div style={{fontSize:12,color:C.inkMid,marginTop:6}}>{cost}</div>
                 <div style={{fontSize:13,fontWeight:900,color:result.includes("+")?C.good:result.includes("-")?C.bad:C.inkMid,marginTop:2}}>{result}</div>
               </div>
             ))}
           </div>
-          <div style={{marginTop:10,padding:"10px 12px",background:C.cream,borderRadius:10,fontSize:11,color:C.inkMid,lineHeight:1.6}}>
+          <div style={{marginTop:10,padding:"10px 12px",background:C.cream,borderRadius:10,fontSize:12,color:C.inkMid,lineHeight:1.6}}>
             <b style={{color:C.ink}}>목표 산식:</b> 평상시 658개 + 딜 증분 342개 (월 3~4회 × 회당 120~160개) = 1,000개.
             일 33개 이상 3~4주 유지 시 상위 노출권 진입 → 딜이 끝나도 오가닉 한 단계 상승.
             <b style={{color:C.ink}}> 상시할인 없이 딜만 운영</b>해 네이버 가격비교 노출 최소화. 가설이 틀려도 최대 손실은 광고비 450만으로 한정.
           </div>
-          <div style={{marginTop:8,padding:"10px 12px",background:"#FEF0F0",border:`1px solid ${C.bad}33`,borderRadius:10,fontSize:11,color:C.ink,fontWeight:700,lineHeight:1.6}}>
+          <div style={{marginTop:8,padding:"10px 12px",background:"#FEF0F0",border:`1px solid ${C.bad}33`,borderRadius:10,fontSize:12,color:C.ink,fontWeight:700,lineHeight:1.6}}>
             ⚠️ 가격 역전 주의: 쿠팡 딜가가 네이버 판매가보다 낮아지면 네이버 이익 엔진이 무너짐 — 쿠팡 딜은 반드시 기간 한정, 네이버 가격 인하 금지.
           </div>
         </Card>
@@ -7904,8 +7904,8 @@ export default function OaDashboard(){
               ["주간","점검 루틴 (3개월 검증)",["쿠팡 베이지 일판매·순위 주간 추적 (위 랭킹 테이블)","SKU별 소진개월 점검 — 12개월 초과 시 특판 증량"]],
             ].map(([m,t,items])=>(
               <div key={m} style={{border:`1px solid ${C.border}`,borderRadius:12,padding:"12px 14px",background:C.white}}>
-                <div style={{fontSize:12,fontWeight:900,color:C.ink}}>{m} <span style={{fontSize:10,fontWeight:700,color:C.inkMid}}>{t}</span></div>
-                <ul style={{margin:"8px 0 0",paddingLeft:16,fontSize:10.5,color:C.inkMid,lineHeight:1.7}}>
+                <div style={{fontSize:13,fontWeight:900,color:C.ink}}>{m} <span style={{fontSize:12,fontWeight:700,color:C.inkMid}}>{t}</span></div>
+                <ul style={{margin:"8px 0 0",paddingLeft:16,fontSize:12,color:C.inkMid,lineHeight:1.7}}>
                   {items.map((it,i)=><li key={i}>{it}</li>)}
                 </ul>
               </div>
@@ -8021,7 +8021,7 @@ export default function OaDashboard(){
     const roasColor=r=>r>=500?"#248A3D":r>=300?"#CA8A04":"#D70015";
     const unmatchedTop=Object.entries(unmatched.byCamp).sort((a,b)=>b[1]-a[1]).slice(0,5);
     const heroBtn={background:"rgba(255,255,255,.14)",border:"1px solid rgba(255,255,255,.25)",color:"#fff",
-      borderRadius:10,padding:"6px 12px",fontSize:12,fontWeight:800,cursor:"pointer",fontFamily:"inherit"};
+      borderRadius:10,padding:"6px 12px",fontSize:13,fontWeight:800,cursor:"pointer",fontFamily:"inherit"};
     const totDiff=Math.round((totRatio-elapsedRatio)*100);
 
     return(
@@ -8034,7 +8034,7 @@ export default function OaDashboard(){
           <div style={{position:"absolute",right:60,bottom:-90,width:200,height:200,borderRadius:"50%",background:"rgba(255,255,255,.05)"}}/>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",flexWrap:"wrap",gap:10,position:"relative"}}>
             <div>
-              <div style={{fontSize:11,fontWeight:800,letterSpacing:2,color:"#8E8E93"}}>MARKETING PORTFOLIO</div>
+              <div style={{fontSize:12,fontWeight:800,letterSpacing:2,color:"#8E8E93"}}>MARKETING PORTFOLIO</div>
               <div style={{fontSize:22,fontWeight:900,marginTop:2}}>{Number(pfMonth.slice(5))}월 팀별 예산 · 페이싱</div>
             </div>
             <div style={{display:"flex",alignItems:"center",gap:6}}>
@@ -8056,16 +8056,16 @@ export default function OaDashboard(){
             ].map(([l,v,s])=>(
               <div key={l} style={{background:"rgba(255,255,255,.10)",border:"1px solid rgba(255,255,255,.15)",
                 borderRadius:14,padding:"12px 14px",backdropFilter:"blur(4px)"}}>
-                <div style={{fontSize:10,fontWeight:700,color:"#AEAEB2"}}>{l}</div>
+                <div style={{fontSize:12,fontWeight:700,color:"#AEAEB2"}}>{l}</div>
                 <div style={{fontSize:22,fontWeight:900,marginTop:3,letterSpacing:-.5}}>{v}</div>
-                {s&&<div style={{fontSize:9.5,color:"#8E8E93",marginTop:2,fontWeight:700}}>{s}</div>}
+                {s&&<div style={{fontSize:11,color:"#8E8E93",marginTop:2,fontWeight:700}}>{s}</div>}
               </div>
             ))}
           </div>
           {totBudget>0&&(
             <div style={{marginTop:16,position:"relative"}}>
               <PaceBar ratio={totRatio} color="#64D2FF" h={12} track="rgba(255,255,255,.18)" markerColor="#fff"/>
-              <div style={{display:"flex",justifyContent:"space-between",fontSize:9.5,fontWeight:700,color:"#8E8E93",marginTop:5}}>
+              <div style={{display:"flex",justifyContent:"space-between",fontSize:11,fontWeight:700,color:"#8E8E93",marginTop:5}}>
                 <span>집행 {Math.round(totRatio*100)}%</span>
                 <span>│ 오늘 ({Math.round(elapsedRatio*100)}%)</span>
                 <span>월말 100%</span>
@@ -8093,22 +8093,22 @@ export default function OaDashboard(){
                 <div style={{display:"flex",alignItems:"center",gap:8}}>
                   <span style={{width:10,height:10,borderRadius:"50%",background:col,flexShrink:0}}/>
                   <span style={{fontSize:15,fontWeight:900,color:C.ink}}>{t.name}</span>
-                  <span style={{fontSize:9.5,fontWeight:800,padding:"3px 9px",borderRadius:20,color:ps.color,background:ps.bg,marginLeft:"auto"}}>{ps.label}</span>
+                  <span style={{fontSize:11,fontWeight:800,padding:"3px 9px",borderRadius:20,color:ps.color,background:ps.bg,marginLeft:"auto"}}>{ps.label}</span>
                   <button onClick={()=>editTeamKw(t)} title="키워드 수정" style={{background:"none",border:"none",cursor:"pointer",padding:2,color:C.inkLt}}><MI n="edit" size={14}/></button>
                   <button onClick={()=>delTeam(t)} title="팀 삭제" style={{background:"none",border:"none",cursor:"pointer",padding:2,color:C.inkLt}}><MI n="delete" size={14}/></button>
                 </div>
-                <div style={{fontSize:9.5,color:C.inkLt,marginTop:4,marginLeft:18,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
+                <div style={{fontSize:11,color:C.inkLt,marginTop:4,marginLeft:18,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
                   {(t.keywords||[]).length?`키워드: ${(t.keywords||[]).join(", ")}`:"매칭 키워드 없음 — 연필 아이콘으로 추가"}
                 </div>
                 <div style={{display:"flex",alignItems:"flex-end",justifyContent:"space-between",marginTop:12,flexWrap:"wrap",gap:6}}>
                   <div>
                     <span style={{fontSize:24,fontWeight:900,color:C.ink,letterSpacing:-.5}}>{fmtW(tSpent)}</span>
-                    <span style={{fontSize:12,fontWeight:700,color:C.inkLt,marginLeft:5}}>/ {tBudget>0?fmtW(tBudget):"예산 미설정"}</span>
+                    <span style={{fontSize:13,fontWeight:700,color:C.inkLt,marginLeft:5}}>/ {tBudget>0?fmtW(tBudget):"예산 미설정"}</span>
                   </div>
                   {tRoas!=null&&(
                     <div style={{textAlign:"right"}}>
                       <span style={{fontSize:20,fontWeight:900,color:roasColor(tRoas)}}>{Math.round(tRoas)}%</span>
-                      <span style={{fontSize:9.5,fontWeight:700,color:C.inkLt,marginLeft:3}}>메타 ROAS</span>
+                      <span style={{fontSize:11,fontWeight:700,color:C.inkLt,marginLeft:3}}>메타 ROAS</span>
                     </div>
                   )}
                 </div>
@@ -8117,7 +8117,7 @@ export default function OaDashboard(){
                 </div>
                 {tTargetRev>0&&(
                   <div style={{marginTop:10,background:"#F5F5F7",borderRadius:10,padding:"8px 10px"}}>
-                    <div style={{display:"flex",justifyContent:"space-between",fontSize:9.5,fontWeight:700,color:C.inkMid,marginBottom:5}}>
+                    <div style={{display:"flex",justifyContent:"space-between",fontSize:11,fontWeight:700,color:C.inkMid,marginBottom:5}}>
                       <span>목표 매출 달성</span>
                       <span style={{fontWeight:900,color:tRev>=tTargetRev?"#248A3D":tTargetRev>0&&tRev/tTargetRev>=elapsedRatio?"#CA8A04":"#D70015"}}>
                         {fmtW(tRev)} / {fmtW(tTargetRev)} ({Math.round(tRev/tTargetRev*100)}%)</span>
@@ -8132,28 +8132,28 @@ export default function OaDashboard(){
                     return(
                       <div key={b.id} style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap",
                         background:"#F8FAFC",border:`1px solid ${C.border}`,borderRadius:12,padding:"8px 10px"}}>
-                        <span style={{fontSize:11,fontWeight:900,color:col,minWidth:38}}>{b.source}</span>
-                        <span style={{fontSize:8.5,fontWeight:800,padding:"2px 6px",borderRadius:20,
+                        <span style={{fontSize:12,fontWeight:900,color:col,minWidth:38}}>{b.source}</span>
+                        <span style={{fontSize:10,fontWeight:800,padding:"2px 6px",borderRadius:20,
                           color:st.auto?"#248A3D":C.inkLt,background:st.auto?"#F0FDF4":C.cream}}>{st.auto?"자동":"수동"}</span>
                         <div style={{display:"flex",alignItems:"center",gap:4}}>
-                          <span style={{fontSize:9,color:C.inkLt,fontWeight:700}}>예산</span>
+                          <span style={{fontSize:11,color:C.inkLt,fontWeight:700}}>예산</span>
                           <NumIn val={b.budget} onCommit={v=>patchBudget(b.id,{budget:v})}/>
                         </div>
                         <div style={{display:"flex",alignItems:"center",gap:4}}>
-                          <span style={{fontSize:9,color:C.inkLt,fontWeight:700}}>집행</span>
+                          <span style={{fontSize:11,color:C.inkLt,fontWeight:700}}>집행</span>
                           {st.auto
-                            ?<span style={{fontSize:11.5,fontWeight:900,color:C.ink}}>{fmtW(st.spent)}</span>
+                            ?<span style={{fontSize:12.5,fontWeight:900,color:C.ink}}>{fmtW(st.spent)}</span>
                             :<NumIn val={b.spent} onCommit={v=>patchBudget(b.id,{spent:v})}/>}
                         </div>
-                        <span style={{fontSize:11,fontWeight:900,color:paceState(ratio,b.budget).color}}>{b.budget>0?`${Math.round(ratio*100)}%`:"—"}</span>
+                        <span style={{fontSize:12,fontWeight:900,color:paceState(ratio,b.budget).color}}>{b.budget>0?`${Math.round(ratio*100)}%`:"—"}</span>
                         {!st.auto&&(
                           <>
                             <div style={{display:"flex",alignItems:"center",gap:4}}>
-                              <span style={{fontSize:9,color:C.inkLt,fontWeight:700}}>매출</span>
+                              <span style={{fontSize:11,color:C.inkLt,fontWeight:700}}>매출</span>
                               <NumIn val={b.rev} onCommit={v=>patchBudget(b.id,{rev:v})}/>
                             </div>
                             <div style={{display:"flex",alignItems:"center",gap:4}}>
-                              <span style={{fontSize:9,color:C.inkLt,fontWeight:700}}>구매</span>
+                              <span style={{fontSize:11,color:C.inkLt,fontWeight:700}}>구매</span>
                               <NumIn val={b.purch} onCommit={v=>patchBudget(b.id,{purch:v})} w={44}/>
                             </div>
                           </>
@@ -8162,25 +8162,25 @@ export default function OaDashboard(){
                         {/* 세부 목표 라인 — ROAS · 매출 · CPA */}
                         <div style={{display:"flex",alignItems:"center",gap:12,flexWrap:"wrap",width:"100%",
                           paddingTop:7,marginTop:2,borderTop:"1px dashed #E5E5EA"}}>
-                          <span style={{fontSize:8.5,fontWeight:800,color:C.inkLt,letterSpacing:"0.06em"}}>목표</span>
+                          <span style={{fontSize:10,fontWeight:800,color:C.inkLt,letterSpacing:"0.06em"}}>목표</span>
                           <div style={{display:"flex",alignItems:"center",gap:4}}>
-                            <span style={{fontSize:9,color:C.inkLt,fontWeight:700}}>ROAS</span>
+                            <span style={{fontSize:11,color:C.inkLt,fontWeight:700}}>ROAS</span>
                             <NumIn val={b.targetRoas} onCommit={v=>patchBudget(b.id,{targetRoas:v})} w={48}/>
-                            {st.roas!=null&&<span style={{fontSize:10.5,fontWeight:900,
+                            {st.roas!=null&&<span style={{fontSize:12,fontWeight:900,
                               color:b.targetRoas>0?(st.roas>=b.targetRoas?"#248A3D":"#D70015"):roasColor(st.roas)}}>
                               {Math.round(st.roas)}%{b.targetRoas>0&&` (${Math.round(st.roas/b.targetRoas*100)}%)`}</span>}
                           </div>
                           <div style={{display:"flex",alignItems:"center",gap:4}}>
-                            <span style={{fontSize:9,color:C.inkLt,fontWeight:700}}>매출</span>
+                            <span style={{fontSize:11,color:C.inkLt,fontWeight:700}}>매출</span>
                             <NumIn val={b.targetRev} onCommit={v=>patchBudget(b.id,{targetRev:v})}/>
-                            {(st.rev||0)>0&&b.targetRev>0&&<span style={{fontSize:10.5,fontWeight:900,
+                            {(st.rev||0)>0&&b.targetRev>0&&<span style={{fontSize:12,fontWeight:900,
                               color:st.rev>=b.targetRev?"#248A3D":st.rev/b.targetRev>=elapsedRatio?"#CA8A04":"#D70015"}}>
                               {fmtW(st.rev)} ({Math.round(st.rev/b.targetRev*100)}%)</span>}
                           </div>
                           <div style={{display:"flex",alignItems:"center",gap:4}}>
-                            <span style={{fontSize:9,color:C.inkLt,fontWeight:700}}>CPA</span>
+                            <span style={{fontSize:11,color:C.inkLt,fontWeight:700}}>CPA</span>
                             <NumIn val={b.targetCpa} onCommit={v=>patchBudget(b.id,{targetCpa:v})} w={60}/>
-                            {st.cpa!=null&&<span style={{fontSize:10.5,fontWeight:900,
+                            {st.cpa!=null&&<span style={{fontSize:12,fontWeight:900,
                               color:b.targetCpa>0?(st.cpa<=b.targetCpa?"#248A3D":"#D70015"):C.inkMid}}>
                               {fmtW(st.cpa)}</span>}
                           </div>
@@ -8189,7 +8189,7 @@ export default function OaDashboard(){
                     );
                   })}
                   <button onClick={()=>addBudget(t)} style={{border:`1.5px dashed ${col}66`,background:`${col}0D`,color:col,
-                    borderRadius:12,padding:"7px 0",fontSize:11,fontWeight:800,cursor:"pointer",fontFamily:"inherit"}}>+ 매체 추가</button>
+                    borderRadius:12,padding:"7px 0",fontSize:12,fontWeight:800,cursor:"pointer",fontFamily:"inherit"}}>+ 매체 추가</button>
                 </div>
               </div>
             );
@@ -8199,8 +8199,8 @@ export default function OaDashboard(){
             gap:6,color:C.inkLt,fontFamily:"inherit"}}>
             <span style={{width:36,height:36,borderRadius:"50%",background:C.blush,color:C.rose,display:"flex",
               alignItems:"center",justifyContent:"center",fontSize:20,fontWeight:900}}>+</span>
-            <span style={{fontSize:12,fontWeight:800}}>팀 추가</span>
-            {!(pfTeams||[]).length&&<span style={{fontSize:10,color:C.inkLt}}>예: 이미용 → 키워드 드라이기,고데기,갈바닉,거울</span>}
+            <span style={{fontSize:13,fontWeight:800}}>팀 추가</span>
+            {!(pfTeams||[]).length&&<span style={{fontSize:12,color:C.inkLt}}>예: 이미용 → 키워드 드라이기,고데기,갈바닉,거울</span>}
           </button>
         </div>
 
@@ -8211,10 +8211,10 @@ export default function OaDashboard(){
               <MI n="warning" size={18} style={{color:"#D97706"}}/>
               <span style={{fontSize:13,fontWeight:900,color:"#92400E"}}>미분류 메타 지출 {fmtW(unmatched.spend)}</span>
             </div>
-            <div style={{fontSize:10,color:"#B45309",marginTop:3}}>어느 팀 키워드에도 매칭되지 않은 {pfMonth} 지출 — 팀 카드의 연필 아이콘으로 캠페인명 키워드를 추가하면 자동 배정됩니다</div>
+            <div style={{fontSize:12,color:"#B45309",marginTop:3}}>어느 팀 키워드에도 매칭되지 않은 {pfMonth} 지출 — 팀 카드의 연필 아이콘으로 캠페인명 키워드를 추가하면 자동 배정됩니다</div>
             <div style={{display:"grid",gap:4,marginTop:10}}>
               {unmatchedTop.map(([name,sp])=>(
-                <div key={name} style={{display:"flex",justifyContent:"space-between",fontSize:10.5,color:"#92400E",
+                <div key={name} style={{display:"flex",justifyContent:"space-between",fontSize:12,color:"#92400E",
                   background:"#FFFFFF88",borderRadius:8,padding:"5px 10px"}}>
                   <span style={{overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",maxWidth:"70%",fontWeight:600}}>{name}</span>
                   <span style={{fontWeight:900}}>{fmtW(sp)}</span>
@@ -8348,9 +8348,9 @@ export default function OaDashboard(){
     const winners=creas.filter(r=>r.cost>=10000&&r.roas>=TARGET).sort((a,b)=>b.roas-a.roas).slice(0,8);
     const losers =creas.filter(r=>r.cost>=50000&&r.roas<50).slice(0,8);
 
-    const th={padding:"9px 10px",textAlign:"left",fontWeight:700,fontSize:12,color:C.inkMid,borderBottom:`1px solid ${C.border}`,whiteSpace:"nowrap"};
+    const th={padding:"9px 10px",textAlign:"left",fontWeight:700,fontSize:13,color:C.inkMid,borderBottom:`1px solid ${C.border}`,whiteSpace:"nowrap"};
     const td={padding:"9px 10px",whiteSpace:"nowrap"};
-    const chip=(j)=>(<span style={{fontSize:12,fontWeight:800,color:j.color,background:j.bg,padding:"3px 8px",borderRadius:20,whiteSpace:"nowrap"}}>{j.t}</span>);
+    const chip=(j)=>(<span style={{fontSize:13,fontWeight:800,color:j.color,background:j.bg,padding:"3px 8px",borderRadius:20,whiteSpace:"nowrap"}}>{j.t}</span>);
 
     return(
       <div style={{display:"flex",flexDirection:"column",gap:14}}>
@@ -8359,21 +8359,21 @@ export default function OaDashboard(){
           <div style={{display:"flex",alignItems:"center",gap:10,flexWrap:"wrap"}}>
             <div style={{flex:1,minWidth:200}}>
               <div style={{fontSize:15,fontWeight:900,color:C.ink}}>GFA 소재 판정</div>
-              <div style={{fontSize:12,color:C.inkMid,marginTop:2}}>
+              <div style={{fontSize:13,color:C.inkMid,marginTop:2}}>
                 광고주센터(ads.naver.com) → 보고서 → <b>소재별</b> CSV 다운로드 후 업로드하면 소재변경/증액을 자동 판정합니다
                 {gfaReport&&<span> · 현재: <b>{gfaReport.fileName}</b> ({(gfaReport.uploadedAt||"").slice(0,10)})</span>}
               </div>
             </div>
-            <button onClick={setTarget} style={{padding:"8px 14px",borderRadius:10,border:`1px solid ${C.border}`,background:"#fff",fontWeight:800,fontSize:12,cursor:"pointer",fontFamily:"inherit",color:C.ink}}>
+            <button onClick={setTarget} style={{padding:"8px 14px",borderRadius:10,border:`1px solid ${C.border}`,background:"#fff",fontWeight:800,fontSize:13,cursor:"pointer",fontFamily:"inherit",color:C.ink}}>
               목표 ROAS {TARGET}%
             </button>
             {rows.length>0&&(
-              <label style={{padding:"8px 14px",borderRadius:10,border:`1px solid ${C.border}`,background:"#fff",fontWeight:800,fontSize:12,cursor:"pointer",color:C.ink}}>
+              <label style={{padding:"8px 14px",borderRadius:10,border:`1px solid ${C.border}`,background:"#fff",fontWeight:800,fontSize:13,cursor:"pointer",color:C.ink}}>
                 소재 이미지 업로드
                 <input type="file" accept="image/*" multiple onChange={onGfaThumbBulk} style={{display:"none"}}/>
               </label>
             )}
-            <label style={{padding:"8px 16px",borderRadius:10,background:C.rose,color:"#fff",fontWeight:800,fontSize:12,cursor:"pointer"}}>
+            <label style={{padding:"8px 16px",borderRadius:10,background:C.rose,color:"#fff",fontWeight:800,fontSize:13,cursor:"pointer"}}>
               CSV 업로드
               <input type="file" accept=".csv" onChange={onGfaFile} style={{display:"none"}}/>
             </label>
@@ -8391,7 +8391,7 @@ export default function OaDashboard(){
           <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(120px,1fr))",gap:10}}>
             {[["총 지출",`${fmtW(tot.cost)}원`],["구매완료",`${tot.buy}건`],["구매 매출",`${fmtW(tot.rev)}원`],["ROAS",`${tot.roas.toFixed(0)}%`],["구매당 비용",tot.cpa?`${fmtW(tot.cpa)}원`:"—"],["CTR",`${tot.ctr.toFixed(2)}%`]].map(([l,v])=>(
               <Card key={l} style={{padding:"14px 16px"}}>
-                <div style={{fontSize:12,fontWeight:700,color:C.inkLt}}>{l}</div>
+                <div style={{fontSize:13,fontWeight:700,color:C.inkLt}}>{l}</div>
                 <div style={{fontSize:21,fontWeight:900,color:C.ink,marginTop:2}}>{v}</div>
               </Card>
             ))}
@@ -8416,7 +8416,7 @@ export default function OaDashboard(){
                     <td style={td}>{fmtW(c.rev)}</td>
                     <td style={{...td,fontWeight:900,color:c.roas>=TARGET?C.good:c.roas>=100?C.rose:c.roas>0?C.warn:C.bad}}>{c.roas.toFixed(0)}%</td>
                     <td style={td}>{chip(j)}</td>
-                    <td style={{...td,fontSize:11.5,color:C.inkMid}}>{j.d}</td>
+                    <td style={{...td,fontSize:12.5,color:C.inkMid}}>{j.d}</td>
                   </tr>);})}
                 </tbody>
               </table>
@@ -8433,7 +8433,7 @@ export default function OaDashboard(){
                   <span style={{flex:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",fontWeight:600}}>{r.name}{r.days!=null&&<span style={{color:C.inkLt}}> · {r.days}일차</span>}</span>
                   <span style={{fontWeight:900,color:C.good,whiteSpace:"nowrap"}}>ROAS {r.roas.toFixed(0)}% · {fmtW(r.cost)}원</span>
                 </div>
-              )):<div style={{fontSize:12,color:C.inkLt}}>해당 없음</div>}
+              )):<div style={{fontSize:13,color:C.inkLt}}>해당 없음</div>}
             </Card>
             <Card>
               <div style={{fontSize:14,fontWeight:900,color:C.bad,marginBottom:8}}>🔻 루저 소재 — 교체/중단 (지출 5만↑ & ROAS 50%↓)</div>
@@ -8443,7 +8443,7 @@ export default function OaDashboard(){
                   <span style={{flex:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",fontWeight:600}}>{r.name} <span style={{color:C.inkLt}}>({r.camp}{r.days!=null?` · ${r.days}일차`:""})</span></span>
                   <span style={{fontWeight:900,color:C.bad,whiteSpace:"nowrap"}}>ROAS {r.roas.toFixed(0)}% · {fmtW(r.cost)}원</span>
                 </div>
-              )):<div style={{fontSize:12,color:C.inkLt}}>해당 없음</div>}
+              )):<div style={{fontSize:13,color:C.inkLt}}>해당 없음</div>}
             </Card>
           </div>
 
@@ -8475,7 +8475,7 @@ export default function OaDashboard(){
             </details>
           </Card>
 
-          <div style={{fontSize:11.5,color:C.inkLt,padding:"0 4px"}}>
+          <div style={{fontSize:12.5,color:C.inkLt,padding:"0 4px"}}>
             ※ 모든 지표는 <b>구매완료 기준</b> (장바구니 제외) · 운영 3일 미만·지출 3만 미만은 판단 보류 · 증액은 2배씩 점진 (급증 시 ROAS 하락 위험) · 소재 이미지는 파일명↔소재명 자동 매칭, 업로드하면 팀 전체 공유
           </div>
         </>)}
@@ -8568,9 +8568,9 @@ export default function OaDashboard(){
       .map(a=>({...a,sales:catSales[a.cat]||0}))
       .sort((a,b)=>b.spend-a.spend);
     const growthChip=(g)=>{
-      if(g===null) return <span style={{fontSize:10,color:C.inkLt}}>신규</span>;
+      if(g===null) return <span style={{fontSize:12,color:C.inkLt}}>신규</span>;
       const up=g>=0;
-      return <span style={{fontSize:11,fontWeight:800,color:up?(g>=0.3?C.good:C.inkMid):(g<=-0.3?C.bad:C.inkMid)}}>{up?"+":""}{Math.round(g*100)}%</span>;
+      return <span style={{fontSize:12,fontWeight:800,color:up?(g>=0.3?C.good:C.inkMid):(g<=-0.3?C.bad:C.inkMid)}}>{up?"+":""}{Math.round(g*100)}%</span>;
     };
     const th={padding:"6px 8px",textAlign:"left",fontWeight:700,color:C.inkMid,borderBottom:`1px solid ${C.border}`,whiteSpace:"nowrap"};
     const td={padding:"6px 8px",whiteSpace:"nowrap"};
@@ -8636,10 +8636,10 @@ export default function OaDashboard(){
     const srMovers=srList.filter(x=>x.d7!=null&&Math.abs(x.d7)>=5&&(x.cur<=100||x.w1<=100)).sort((a,b)=>b.d7-a.d7);
     const srUpdated=srData?.updated?new Date(srData.updated).toLocaleString("ko-KR",{month:"numeric",day:"numeric",hour:"numeric",minute:"2-digit"}):null;
     const srChip=(d)=>{
-      if(d==null) return <span style={{fontSize:10,color:C.inkLt}}>—</span>;
-      if(d===0) return <span style={{fontSize:10,fontWeight:700,color:C.inkLt}}>0</span>;
+      if(d==null) return <span style={{fontSize:12,color:C.inkLt}}>—</span>;
+      if(d===0) return <span style={{fontSize:12,fontWeight:700,color:C.inkLt}}>0</span>;
       const worse=d>0;
-      return <span style={{fontSize:10.5,fontWeight:800,color:worse?C.bad:C.good}}>{worse?`▼${d}`:`▲${-d}`}</span>;
+      return <span style={{fontSize:12,fontWeight:800,color:worse?C.bad:C.good}}>{worse?`▼${d}`:`▲${-d}`}</span>;
     };
     const actGroups=[
       {key:"boost",title:"🔥 증액 — 잘 팔리는 중, 더 밀기",color:C.bad,bg:"#FEF0F0"},
@@ -8664,15 +8664,15 @@ export default function OaDashboard(){
           <div style={{position:"absolute",right:60,bottom:-90,width:200,height:200,borderRadius:"50%",background:"rgba(255,255,255,.05)"}}/>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",flexWrap:"wrap",gap:10,position:"relative"}}>
             <div>
-              <div style={{fontSize:11,fontWeight:800,letterSpacing:2,color:"#8E8E93"}}>PRODUCT PRIORITY</div>
+              <div style={{fontSize:12,fontWeight:800,letterSpacing:2,color:"#8E8E93"}}>PRODUCT PRIORITY</div>
               <div style={{fontSize:22,fontWeight:900,marginTop:2}}>이번 주 어디에 불을 붙일까</div>
-              <div style={{fontSize:11,fontWeight:700,color:"#8E8E93",marginTop:4}}>
+              <div style={{fontSize:12,fontWeight:700,color:"#8E8E93",marginTop:4}}>
                 선택 기간 {days}일 vs 직전 {days}일 매출 자동 분류 · 제품 {enriched.length}개{updated?` · 갱신 ${updated}`:""}
               </div>
             </div>
             <select value={prioCat} onChange={e=>setPrioCat(e.target.value)}
               style={{background:"rgba(255,255,255,.14)",border:"1px solid rgba(255,255,255,.25)",color:"#fff",
-                borderRadius:10,padding:"6px 12px",fontSize:12,fontWeight:800,cursor:"pointer",fontFamily:"inherit"}}>
+                borderRadius:10,padding:"6px 12px",fontSize:13,fontWeight:800,cursor:"pointer",fontFamily:"inherit"}}>
               {cats.map(c=><option key={c} value={c} style={{color:"#1D1D1F"}}>{c}</option>)}
             </select>
           </div>
@@ -8683,25 +8683,25 @@ export default function OaDashboard(){
                 style={{background:days===n&&to===new Date().toISOString().slice(0,10)?"#fff":"rgba(255,255,255,.14)",
                   color:days===n&&to===new Date().toISOString().slice(0,10)?"#1D1D1F":"#fff",
                   border:"1px solid rgba(255,255,255,.25)",borderRadius:20,padding:"5px 13px",
-                  fontSize:11,fontWeight:800,cursor:"pointer",fontFamily:"inherit"}}>
+                  fontSize:12,fontWeight:800,cursor:"pointer",fontFamily:"inherit"}}>
                 {n}일
               </button>
             ))}
             <input type="date" value={prioFrom} max={prioTo} onChange={e=>e.target.value&&setPrioFrom(e.target.value)}
               style={{background:"rgba(255,255,255,.14)",border:"1px solid rgba(255,255,255,.25)",color:"#fff",
-                borderRadius:10,padding:"4px 8px",fontSize:11,fontWeight:700,fontFamily:"inherit",colorScheme:"dark"}}/>
-            <span style={{fontSize:11,color:"#8E8E93",fontWeight:800}}>~</span>
+                borderRadius:10,padding:"4px 8px",fontSize:12,fontWeight:700,fontFamily:"inherit",colorScheme:"dark"}}/>
+            <span style={{fontSize:12,color:"#8E8E93",fontWeight:800}}>~</span>
             <input type="date" value={prioTo} min={prioFrom} onChange={e=>e.target.value&&setPrioTo(e.target.value)}
               style={{background:"rgba(255,255,255,.14)",border:"1px solid rgba(255,255,255,.25)",color:"#fff",
-                borderRadius:10,padding:"4px 8px",fontSize:11,fontWeight:700,fontFamily:"inherit",colorScheme:"dark"}}/>
-            <span style={{fontSize:10,color:"#8E8E93",fontWeight:700}}>비교: {prevFrom} ~ {prevTo}</span>
+                borderRadius:10,padding:"4px 8px",fontSize:12,fontWeight:700,fontFamily:"inherit",colorScheme:"dark"}}/>
+            <span style={{fontSize:12,color:"#8E8E93",fontWeight:700}}>비교: {prevFrom} ~ {prevTo}</span>
           </div>
           <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(130px,1fr))",gap:10,marginTop:18,position:"relative"}}>
             {heroCounts.map(([l,v,col])=>(
               <div key={l} style={{background:"rgba(255,255,255,.10)",border:"1px solid rgba(255,255,255,.15)",
                 borderRadius:14,padding:"12px 14px",backdropFilter:"blur(4px)"}}>
-                <div style={{fontSize:10,fontWeight:700,color:"#AEAEB2"}}>{l}</div>
-                <div style={{fontSize:24,fontWeight:900,marginTop:3,letterSpacing:-.5,color:col}}>{v}<span style={{fontSize:12,color:"#AEAEB2",fontWeight:800,marginLeft:2}}>개</span></div>
+                <div style={{fontSize:12,fontWeight:700,color:"#AEAEB2"}}>{l}</div>
+                <div style={{fontSize:24,fontWeight:900,marginTop:3,letterSpacing:-.5,color:col}}>{v}<span style={{fontSize:13,color:"#AEAEB2",fontWeight:800,marginLeft:2}}>개</span></div>
               </div>
             ))}
           </div>
@@ -8717,21 +8717,21 @@ export default function OaDashboard(){
                 <div style={{padding:"12px 16px",background:gr.bg,display:"flex",justifyContent:"space-between",alignItems:"center",
                   borderBottom:"1px solid rgba(0,0,0,.05)"}}>
                   <span style={{fontSize:13,fontWeight:900,color:gr.color,letterSpacing:-.2}}>{gr.title}</span>
-                  <span style={{fontSize:11,fontWeight:900,color:gr.color,background:"rgba(255,255,255,.7)",
+                  <span style={{fontSize:12,fontWeight:900,color:gr.color,background:"rgba(255,255,255,.7)",
                     padding:"3px 10px",borderRadius:20}}>{list.length}개</span>
                 </div>
                 {list.slice(0,6).map((it,i)=>(
                   <div key={it.product} style={{padding:"10px 16px",borderTop:i>0?"1px solid rgba(0,0,0,.04)":"none"}}>
                     <div style={{display:"flex",justifyContent:"space-between",alignItems:"baseline",gap:8}}>
-                      <span style={{fontSize:12.5,fontWeight:800,color:C.ink,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",letterSpacing:-.2}}>{it.product}</span>
-                      <span style={{fontSize:11,fontWeight:800,color:C.inkMid,whiteSpace:"nowrap"}}>₩{fmtW(it.s30)} {growthChip(it.growth)}</span>
+                      <span style={{fontSize:13,fontWeight:800,color:C.ink,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",letterSpacing:-.2}}>{it.product}</span>
+                      <span style={{fontSize:12,fontWeight:800,color:C.inkMid,whiteSpace:"nowrap"}}>₩{fmtW(it.s30)} {growthChip(it.growth)}</span>
                     </div>
-                    <div style={{fontSize:10.5,fontWeight:600,color:gr.color,marginTop:3,background:gr.bg,
+                    <div style={{fontSize:12,fontWeight:600,color:gr.color,marginTop:3,background:gr.bg,
                       display:"inline-block",padding:"3px 9px",borderRadius:8}}>→ {advise(it)}</div>
                   </div>
                 ))}
-                {list.length>6&&<div style={{padding:"8px 16px",borderTop:"1px solid rgba(0,0,0,.04)",fontSize:10,fontWeight:700,color:C.inkLt}}>+{list.length-6}개 더 — 아래 전체 표에서 확인</div>}
-                {list.length===0&&<div style={{padding:"16px",fontSize:11,color:C.inkLt}}>해당 없음</div>}
+                {list.length>6&&<div style={{padding:"8px 16px",borderTop:"1px solid rgba(0,0,0,.04)",fontSize:12,fontWeight:700,color:C.inkLt}}>+{list.length-6}개 더 — 아래 전체 표에서 확인</div>}
+                {list.length===0&&<div style={{padding:"16px",fontSize:12,color:C.inkLt}}>해당 없음</div>}
               </div>
             );
           })}
@@ -8744,9 +8744,9 @@ export default function OaDashboard(){
               action={
                 <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
                   <input value={srQ} onChange={e=>setSrQ(e.target.value)} placeholder="키워드/제품 검색"
-                    style={{padding:"5px 8px",border:`1px solid ${C.border}`,borderRadius:8,fontSize:11,fontFamily:"inherit",width:130}}/>
+                    style={{padding:"5px 8px",border:`1px solid ${C.border}`,borderRadius:8,fontSize:12,fontFamily:"inherit",width:130}}/>
                   <button onClick={()=>setSrOpen(v=>!v)}
-                    style={{padding:"5px 12px",border:`1px solid ${C.border}`,borderRadius:8,fontSize:11,fontWeight:700,fontFamily:"inherit",background:C.white,color:C.inkMid,cursor:"pointer"}}>
+                    style={{padding:"5px 12px",border:`1px solid ${C.border}`,borderRadius:8,fontSize:12,fontWeight:700,fontFamily:"inherit",background:C.white,color:C.inkMid,cursor:"pointer"}}>
                     {srOpen||srQq?"급변만 보기":`전체 ${srList.length}개 펼치기`}
                   </button>
                 </div>
@@ -8758,21 +8758,21 @@ export default function OaDashboard(){
                     <div key={x.kw} style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:8,
                       background:x.d7>0?"#FFF8EC":"#EDF7F1",borderRadius:10,padding:"8px 12px"}}>
                       <div style={{overflow:"hidden"}}>
-                        <div style={{fontSize:11.5,fontWeight:800,color:C.ink,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{x.kw}</div>
-                        <div style={{fontSize:9.5,color:C.inkLt,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{x.prod||"—"}</div>
+                        <div style={{fontSize:12.5,fontWeight:800,color:C.ink,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{x.kw}</div>
+                        <div style={{fontSize:11,color:C.inkLt,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{x.prod||"—"}</div>
                       </div>
                       <div style={{textAlign:"right",whiteSpace:"nowrap"}}>
-                        <div style={{fontSize:12,fontWeight:900,color:C.ink}}>{x.cur}위</div>
-                        <div>{srChip(x.d7)}<span style={{fontSize:9,color:C.inkLt,marginLeft:3}}>7일</span></div>
+                        <div style={{fontSize:13,fontWeight:900,color:C.ink}}>{x.cur}위</div>
+                        <div>{srChip(x.d7)}<span style={{fontSize:11,color:C.inkLt,marginLeft:3}}>7일</span></div>
                       </div>
                     </div>
                   ))}
                 </div>
-              ):<div style={{fontSize:11,color:C.inkLt}}>최근 7일 급변(±5계단 이상) 없음 — 검색하거나 전체를 펼쳐보세요</div>
+              ):<div style={{fontSize:12,color:C.inkLt}}>최근 7일 급변(±5계단 이상) 없음 — 검색하거나 전체를 펼쳐보세요</div>
             )}
             {(srOpen||srQq)&&(
               <div style={{overflowX:"auto",maxHeight:420,overflowY:"auto"}}>
-                <table style={{width:"100%",borderCollapse:"collapse",fontSize:11}}>
+                <table style={{width:"100%",borderCollapse:"collapse",fontSize:12}}>
                   <thead><tr style={{background:C.cream,position:"sticky",top:0}}>
                     {["키워드","현재","7일 전","30일 전","7일 변동","대표 상품"].map(h=><th key={h} style={th}>{h}</th>)}
                   </tr></thead>
@@ -8799,7 +8799,7 @@ export default function OaDashboard(){
           <Card>
             <CardTitle title={`💸 카테고리 광고비 vs 매출 (${lastMonth})`} sub={`오아 브랜드 월 광고비 대비 해당 카테고리 선택 기간(${days}일) 매출 — 배분이 안 맞는 곳 점검`}/>
             <div style={{overflowX:"auto"}}>
-              <table style={{width:"100%",borderCollapse:"collapse",fontSize:11}}>
+              <table style={{width:"100%",borderCollapse:"collapse",fontSize:12}}>
                 <thead><tr style={{background:C.cream}}>
                   {["카테고리","월 광고비",`기간 매출 (${days}일)`,"매출/광고비"].map(h=><th key={h} style={th}>{h}</th>)}
                 </tr></thead>
@@ -8827,23 +8827,23 @@ export default function OaDashboard(){
               <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
                 {prioShowTable&&<>
                 <select value={prioCat} onChange={e=>setPrioCat(e.target.value)}
-                  style={{padding:"5px 8px",border:`1px solid ${C.border}`,borderRadius:8,fontSize:11,fontFamily:"inherit",background:C.white}}>
+                  style={{padding:"5px 8px",border:`1px solid ${C.border}`,borderRadius:8,fontSize:12,fontFamily:"inherit",background:C.white}}>
                   {cats.map(c=><option key={c} value={c}>{c}</option>)}
                 </select>
                 <input value={prioQ} onChange={e=>setPrioQ(e.target.value)} placeholder="제품 검색"
-                  style={{padding:"5px 8px",border:`1px solid ${C.border}`,borderRadius:8,fontSize:11,fontFamily:"inherit",width:110}}/>
-                <label style={{display:"flex",alignItems:"center",gap:4,fontSize:11,color:C.inkMid,cursor:"pointer"}}>
+                  style={{padding:"5px 8px",border:`1px solid ${C.border}`,borderRadius:8,fontSize:12,fontFamily:"inherit",width:110}}/>
+                <label style={{display:"flex",alignItems:"center",gap:4,fontSize:12,color:C.inkMid,cursor:"pointer"}}>
                   <input type="checkbox" checked={prioActOnly} onChange={e=>setPrioActOnly(e.target.checked)}/>액션만
                 </label>
                 </>}
                 <button onClick={()=>setPrioShowTable(v=>!v)}
-                  style={{padding:"5px 12px",border:`1px solid ${C.border}`,borderRadius:8,fontSize:11,fontWeight:700,fontFamily:"inherit",background:C.white,color:C.inkMid,cursor:"pointer"}}>
+                  style={{padding:"5px 12px",border:`1px solid ${C.border}`,borderRadius:8,fontSize:12,fontWeight:700,fontFamily:"inherit",background:C.white,color:C.inkMid,cursor:"pointer"}}>
                   {prioShowTable?"접기":"전체 표 펼치기"}
                 </button>
               </div>
             }/>
           {prioShowTable&&<div style={{overflowX:"auto"}}>
-            <table style={{width:"100%",borderCollapse:"collapse",fontSize:11}}>
+            <table style={{width:"100%",borderCollapse:"collapse",fontSize:12}}>
               <thead><tr style={{background:C.cream}}>
                 {["#","카테고리","제품",`기간 ${days}일`,`직전 ${days}일`,"성장률","수량","메타광고비","클릭","CTR","랜딩도달율","구매당비용(전환)","네이버광고비","네이버구매당비용","액션"].map(h=><th key={h} style={th}>{h}</th>)}
               </tr></thead>
@@ -8858,19 +8858,19 @@ export default function OaDashboard(){
                     <td style={td}>{growthChip(it.growth)}</td>
                     <td style={{...td,color:C.inkMid}}>{(it.q30||0).toLocaleString()}</td>
                     <td style={td} title={it.ad30>0?`전환 ₩${fmtW(it.adConv30||0)} · 트래픽 ₩${fmtW(it.adTraffic30||0)}`:undefined}>{it.ad30>0?`₩${fmtW(it.ad30)}`:(it.act&&(it.act.key==="boost"||it.act.key==="spark")&&!(it.nav30>0)?(
-                      <span style={{fontSize:9,fontWeight:800,padding:"2px 7px",borderRadius:20,color:C.rose,background:C.blush,border:`1px solid ${C.rose}33`}}>무광고 기회</span>
+                      <span style={{fontSize:11,fontWeight:800,padding:"2px 7px",borderRadius:20,color:C.rose,background:C.blush,border:`1px solid ${C.rose}33`}}>무광고 기회</span>
                     ):<span style={{color:C.inkLt}}>—</span>)}</td>
                     <td style={{...td,color:C.inkMid}}>{it.adClicks>0?it.adClicks.toLocaleString():"—"}</td>
                     <td style={{...td,fontWeight:700,color:it.adCtr===null?C.inkLt:it.adCtr>=1.5?C.good:it.adCtr<0.8?C.bad:C.ink}}>{it.adCtr!==null?`${it.adCtr.toFixed(2)}%`:"—"}</td>
                     <td style={{...td,fontWeight:700,color:it.adLpvRate===null?C.inkLt:it.adLpvRate>=80?C.good:it.adLpvRate<60?C.bad:C.ink}}>{it.adLpvRate!==null?`${Math.round(it.adLpvRate)}%`:"—"}</td>
                     <td style={{...td,fontWeight:700,color:it.adCpa===null?C.inkLt:C.ink}}>{it.adCpa!==null?`₩${fmtW(it.adCpa)}`:it.adTrafficOnly?(
-                      <span style={{fontSize:9,fontWeight:800,padding:"2px 7px",borderRadius:20,color:C.warn,background:"#FFF8EC",border:`1px solid ${C.warn}33`}} title="메타 지출이 전부 트래픽 캠페인 — 구매당비용 측정 불가">트래픽만</span>
+                      <span style={{fontSize:11,fontWeight:800,padding:"2px 7px",borderRadius:20,color:C.warn,background:"#FFF8EC",border:`1px solid ${C.warn}33`}} title="메타 지출이 전부 트래픽 캠페인 — 구매당비용 측정 불가">트래픽만</span>
                     ):"—"}</td>
                     <td style={td} title={it.nav30>0?`클릭 ${(it.navClk||0).toLocaleString()} · CTR ${it.navCtr!==null?it.navCtr.toFixed(2)+"%":"—"}`:undefined}>{it.nav30>0?`₩${fmtW(it.nav30)}`:<span style={{color:C.inkLt}}>—</span>}</td>
                     <td style={{...td,fontWeight:700,color:it.navCpa===null?C.inkLt:C.ink}}>{it.navCpa!==null?`₩${fmtW(it.navCpa)}`:"—"}</td>
                     <td style={td}>{it.act?(
-                      <span title={it.act.key==="cool"?(whyCool(it).join(" · ")||it.act.desc):it.act.desc} style={{fontSize:10,fontWeight:800,padding:"2px 8px",borderRadius:20,color:it.act.color,background:it.act.bg,border:`1px solid ${it.act.color}33`,cursor:"default"}}>{it.act.label}</span>
-                    ):<span style={{fontSize:10,color:C.inkLt}}>—</span>}</td>
+                      <span title={it.act.key==="cool"?(whyCool(it).join(" · ")||it.act.desc):it.act.desc} style={{fontSize:12,fontWeight:800,padding:"2px 8px",borderRadius:20,color:it.act.color,background:it.act.bg,border:`1px solid ${it.act.color}33`,cursor:"default"}}>{it.act.label}</span>
+                    ):<span style={{fontSize:12,color:C.inkLt}}>—</span>}</td>
                   </tr>
                 ))}
                 {filtered.length===0&&(
@@ -8879,7 +8879,7 @@ export default function OaDashboard(){
               </tbody>
             </table>
           </div>}
-          {prioShowTable&&filtered.length>100&&<div style={{fontSize:10,color:C.inkLt,marginTop:8}}>상위 100개만 표시 (전체 {filtered.length}개)</div>}
+          {prioShowTable&&filtered.length>100&&<div style={{fontSize:12,color:C.inkLt,marginTop:8}}>상위 100개만 표시 (전체 {filtered.length}개)</div>}
         </Card>
       </div>
     );
@@ -8969,7 +8969,7 @@ export default function OaDashboard(){
         borderRadius:20,padding:"22px 24px",color:"#fff",position:"relative",overflow:"hidden",
         boxShadow:"0 12px 32px rgba(0,0,0,.18)"}}>
         <div style={{position:"absolute",right:-60,top:-60,width:200,height:200,borderRadius:"50%",background:"rgba(255,255,255,.05)"}}/>
-        <div style={{fontSize:10,fontWeight:700,letterSpacing:"0.14em",color:"#8E8E93",marginBottom:6,position:"relative"}}>TODAY · {dateStr}</div>
+        <div style={{fontSize:12,fontWeight:700,letterSpacing:"0.14em",color:"#8E8E93",marginBottom:6,position:"relative"}}>TODAY · {dateStr}</div>
         <div style={{fontSize:26,fontWeight:800,lineHeight:1.15,letterSpacing:"-0.02em",position:"relative"}}>
           {totalAlerts>0
             ?<>확인 필요 <span style={{color:"#FF453A"}}>{totalAlerts}건</span></>
@@ -8979,7 +8979,7 @@ export default function OaDashboard(){
           <div style={{display:"flex",flexWrap:"wrap",gap:6,marginTop:12,position:"relative"}}>
             {activeGroups.map(g=>(
               <span key={g.id} onClick={g.action} style={{
-                fontSize:10.5,fontWeight:700,padding:"5px 12px",borderRadius:20,
+                fontSize:12,fontWeight:700,padding:"5px 12px",borderRadius:20,
                 background:"rgba(255,255,255,.12)",color:"#fff",
                 cursor:"pointer",backdropFilter:"blur(6px)",border:"1px solid rgba(255,255,255,.18)"}}>
                 <MI n={g.icon} size={10}/> {g.label} {g.count}
@@ -8993,28 +8993,28 @@ export default function OaDashboard(){
             borderTop:"1px solid rgba(255,255,255,.12)"}}>
             {homeSales&&(
               <div>
-                <div style={{fontSize:10,fontWeight:700,color:"#8E8E93"}}>오늘 매출</div>
+                <div style={{fontSize:12,fontWeight:700,color:"#8E8E93"}}>오늘 매출</div>
                 <div style={{fontSize:21,fontWeight:800,letterSpacing:"-0.02em",marginTop:2}}>{fmtS(homeSales.today)}</div>
               </div>
             )}
             {ySpend>0&&(
               <div onClick={()=>setSec("meta")} style={{cursor:"pointer"}}>
-                <div style={{fontSize:10,fontWeight:700,color:"#8E8E93"}}>전날 광고비 · {yStr.slice(5)}</div>
+                <div style={{fontSize:12,fontWeight:700,color:"#8E8E93"}}>전날 광고비 · {yStr.slice(5)}</div>
                 <div style={{fontSize:21,fontWeight:800,letterSpacing:"-0.02em",marginTop:2}}>{fmtW(ySpend)}</div>
-                <div style={{fontSize:9.5,fontWeight:600,color:"#8E8E93",marginTop:1}}>전환 {fmtW(yConv)} · 트래픽 {fmtW(yTraff)}</div>
+                <div style={{fontSize:11,fontWeight:600,color:"#8E8E93",marginTop:1}}>전환 {fmtW(yConv)} · 트래픽 {fmtW(yTraff)}</div>
               </div>
             )}
             {homeSales&&(
               <div>
-                <div style={{fontSize:10,fontWeight:700,color:"#8E8E93"}}>이번 주</div>
+                <div style={{fontSize:12,fontWeight:700,color:"#8E8E93"}}>이번 주</div>
                 <div style={{fontSize:21,fontWeight:800,letterSpacing:"-0.02em",marginTop:2}}>{fmtS(homeSales.week)}</div>
-                {homeSales.weekChange!==0&&<div style={{fontSize:9.5,fontWeight:700,marginTop:1,
+                {homeSales.weekChange!==0&&<div style={{fontSize:11,fontWeight:700,marginTop:1,
                   color:homeSales.weekChange>0?"#30D158":"#FF453A"}}>{homeSales.weekChange>0?"+":""}{homeSales.weekChange}% 전주비</div>}
               </div>
             )}
             {homeSales&&(
               <div>
-                <div style={{fontSize:10,fontWeight:700,color:"#8E8E93"}}>이번 달 매출</div>
+                <div style={{fontSize:12,fontWeight:700,color:"#8E8E93"}}>이번 달 매출</div>
                 <div style={{fontSize:21,fontWeight:800,letterSpacing:"-0.02em",marginTop:2}}>{fmtS(homeSales.month)}</div>
               </div>
             )}
@@ -9047,7 +9047,7 @@ export default function OaDashboard(){
           <div onClick={()=>setSec("portfolio")} style={{background:C.white,border:"1px solid rgba(0,0,0,.06)",
             borderRadius:16,padding:"14px 16px",cursor:"pointer",boxShadow:"0 2px 8px rgba(0,0,0,.04)"}}>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
-              <div style={{fontSize:11,fontWeight:800,color:C.ink}}>📊 팀 예산 페이싱 · {Number(m.slice(5))}월</div>
+              <div style={{fontSize:12,fontWeight:800,color:C.ink}}>📊 팀 예산 페이싱 · {Number(m.slice(5))}월</div>
               <MI n="arrow_forward_ios" size={12} style={{color:C.inkLt}}/>
             </div>
             <div style={{display:"grid",gap:8}}>
@@ -9057,14 +9057,14 @@ export default function OaDashboard(){
                 const pColor=diff>0.1?"#D70015":diff<-0.1?"#C93400":"#248A3D";
                 return(
                   <div key={t.id} style={{display:"flex",alignItems:"center",gap:10}}>
-                    <span style={{fontSize:10.5,fontWeight:800,color:C.ink,minWidth:56,display:"flex",alignItems:"center",gap:5}}>
+                    <span style={{fontSize:12,fontWeight:800,color:C.ink,minWidth:56,display:"flex",alignItems:"center",gap:5}}>
                       <span style={{width:7,height:7,borderRadius:"50%",background:color,flexShrink:0}}/>{t.name}</span>
                     <div style={{flex:1,position:"relative",height:7,background:"#EDEDF0",borderRadius:7}}>
                       <div style={{position:"absolute",left:0,top:0,bottom:0,width:`${Math.min(100,ratio*100)}%`,background:color,borderRadius:7}}/>
                       <div style={{position:"absolute",left:`calc(${Math.min(100,elapsed*100)}% - 1px)`,top:-2,bottom:-2,width:2,background:"#1D1D1F",borderRadius:1,opacity:.5}}/>
                     </div>
-                    <span style={{fontSize:10.5,fontWeight:900,color:pColor,minWidth:34,textAlign:"right"}}>{Math.round(ratio*100)}%</span>
-                    <span style={{fontSize:9.5,fontWeight:600,color:C.inkLt,minWidth:90,textAlign:"right"}}>{fmtW(spent)} / {fmtW(budget)}</span>
+                    <span style={{fontSize:12,fontWeight:900,color:pColor,minWidth:34,textAlign:"right"}}>{Math.round(ratio*100)}%</span>
+                    <span style={{fontSize:11,fontWeight:600,color:C.inkLt,minWidth:90,textAlign:"right"}}>{fmtW(spent)} / {fmtW(budget)}</span>
                   </div>
                 );
               })}
@@ -9084,19 +9084,19 @@ export default function OaDashboard(){
                 padding:"12px 16px",background:g.bg}}>
                 <div style={{display:"flex",alignItems:"center",gap:8,cursor:"pointer",flex:1}} onClick={g.action}>
                   <span style={{fontSize:16}}>{g.icon}</span>
-                  <span style={{fontSize:12,fontWeight:800,color:g.color}}>{g.label}</span>
-                  <span style={{fontSize:11,fontWeight:900,color:C.white,background:g.color,
+                  <span style={{fontSize:13,fontWeight:800,color:g.color}}>{g.label}</span>
+                  <span style={{fontSize:12,fontWeight:900,color:C.white,background:g.color,
                     padding:"1px 8px",borderRadius:20,minWidth:20,textAlign:"center"}}>{g.count}</span>
                 </div>
                 <div style={{display:"flex",alignItems:"center",gap:6}}>
                   {g.dismissAll&&(
                     <button onClick={e=>{e.stopPropagation();g.dismissAll();}}
-                      style={{fontSize:10,fontWeight:700,padding:"3px 10px",borderRadius:6,cursor:"pointer",
+                      style={{fontSize:12,fontWeight:700,padding:"3px 10px",borderRadius:6,cursor:"pointer",
                         border:`1px solid ${g.color}44`,background:"transparent",color:g.color,fontFamily:"inherit"}}>
                       전체 삭제
                     </button>
                   )}
-                  <span onClick={g.action} style={{fontSize:10,color:g.color,fontWeight:700,opacity:0.7,cursor:"pointer"}}>→ 바로가기</span>
+                  <span onClick={g.action} style={{fontSize:12,color:g.color,fontWeight:700,opacity:0.7,cursor:"pointer"}}>→ 바로가기</span>
                 </div>
               </div>
               {/* 아이템 목록 */}
@@ -9105,14 +9105,14 @@ export default function OaDashboard(){
                   <div key={i} style={{display:"flex",alignItems:"center",gap:6,
                     padding:"5px 0",borderBottom:i<Math.min(g.items.length,3)-1?`1px solid ${C.border}`:"none"}}>
                     <div style={{width:4,height:4,borderRadius:"50%",background:g.color,flexShrink:0}}/>
-                    <span style={{fontSize:11,color:C.ink,fontWeight:600,
+                    <span style={{fontSize:12,color:C.ink,fontWeight:600,
                       overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
                       {g.render(item)}
                     </span>
                   </div>
                 ))}
                 {g.items.length>3&&(
-                  <div style={{fontSize:10,color:C.inkLt,marginTop:4,textAlign:"center"}}>
+                  <div style={{fontSize:12,color:C.inkLt,marginTop:4,textAlign:"center"}}>
                     +{g.items.length-3}개 더
                   </div>
                 )}
@@ -9126,12 +9126,12 @@ export default function OaDashboard(){
       {homeInsights.length>0&&(
         <div onClick={()=>setSec("insight")} style={{background:"linear-gradient(135deg,#7c3aed11,#a78bfa11)",border:`1px solid #e9d5ff`,borderRadius:16,padding:"14px 16px",cursor:"pointer"}}>
           <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:8}}>
-            <div style={{fontSize:11,fontWeight:800,color:"#7c3aed"}}>🧠 AI 인사이트</div>
+            <div style={{fontSize:12,fontWeight:800,color:"#7c3aed"}}>🧠 AI 인사이트</div>
             <MI n="arrow_forward_ios" size={12} style={{color:"#a78bfa"}}/>
           </div>
           {homeInsights.slice(0,3).map(h=>(
-            <div key={h.id} style={{fontSize:11,color:C.ink,padding:"3px 0",display:"flex",alignItems:"flex-start",gap:6}}>
-              <span style={{fontSize:9,fontWeight:700,color:h.type==="원인분석"?"#2563eb":"#16a34a",background:h.type==="원인분석"?"#eff6ff":"#f0fdf4",padding:"1px 5px",borderRadius:4,flexShrink:0,marginTop:1}}>{h.type||"분석"}</span>
+            <div key={h.id} style={{fontSize:12,color:C.ink,padding:"3px 0",display:"flex",alignItems:"flex-start",gap:6}}>
+              <span style={{fontSize:11,fontWeight:700,color:h.type==="원인분석"?"#2563eb":"#16a34a",background:h.type==="원인분석"?"#eff6ff":"#f0fdf4",padding:"1px 5px",borderRadius:4,flexShrink:0,marginTop:1}}>{h.type||"분석"}</span>
               <span style={{fontWeight:600,lineHeight:1.4}}>{h.title}</span>
             </div>
           ))}
@@ -9142,7 +9142,7 @@ export default function OaDashboard(){
       {homeRankChanges.length>0&&(
         <div onClick={()=>setSec("keyword")} style={{background:C.white,border:"1px solid rgba(0,0,0,.06)",borderRadius:16,padding:"14px 16px",cursor:"pointer",boxShadow:"0 2px 8px rgba(0,0,0,.04)"}}>
           <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:8}}>
-            <div style={{fontSize:11,fontWeight:800,color:C.ink}}>🔍 검색순위 변동</div>
+            <div style={{fontSize:12,fontWeight:800,color:C.ink}}>🔍 검색순위 변동</div>
             <MI n="arrow_forward_ios" size={12} style={{color:C.inkLt}}/>
           </div>
           <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(160px,1fr))",gap:6}}>
@@ -9153,8 +9153,8 @@ export default function OaDashboard(){
                   {r.diff>0?`▲${r.diff}`:`▼${-r.diff}`}
                 </span>
                 <div style={{flex:1,minWidth:0}}>
-                  <div style={{fontSize:10,fontWeight:700,color:C.ink,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{r.keyword}</div>
-                  <div style={{fontSize:9,color:C.inkMid}}>{r.latest.rank}위 ← {r.prev.rank}위</div>
+                  <div style={{fontSize:12,fontWeight:700,color:C.ink,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{r.keyword}</div>
+                  <div style={{fontSize:11,color:C.inkMid}}>{r.latest.rank}위 ← {r.prev.rank}위</div>
                 </div>
               </div>
             ))}
@@ -9169,7 +9169,7 @@ export default function OaDashboard(){
       {/* 발주임박 시트 연결 모달 */}
       {orderModal&&(
         <Modal title={<><MI n="inventory_2"/> 발주임박 시트 연결</>} onClose={()=>setOrderModal(false)} wide>
-          <div style={{background:C.sageLt,borderRadius:10,padding:"12px 14px",marginBottom:16,fontSize:11,color:C.sage,fontWeight:700}}>
+          <div style={{background:C.sageLt,borderRadius:10,padding:"12px 14px",marginBottom:16,fontSize:12,color:C.sage,fontWeight:700}}>
             💡 구글시트 발주분석 파일의 <b>📋발주임박목록</b> 시트 URL을 붙여넣으세요<br/>
             <span style={{fontWeight:400,color:C.inkMid}}>시트 공유 설정 → "링크 있는 모든 사용자" → 뷰어 권한</span>
           </div>
@@ -9260,14 +9260,14 @@ export default function OaDashboard(){
     const nPush=items.filter(i=>i.act&&i.act.lv===2).length;
     const q=stQuery.trim().replace(/\s/g,"");
     const shown=items.filter(i=>(!q||(i.name||"").replace(/\s/g,"").includes(q))&&(!stOnlyAct||i.act));
-    if(stRows===null) return <Card><div style={{fontSize:11,color:C.inkLt,padding:"20px 0",textAlign:"center"}}>재고 데이터 로딩 중…</div></Card>;
+    if(stRows===null) return <Card><div style={{fontSize:12,color:C.inkLt,padding:"20px 0",textAlign:"center"}}>재고 데이터 로딩 중…</div></Card>;
     return(
       <div style={{display:"flex",flexDirection:"column",gap:14}}>
         <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
           {[["품절 임박",nCrit,"#b91c1c","#fef2f2"],["발주 점검",nWarn,"#92400e","#fffbeb"],["증액/밀어주기 후보",nPush,"#0369a1","#f0f9ff"]].map(([l,n,fg,bg])=>(
             <div key={l} style={{flex:1,minWidth:120,background:bg,border:`1px solid ${C.border}`,borderRadius:12,padding:"12px 14px"}}>
-              <div style={{fontSize:10,fontWeight:700,color:fg}}>{l}</div>
-              <div style={{fontSize:22,fontWeight:800,color:fg}}>{n}<span style={{fontSize:11,fontWeight:600}}> 제품</span></div>
+              <div style={{fontSize:12,fontWeight:700,color:fg}}>{l}</div>
+              <div style={{fontSize:22,fontWeight:800,color:fg}}>{n}<span style={{fontSize:12,fontWeight:600}}> 제품</span></div>
             </div>
           ))}
         </div>
@@ -9275,15 +9275,15 @@ export default function OaDashboard(){
           <CardTitle title={`이미용 전제품 재고 (${items.length})`} sub="일판매 = 최근 7일 ERP 출고+쿠팡 판매 평균 · 재고일수 = 창고재고 ÷ 일판매 · 광고비는 최근 7일 메타"/>
           <div style={{display:"flex",gap:8,alignItems:"center",marginBottom:10,flexWrap:"wrap"}}>
             <input value={stQuery} onChange={e=>setStQuery(e.target.value)} placeholder="제품명 검색"
-              style={{padding:"6px 10px",border:`1px solid ${C.border}`,borderRadius:8,fontSize:11,color:C.ink,outline:"none",width:180}}/>
+              style={{padding:"6px 10px",border:`1px solid ${C.border}`,borderRadius:8,fontSize:12,color:C.ink,outline:"none",width:180}}/>
             <button onClick={()=>setStOnlyAct(v=>!v)}
-              style={{padding:"6px 12px",border:`1px solid ${stOnlyAct?C.rose:C.border}`,borderRadius:99,fontSize:10,fontWeight:700,
+              style={{padding:"6px 12px",border:`1px solid ${stOnlyAct?C.rose:C.border}`,borderRadius:99,fontSize:12,fontWeight:700,
                 background:stOnlyAct?"#fff1f2":C.white,color:stOnlyAct?"#be123c":C.inkMid,cursor:"pointer"}}>액션 필요만</button>
           </div>
           <div style={{overflowX:"auto"}}>
-            <table style={{width:"100%",borderCollapse:"collapse",fontSize:11}}>
+            <table style={{width:"100%",borderCollapse:"collapse",fontSize:12}}>
               <thead>
-                <tr style={{borderBottom:`2px solid ${C.border}`,color:C.inkLt,fontSize:10}}>
+                <tr style={{borderBottom:`2px solid ${C.border}`,color:C.inkLt,fontSize:12}}>
                   {["제품","창고재고","쿠팡재고","입고 대기","입고 예정","일판매","재고일수","입고 포함","7일 광고비","ROAS","액션"].map(h=>
                     <th key={h} style={{padding:"6px 8px",textAlign:h==="제품"||h==="액션"?"left":"right",fontWeight:700,whiteSpace:"nowrap"}}>{h}</th>)}
                 </tr>
@@ -9293,7 +9293,7 @@ export default function OaDashboard(){
                   const dayColor=it.days===null?C.inkLt:it.days<it.threshold?"#b91c1c":it.days<it.threshold+16?"#b45309":C.ink;
                   return(
                     <tr key={it.name} style={{borderBottom:`1px solid ${C.border}`}}>
-                      <td style={{padding:"8px",fontWeight:700,color:C.ink,maxWidth:220,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}} title={it.name}>{it.name}{it.lead>0&&<span style={{fontSize:9,color:C.inkLt,fontWeight:600}}> 리드 {it.lead}일</span>}</td>
+                      <td style={{padding:"8px",fontWeight:700,color:C.ink,maxWidth:220,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}} title={it.name}>{it.name}{it.lead>0&&<span style={{fontSize:11,color:C.inkLt,fontWeight:600}}> 리드 {it.lead}일</span>}</td>
                       <td style={{padding:"8px",textAlign:"right",fontWeight:700,color:C.ink}}>{it.qty.toLocaleString()}</td>
                       <td style={{padding:"8px",textAlign:"right",color:it.cStock>0?C.inkMid:C.inkLt}}>{it.cStock>0?it.cStock.toLocaleString():"—"}</td>
                       <td style={{padding:"8px",textAlign:"right",color:it.incoming>0?"#0369a1":C.inkLt}}>{it.incoming>0?`+${it.incoming.toLocaleString()}`:"—"}</td>
@@ -9303,7 +9303,7 @@ export default function OaDashboard(){
                       <td style={{padding:"8px",textAlign:"right",color:C.inkMid}}>{it.daysInc!==null&&it.incoming>0?`${it.daysInc}일`:"—"}</td>
                       <td style={{padding:"8px",textAlign:"right",color:it.spend7>0?C.ink:C.inkLt}}>{it.spend7>0?fmtW(it.spend7):"—"}</td>
                       <td style={{padding:"8px",textAlign:"right",fontWeight:700,color:it.roas7===null?C.inkLt:it.roas7>=400?"#15803d":it.roas7>=200?C.inkMid:"#b91c1c"}}>{it.roas7!==null?`${it.roas7}%`:"—"}</td>
-                      <td style={{padding:"8px"}}>{it.act?<span style={{fontSize:10,fontWeight:700,padding:"3px 9px",borderRadius:99,background:it.act.bg,border:`1px solid ${it.act.bd}`,color:it.act.fg,whiteSpace:"nowrap"}}>{it.act.t}</span>:<span style={{color:C.inkLt}}>—</span>}</td>
+                      <td style={{padding:"8px"}}>{it.act?<span style={{fontSize:12,fontWeight:700,padding:"3px 9px",borderRadius:99,background:it.act.bg,border:`1px solid ${it.act.bd}`,color:it.act.fg,whiteSpace:"nowrap"}}>{it.act.t}</span>:<span style={{color:C.inkLt}}>—</span>}</td>
                     </tr>
                   );
                 })}
@@ -9311,7 +9311,7 @@ export default function OaDashboard(){
               </tbody>
             </table>
           </div>
-          <div style={{fontSize:10,color:C.inkLt,marginTop:8}}>기준: 재고일수 &lt; max(14일, 리드타임) = 품절 임박 · ≥60일 = 재고 여유 · 광고비/ROAS는 제품명에 마진 키워드가 포함된 소재 합계. ERP 재고·쿠팡 판매는 아침 7시 동기화</div>
+          <div style={{fontSize:12,color:C.inkLt,marginTop:8}}>기준: 재고일수 &lt; max(14일, 리드타임) = 품절 임박 · ≥60일 = 재고 여유 · 광고비/ROAS는 제품명에 마진 키워드가 포함된 소재 합계. ERP 재고·쿠팡 판매는 아침 7시 동기화</div>
         </div>
       </div>
     );
@@ -9352,7 +9352,7 @@ export default function OaDashboard(){
     };
     const fmtW=n=>`${Math.round(n).toLocaleString()}원`;
     const card={background:C.white,border:`1px solid ${C.border}`,borderRadius:12,padding:"14px 16px"};
-    if(f11===null) return <Card><div style={{fontSize:11,color:C.inkLt,padding:"20px 0",textAlign:"center"}}>11번가 광고 데이터 로딩 중…</div></Card>;
+    if(f11===null) return <Card><div style={{fontSize:12,color:C.inkLt,padding:"20px 0",textAlign:"center"}}>11번가 광고 데이터 로딩 중…</div></Card>;
     const prods=(f11.products||[]).map(p=>{
       const profit=p.profit30!==undefined&&p.profit30!==null?p.profit30
         :(p.marginWon!=null?Math.round(p.marginWon*(p.conv30||0)-(p.spend30||0)):null);
@@ -9374,7 +9374,7 @@ export default function OaDashboard(){
           {[["월 광고비",fmtW(totSpend),C.ink,"#fff"],["월손익 (마진 매칭분)",`${totProfit>=0?"+":""}${fmtW(totProfit)}`,totProfit>=0?"#15803d":"#b91c1c",totProfit>=0?"#f0fdf4":"#fef2f2"],
             ["전환 0 지출",fmtW(zeroSpend),"#b91c1c","#fef2f2"],["적자 제품",`${nLoss}개`,"#92400e","#fffbeb"]].map(([l,v,fg,bg])=>(
             <div key={l} style={{flex:1,minWidth:130,background:bg,border:`1px solid ${C.border}`,borderRadius:12,padding:"12px 14px"}}>
-              <div style={{fontSize:10,fontWeight:700,color:C.inkLt}}>{l}</div>
+              <div style={{fontSize:12,fontWeight:700,color:C.inkLt}}>{l}</div>
               <div style={{fontSize:19,fontWeight:800,color:fg}}>{v}</div>
             </div>
           ))}
@@ -9384,18 +9384,18 @@ export default function OaDashboard(){
             sub={`수집일 ${f11.date||"—"} · 개당마진 = ERP 90일 매출이익 · 월손익 = 개당마진×전환수−광고비 · 수집은 로컬 스크립트(크롬 로그인 필요)`}/>
           <div style={{display:"flex",gap:8,alignItems:"center",marginBottom:10,flexWrap:"wrap"}}>
             <input value={q11} onChange={e=>setQ11(e.target.value)} placeholder="제품명 검색"
-              style={{padding:"6px 10px",border:`1px solid ${C.border}`,borderRadius:8,fontSize:11,color:C.ink,outline:"none",width:180}}/>
+              style={{padding:"6px 10px",border:`1px solid ${C.border}`,borderRadius:8,fontSize:12,color:C.ink,outline:"none",width:180}}/>
             <button onClick={()=>setAct11(v=>!v)}
-              style={{padding:"6px 12px",border:`1px solid ${act11?C.rose:C.border}`,borderRadius:99,fontSize:10,fontWeight:700,
+              style={{padding:"6px 12px",border:`1px solid ${act11?C.rose:C.border}`,borderRadius:99,fontSize:12,fontWeight:700,
                 background:act11?"#fff1f2":C.white,color:act11?"#be123c":C.inkMid,cursor:"pointer"}}>액션 필요만</button>
             {rulesDirty&&<button onClick={saveRules} disabled={rulesSaving}
-              style={{padding:"6px 12px",border:"none",borderRadius:99,fontSize:10,fontWeight:700,background:C.rose,color:"#fff",cursor:"pointer"}}>
+              style={{padding:"6px 12px",border:"none",borderRadius:99,fontSize:12,fontWeight:700,background:C.rose,color:"#fff",cursor:"pointer"}}>
               {rulesSaving?"저장 중…":"입찰 규칙 저장"}</button>}
           </div>
           <div style={{overflowX:"auto"}}>
-            <table style={{width:"100%",borderCollapse:"collapse",fontSize:11}}>
+            <table style={{width:"100%",borderCollapse:"collapse",fontSize:12}}>
               <thead>
-                <tr style={{borderBottom:`2px solid ${C.border}`,color:C.inkLt,fontSize:10}}>
+                <tr style={{borderBottom:`2px solid ${C.border}`,color:C.inkLt,fontSize:12}}>
                   {["제품","상태","30일 광고비","전환","전환금액","ROAS","개당마진","월손익","액션"].map(h=>
                     <th key={h} style={{padding:"6px 8px",textAlign:h==="제품"||h==="액션"||h==="상태"?"left":"right",fontWeight:700,whiteSpace:"nowrap"}}>{h}</th>)}
                 </tr>
@@ -9407,7 +9407,7 @@ export default function OaDashboard(){
                   <Fragment key={p.pid}>
                     <tr onClick={()=>setOpen11(isOpen?null:p.pid)} style={{borderBottom:`1px solid ${C.border}`,cursor:"pointer",background:isOpen?"#faf9f7":"transparent"}}>
                       <td style={{padding:"8px",fontWeight:700,color:C.ink,maxWidth:240,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}} title={p.name}>
-                        <span style={{fontSize:9,color:C.inkLt,marginRight:4}}>{isOpen?"▼":"▶"}</span>{p.name}</td>
+                        <span style={{fontSize:11,color:C.inkLt,marginRight:4}}>{isOpen?"▼":"▶"}</span>{p.name}</td>
                       <td style={{padding:"8px",color:p.status==="운영중"?C.inkMid:C.inkLt,whiteSpace:"nowrap"}}>{p.status}</td>
                       <td style={{padding:"8px",textAlign:"right",fontWeight:700,color:C.ink}}>{fmtW(p.spend30||0)}</td>
                       <td style={{padding:"8px",textAlign:"right",color:C.inkMid}}>{p.conv30||0}</td>
@@ -9415,12 +9415,12 @@ export default function OaDashboard(){
                       <td style={{padding:"8px",textAlign:"right",fontWeight:700,color:p.roas30===null||p.roas30===undefined?C.inkLt:p.roas30>=400?"#15803d":p.roas30>=200?C.inkMid:"#b91c1c"}}>{p.roas30!=null?`${p.roas30}%`:"—"}</td>
                       <td style={{padding:"8px",textAlign:"right",color:p.marginWon!=null?C.inkMid:C.inkLt}}>{p.marginWon!=null?fmtW(p.marginWon):"—"}</td>
                       <td style={{padding:"8px",textAlign:"right",fontWeight:800,color:p.profit===null?C.inkLt:p.profit>=0?"#15803d":"#b91c1c"}}>{p.profit!==null?`${p.profit>=0?"+":""}${fmtW(p.profit)}`:"—"}</td>
-                      <td style={{padding:"8px"}}>{p.act?<span style={{fontSize:10,fontWeight:700,padding:"3px 9px",borderRadius:99,background:p.act.bg,border:`1px solid ${p.act.bd}`,color:p.act.fg,whiteSpace:"nowrap"}}>{p.act.t}</span>:<span style={{color:C.inkLt}}>—</span>}</td>
+                      <td style={{padding:"8px"}}>{p.act?<span style={{fontSize:12,fontWeight:700,padding:"3px 9px",borderRadius:99,background:p.act.bg,border:`1px solid ${p.act.bd}`,color:p.act.fg,whiteSpace:"nowrap"}}>{p.act.t}</span>:<span style={{color:C.inkLt}}>—</span>}</td>
                     </tr>
                     {isOpen&&(
                       <tr><td colSpan={9} style={{padding:"4px 8px 12px 24px",background:"#faf9f7"}}>
-                        {(p.keywords||[]).length===0?<div style={{fontSize:10,color:C.inkLt,padding:"8px 0"}}>키워드 데이터 없음 — 로컬 수집 스크립트 재실행 필요</div>:(
-                        <table style={{width:"100%",borderCollapse:"collapse",fontSize:10}}>
+                        {(p.keywords||[]).length===0?<div style={{fontSize:12,color:C.inkLt,padding:"8px 0"}}>키워드 데이터 없음 — 로컬 수집 스크립트 재실행 필요</div>:(
+                        <table style={{width:"100%",borderCollapse:"collapse",fontSize:12}}>
                           <thead><tr style={{color:C.inkLt}}>
                             {["키워드","입찰가","현재순위","평균순위","노출","클릭","목표순위","최대입찰가"].map(h=>
                               <th key={h} style={{padding:"4px 6px",textAlign:h==="키워드"?"left":"right",fontWeight:700}}>{h}</th>)}
@@ -9438,14 +9438,14 @@ export default function OaDashboard(){
                                 <td style={{padding:"4px 6px",textAlign:"right",color:C.inkMid}}>{k.clicks||0}</td>
                                 <td style={{padding:"4px 6px",textAlign:"right"}} onClick={e=>e.stopPropagation()}>
                                   <input type="number" value={rule.target??""} onChange={e=>setRule(rk,"target",e.target.value)} placeholder="—"
-                                    style={{width:44,padding:"2px 4px",border:`1px solid ${C.border}`,borderRadius:6,fontSize:10,textAlign:"right",outline:"none"}}/></td>
+                                    style={{width:44,padding:"2px 4px",border:`1px solid ${C.border}`,borderRadius:6,fontSize:12,textAlign:"right",outline:"none"}}/></td>
                                 <td style={{padding:"4px 6px",textAlign:"right"}} onClick={e=>e.stopPropagation()}>
                                   <input type="number" value={rule.maxBid??""} onChange={e=>setRule(rk,"maxBid",e.target.value)} placeholder="—" step={10}
-                                    style={{width:60,padding:"2px 4px",border:`1px solid ${C.border}`,borderRadius:6,fontSize:10,textAlign:"right",outline:"none"}}/></td>
+                                    style={{width:60,padding:"2px 4px",border:`1px solid ${C.border}`,borderRadius:6,fontSize:12,textAlign:"right",outline:"none"}}/></td>
                               </tr>);})}
                           </tbody>
                         </table>)}
-                        <div style={{fontSize:9,color:C.inkLt,marginTop:6}}>노출수 상위 40개 표시 · 목표순위/최대입찰가를 입력하고 저장하면 자동 입찰 조정 스크립트가 이 규칙을 따름</div>
+                        <div style={{fontSize:11,color:C.inkLt,marginTop:6}}>노출수 상위 40개 표시 · 목표순위/최대입찰가를 입력하고 저장하면 자동 입찰 조정 스크립트가 이 규칙을 따름</div>
                       </td></tr>
                     )}
                   </Fragment>);
@@ -9488,11 +9488,11 @@ export default function OaDashboard(){
                   onChange={e=>setMetaGoalInput(e.target.value)}
                   placeholder="이번 캠페인 목표를 입력하세요 (예: 3월 ROAS 700% 달성, CPA 5,000원 이하 유지)"
                   style={{flex:1,padding:"8px 10px",border:`1px solid ${C.rose}`,borderRadius:8,
-                    fontSize:11,color:C.ink,background:C.cream,outline:"none",fontFamily:"inherit",
+                    fontSize:12,color:C.ink,background:C.cream,outline:"none",fontFamily:"inherit",
                     resize:"vertical",minHeight:60,lineHeight:1.6}}
                 />
               ) : (
-                <span style={{fontSize:12,color:metaGoal?C.ink:C.inkLt,fontWeight:metaGoal?700:400,lineHeight:1.6,flex:1}}>
+                <span style={{fontSize:13,color:metaGoal?C.ink:C.inkLt,fontWeight:metaGoal?700:400,lineHeight:1.6,flex:1}}>
                   {metaGoal||"목표를 입력하면 팀 전체가 볼 수 있어요"}
                 </span>
               )}
@@ -9521,11 +9521,11 @@ export default function OaDashboard(){
             <div>
               {sheetConvRaw.length>0 ? (
                 <>
-                  <div style={{fontSize:12,fontWeight:800,color:C.good}}>데이터 연결됨 · {metaRaw.length}건{deletedAds.length>0&&<span style={{color:C.inkLt,fontWeight:600}}> ({deletedAds.length}개 숨김)</span>}</div>
-                  <div style={{fontSize:10,color:C.inkMid,marginTop:1}}>기간: {metaRaw.map(r=>r.date).filter(Boolean).sort()[0]||"—"} ~ {sheetMaxDate||"—"}</div>
+                  <div style={{fontSize:13,fontWeight:800,color:C.good}}>데이터 연결됨 · {metaRaw.length}건{deletedAds.length>0&&<span style={{color:C.inkLt,fontWeight:600}}> ({deletedAds.length}개 숨김)</span>}</div>
+                  <div style={{fontSize:12,color:C.inkMid,marginTop:1}}>기간: {metaRaw.map(r=>r.date).filter(Boolean).sort()[0]||"—"} ~ {sheetMaxDate||"—"}</div>
                 </>
               ) : (
-                <div style={{fontSize:12,fontWeight:700,color:C.gold}}>전환 시트를 연결해주세요</div>
+                <div style={{fontSize:13,fontWeight:700,color:C.gold}}>전환 시트를 연결해주세요</div>
               )}
             </div>
           </div>
@@ -9545,9 +9545,9 @@ export default function OaDashboard(){
                     boxShadow:"0 8px 24px rgba(0,0,0,0.12)",minWidth:260,padding:8}}>
                     <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",
                       padding:"4px 8px 8px",borderBottom:`1px solid ${C.border}`,marginBottom:4}}>
-                      <span style={{fontSize:11,fontWeight:700,color:C.inkMid}}>최근 숨긴 순서</span>
+                      <span style={{fontSize:12,fontWeight:700,color:C.inkMid}}>최근 숨긴 순서</span>
                       <button onClick={()=>{setDeletedAds([]);setShowDeletedPanel(false);}}
-                        style={{fontSize:10,fontWeight:700,color:C.rose,background:"none",border:`1px solid ${C.rose}`,
+                        style={{fontSize:12,fontWeight:700,color:C.rose,background:"none",border:`1px solid ${C.rose}`,
                           borderRadius:6,padding:"2px 8px",cursor:"pointer",fontFamily:"inherit"}}>
                         전체 복원
                       </button>
@@ -9557,14 +9557,14 @@ export default function OaDashboard(){
                       return(
                       <div key={uid} style={{display:"flex",alignItems:"center",gap:8,padding:"5px 8px",
                         borderRadius:8,transition:"background 0.1s"}}>
-                        <span style={{fontSize:10,color:C.inkMid,flexShrink:0,width:16,textAlign:"right"}}>{i+1}</span>
-                        <span style={{flex:1,fontSize:11,fontWeight:600,color:C.ink,
+                        <span style={{fontSize:12,color:C.inkMid,flexShrink:0,width:16,textAlign:"right"}}>{i+1}</span>
+                        <span style={{flex:1,fontSize:12,fontWeight:600,color:C.ink,
                           overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}} title={displayName}>{displayName}</span>
                         <button onClick={()=>{
                           const next=deletedAds.filter(n=>n!==uid);
                           setDeletedAds(next);
                           if(next.length===0) setShowDeletedPanel(false);
-                        }} style={{fontSize:10,fontWeight:700,color:"#4DAD7A",background:"none",
+                        }} style={{fontSize:12,fontWeight:700,color:"#4DAD7A",background:"none",
                           border:`1px solid #4DAD7A`,borderRadius:6,padding:"2px 8px",
                           cursor:"pointer",fontFamily:"inherit",flexShrink:0}}>
                           복원
@@ -9584,7 +9584,7 @@ export default function OaDashboard(){
         {/* ── 월 선택기 (집행중/전체광고비 카드용) ── */}
         {hasSheet&&availableMonths.length>1&&(
           <div style={{display:"flex",gap:6,flexWrap:"wrap",alignItems:"center"}}>
-            <span style={{fontSize:11,color:C.inkLt,fontWeight:700,marginRight:2}}>월별 보기</span>
+            <span style={{fontSize:12,color:C.inkLt,fontWeight:700,marginRight:2}}>월별 보기</span>
             {availableMonths.map(m=>{
               const [y,mo]=m.split("-");
               const label=`${parseInt(mo)}월`;
@@ -9593,7 +9593,7 @@ export default function OaDashboard(){
                 <button key={m} onClick={()=>setSelectedMonth(m===defaultMonth?"":m)}
                   style={{padding:"4px 12px",borderRadius:20,border:`1.5px solid ${active?"#7c3aed":C.border}`,
                     background:active?"#7c3aed":"transparent",color:active?"#fff":C.inkMid,
-                    fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
+                    fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
                   {y}.{label}
                 </button>
               );
@@ -9649,8 +9649,8 @@ export default function OaDashboard(){
             <div style={{background:"rgba(255,255,255,0.07)",borderRadius:12,padding:"14px"}}>
               <div style={{display:"flex",alignItems:"center",gap:5,marginBottom:10}}>
                 {typeof icon==="string"&&icon.length<30?<MI n={icon} size={14}/>:<span>{icon}</span>}
-                <span style={{fontSize:11,fontWeight:800,color:accent||"rgba(255,255,255,0.9)"}}>{label}</span>
-                <span style={{marginLeft:"auto",fontSize:10,opacity:0.4}}>{data.ads}개</span>
+                <span style={{fontSize:12,fontWeight:800,color:accent||"rgba(255,255,255,0.9)"}}>{label}</span>
+                <span style={{marginLeft:"auto",fontSize:12,opacity:0.4}}>{data.ads}개</span>
               </div>
               <div style={{fontSize:18,fontWeight:900,color:"rgba(255,255,255,0.95)",marginBottom:8}}>{fmtW(data.spend)}</div>
               <div style={{display:"flex",flexDirection:"column",gap:4}}>
@@ -9664,8 +9664,8 @@ export default function OaDashboard(){
                   ["LPV",    data.lpv.toLocaleString()],
                 ].map(([l,v])=>(
                   <div key={l} style={{display:"flex",justifyContent:"space-between"}}>
-                    <span style={{fontSize:9,opacity:0.45,fontWeight:600}}>{l}</span>
-                    <span style={{fontSize:10,fontWeight:700,color:"rgba(255,255,255,0.85)"}}>{v}</span>
+                    <span style={{fontSize:11,opacity:0.45,fontWeight:600}}>{l}</span>
+                    <span style={{fontSize:12,fontWeight:700,color:"rgba(255,255,255,0.85)"}}>{v}</span>
                   </div>
                 ))}
               </div>
@@ -9677,18 +9677,18 @@ export default function OaDashboard(){
             <div style={{background:C.ink,borderRadius:14,padding:"16px 18px",color:C.white}}>
               <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12,gap:8,flexWrap:"wrap"}}>
                 <div>
-                  <div style={{fontSize:12,fontWeight:800,letterSpacing:"0.05em"}}><MI n="bar_chart" size={14}/> {isLatestMonth?"집행중 광고 성과":`${parseInt(activeMonth.slice(5))}월 광고 성과`}</div>
-                  <div style={{fontSize:10,opacity:0.5,marginTop:2}}>{period} · {isLatestMonth?`집행중 ${activeKeys.size}개`:`광고 ${activeKeys.size}개`}</div>
+                  <div style={{fontSize:13,fontWeight:800,letterSpacing:"0.05em"}}><MI n="bar_chart" size={14}/> {isLatestMonth?"집행중 광고 성과":`${parseInt(activeMonth.slice(5))}월 광고 성과`}</div>
+                  <div style={{fontSize:12,opacity:0.5,marginTop:2}}>{period} · {isLatestMonth?`집행중 ${activeKeys.size}개`:`광고 ${activeKeys.size}개`}</div>
                 </div>
                 <div style={{display:"flex",gap:10,alignItems:"flex-end"}}>
                   {instaRaw.length>0&&(
                     <div style={{textAlign:"right"}}>
-                      <div style={{fontSize:9,opacity:0.4}}><MI n="photo_camera" size={10}/> 인스타 게시물</div>
+                      <div style={{fontSize:11,opacity:0.4}}><MI n="photo_camera" size={10}/> 인스타 게시물</div>
                       <div style={{fontSize:13,fontWeight:700,color:"rgba(255,255,255,0.5)"}}>{fmtW(instaRaw.reduce((s,r)=>s+(r.spend||0),0))}</div>
                     </div>
                   )}
                   <div style={{textAlign:"right"}}>
-                    <div style={{fontSize:9,opacity:0.5}}>집행중 총 광고비</div>
+                    <div style={{fontSize:11,opacity:0.5}}>집행중 총 광고비</div>
                     <div style={{fontSize:20,fontWeight:900,color:"#86efac"}}>{fmtW(total.spend)}</div>
                   </div>
                 </div>
@@ -9718,11 +9718,11 @@ export default function OaDashboard(){
               border:"1px solid rgba(255,255,255,0.08)"}}>
               <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12,gap:8,flexWrap:"wrap"}}>
                 <div>
-                  <div style={{fontSize:12,fontWeight:800,letterSpacing:"0.05em"}}><MI n="payments" size={14}/> {parseInt(activeMonth.slice(5))}월 전체 광고비</div>
-                  <div style={{fontSize:10,opacity:0.4,marginTop:2}}>시트 기준 합산</div>
+                  <div style={{fontSize:13,fontWeight:800,letterSpacing:"0.05em"}}><MI n="payments" size={14}/> {parseInt(activeMonth.slice(5))}월 전체 광고비</div>
+                  <div style={{fontSize:12,opacity:0.4,marginTop:2}}>시트 기준 합산</div>
                 </div>
                 <div style={{textAlign:"right"}}>
-                  <div style={{fontSize:9,opacity:0.5}}>총 광고비</div>
+                  <div style={{fontSize:11,opacity:0.5}}>총 광고비</div>
                   <div style={{fontSize:20,fontWeight:900,color:"#fbbf24"}}>{fmtW(spend(allRows))}</div>
                 </div>
               </div>
@@ -9735,8 +9735,8 @@ export default function OaDashboard(){
                   <div key={label} style={{background:"rgba(255,255,255,0.05)",borderRadius:12,padding:"12px"}}>
                     <div style={{display:"flex",alignItems:"center",gap:5,marginBottom:8}}>
                       <MI n={icon} size={14}/>
-                      <span style={{fontSize:11,fontWeight:800,color:accent}}>{label}</span>
-                      <span style={{marginLeft:"auto",fontSize:10,opacity:0.35}}>{ads(rows)}개</span>
+                      <span style={{fontSize:12,fontWeight:800,color:accent}}>{label}</span>
+                      <span style={{marginLeft:"auto",fontSize:12,opacity:0.35}}>{ads(rows)}개</span>
                     </div>
                     <div style={{fontSize:16,fontWeight:900,color:"rgba(255,255,255,0.9)",marginBottom:6}}>{fmtW(spend(rows))}</div>
                     <div style={{display:"flex",flexDirection:"column",gap:3}}>
@@ -9746,8 +9746,8 @@ export default function OaDashboard(){
                         ["CPA", purch(rows)>0?fmtW(spend(rows)/purch(rows)):"—"],
                       ].map(([l,v])=>(
                         <div key={l} style={{display:"flex",justifyContent:"space-between"}}>
-                          <span style={{fontSize:9,opacity:0.4,fontWeight:600}}>{l}</span>
-                          <span style={{fontSize:10,fontWeight:700,color:"rgba(255,255,255,0.7)"}}>{v}</span>
+                          <span style={{fontSize:11,opacity:0.4,fontWeight:600}}>{l}</span>
+                          <span style={{fontSize:12,fontWeight:700,color:"rgba(255,255,255,0.7)"}}>{v}</span>
                         </div>
                       ))}
                     </div>
@@ -9762,23 +9762,23 @@ export default function OaDashboard(){
         <details style={{background:C.white,border:`1px solid ${C.border}`,borderRadius:12,padding:"14px 16px"}}>
           <summary style={{fontWeight:700,fontSize:13,color:C.ink,cursor:"pointer",listStyle:"revert"}}>
             🎬 광고 소재
-            <span style={{fontSize:10,color:C.inkLt,fontWeight:600,marginLeft:8}}>
+            <span style={{fontSize:12,color:C.inkLt,fontWeight:600,marginLeft:8}}>
               {Object.keys(metaThumbs).length>0?`메타 자동 연동 ${Object.keys(metaThumbs).length}개`:"자동 연동 중…"}{adImages.length>0?` · 수동 ${adImages.length}개`:""} — 펼쳐서 관리
             </span>
           </summary>
           <div style={{display:"flex",alignItems:"center",justifyContent:"flex-end",margin:"10px 0"}}>
             <div style={{display:"flex",gap:6,alignItems:"center",flexWrap:"wrap"}}>
-              {imgUploading&&<span style={{fontSize:10,color:C.inkLt}}><MI n="hourglass_empty" size={13}/> 업로드 중...</span>}
-              {imgError&&<span style={{fontSize:10,color:C.bad,maxWidth:200,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}} title={imgError}><MI n="cancel" size={13}/> {imgError}</span>}
+              {imgUploading&&<span style={{fontSize:12,color:C.inkLt}}><MI n="hourglass_empty" size={13}/> 업로드 중...</span>}
+              {imgError&&<span style={{fontSize:12,color:C.bad,maxWidth:200,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}} title={imgError}><MI n="cancel" size={13}/> {imgError}</span>}
               <input ref={fileInputRef} type="file" accept="image/*,video/*" multiple style={{display:"none"}}
                 onChange={e=>handleAdImageUpload(e.target.files)}/>
               {adImages.length>0&&<button onClick={async()=>{if(confirm("업로드된 소재를 모두 삭제할까요?")){{setAdImages([]);await saveAdImagesMeta([]);}}}}
-                style={{fontSize:11,fontWeight:600,padding:"5px 10px",borderRadius:8,
+                style={{fontSize:12,fontWeight:600,padding:"5px 10px",borderRadius:8,
                   border:`1px solid ${C.bad}44`,background:"#fff5f5",cursor:"pointer",
                   color:C.bad,fontFamily:"inherit"}}>
                 전체삭제
               </button>}
-              {Object.keys(metaThumbs).length>0&&<span style={{fontSize:10,color:C.sage,fontWeight:700}}>
+              {Object.keys(metaThumbs).length>0&&<span style={{fontSize:12,color:C.sage,fontWeight:700}}>
                 <MI n="cloud_done" size={12}/> 메타 소재 {Object.keys(metaThumbs).length}개 연결됨
               </span>}
               <button disabled={imgUploading} onClick={async()=>{
@@ -9796,13 +9796,13 @@ export default function OaDashboard(){
                 }catch(e){ setImgError(e.message||"메타 가져오기 실패"); }
                 setImgUploading(false);
               }}
-                style={{fontSize:11,fontWeight:600,padding:"5px 12px",borderRadius:8,
+                style={{fontSize:12,fontWeight:600,padding:"5px 12px",borderRadius:8,
                   border:`1px solid ${C.rose}44`,background:C.blush,cursor:"pointer",
                   color:C.rose,fontFamily:"inherit",opacity:imgUploading?0.5:1}}>
                 <MI n="sync" size={12}/> 메타에서 자동 가져오기
               </button>
               <button onClick={()=>fileInputRef.current?.click()}
-                style={{fontSize:11,fontWeight:600,padding:"5px 14px",borderRadius:8,
+                style={{fontSize:12,fontWeight:600,padding:"5px 14px",borderRadius:8,
                   border:`1px solid ${C.border}`,background:C.white,cursor:"pointer",
                   color:C.rose,fontFamily:"inherit"}}>
                 + 소재 추가
@@ -9828,17 +9828,17 @@ export default function OaDashboard(){
             {adImages.length===0?(
               <div style={{textAlign:"center",pointerEvents:"none"}}>
                 <div style={{fontSize:24,marginBottom:6}}><MI n="folder_open" size={24}/></div>
-                <div style={{fontSize:11,fontWeight:700,color:isDragging?C.rose:C.inkMid}}>
+                <div style={{fontSize:12,fontWeight:700,color:isDragging?C.rose:C.inkMid}}>
                   {isDragging?"여기에 놓으세요!":"파일을 드래그해서 놓거나 클릭해서 추가"}
                 </div>
-                <div style={{fontSize:10,color:C.inkLt,marginTop:3}}>이미지·영상 모두 가능 · 광고명과 자동 매칭</div>
+                <div style={{fontSize:12,color:C.inkLt,marginTop:3}}>이미지·영상 모두 가능 · 광고명과 자동 매칭</div>
               </div>
             ):(
               <div style={{display:"flex",gap:10,flexWrap:"wrap",alignItems:"flex-start"}}>
                 {adImages.map((img,i)=>(
                   <div key={i} style={{position:"relative",display:"inline-flex",flexDirection:"column",alignItems:"center",gap:4}}>
                     <ThumbPreview url={img.url} name={img.name}/>
-                    <span style={{fontSize:9,color:C.inkMid,maxWidth:56,textAlign:"center",
+                    <span style={{fontSize:11,color:C.inkMid,maxWidth:56,textAlign:"center",
                       overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{img.name}</span>
                     <button onClick={async(e)=>{
                       e.stopPropagation();
@@ -9846,7 +9846,7 @@ export default function OaDashboard(){
                       setAdImages(next);
                       await saveAdImagesMeta(next);
                     }} style={{position:"absolute",top:-4,right:-4,width:16,height:16,borderRadius:"50%",
-                      background:C.bad,color:"#fff",border:"none",cursor:"pointer",fontSize:9,
+                      background:C.bad,color:"#fff",border:"none",cursor:"pointer",fontSize:11,
                       display:"flex",alignItems:"center",justifyContent:"center",lineHeight:1}}>✕</button>
                   </div>
                 ))}
@@ -9866,7 +9866,7 @@ export default function OaDashboard(){
             const filled=[...new Set(metaBackfill.map(r=>r.date))].sort();
             return(
               <div style={{display:"flex",alignItems:"center",gap:8,padding:"10px 14px",borderRadius:10,
-                background:"#f0f9ff",border:"1px solid #7dd3fc",fontSize:11,color:"#0369a1"}}>
+                background:"#f0f9ff",border:"1px solid #7dd3fc",fontSize:12,color:"#0369a1"}}>
                 <MI n="cloud_sync" size={15}/>
                 <span style={{fontWeight:700}}>
                   시트 누락 {filled.map(d=>d.slice(5).replace("-","/")).join(", ")} — 메타 API 데이터로 자동 보완됨
@@ -9887,7 +9887,7 @@ export default function OaDashboard(){
           const lastGood=ds.filter(d=>byDate[d]>0).pop();
           return(
             <div style={{display:"flex",alignItems:"center",gap:8,padding:"10px 14px",borderRadius:10,
-              background:"#fffbeb",border:"1px solid #fcd34d",fontSize:11,color:"#92400e"}}>
+              background:"#fffbeb",border:"1px solid #fcd34d",fontSize:12,color:"#92400e"}}>
               <MI n="warning" size={15}/>
               <span style={{fontWeight:700}}>
                 시트 데이터 누락 의심: {missing.map(d=>d.slice(5).replace("-","/")).join(", ")}
@@ -9905,7 +9905,7 @@ export default function OaDashboard(){
             <button key={t.id} onClick={()=>setMetaTab(t.id)} style={{
               padding:"6px 16px",borderRadius:8,cursor:"pointer",border:`1px solid ${metaTab===t.id?C.rose:C.border}`,
               background:metaTab===t.id?C.blush:C.white,color:metaTab===t.id?C.rose:C.inkMid,
-              fontSize:11,fontWeight:700,whiteSpace:"nowrap",transition:"all 0.2s",fontFamily:"inherit"}}>{t.label}</button>
+              fontSize:12,fontWeight:700,whiteSpace:"nowrap",transition:"all 0.2s",fontFamily:"inherit"}}>{t.label}</button>
           ))}
         </div>
 
@@ -9924,17 +9924,17 @@ export default function OaDashboard(){
                 <ResponsiveContainer width="100%" height={180}>
                   <BarChart data={d.daily} stackOffset="none">
                     <CartesianGrid strokeDasharray="3 3" stroke={C.border}/>
-                    <XAxis dataKey="day" tick={{fontSize:8,fill:C.inkLt}} axisLine={false} tickLine={false} interval={Math.floor(d.daily.length/6)}/>
-                    <YAxis tick={{fontSize:8,fill:C.inkLt}} axisLine={false} tickLine={false}
+                    <XAxis dataKey="day" tick={{fontSize:10,fill:C.inkLt}} axisLine={false} tickLine={false} interval={Math.floor(d.daily.length/6)}/>
+                    <YAxis tick={{fontSize:10,fill:C.inkLt}} axisLine={false} tickLine={false}
                       tickFormatter={v=>v>=10000?`${Math.round(v/10000)}만`:v}/>
-                    <Tooltip formatter={(v,n)=>[`₩${Math.round(v/10000).toLocaleString()}만`,n]} labelStyle={{fontWeight:700,fontSize:11}}/>
+                    <Tooltip formatter={(v,n)=>[`₩${Math.round(v/10000).toLocaleString()}만`,n]} labelStyle={{fontWeight:700,fontSize:12}}/>
                     <Bar dataKey="convSpend"  stackId="a" fill="#f9a8d4" name="전환"/>
                     <Bar dataKey="traffSpend" stackId="a" fill={C.roseLt} radius={[3,3,0,0]} name="트래픽"/>
                   </BarChart>
                 </ResponsiveContainer>
                 <div style={{display:"flex",gap:16,justifyContent:"flex-end",marginTop:4}}>
                   {[{c:"#f9a8d4",l:"전환"},{c:C.roseLt,l:"트래픽"}].map(({c,l})=>(
-                    <div key={l} style={{display:"flex",alignItems:"center",gap:5,fontSize:10,color:C.inkMid}}>
+                    <div key={l} style={{display:"flex",alignItems:"center",gap:5,fontSize:12,color:C.inkMid}}>
                       <div style={{width:12,height:12,background:c,borderRadius:3}}/>{l}
                     </div>
                   ))}
@@ -9953,8 +9953,8 @@ export default function OaDashboard(){
                       </linearGradient>
                     </defs>
                     <CartesianGrid strokeDasharray="3 3" stroke={C.border}/>
-                    <XAxis dataKey="day" tick={{fontSize:9,fill:C.inkLt}} axisLine={false} tickLine={false} interval={Math.floor(d.daily.length/7)}/>
-                    <YAxis tick={{fontSize:9,fill:C.inkLt}} axisLine={false} tickLine={false}/>
+                    <XAxis dataKey="day" tick={{fontSize:11,fill:C.inkLt}} axisLine={false} tickLine={false} interval={Math.floor(d.daily.length/7)}/>
+                    <YAxis tick={{fontSize:11,fill:C.inkLt}} axisLine={false} tickLine={false}/>
                     <Tooltip content={<BeautyTooltip/>}/>
                     <Area type="monotone" dataKey="clicks" stroke={C.rose} strokeWidth={2.5} fill="url(#cg)" name="링크클릭"/>
                     <Area type="monotone" dataKey="lpv"    stroke={C.sage} strokeWidth={2}   fill="url(#lg)" name="LPV"/>
@@ -9962,7 +9962,7 @@ export default function OaDashboard(){
                 </ResponsiveContainer>
                 <div style={{display:"flex",gap:16,justifyContent:"flex-end",marginTop:4}}>
                   {[{c:C.rose,l:"링크클릭"},{c:C.sage,l:"LPV"}].map(({c,l})=>(
-                    <div key={l} style={{display:"flex",alignItems:"center",gap:5,fontSize:10,color:C.inkMid}}>
+                    <div key={l} style={{display:"flex",alignItems:"center",gap:5,fontSize:12,color:C.inkMid}}>
                       <div style={{width:14,height:3,background:c,borderRadius:2}}/>{l}
                     </div>
                   ))}
@@ -9979,8 +9979,8 @@ export default function OaDashboard(){
                         </linearGradient>
                       </defs>
                       <CartesianGrid strokeDasharray="3 3" stroke={C.border}/>
-                      <XAxis dataKey="day" tick={{fontSize:8,fill:C.inkLt}} axisLine={false} tickLine={false} interval={Math.floor(d.daily.length/5)}/>
-                      <YAxis tick={{fontSize:8,fill:C.inkLt}} axisLine={false} tickLine={false} tickFormatter={v=>`${v}%`}/>
+                      <XAxis dataKey="day" tick={{fontSize:10,fill:C.inkLt}} axisLine={false} tickLine={false} interval={Math.floor(d.daily.length/5)}/>
+                      <YAxis tick={{fontSize:10,fill:C.inkLt}} axisLine={false} tickLine={false} tickFormatter={v=>`${v}%`}/>
                       <Tooltip content={<BeautyTooltip fmt={v=>`${v}%`}/>}/>
                       <Area type="monotone" dataKey="ctr" stroke={C.gold} strokeWidth={2} fill="url(#ctrg)" name="CTR"/>
                     </AreaChart>
@@ -9996,8 +9996,8 @@ export default function OaDashboard(){
                         </linearGradient>
                       </defs>
                       <CartesianGrid strokeDasharray="3 3" stroke={C.border}/>
-                      <XAxis dataKey="day" tick={{fontSize:8,fill:C.inkLt}} axisLine={false} tickLine={false} interval={Math.floor(d.daily.length/5)}/>
-                      <YAxis tick={{fontSize:8,fill:C.inkLt}} axisLine={false} tickLine={false} tickFormatter={v=>`${v}%`}/>
+                      <XAxis dataKey="day" tick={{fontSize:10,fill:C.inkLt}} axisLine={false} tickLine={false} interval={Math.floor(d.daily.length/5)}/>
+                      <YAxis tick={{fontSize:10,fill:C.inkLt}} axisLine={false} tickLine={false} tickFormatter={v=>`${v}%`}/>
                       <Tooltip content={<BeautyTooltip fmt={v=>`${v}%`}/>}/>
                       <Area type="monotone" dataKey="lpvRate" stroke={C.purple} strokeWidth={2} fill="url(#lpvrg)" name="LPV율"/>
                     </AreaChart>
@@ -10009,16 +10009,16 @@ export default function OaDashboard(){
                 <ResponsiveContainer width="100%" height={160}>
                   <LineChart data={d.daily}>
                     <CartesianGrid strokeDasharray="3 3" stroke={C.border}/>
-                    <XAxis dataKey="day" tick={{fontSize:8,fill:C.inkLt}} axisLine={false} tickLine={false} interval={Math.floor(d.daily.length/6)}/>
-                    <YAxis tick={{fontSize:8,fill:C.inkLt}} axisLine={false} tickLine={false} tickFormatter={v=>v>=1000?`${Math.round(v/1000)}k`:v}/>
-                    <Tooltip formatter={(v,n)=>[v!=null?`₩${Math.round(v).toLocaleString()}`:"—",n]} labelStyle={{fontWeight:700,fontSize:11}}/>
+                    <XAxis dataKey="day" tick={{fontSize:10,fill:C.inkLt}} axisLine={false} tickLine={false} interval={Math.floor(d.daily.length/6)}/>
+                    <YAxis tick={{fontSize:10,fill:C.inkLt}} axisLine={false} tickLine={false} tickFormatter={v=>v>=1000?`${Math.round(v/1000)}k`:v}/>
+                    <Tooltip formatter={(v,n)=>[v!=null?`₩${Math.round(v).toLocaleString()}`:"—",n]} labelStyle={{fontWeight:700,fontSize:12}}/>
                     <Line type="monotone" dataKey="convCpc"  stroke="#f9a8d4" strokeWidth={2} dot={false} name="전환 CPC" connectNulls={false}/>
                     <Line type="monotone" dataKey="traffCpc" stroke={C.roseLt} strokeWidth={2} dot={false} name="트래픽 CPC" connectNulls={false}/>
                   </LineChart>
                 </ResponsiveContainer>
                 <div style={{display:"flex",gap:16,justifyContent:"flex-end",marginTop:4}}>
                   {[{c:"#f9a8d4",l:"전환 CPC"},{c:C.roseLt,l:"트래픽 CPC"}].map(({c,l})=>(
-                    <div key={l} style={{display:"flex",alignItems:"center",gap:5,fontSize:10,color:C.inkMid}}>
+                    <div key={l} style={{display:"flex",alignItems:"center",gap:5,fontSize:12,color:C.inkMid}}>
                       <div style={{width:14,height:3,background:c,borderRadius:2}}/>{l}
                     </div>
                   ))}
@@ -10028,14 +10028,14 @@ export default function OaDashboard(){
                 border:`1px solid ${C.rose}33`,borderRadius:14,padding:"16px",
                 display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:12}}>
                 <div>
-                  <div style={{fontSize:10,color:C.rose,fontWeight:700,letterSpacing:"0.1em"}}>CLICK → LPV 전환율</div>
+                  <div style={{fontSize:12,color:C.rose,fontWeight:700,letterSpacing:"0.1em"}}>CLICK → LPV 전환율</div>
                   <div style={{fontSize:32,fontWeight:900,color:C.rose,lineHeight:1.1}}>{d.lpvRate.toFixed(1)}%</div>
-                  <div style={{fontSize:10,color:C.inkMid}}>{d.totalClicks.toLocaleString()} 클릭 → {d.totalLpv.toLocaleString()} 랜딩 도달</div>
+                  <div style={{fontSize:12,color:C.inkMid}}>{d.totalClicks.toLocaleString()} 클릭 → {d.totalLpv.toLocaleString()} 랜딩 도달</div>
                 </div>
                 <div style={{textAlign:"right"}}>
-                  <div style={{fontSize:10,color:C.inkLt}}>기간 평균 CPC</div>
+                  <div style={{fontSize:12,color:C.inkLt}}>기간 평균 CPC</div>
                   <div style={{fontSize:22,fontWeight:900,color:C.gold}}>₩{Math.round(d.avgCpc).toLocaleString()}</div>
-                  <div style={{fontSize:10,color:C.inkLt}}>총 {d.campaigns.length}개 캠페인</div>
+                  <div style={{fontSize:12,color:C.inkLt}}>총 {d.campaigns.length}개 캠페인</div>
                 </div>
               </div>
             </>)}
@@ -10056,7 +10056,7 @@ export default function OaDashboard(){
                 <div style={{display:"flex",gap:4,padding:"4px",background:C.cream,borderRadius:12,width:"fit-content"}}>
                   {[{id:"conversion",label:"🛒 전환 캠페인"},{id:"traffic",label:"🚀 트래픽 캠페인"}].map(t=>(
                     <button key={t.id} onClick={()=>setCampTab(t.id)} style={{
-                      padding:"7px 16px",borderRadius:9,border:"none",cursor:"pointer",fontSize:11,fontWeight:700,fontFamily:"inherit",
+                      padding:"7px 16px",borderRadius:9,border:"none",cursor:"pointer",fontSize:12,fontWeight:700,fontFamily:"inherit",
                       background:campTab===t.id?C.white:"transparent",color:campTab===t.id?C.ink:C.inkMid,
                       boxShadow:campTab===t.id?"0 2px 8px rgba(43,31,46,0.1)":"none",transition:"all 0.2s"}}>{t.label}</button>
                   ))}
@@ -10070,7 +10070,7 @@ export default function OaDashboard(){
                   if(!ended) return null;
                   return(
                     <button onClick={()=>setShowEnded(v=>!v)} style={{
-                      padding:"6px 12px",borderRadius:20,cursor:"pointer",fontSize:10,fontWeight:700,fontFamily:"inherit",
+                      padding:"6px 12px",borderRadius:20,cursor:"pointer",fontSize:12,fontWeight:700,fontFamily:"inherit",
                       border:`1px solid ${showEnded?C.inkMid:C.border}`,
                       background:showEnded?C.cream:C.white,color:C.inkMid,transition:"all 0.2s",
                       display:"inline-flex",alignItems:"center",gap:4}}>
@@ -10109,7 +10109,7 @@ export default function OaDashboard(){
                 return(
                   <div style={{background:`linear-gradient(135deg,${C.blush},${C.white})`,
                     border:`1px solid ${C.rose}33`,borderRadius:14,padding:"16px"}}>
-                    <div style={{fontSize:12,fontWeight:800,color:C.rose,marginBottom:12}}>
+                    <div style={{fontSize:13,fontWeight:800,color:C.rose,marginBottom:12}}>
                       ⭐ 상위 광고 소재 · {campTab==="conversion"?"CPA 유지 + LPV 정상":"CPC·CTR·LPV 기준 통과"}
                     </div>
                     <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
@@ -10131,7 +10131,7 @@ export default function OaDashboard(){
                               }
                             </div>
                             {/* 광고명 */}
-                            <div style={{fontSize:10,fontWeight:700,color:C.ink,marginBottom:6,
+                            <div style={{fontSize:12,fontWeight:700,color:C.ink,marginBottom:6,
                               overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}} title={c.name}>
                               {c.name}
                             </div>
@@ -10139,29 +10139,29 @@ export default function OaDashboard(){
                             <div style={{display:"flex",flexDirection:"column",gap:3}}>
                               {campTab==="conversion"?<>
                                 <div style={{display:"flex",justifyContent:"space-between"}}>
-                                  <span style={{fontSize:9,color:C.inkLt}}>광고비</span>
-                                  <span style={{fontSize:9,fontWeight:700,color:C.ink}}>{fmtW(c.spend)}</span>
+                                  <span style={{fontSize:11,color:C.inkLt}}>광고비</span>
+                                  <span style={{fontSize:11,fontWeight:700,color:C.ink}}>{fmtW(c.spend)}</span>
                                 </div>
                                 <div style={{display:"flex",justifyContent:"space-between"}}>
-                                  <span style={{fontSize:9,color:C.inkLt}}>ROAS</span>
-                                  <span style={{fontSize:9,fontWeight:700,color:C.good}}>{c.spend>0?`${Math.round((c.convValue||0)/c.spend*100)}%`:"—"}</span>
+                                  <span style={{fontSize:11,color:C.inkLt}}>ROAS</span>
+                                  <span style={{fontSize:11,fontWeight:700,color:C.good}}>{c.spend>0?`${Math.round((c.convValue||0)/c.spend*100)}%`:"—"}</span>
                                 </div>
                                 <div style={{display:"flex",justifyContent:"space-between"}}>
-                                  <span style={{fontSize:9,color:C.inkLt}}>CPA</span>
-                                  <span style={{fontSize:9,fontWeight:700,color:C.ink}}>{c.purchases>0?fmtW(c.spend/c.purchases):"—"}</span>
+                                  <span style={{fontSize:11,color:C.inkLt}}>CPA</span>
+                                  <span style={{fontSize:11,fontWeight:700,color:C.ink}}>{c.purchases>0?fmtW(c.spend/c.purchases):"—"}</span>
                                 </div>
                               </>:<>
                                 <div style={{display:"flex",justifyContent:"space-between"}}>
-                                  <span style={{fontSize:9,color:C.inkLt}}>광고비</span>
-                                  <span style={{fontSize:9,fontWeight:700,color:C.ink}}>{fmtW(c.spend)}</span>
+                                  <span style={{fontSize:11,color:C.inkLt}}>광고비</span>
+                                  <span style={{fontSize:11,fontWeight:700,color:C.ink}}>{fmtW(c.spend)}</span>
                                 </div>
                                 <div style={{display:"flex",justifyContent:"space-between"}}>
-                                  <span style={{fontSize:9,color:C.inkLt}}>CPC</span>
-                                  <span style={{fontSize:9,fontWeight:700,color:C.good}}>₩{Math.round(c.cpc||0).toLocaleString()}</span>
+                                  <span style={{fontSize:11,color:C.inkLt}}>CPC</span>
+                                  <span style={{fontSize:11,fontWeight:700,color:C.good}}>₩{Math.round(c.cpc||0).toLocaleString()}</span>
                                 </div>
                                 <div style={{display:"flex",justifyContent:"space-between"}}>
-                                  <span style={{fontSize:9,color:C.inkLt}}>LPV율</span>
-                                  <span style={{fontSize:9,fontWeight:700,color:C.ink}}>{c.lpvRate||0}%</span>
+                                  <span style={{fontSize:11,color:C.inkLt}}>LPV율</span>
+                                  <span style={{fontSize:11,fontWeight:700,color:C.ink}}>{c.lpvRate||0}%</span>
                                 </div>
                               </>}
                             </div>
@@ -10176,9 +10176,9 @@ export default function OaDashboard(){
               {(()=>{
                 const allCamps = campTab==="conversion" ? d.convCamps : d.trafficCamps;
                 if(!allCamps||allCamps.length===0) return(
-                  <div style={{textAlign:"center",padding:"32px",color:C.inkLt,fontSize:12}}>
+                  <div style={{textAlign:"center",padding:"32px",color:C.inkLt,fontSize:13}}>
                     해당 목적의 캠페인 데이터가 없습니다<br/>
-                    <span style={{fontSize:10,marginTop:4,display:"block"}}>시트의 "캠페인_목적" 컬럼을 확인해주세요</span>
+                    <span style={{fontSize:12,marginTop:4,display:"block"}}>시트의 "캠페인_목적" 컬럼을 확인해주세요</span>
                   </div>
                 );
                 // 비활성(마지막 지출이 시트 최신일 기준 3일 초과) 자동 숨김 + 광고비순 정렬
@@ -10189,9 +10189,9 @@ export default function OaDashboard(){
                 const camps = (showEnded ? allCamps : allCamps.filter(isLive))
                   .slice().sort((a,b)=>(b.spend||0)-(a.spend||0));
                 if(camps.length===0) return(
-                  <div style={{textAlign:"center",padding:"32px",color:C.inkLt,fontSize:12}}>
+                  <div style={{textAlign:"center",padding:"32px",color:C.inkLt,fontSize:13}}>
                     집행중인 광고가 없습니다<br/>
-                    <span style={{fontSize:10,marginTop:4,display:"block"}}>위 "종료 광고 숨겨짐" 버튼으로 지난 광고를 볼 수 있어요</span>
+                    <span style={{fontSize:12,marginTop:4,display:"block"}}>위 "종료 광고 숨겨짐" 버튼으로 지난 광고를 볼 수 있어요</span>
                   </div>
                 );
                 return(
@@ -10222,7 +10222,7 @@ export default function OaDashboard(){
                         <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:10,marginBottom:14}}>
                           {summaryItems.map((s,i)=>(
                             <div key={i} style={{background:C.white,border:`1px solid ${C.border}`,borderRadius:12,padding:"12px 14px",textAlign:"center"}}>
-                              <div style={{fontSize:9,color:C.inkLt,fontWeight:700,letterSpacing:"0.1em"}}>{s.label}</div>
+                              <div style={{fontSize:11,color:C.inkLt,fontWeight:700,letterSpacing:"0.1em"}}>{s.label}</div>
                               <div style={{fontSize:18,fontWeight:900,color:s.color,marginTop:4}}>{s.value}</div>
                             </div>
                           ))}
@@ -10270,9 +10270,9 @@ export default function OaDashboard(){
 
                       return(
                         <div style={{marginBottom:14}}>
-                          <div style={{fontSize:11,fontWeight:800,color:C.ink,marginBottom:8,display:"flex",alignItems:"center",gap:6}}>
+                          <div style={{fontSize:12,fontWeight:800,color:C.ink,marginBottom:8,display:"flex",alignItems:"center",gap:6}}>
                             <MI n="payments" size={13}/> 광고세트 예산 현황
-                            <span style={{fontSize:9,color:C.inkLt,fontWeight:500}}>최신 날짜 기준 일일 예산 · 끈 광고 제외 권장예산 자동 계산</span>
+                            <span style={{fontSize:11,color:C.inkLt,fontWeight:500}}>최신 날짜 기준 일일 예산 · 끈 광고 제외 권장예산 자동 계산</span>
                           </div>
                           <div style={{display:"flex",flexDirection:"column",gap:8}}>
                             {adsets.map((s,i)=>{
@@ -10291,37 +10291,37 @@ export default function OaDashboard(){
                                   borderRadius:12,padding:"12px 14px"}}>
                                   <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",gap:8,flexWrap:"wrap"}}>
                                     <div style={{flex:1,minWidth:0}}>
-                                      <div style={{fontSize:11,fontWeight:800,color:C.ink,marginBottom:4,
+                                      <div style={{fontSize:12,fontWeight:800,color:C.ink,marginBottom:4,
                                         overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{s.name}</div>
                                       <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
                                         {/* 광고 수 */}
-                                        <span style={{fontSize:9,fontWeight:700,padding:"2px 8px",borderRadius:20,
+                                        <span style={{fontSize:11,fontWeight:700,padding:"2px 8px",borderRadius:20,
                                           background:C.cream,color:C.inkMid,border:`1px solid ${C.border}`}}>
                                           광고 총 {totalAds}개
                                         </span>
-                                        <span style={{fontSize:9,fontWeight:700,padding:"2px 8px",borderRadius:20,
+                                        <span style={{fontSize:11,fontWeight:700,padding:"2px 8px",borderRadius:20,
                                           background:"#EDF7F1",color:C.good,border:`1px solid ${C.good}33`}}>
                                           <MI n="circle" size={9} style={{color:C.good}}/> 활성 {activeAds}개
                                         </span>
                                         {offAds.length>0&&(
-                                          <span style={{fontSize:9,fontWeight:700,padding:"2px 8px",borderRadius:20,
+                                          <span style={{fontSize:11,fontWeight:700,padding:"2px 8px",borderRadius:20,
                                             background:"#FEF0F0",color:C.bad,border:`1px solid ${C.bad}33`}}>
                                             ⏹ 꺼짐 {offAds.length}개
                                           </span>
                                         )}
-                                        <span style={{fontSize:9,fontWeight:600,padding:"2px 8px",borderRadius:20,
+                                        <span style={{fontSize:11,fontWeight:600,padding:"2px 8px",borderRadius:20,
                                           background:C.purpleLt,color:C.purple,border:`1px solid ${C.purple}33`}}>
                                           {s.budgetType||"일일 예산"}
                                         </span>
                                       </div>
                                     </div>
                                     <div style={{textAlign:"right",flexShrink:0}}>
-                                      <div style={{fontSize:9,color:C.inkLt,marginBottom:2}}>
+                                      <div style={{fontSize:11,color:C.inkLt,marginBottom:2}}>
                                         현재 일일 예산
                                         {adsetBudgetMap[s.name]?.date&&<span style={{marginLeft:4,color:C.inkLt}}>({adsetBudgetMap[s.name].date.slice(5).replace("-","/")} 기준)</span>}
                                       </div>
                                       <div style={{fontSize:16,fontWeight:900,color:C.ink}}>{fmtW(s.budget)}</div>
-                                      <div style={{fontSize:9,color:C.inkMid,marginTop:1}}>기간 지출 {fmtW(s.spend)} ({sosinRate}%)</div>
+                                      <div style={{fontSize:11,color:C.inkMid,marginTop:1}}>기간 지출 {fmtW(s.spend)} ({sosinRate}%)</div>
                                     </div>
                                   </div>
                                   {/* 예산 조정 권장 */}
@@ -10329,22 +10329,22 @@ export default function OaDashboard(){
                                     <div style={{marginTop:10,padding:"10px 12px",background:"#FFF3E0",
                                       borderRadius:8,border:`1px solid ${C.warn}44`,display:"flex",alignItems:"center",justifyContent:"space-between",gap:8}}>
                                       <div>
-                                        <div style={{fontSize:10,fontWeight:800,color:C.warn}}>⚠️ 예산 조정 권장</div>
-                                        <div style={{fontSize:9,color:C.inkMid,marginTop:2}}>
+                                        <div style={{fontSize:12,fontWeight:800,color:C.warn}}>⚠️ 예산 조정 권장</div>
+                                        <div style={{fontSize:11,color:C.inkMid,marginTop:2}}>
                                           꺼진 광고 {offAds.length}개 제외 · {activeAds}개 기준으로 재배분
                                         </div>
                                       </div>
                                       <div style={{display:"flex",alignItems:"center",gap:8}}>
                                         <div style={{textAlign:"center"}}>
-                                          <div style={{fontSize:9,color:C.inkLt}}>현재</div>
+                                          <div style={{fontSize:11,color:C.inkLt}}>현재</div>
                                           <div style={{fontSize:13,fontWeight:800,color:C.warn,textDecoration:"line-through"}}>{fmtW(s.budget)}</div>
                                         </div>
-                                        <span style={{fontSize:12,color:C.inkMid}}>→</span>
+                                        <span style={{fontSize:13,color:C.inkMid}}>→</span>
                                         <div style={{textAlign:"center"}}>
-                                          <div style={{fontSize:9,color:C.inkLt}}>권장</div>
+                                          <div style={{fontSize:11,color:C.inkLt}}>권장</div>
                                           <div style={{fontSize:15,fontWeight:900,color:C.good}}>{fmtW(recommended)}</div>
                                         </div>
-                                        <div style={{fontSize:9,fontWeight:700,padding:"3px 8px",borderRadius:20,
+                                        <div style={{fontSize:11,fontWeight:700,padding:"3px 8px",borderRadius:20,
                                           background:"#EDF7F1",color:C.good,border:`1px solid ${C.good}33`}}>
                                           -{fmtW(s.budget-recommended)} 절감
                                         </div>
@@ -10394,14 +10394,14 @@ export default function OaDashboard(){
                       const cutList =camps.filter(c=>classify(c)==="cut");
                       if(!upList.length&&!holdList.length&&!cutList.length) return null;
                       const typeTag=isConv
-                        ?<span style={{fontSize:9,fontWeight:700,padding:"1px 7px",borderRadius:20,background:C.blush,color:C.rose,border:`1px solid ${C.rose}33`,marginLeft:4}}>전환</span>
-                        :<span style={{fontSize:9,fontWeight:700,padding:"1px 7px",borderRadius:20,background:C.purpleLt,color:C.purple,border:`1px solid ${C.purple}33`,marginLeft:4}}>트래픽</span>;
+                        ?<span style={{fontSize:11,fontWeight:700,padding:"1px 7px",borderRadius:20,background:C.blush,color:C.rose,border:`1px solid ${C.rose}33`,marginLeft:4}}>전환</span>
+                        :<span style={{fontSize:11,fontWeight:700,padding:"1px 7px",borderRadius:20,background:C.purpleLt,color:C.purple,border:`1px solid ${C.purple}33`,marginLeft:4}}>트래픽</span>;
                       const metric=isConv
                         ?(c)=>`CPA ₩${(c.cpa||0).toLocaleString()}`
                         :(c)=>`CPC ₩${(c.cpc||0).toLocaleString()}`;
                       return(
                         <div style={{marginBottom:14}}>
-                          <div style={{fontSize:10,fontWeight:700,color:C.inkMid,marginBottom:6,display:"flex",alignItems:"center",gap:4}}>
+                          <div style={{fontSize:12,fontWeight:700,color:C.inkMid,marginBottom:6,display:"flex",alignItems:"center",gap:4}}>
                             예산 운영 판단{typeTag}
                           </div>
                           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:10}}>
@@ -10409,16 +10409,16 @@ export default function OaDashboard(){
                               <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:8}}>
                                 <span style={{fontSize:15}}>🚀</span>
                                 <div style={{flex:1}}>
-                                  <div style={{fontSize:11,fontWeight:800,color:C.good}}>예산 올리기</div>
-                                  <div style={{fontSize:9,color:C.inkMid}}>{isConv?"CPA✅·구매5건↑":"CPC✅·CTR✅·LPV✅"}</div>
+                                  <div style={{fontSize:12,fontWeight:800,color:C.good}}>예산 올리기</div>
+                                  <div style={{fontSize:11,color:C.inkMid}}>{isConv?"CPA✅·구매5건↑":"CPC✅·CTR✅·LPV✅"}</div>
                                 </div>
                                 <span style={{fontSize:13,fontWeight:900,color:C.good}}>{upList.length}</span>
                               </div>
-                              {upList.length===0?<div style={{fontSize:10,color:C.inkLt,textAlign:"center",padding:"6px 0"}}>없음</div>:
+                              {upList.length===0?<div style={{fontSize:12,color:C.inkLt,textAlign:"center",padding:"6px 0"}}>없음</div>:
                               upList.map((c,i)=>(
-                                <div key={i} style={{fontSize:10,padding:"3px 7px",background:C.white,borderRadius:7,marginBottom:3,display:"flex",justifyContent:"space-between",gap:4}}>
+                                <div key={i} style={{fontSize:12,padding:"3px 7px",background:C.white,borderRadius:7,marginBottom:3,display:"flex",justifyContent:"space-between",gap:4}}>
                                   <span style={{overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",fontWeight:600,color:C.ink,flex:1}}>{c.name}</span>
-                                  <span style={{color:C.good,fontWeight:800,flexShrink:0,fontSize:9}}>{metric(c)}</span>
+                                  <span style={{color:C.good,fontWeight:800,flexShrink:0,fontSize:11}}>{metric(c)}</span>
                                 </div>
                               ))}
                             </div>
@@ -10426,16 +10426,16 @@ export default function OaDashboard(){
                               <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:8}}>
                                 <span style={{fontSize:15}}>⚠️</span>
                                 <div style={{flex:1}}>
-                                  <div style={{fontSize:11,fontWeight:800,color:C.warn}}>예산 줄이기</div>
-                                  <div style={{fontSize:9,color:C.inkMid}}>{isConv?"CPA·LPV 보류":"CPC↑·CTR↓"}</div>
+                                  <div style={{fontSize:12,fontWeight:800,color:C.warn}}>예산 줄이기</div>
+                                  <div style={{fontSize:11,color:C.inkMid}}>{isConv?"CPA·LPV 보류":"CPC↑·CTR↓"}</div>
                                 </div>
                                 <span style={{fontSize:13,fontWeight:900,color:C.warn}}>{holdList.length}</span>
                               </div>
-                              {holdList.length===0?<div style={{fontSize:10,color:C.inkLt,textAlign:"center",padding:"6px 0"}}>없음</div>:
+                              {holdList.length===0?<div style={{fontSize:12,color:C.inkLt,textAlign:"center",padding:"6px 0"}}>없음</div>:
                               holdList.map((c,i)=>(
-                                <div key={i} style={{fontSize:10,padding:"3px 7px",background:C.white,borderRadius:7,marginBottom:3,display:"flex",justifyContent:"space-between",gap:4}}>
+                                <div key={i} style={{fontSize:12,padding:"3px 7px",background:C.white,borderRadius:7,marginBottom:3,display:"flex",justifyContent:"space-between",gap:4}}>
                                   <span style={{overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",fontWeight:600,color:C.ink,flex:1}}>{c.name}</span>
-                                  <span style={{color:C.warn,fontWeight:800,flexShrink:0,fontSize:9}}>{metric(c)}</span>
+                                  <span style={{color:C.warn,fontWeight:800,flexShrink:0,fontSize:11}}>{metric(c)}</span>
                                 </div>
                               ))}
                             </div>
@@ -10443,16 +10443,16 @@ export default function OaDashboard(){
                               <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:8}}>
                                 <span style={{fontSize:15}}>🔴</span>
                                 <div style={{flex:1}}>
-                                  <div style={{fontSize:11,fontWeight:800,color:C.bad}}>끄기</div>
-                                  <div style={{fontSize:9,color:C.inkMid}}>{isConv?"CPA컷·랜딩문제":"소재문제·CPC과다"}</div>
+                                  <div style={{fontSize:12,fontWeight:800,color:C.bad}}>끄기</div>
+                                  <div style={{fontSize:11,color:C.inkMid}}>{isConv?"CPA컷·랜딩문제":"소재문제·CPC과다"}</div>
                                 </div>
                                 <span style={{fontSize:13,fontWeight:900,color:C.bad}}>{cutList.length}</span>
                               </div>
-                              {cutList.length===0?<div style={{fontSize:10,color:C.inkLt,textAlign:"center",padding:"6px 0"}}>없음</div>:
+                              {cutList.length===0?<div style={{fontSize:12,color:C.inkLt,textAlign:"center",padding:"6px 0"}}>없음</div>:
                               cutList.map((c,i)=>(
-                                <div key={i} style={{fontSize:10,padding:"3px 7px",background:C.white,borderRadius:7,marginBottom:3,display:"flex",justifyContent:"space-between",gap:4}}>
+                                <div key={i} style={{fontSize:12,padding:"3px 7px",background:C.white,borderRadius:7,marginBottom:3,display:"flex",justifyContent:"space-between",gap:4}}>
                                   <span style={{overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",fontWeight:600,color:C.ink,flex:1}}>{c.name}</span>
-                                  <span style={{color:C.bad,fontWeight:800,flexShrink:0,fontSize:9}}>{metric(c)}</span>
+                                  <span style={{color:C.bad,fontWeight:800,flexShrink:0,fontSize:11}}>{metric(c)}</span>
                                 </div>
                               ))}
                             </div>
@@ -10464,14 +10464,14 @@ export default function OaDashboard(){
                       <CardTitle title={campTab==="conversion"?"전환 캠페인":"트래픽 캠페인"}
                         sub={`${campTab==="conversion"?"CPA · LPV율 중심":"CPC · CTR 중심"} · ${camps.length}개 (${showEnded?"종료 포함":"집행중만"}) · 광고비순`}/>
                       <div style={{overflowX:"auto"}}>
-                        <table style={{width:"100%",borderCollapse:"collapse",fontSize:11,minWidth:600}}>
+                        <table style={{width:"100%",borderCollapse:"collapse",fontSize:12,minWidth:600}}>
                           <thead><tr style={{borderBottom:`2px solid ${C.border}`}}>
                             {(campTab==="conversion"
                               ?["광고명","광고세트","광고비","클릭","구매","전환값","CPA","ROAS","LPV율","ON/OFF"]
                               :["광고명","광고세트","광고비","클릭","LPV","CPC","CTR","LPV율","ON/OFF"]
                             ).map((h,hi)=>(
                               <th key={hi} style={{padding:"8px 8px",textAlign:h==="광고명"?"left":"center",
-                                color:C.inkLt,fontWeight:700,fontSize:9,whiteSpace:"nowrap"}}>{h==="삭제"?"":h}</th>
+                                color:C.inkLt,fontWeight:700,fontSize:11,whiteSpace:"nowrap"}}>{h==="삭제"?"":h}</th>
                             ))}
                           </tr></thead>
                           <tbody>{camps.map((c,i)=>{
@@ -10547,14 +10547,14 @@ export default function OaDashboard(){
                               <td style={{padding:"10px 8px",maxWidth:220}}>
                                 <div style={{display:"flex",alignItems:"center",gap:4,marginBottom:3}}>
                                   {(()=>{const thumb=adImages.find(img=>img.name&&c.name&&(c.name.includes(img.name)||img.name.includes(c.name)))||matchMetaThumb(c.name);return thumb?<ThumbPreview url={thumb.url} name={thumb.name}/>:null;})()}
-                                  <span style={{fontWeight:700,color:C.ink,fontSize:11,wordBreak:"break-all"}}>{c.name}</span>
+                                  <span style={{fontWeight:700,color:C.ink,fontSize:12,wordBreak:"break-all"}}>{c.name}</span>
                                 </div>
                                 <div style={{display:"flex",flexWrap:"wrap",gap:3}}>
                                   {/* 판정 뱃지 */}
-                                  <span style={{fontSize:9,fontWeight:800,padding:"2px 7px",borderRadius:20,color:verdictColor,background:verdictBg,border:`1px solid ${verdictColor}33`}}>{verdict}</span>
+                                  <span style={{fontSize:11,fontWeight:800,padding:"2px 7px",borderRadius:20,color:verdictColor,background:verdictBg,border:`1px solid ${verdictColor}33`}}>{verdict}</span>
                                   {/* 운영 기간 뱃지 */}
                                   {runDays!==null&&(
-                                    <span style={{fontSize:9,fontWeight:600,padding:"2px 7px",borderRadius:20,whiteSpace:"nowrap",
+                                    <span style={{fontSize:11,fontWeight:600,padding:"2px 7px",borderRadius:20,whiteSpace:"nowrap",
                                       color:isActive?C.good:C.inkLt,
                                       background:isActive?"#EDF7F1":C.cream,
                                       border:`1px solid ${isActive?C.good+"44":C.border}`}}>
@@ -10564,37 +10564,37 @@ export default function OaDashboard(){
                                     </span>
                                   )}
                                   {/* 복제 추천 */}
-                                  {cloneable&&<span style={{fontSize:9,fontWeight:800,padding:"2px 7px",borderRadius:20,color:C.purple,background:C.purpleLt,border:`1px solid ${C.purple}33`,display:"inline-flex",alignItems:"center",gap:2}}><MI n="assignment" size={9}/>복제추천</span>}
+                                  {cloneable&&<span style={{fontSize:11,fontWeight:800,padding:"2px 7px",borderRadius:20,color:C.purple,background:C.purpleLt,border:`1px solid ${C.purple}33`,display:"inline-flex",alignItems:"center",gap:2}}><MI n="assignment" size={9}/>복제추천</span>}
                                   {/* LPV 원인 */}
-                                  {lpvIssue&&<span style={{fontSize:9,fontWeight:700,padding:"2px 7px",borderRadius:20,color:C.warn,background:"#FFF8EC",border:`1px solid ${C.warn}33`}}>⚡{lpvIssue}</span>}
+                                  {lpvIssue&&<span style={{fontSize:11,fontWeight:700,padding:"2px 7px",borderRadius:20,color:C.warn,background:"#FFF8EC",border:`1px solid ${C.warn}33`}}>⚡{lpvIssue}</span>}
                                 </div>
                               </td>
                               {/* 광고세트 */}
                               <td style={{padding:"10px 8px",maxWidth:140}}>
-                                <div style={{fontSize:10,color:C.inkMid,wordBreak:"break-all"}}>{c.adset||"—"}</div>
+                                <div style={{fontSize:12,color:C.inkMid,wordBreak:"break-all"}}>{c.adset||"—"}</div>
                               </td>
                               {/* 광고비 (원) */}
-                              <td style={{padding:"10px 8px",textAlign:"right",color:C.inkMid,fontSize:10,whiteSpace:"nowrap"}}>{spendKr}</td>
+                              <td style={{padding:"10px 8px",textAlign:"right",color:C.inkMid,fontSize:12,whiteSpace:"nowrap"}}>{spendKr}</td>
                               {/* 클릭 */}
                               <td style={{padding:"10px 8px",textAlign:"right",color:C.inkMid}}>{c.clicks.toLocaleString()}</td>
                               {campTab==="conversion" ? <>
                                 <td style={{padding:"10px 8px",textAlign:"right",fontWeight:800,color:C.good}}>{c.purchases}</td>
-                                <td style={{padding:"10px 8px",textAlign:"right",fontSize:10,color:C.inkMid,whiteSpace:"nowrap"}}>
+                                <td style={{padding:"10px 8px",textAlign:"right",fontSize:12,color:C.inkMid,whiteSpace:"nowrap"}}>
                                   {c.convValue>0?`₩${Math.round(c.convValue/10000).toLocaleString()}만`:"—"}
                                 </td>
                                 <td style={{padding:"10px 8px",textAlign:"right"}}>
-                                  {c.cpa>0?<span style={{fontWeight:800,fontSize:11,color:cpaOk?C.good:C.bad,background:cpaOk?"#EDF7F1":"#FEF0F0",padding:"2px 7px",borderRadius:20,whiteSpace:"nowrap"}}>₩{c.cpa.toLocaleString()}</span>:<span style={{color:C.inkLt}}>—</span>}
+                                  {c.cpa>0?<span style={{fontWeight:800,fontSize:12,color:cpaOk?C.good:C.bad,background:cpaOk?"#EDF7F1":"#FEF0F0",padding:"2px 7px",borderRadius:20,whiteSpace:"nowrap"}}>₩{c.cpa.toLocaleString()}</span>:<span style={{color:C.inkLt}}>—</span>}
                                 </td>
                                 <td style={{padding:"10px 8px",textAlign:"right"}}>
-                                  {roasPct?<span style={{fontWeight:800,fontSize:11,color:roasOk?C.good:C.warn,background:roasOk?"#EDF7F1":"#FFF8EC",padding:"2px 7px",borderRadius:20}}>{roasPct}</span>:<span style={{color:C.inkLt}}>—</span>}
+                                  {roasPct?<span style={{fontWeight:800,fontSize:12,color:roasOk?C.good:C.warn,background:roasOk?"#EDF7F1":"#FFF8EC",padding:"2px 7px",borderRadius:20}}>{roasPct}</span>:<span style={{color:C.inkLt}}>—</span>}
                                 </td>
                               </> : <>
                                 <td style={{padding:"10px 8px",textAlign:"right",color:C.sage,fontWeight:700}}>{c.lpv.toLocaleString()}</td>
                                 <td style={{padding:"10px 8px",textAlign:"right"}}>
-                                  <span style={{fontWeight:800,fontSize:11,color:cpcOk?C.good:C.bad,background:cpcOk?"#EDF7F1":"#FEF0F0",padding:"2px 7px",borderRadius:20}}>₩{c.cpc}</span>
+                                  <span style={{fontWeight:800,fontSize:12,color:cpcOk?C.good:C.bad,background:cpcOk?"#EDF7F1":"#FEF0F0",padding:"2px 7px",borderRadius:20}}>₩{c.cpc}</span>
                                 </td>
                                 <td style={{padding:"10px 8px",textAlign:"right"}}>
-                                  <span style={{fontWeight:800,fontSize:11,color:ctrOk?C.good:C.warn,background:ctrOk?"#EDF7F1":"#FFF8EC",padding:"2px 7px",borderRadius:20}}>{c.ctr}%</span>
+                                  <span style={{fontWeight:800,fontSize:12,color:ctrOk?C.good:C.warn,background:ctrOk?"#EDF7F1":"#FFF8EC",padding:"2px 7px",borderRadius:20}}>{c.ctr}%</span>
                                 </td>
                               </>}
                               {/* LPV율 */}
@@ -10603,7 +10603,7 @@ export default function OaDashboard(){
                                   <div style={{width:32,height:4,background:C.border,borderRadius:2,overflow:"hidden"}}>
                                     <div style={{height:"100%",width:`${Math.min(c.lpvRate,100)}%`,background:lpvOk?C.sage:C.warn,borderRadius:2}}/>
                                   </div>
-                                  <span style={{fontWeight:700,color:lpvOk?C.sage:C.warn,fontSize:10}}>{c.lpvRate}%</span>
+                                  <span style={{fontWeight:700,color:lpvOk?C.sage:C.warn,fontSize:12}}>{c.lpvRate}%</span>
                                 </div>
                               </td>
                               {/* ON/OFF 토글 */}
@@ -10611,8 +10611,8 @@ export default function OaDashboard(){
                                 {(()=>{
                                   const st=adStatuses?.[c.name];
                                   const loading=toggleStates[c.name]==="loading";
-                                  if(adStatuses===null) return <span style={{fontSize:9,color:C.inkLt}}>…</span>;
-                                  if(!st) return <span style={{fontSize:9,color:C.inkLt}} title="메타에서 광고를 찾지 못함">—</span>;
+                                  if(adStatuses===null) return <span style={{fontSize:11,color:C.inkLt}}>…</span>;
+                                  if(!st) return <span style={{fontSize:11,color:C.inkLt}} title="메타에서 광고를 찾지 못함">—</span>;
                                   const isOn=st==="ACTIVE";
                                   return(
                                     <button onClick={()=>toggleAd(c.name)} disabled={loading}
@@ -10726,32 +10726,32 @@ export default function OaDashboard(){
               const stk=label==="증액"?getStockDays(name):null;
               return(
               <div key={label+name} style={{display:"flex",alignItems:"center",gap:8,padding:"6px 10px",borderRadius:8,background:C.white,border:`1px solid ${color}33`}}>
-                <span style={{fontSize:9,fontWeight:800,color,background:color+"18",padding:"2px 7px",borderRadius:4,flexShrink:0}}>{label}</span>
-                <span style={{flex:1,fontSize:11,fontWeight:700,color:C.ink,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{name}</span>
+                <span style={{fontSize:11,fontWeight:800,color,background:color+"18",padding:"2px 7px",borderRadius:4,flexShrink:0}}>{label}</span>
+                <span style={{flex:1,fontSize:12,fontWeight:700,color:C.ink,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{name}</span>
                 {stk&&(stk.days!==null
                   ?<span title={`재고 ${stk.qty.toLocaleString()}개${stk.pending?` · 발주중 ${stk.pending.toLocaleString()}개`:""} · 최근 14일 판매 기준`}
-                      style={{fontSize:9,fontWeight:800,flexShrink:0,padding:"2px 7px",borderRadius:4,
+                      style={{fontSize:11,fontWeight:800,flexShrink:0,padding:"2px 7px",borderRadius:4,
                         color:stk.days<14?"#dc2626":stk.days<30?"#d97706":C.sage,
                         background:stk.days<14?"#fef2f2":stk.days<30?"#fffbeb":"#f0fdf4"}}>
                       {stk.days<14&&<MI n="warning" size={10}/>} 재고 {stk.days}일
                     </span>
                   :<span title={`재고 ${stk.qty.toLocaleString()}개 · 최근 판매 없음`}
-                      style={{fontSize:9,fontWeight:700,color:C.inkLt,flexShrink:0}}>재고 {stk.qty.toLocaleString()}개</span>)}
-                <span style={{fontSize:10,color:C.inkLt,flexShrink:0}}>
+                      style={{fontSize:11,fontWeight:700,color:C.inkLt,flexShrink:0}}>재고 {stk.qty.toLocaleString()}개</span>)}
+                <span style={{fontSize:12,color:C.inkLt,flexShrink:0}}>
                   {fmtW(v.spend)} · {v.purchases>0?`ROAS ${Math.round((v.convValue/v.spend)*100)}%`:"구매 0"}
                 </span>
                 {canPause&&(pauseStates[name]==="paused"
-                  ?<span style={{fontSize:9,fontWeight:700,color:C.inkLt,flexShrink:0}}><MI n="pause_circle" size={11}/> 꺼짐</span>
+                  ?<span style={{fontSize:11,fontWeight:700,color:C.inkLt,flexShrink:0}}><MI n="pause_circle" size={11}/> 꺼짐</span>
                   :<button onClick={()=>pauseAd(name)} disabled={pauseStates[name]==="loading"}
-                      style={{fontSize:9,fontWeight:700,padding:"3px 8px",borderRadius:6,flexShrink:0,
+                      style={{fontSize:11,fontWeight:700,padding:"3px 8px",borderRadius:6,flexShrink:0,
                         border:`1px solid ${C.bad}44`,background:"#fef2f2",color:C.bad,
                         cursor:pauseStates[name]==="loading"?"wait":"pointer",fontFamily:"inherit",opacity:pauseStates[name]==="loading"?0.5:1}}>
                       <MI n="pause" size={10}/> {pauseStates[name]==="loading"?"끄는 중…":"광고 끄기"}
                     </button>)}
                 {canReq&&(alreadyReq(name)
-                  ?<span style={{fontSize:9,fontWeight:700,color:"#8b5cf6",flexShrink:0}}><MI n="check" size={11}/> 요청됨</span>
+                  ?<span style={{fontSize:11,fontWeight:700,color:"#8b5cf6",flexShrink:0}}><MI n="check" size={11}/> 요청됨</span>
                   :<button onClick={()=>requestFromWeekly(name,v)}
-                      style={{fontSize:9,fontWeight:700,padding:"3px 8px",borderRadius:6,flexShrink:0,
+                      style={{fontSize:11,fontWeight:700,padding:"3px 8px",borderRadius:6,flexShrink:0,
                         border:"1px solid #8b5cf644",background:"#f5f3ff",color:"#8b5cf6",
                         cursor:"pointer",fontFamily:"inherit"}}>
                       <MI n="palette" size={10}/> 재제작
@@ -10762,7 +10762,7 @@ export default function OaDashboard(){
               <div style={{background:"linear-gradient(135deg,#fff5f7,#fff)",border:`1px solid ${C.rose}44`,borderRadius:12,padding:"14px 16px"}}>
                 <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:10}}>
                   <div style={{fontSize:13,fontWeight:800,color:C.rose}}><MI n="bolt" size={14}/> 이번 주 액션 추천</div>
-                  <div style={{fontSize:10,color:C.inkLt,display:"flex",gap:10}}>
+                  <div style={{fontSize:12,color:C.inkLt,display:"flex",gap:10}}>
                     {spendDelta!==null&&<span>지출 {spendDelta>=0?"+":""}{spendDelta}%</span>}
                     {roasDelta!==null&&<span style={{fontWeight:700,color:roasDelta>=0?C.sage:C.bad}}>ROAS {roasDelta>=0?"▲":"▼"}{Math.abs(roasDelta)}%p</span>}
                   </div>
@@ -10771,9 +10771,9 @@ export default function OaDashboard(){
                   {scaleUp.map(([n,v])=>row(n,v,C.sage,"증액",false))}
                   {fatigue.map(([n,v])=>row(n,v,"#d97706","교체 준비",true))}
                   {stop.map(([n,v])=>row(n,v,C.bad,"중단 검토",true,true))}
-                  {!scaleUp.length&&!stop.length&&!fatigue.length&&<div style={{fontSize:11,color:C.inkLt}}>이번 주는 증액/중단 대상 소재가 없어요</div>}
+                  {!scaleUp.length&&!stop.length&&!fatigue.length&&<div style={{fontSize:12,color:C.inkLt}}>이번 주는 증액/중단 대상 소재가 없어요</div>}
                 </div>
-                {fatigue.length>0&&<div style={{fontSize:9,color:C.inkLt,marginTop:6}}>교체 준비 = 최근 3개 게재 주 연속 ROAS 하락 — 소재 수명 끝나기 전에 변주 준비</div>}
+                {fatigue.length>0&&<div style={{fontSize:11,color:C.inkLt,marginTop:6}}>교체 준비 = 최근 3개 게재 주 연속 ROAS 하락 — 소재 수명 끝나기 전에 변주 준비</div>}
               </div>
             );
           })();
@@ -10795,9 +10795,9 @@ export default function OaDashboard(){
                       <div style={{display:"flex",alignItems:"center",gap:10}}>
                         <div style={{fontSize:14,fontWeight:800,color:i===0?C.rose:C.ink}}>
                           {startStr} ~ {endStr}
-                          {i===0&&<span style={{fontSize:10,marginLeft:6,color:C.rose,fontWeight:700,background:C.blush,padding:"2px 6px",borderRadius:4}}>최신</span>}
+                          {i===0&&<span style={{fontSize:12,marginLeft:6,color:C.rose,fontWeight:700,background:C.blush,padding:"2px 6px",borderRadius:4}}>최신</span>}
                         </div>
-                        <div style={{fontSize:10,color:C.inkLt,display:"flex",gap:8}}>
+                        <div style={{fontSize:12,color:C.inkLt,display:"flex",gap:8}}>
                           {w.purchases>0&&<span style={{color:C.sage,fontWeight:700}}>{w.purchases}건</span>}
                           {roas>0&&<span>ROAS {roas}%</span>}
                         </div>
@@ -10816,9 +10816,9 @@ export default function OaDashboard(){
                             <div key={camp} style={{display:"flex",alignItems:"center",justifyContent:"space-between",
                               padding:"8px 10px",borderRadius:8,background:isConv?"#fff5f7":C.cream}}>
                               <div style={{flex:1,minWidth:0}}>
-                                <div style={{fontSize:11,fontWeight:700,color:isConv?C.rose:C.inkMid,
+                                <div style={{fontSize:12,fontWeight:700,color:isConv?C.rose:C.inkMid,
                                   overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{camp}</div>
-                                <div style={{fontSize:10,color:C.inkLt,display:"flex",gap:8,marginTop:2}}>
+                                <div style={{fontSize:12,color:C.inkLt,display:"flex",gap:8,marginTop:2}}>
                                   {v.purchases>0&&<span style={{color:C.sage,fontWeight:700}}>{v.purchases}건</span>}
                                   {cr&&<span>ROAS {cr}%</span>}
                                   {v.clicks>0&&<span>{v.clicks.toLocaleString()} 클릭</span>}
@@ -10834,7 +10834,7 @@ export default function OaDashboard(){
                           if(!adList.length) return null;
                           return(
                             <>
-                              <div style={{fontSize:10,fontWeight:800,color:C.inkLt,marginTop:8,padding:"0 2px",letterSpacing:0.3}}>
+                              <div style={{fontSize:12,fontWeight:800,color:C.inkLt,marginTop:8,padding:"0 2px",letterSpacing:0.3}}>
                                 <MI n="image" size={11}/> 소재별 성과 TOP {adList.length}
                               </div>
                               {adList.map(([name,v])=>{
@@ -10850,11 +10850,11 @@ export default function OaDashboard(){
                                           <MI n="image" size={18} style={{color:C.inkLt}}/>
                                         </div>}
                                     <div style={{flex:1,minWidth:0}}>
-                                      <div style={{fontSize:11,fontWeight:700,color:C.ink,
+                                      <div style={{fontSize:12,fontWeight:700,color:C.ink,
                                         overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{name}</div>
-                                      <div style={{fontSize:10,color:C.inkLt,display:"flex",gap:8,marginTop:2,alignItems:"center",flexWrap:"wrap"}}>
-                                        {(()=>{const ap=classifyAppeal(name);return <span style={{fontSize:8.5,fontWeight:800,color:"#fff",background:APPEAL_COLORS[ap],padding:"1px 6px",borderRadius:4}}>{ap}</span>;})()}
-                                        {fatigued.has(name)&&<span style={{fontSize:8.5,fontWeight:800,color:"#fff",background:"#d97706",padding:"1px 6px",borderRadius:4}}>피로↓</span>}
+                                      <div style={{fontSize:12,color:C.inkLt,display:"flex",gap:8,marginTop:2,alignItems:"center",flexWrap:"wrap"}}>
+                                        {(()=>{const ap=classifyAppeal(name);return <span style={{fontSize:10,fontWeight:800,color:"#fff",background:APPEAL_COLORS[ap],padding:"1px 6px",borderRadius:4}}>{ap}</span>;})()}
+                                        {fatigued.has(name)&&<span style={{fontSize:10,fontWeight:800,color:"#fff",background:"#d97706",padding:"1px 6px",borderRadius:4}}>피로↓</span>}
                                         {v.purchases>0&&<span style={{color:C.sage,fontWeight:700}}>{v.purchases}건</span>}
                                         {cr!==null&&<span style={{fontWeight:700,color:cr>=400?C.sage:cr<200?C.bad:C.inkMid}}>ROAS {cr}%</span>}
                                         {cr===null&&v.spend>0&&<span style={{color:C.bad,fontWeight:700}}>구매 0</span>}
@@ -10921,9 +10921,9 @@ export default function OaDashboard(){
                       <div style={{display:"flex",alignItems:"center",gap:10}}>
                         <div style={{fontSize:14,fontWeight:800,color:i===0?C.rose:C.ink}}>
                           {yr}년 {mo}월
-                          {i===0&&<span style={{fontSize:10,marginLeft:6,color:C.rose,fontWeight:700,background:C.blush,padding:"2px 6px",borderRadius:4}}>최신</span>}
+                          {i===0&&<span style={{fontSize:12,marginLeft:6,color:C.rose,fontWeight:700,background:C.blush,padding:"2px 6px",borderRadius:4}}>최신</span>}
                         </div>
-                        <div style={{fontSize:10,color:C.inkLt,display:"flex",gap:8}}>
+                        <div style={{fontSize:12,color:C.inkLt,display:"flex",gap:8}}>
                           {m.purchases>0&&<span style={{color:C.sage,fontWeight:700}}>{m.purchases}건</span>}
                           {roas>0&&<span>ROAS {roas}%</span>}
                         </div>
@@ -10942,9 +10942,9 @@ export default function OaDashboard(){
                             <div key={camp} style={{display:"flex",alignItems:"center",justifyContent:"space-between",
                               padding:"8px 10px",borderRadius:8,background:isConv?"#fff5f7":C.cream}}>
                               <div style={{flex:1,minWidth:0}}>
-                                <div style={{fontSize:11,fontWeight:700,color:isConv?C.rose:C.inkMid,
+                                <div style={{fontSize:12,fontWeight:700,color:isConv?C.rose:C.inkMid,
                                   overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{camp}</div>
-                                <div style={{fontSize:10,color:C.inkLt,display:"flex",gap:8,marginTop:2}}>
+                                <div style={{fontSize:12,color:C.inkLt,display:"flex",gap:8,marginTop:2}}>
                                   {v.purchases>0&&<span style={{color:C.sage,fontWeight:700}}>{v.purchases}건</span>}
                                   {cr&&<span>ROAS {cr}%</span>}
                                   {v.clicks>0&&<span>{v.clicks.toLocaleString()} 클릭</span>}
@@ -11001,9 +11001,9 @@ export default function OaDashboard(){
                       <div style={{display:"flex",alignItems:"center",gap:10}}>
                         <div style={{fontSize:14,fontWeight:800,color:isLatest?C.rose:C.ink}}>
                           {date.slice(5).replace("-","/")}
-                          {isLatest&&<span style={{fontSize:10,marginLeft:6,color:C.rose,fontWeight:700,background:C.blush,padding:"2px 6px",borderRadius:4}}>최신</span>}
+                          {isLatest&&<span style={{fontSize:12,marginLeft:6,color:C.rose,fontWeight:700,background:C.blush,padding:"2px 6px",borderRadius:4}}>최신</span>}
                         </div>
-                        <div style={{fontSize:10,color:C.inkLt,display:"flex",gap:8}}>
+                        <div style={{fontSize:12,color:C.inkLt,display:"flex",gap:8}}>
                           {convTotal>0&&<span style={{color:"#f9a8d4",fontWeight:700}}>전환 {fmtW(convTotal)}</span>}
                           {traffTotal>0&&<span style={{color:C.roseLt,fontWeight:700}}>트래픽 {fmtW(traffTotal)}</span>}
                         </div>
@@ -11023,9 +11023,9 @@ export default function OaDashboard(){
                             <div key={camp} style={{display:"flex",alignItems:"center",justifyContent:"space-between",
                               padding:"8px 10px",borderRadius:8,background:isConv?"#fff5f7":C.cream}}>
                               <div style={{flex:1,minWidth:0}}>
-                                <div style={{fontSize:11,fontWeight:700,color:isConv?C.rose:C.inkMid,
+                                <div style={{fontSize:12,fontWeight:700,color:isConv?C.rose:C.inkMid,
                                   overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{camp}</div>
-                                <div style={{fontSize:10,color:C.inkLt,display:"flex",gap:8,marginTop:2}}>
+                                <div style={{fontSize:12,color:C.inkLt,display:"flex",gap:8,marginTop:2}}>
                                   {v.purchases>0&&<span style={{color:C.sage,fontWeight:700}}>{v.purchases}건</span>}
                                   {roas&&<span>ROAS {roas}%</span>}
                                   {v.clicks>0&&<span>{v.clicks.toLocaleString()} 클릭</span>}
@@ -11079,14 +11079,14 @@ export default function OaDashboard(){
             s.qty=(realSales||[]).filter(r=>r.date>=start&&r.date<=end).reduce((a,r)=>a+(Number(r.qty)||0),0);
             return s;
           };
-          const inputSt={padding:"7px 10px",borderRadius:8,border:`1px solid ${C.border}`,fontSize:11,fontFamily:"inherit",background:C.white,color:C.ink};
+          const inputSt={padding:"7px 10px",borderRadius:8,border:`1px solid ${C.border}`,fontSize:12,fontFamily:"inherit",background:C.white,color:C.ink};
           const fmtD=d=>d?d.slice(5).replace("-","/"):"";
           return(
             <div style={{display:"flex",flexDirection:"column",gap:10}}>
               <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
-                <div style={{fontSize:12,fontWeight:800,color:C.ink}}><MI n="celebration" size={14}/> 행사 일정 · 기간별 성과</div>
+                <div style={{fontSize:13,fontWeight:800,color:C.ink}}><MI n="celebration" size={14}/> 행사 일정 · 기간별 성과</div>
                 {!eventForm&&<button onClick={()=>setEventForm({name:"",start:today,end:today,memo:""})}
-                  style={{fontSize:10,fontWeight:700,padding:"5px 12px",borderRadius:8,border:`1px solid ${C.rose}`,
+                  style={{fontSize:12,fontWeight:700,padding:"5px 12px",borderRadius:8,border:`1px solid ${C.rose}`,
                     background:C.blush,color:C.rose,cursor:"pointer",fontFamily:"inherit"}}>+ 행사 등록</button>}
               </div>
               {eventForm&&(
@@ -11095,7 +11095,7 @@ export default function OaDashboard(){
                     <input style={{...inputSt,flex:2,minWidth:140}} placeholder="행사명 (예: 7월 슈퍼세일)" value={eventForm.name}
                       onChange={e=>setEventForm(f=>({...f,name:e.target.value}))}/>
                     <input type="date" style={inputSt} value={eventForm.start} onChange={e=>setEventForm(f=>({...f,start:e.target.value}))}/>
-                    <span style={{alignSelf:"center",fontSize:11,color:C.inkLt}}>~</span>
+                    <span style={{alignSelf:"center",fontSize:12,color:C.inkLt}}>~</span>
                     <input type="date" style={inputSt} value={eventForm.end} onChange={e=>setEventForm(f=>({...f,end:e.target.value}))}/>
                   </div>
                   <input style={inputSt} placeholder="제품명 (예: 소닉플로우, 에어리소닉) — 광고 자동 매칭" value={eventForm.product||""}
@@ -11103,15 +11103,15 @@ export default function OaDashboard(){
                   <input style={inputSt} placeholder="메모 (선택 — 할인율, 채널, 목표 등)" value={eventForm.memo||""}
                     onChange={e=>setEventForm(f=>({...f,memo:e.target.value}))}/>
                   <div style={{display:"flex",gap:6,justifyContent:"flex-end"}}>
-                    <button onClick={()=>setEventForm(null)} style={{fontSize:10,fontWeight:700,padding:"5px 12px",borderRadius:8,
+                    <button onClick={()=>setEventForm(null)} style={{fontSize:12,fontWeight:700,padding:"5px 12px",borderRadius:8,
                       border:`1px solid ${C.border}`,background:C.white,color:C.inkMid,cursor:"pointer",fontFamily:"inherit"}}>취소</button>
-                    <button onClick={saveEvent} style={{fontSize:10,fontWeight:700,padding:"5px 14px",borderRadius:8,
+                    <button onClick={saveEvent} style={{fontSize:12,fontWeight:700,padding:"5px 14px",borderRadius:8,
                       border:"none",background:C.rose,color:"#fff",cursor:"pointer",fontFamily:"inherit"}}>{eventForm.id?"수정":"등록"}</button>
                   </div>
                 </div>
               )}
               {!events.length&&!eventForm&&(
-                <div style={{textAlign:"center",color:C.inkLt,fontSize:12,padding:"30px 0",background:C.white,borderRadius:12,border:`1px solid ${C.border}`}}>
+                <div style={{textAlign:"center",color:C.inkLt,fontSize:13,padding:"30px 0",background:C.white,borderRadius:12,border:`1px solid ${C.border}`}}>
                   행사를 등록하면 기간 동안의 광고 성과·실판매를 직전 기간과 비교해서 보여드려요
                 </div>
               )}
@@ -11129,10 +11129,10 @@ export default function OaDashboard(){
                   const prevRoas=prev.spend>0?Math.round((prev.convValue/prev.spend)*100):0;
                   const pct=(a,b)=>b>0?Math.round(((a-b)/b)*100):null;
                   const delta=(a,b,suffix="")=>{const p=pct(a,b);return p===null?null:
-                    <span style={{fontSize:9,fontWeight:700,color:p>=0?C.sage:C.bad}}> {p>=0?"+":""}{p}%{suffix}</span>;};
+                    <span style={{fontSize:11,fontWeight:700,color:p>=0?C.sage:C.bad}}> {p>=0?"+":""}{p}%{suffix}</span>;};
                   const stat=(label,val,d)=>(
                     <div key={label} style={{flex:1,minWidth:90,background:C.cream,borderRadius:10,padding:"10px 12px"}}>
-                      <div style={{fontSize:9,color:C.inkLt,fontWeight:700}}>{label}</div>
+                      <div style={{fontSize:11,color:C.inkLt,fontWeight:700}}>{label}</div>
                       <div style={{fontSize:14,fontWeight:900,color:C.ink,marginTop:2}}>{val}{d}</div>
                     </div>
                   );
@@ -11140,22 +11140,22 @@ export default function OaDashboard(){
                     .sort((a,b)=>b[1].spend-a[1].spend).slice(0,5);
                   body=(
                     <div style={{borderTop:`1px solid ${C.border}`,padding:"12px 14px",display:"flex",flexDirection:"column",gap:10}}>
-                      {ev.product&&<div style={{fontSize:10,color:C.rose,fontWeight:700}}>🔗 제품 매칭: {ev.product} · 광고 {cur.matchedAds}건 / {cur.totalAds}건</div>}
+                      {ev.product&&<div style={{fontSize:12,color:C.rose,fontWeight:700}}>🔗 제품 매칭: {ev.product} · 광고 {cur.matchedAds}건 / {cur.totalAds}건</div>}
                       <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
                         {stat("광고비",fmtW(cur.spend),delta(cur.spend,prev.spend))}
                         {stat("구매",`${cur.purchases}건`,delta(cur.purchases,prev.purchases))}
-                        {stat("ROAS",`${roas}%`,prevRoas>0?<span style={{fontSize:9,fontWeight:700,color:roas>=prevRoas?C.sage:C.bad}}> {roas>=prevRoas?"▲":"▼"}{Math.abs(roas-prevRoas)}%p</span>:null)}
+                        {stat("ROAS",`${roas}%`,prevRoas>0?<span style={{fontSize:11,fontWeight:700,color:roas>=prevRoas?C.sage:C.bad}}> {roas>=prevRoas?"▲":"▼"}{Math.abs(roas-prevRoas)}%p</span>:null)}
                         {stat("실판매",`${cur.qty.toLocaleString()}개`,delta(cur.qty,prev.qty))}
                       </div>
-                      <div style={{fontSize:9,color:C.inkLt}}>비교 기준: 직전 같은 길이 기간 ({fmtD(prevStart)}~{fmtD(prevEnd)}, {lenDays}일) · 실판매 = 쿠팡 일별 판매량</div>
+                      <div style={{fontSize:11,color:C.inkLt}}>비교 기준: 직전 같은 길이 기간 ({fmtD(prevStart)}~{fmtD(prevEnd)}, {lenDays}일) · 실판매 = 쿠팡 일별 판매량</div>
                       {topAdsEv.length>0&&(
                         <div>
-                          <div style={{fontSize:10,fontWeight:800,color:C.ink,marginBottom:5}}>기간 중 소재 TOP {topAdsEv.length}</div>
+                          <div style={{fontSize:12,fontWeight:800,color:C.ink,marginBottom:5}}>기간 중 소재 TOP {topAdsEv.length}</div>
                           <div style={{display:"flex",flexDirection:"column",gap:3}}>
                             {topAdsEv.map(([n,v])=>{
                               const r=v.spend>0?Math.round((v.convValue/v.spend)*100):0;
                               return(
-                                <div key={n} style={{display:"flex",alignItems:"center",gap:8,fontSize:10,padding:"5px 9px",borderRadius:7,background:C.cream}}>
+                                <div key={n} style={{display:"flex",alignItems:"center",gap:8,fontSize:12,padding:"5px 9px",borderRadius:7,background:C.cream}}>
                                   <span style={{flex:1,fontWeight:700,color:C.ink,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{n}</span>
                                   <span style={{color:C.inkLt,flexShrink:0}}>{fmtW(v.spend)}</span>
                                   <span style={{fontWeight:800,flexShrink:0,color:r>=400?C.sage:r>=200?C.ink:C.bad}}>ROAS {r}%</span>
@@ -11166,9 +11166,9 @@ export default function OaDashboard(){
                         </div>
                       )}
                       <div style={{display:"flex",gap:6,justifyContent:"flex-end"}}>
-                        <button onClick={()=>setEventForm({...ev})} style={{fontSize:9,fontWeight:700,padding:"4px 10px",borderRadius:6,
+                        <button onClick={()=>setEventForm({...ev})} style={{fontSize:11,fontWeight:700,padding:"4px 10px",borderRadius:6,
                           border:`1px solid ${C.border}`,background:C.white,color:C.inkMid,cursor:"pointer",fontFamily:"inherit"}}>수정</button>
-                        <button onClick={()=>deleteEvent(ev.id)} style={{fontSize:9,fontWeight:700,padding:"4px 10px",borderRadius:6,
+                        <button onClick={()=>deleteEvent(ev.id)} style={{fontSize:11,fontWeight:700,padding:"4px 10px",borderRadius:6,
                           border:`1px solid ${C.bad}44`,background:"#fef2f2",color:C.bad,cursor:"pointer",fontFamily:"inherit"}}>삭제</button>
                       </div>
                     </div>
@@ -11181,17 +11181,17 @@ export default function OaDashboard(){
                         background:active?"linear-gradient(135deg,#fff5f7,#fff)":"transparent"}}>
                       <div style={{display:"flex",alignItems:"center",gap:10,minWidth:0}}>
                         <div style={{fontSize:13,fontWeight:800,color:active?C.rose:C.ink,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{ev.name}</div>
-                        {ev.product&&<span style={{fontSize:9,fontWeight:700,color:"#7c3aed",background:"#f5f3ff",padding:"2px 8px",borderRadius:20,flexShrink:0}}>{ev.product}</span>}
-                        {active&&<span style={{fontSize:9,fontWeight:800,color:C.rose,background:C.blush,padding:"2px 8px",borderRadius:20,flexShrink:0}}>진행 중</span>}
-                        {upcoming&&<span style={{fontSize:9,fontWeight:700,color:"#0284c7",background:"#e0f2fe",padding:"2px 8px",borderRadius:20,flexShrink:0}}>예정</span>}
-                        {past&&<span style={{fontSize:9,fontWeight:700,color:C.inkLt,background:C.cream,padding:"2px 8px",borderRadius:20,flexShrink:0}}>종료</span>}
+                        {ev.product&&<span style={{fontSize:11,fontWeight:700,color:"#7c3aed",background:"#f5f3ff",padding:"2px 8px",borderRadius:20,flexShrink:0}}>{ev.product}</span>}
+                        {active&&<span style={{fontSize:11,fontWeight:800,color:C.rose,background:C.blush,padding:"2px 8px",borderRadius:20,flexShrink:0}}>진행 중</span>}
+                        {upcoming&&<span style={{fontSize:11,fontWeight:700,color:"#0284c7",background:"#e0f2fe",padding:"2px 8px",borderRadius:20,flexShrink:0}}>예정</span>}
+                        {past&&<span style={{fontSize:11,fontWeight:700,color:C.inkLt,background:C.cream,padding:"2px 8px",borderRadius:20,flexShrink:0}}>종료</span>}
                       </div>
                       <div style={{display:"flex",alignItems:"center",gap:10,flexShrink:0}}>
-                        <span style={{fontSize:11,color:C.inkMid,fontWeight:700}}>{fmtD(ev.start)} ~ {fmtD(ev.end)}</span>
+                        <span style={{fontSize:12,color:C.inkMid,fontWeight:700}}>{fmtD(ev.start)} ~ {fmtD(ev.end)}</span>
                         <MI n={open?"expand_less":"expand_more"} size={18} style={{color:C.inkLt}}/>
                       </div>
                     </div>
-                    {ev.memo&&!open&&<div style={{fontSize:10,color:C.inkLt,padding:"0 16px 10px"}}>{ev.memo}</div>}
+                    {ev.memo&&!open&&<div style={{fontSize:12,color:C.inkLt,padding:"0 16px 10px"}}>{ev.memo}</div>}
                     {body}
                   </div>
                 );
@@ -11240,7 +11240,7 @@ export default function OaDashboard(){
             <div style={{display:"flex",flexDirection:"column",gap:12}}>
               <div style={{...card,background:"linear-gradient(135deg,#fff5f7,#fff)"}}>
                 <div style={{fontSize:14,fontWeight:900,color:C.rose}}>📖 소재 제작 가이드</div>
-                <div style={{fontSize:11,color:C.inkMid,marginTop:4}}>2026 상반기 소재 95개 성과 분석 기반 (전체 ROAS 4.05) · 상세 버전은 Figma 가이드 참고</div>
+                <div style={{fontSize:12,color:C.inkMid,marginTop:4}}>2026 상반기 소재 95개 성과 분석 기반 (전체 ROAS 4.05) · 상세 버전은 Figma 가이드 참고</div>
               </div>
               <div style={card}>
                 <div style={h}><MI n="emoji_events" size={15}/> 소구 유형별 ROAS — 뭘 만들지 정할 때</div>
@@ -11248,10 +11248,10 @@ export default function OaDashboard(){
                   {APPEALS.map((a,i)=>(
                     <div key={a.name} style={{display:"flex",alignItems:"center",gap:10,padding:"8px 10px",borderRadius:8,
                       background:a.best?C.blush:C.cream,border:a.best?`1px solid ${C.rose}44`:"none"}}>
-                      <div style={{fontSize:12,fontWeight:800,color:a.best?C.rose:C.inkMid,width:18}}>{i+1}</div>
+                      <div style={{fontSize:13,fontWeight:800,color:a.best?C.rose:C.inkMid,width:18}}>{i+1}</div>
                       <div style={{flex:1,minWidth:0}}>
-                        <div style={{fontSize:12,fontWeight:700,color:C.ink}}>{a.name}{a.best&&<span style={{fontSize:9,marginLeft:6,color:C.rose,fontWeight:800,background:"#fff",padding:"1px 6px",borderRadius:4}}>추천</span>}</div>
-                        <div style={{fontSize:10,color:C.inkLt,marginTop:1}}>{a.ex}</div>
+                        <div style={{fontSize:13,fontWeight:700,color:C.ink}}>{a.name}{a.best&&<span style={{fontSize:11,marginLeft:6,color:C.rose,fontWeight:800,background:"#fff",padding:"1px 6px",borderRadius:4}}>추천</span>}</div>
+                        <div style={{fontSize:12,color:C.inkLt,marginTop:1}}>{a.ex}</div>
                       </div>
                       {(()=>{
                         const lv=live[a.name];
@@ -11259,19 +11259,19 @@ export default function OaDashboard(){
                         const lr=(lv.convValue/lv.spend);
                         return(
                           <div style={{textAlign:"right",marginRight:10}}>
-                            <div style={{fontSize:11,fontWeight:800,color:lr>=4?C.sage:lr>=2?C.inkMid:C.bad}}>현재 {lr.toFixed(2)}</div>
-                            <div style={{fontSize:9,color:C.inkLt}}>{lv.ads.size}개 소재</div>
+                            <div style={{fontSize:12,fontWeight:800,color:lr>=4?C.sage:lr>=2?C.inkMid:C.bad}}>현재 {lr.toFixed(2)}</div>
+                            <div style={{fontSize:11,color:C.inkLt}}>{lv.ads.size}개 소재</div>
                           </div>
                         );
                       })()}
                       <div style={{textAlign:"right"}}>
                         <div style={{fontSize:13,fontWeight:900,color:a.roas>=4.5?C.sage:a.roas>=3?C.inkMid:C.bad}}>{a.roas}</div>
-                        <div style={{fontSize:9,color:C.inkLt}}>상반기</div>
+                        <div style={{fontSize:11,color:C.inkLt}}>상반기</div>
                       </div>
                     </div>
                   ))}
                 </div>
-                <div style={{fontSize:9,color:C.inkLt,marginTop:8}}>"현재" = 연결된 시트 데이터 기준, 광고명 키워드 자동 분류 · "상반기" = 2026 상반기 95개 소재 분석</div>
+                <div style={{fontSize:11,color:C.inkLt,marginTop:8}}>"현재" = 연결된 시트 데이터 기준, 광고명 키워드 자동 분류 · "상반기" = 2026 상반기 95개 소재 분석</div>
               </div>
               {(()=>{
                 // 제품 × 소구 매트릭스 (현재 시트 데이터)
@@ -11298,9 +11298,9 @@ export default function OaDashboard(){
                 });
                 if(!prods.length) return null;
                 const cell=(v,key)=>{
-                  if(!v||v.spend<30000) return <td key={key} style={{padding:"7px 6px",textAlign:"center",fontSize:10,color:C.inkLt}}>—</td>;
+                  if(!v||v.spend<30000) return <td key={key} style={{padding:"7px 6px",textAlign:"center",fontSize:12,color:C.inkLt}}>—</td>;
                   const r=v.convValue/v.spend;
-                  return <td key={key} style={{padding:"7px 6px",textAlign:"center",fontSize:11,fontWeight:800,
+                  return <td key={key} style={{padding:"7px 6px",textAlign:"center",fontSize:12,fontWeight:800,
                     color:r>=4?C.sage:r>=2?C.inkMid:C.bad,
                     background:r>=4?"#f0fdf4":r<2?"#fff5f5":"transparent",borderRadius:6}}>{r.toFixed(1)}</td>;
                 };
@@ -11311,21 +11311,21 @@ export default function OaDashboard(){
                       <table style={{width:"100%",borderCollapse:"collapse",minWidth:420}}>
                         <thead>
                           <tr>
-                            <th style={{padding:"6px",textAlign:"left",fontSize:10,color:C.inkLt,fontWeight:700}}>제품</th>
-                            {APS.map(a=><th key={a} style={{padding:"6px",textAlign:"center",fontSize:10,fontWeight:800,color:APPEAL_COLORS[a]}}>{APS_SHORT[a]}</th>)}
+                            <th style={{padding:"6px",textAlign:"left",fontSize:12,color:C.inkLt,fontWeight:700}}>제품</th>
+                            {APS.map(a=><th key={a} style={{padding:"6px",textAlign:"center",fontSize:12,fontWeight:800,color:APPEAL_COLORS[a]}}>{APS_SHORT[a]}</th>)}
                           </tr>
                         </thead>
                         <tbody>
                           {prods.map(p=>(
                             <tr key={p} style={{borderTop:`1px solid ${C.border}66`}}>
-                              <td style={{padding:"7px 6px",fontSize:11,fontWeight:700,color:C.ink,whiteSpace:"nowrap"}}>{p}</td>
+                              <td style={{padding:"7px 6px",fontSize:12,fontWeight:700,color:C.ink,whiteSpace:"nowrap"}}>{p}</td>
                               {APS.map(a=>cell(mx[p][a],a))}
                             </tr>
                           ))}
                         </tbody>
                       </table>
                     </div>
-                    <div style={{fontSize:9,color:C.inkLt,marginTop:8}}>숫자 = ROAS (배수) · 지출 3만원 미만 셀은 표시 안 함 · 🟢 4.0↑ 확장, 🔴 2.0↓ 회피 조합</div>
+                    <div style={{fontSize:11,color:C.inkLt,marginTop:8}}>숫자 = ROAS (배수) · 지출 3만원 미만 셀은 표시 안 함 · 🟢 4.0↑ 확장, 🔴 2.0↓ 회피 조합</div>
                   </div>
                 );
               })()}
@@ -11336,8 +11336,8 @@ export default function OaDashboard(){
                     <div key={i} style={{display:"flex",gap:10,padding:"10px 12px",borderRadius:8,background:C.cream}}>
                       <div style={{fontSize:14,fontWeight:900,color:C.rose,lineHeight:1.2}}>{String(i+1).padStart(2,"0")}</div>
                       <div>
-                        <div style={{fontSize:12,fontWeight:800,color:C.ink}}>{p.t}</div>
-                        <div style={{fontSize:11,color:C.inkMid,marginTop:2,lineHeight:1.5}}>{p.d}</div>
+                        <div style={{fontSize:13,fontWeight:800,color:C.ink}}>{p.t}</div>
+                        <div style={{fontSize:12,color:C.inkMid,marginTop:2,lineHeight:1.5}}>{p.d}</div>
                       </div>
                     </div>
                   ))}
@@ -11347,7 +11347,7 @@ export default function OaDashboard(){
                 <div style={h}><MI n="checklist" size={15}/> 게재 전 체크리스트</div>
                 <div style={{display:"flex",flexDirection:"column",gap:5}}>
                   {CHECKS.map((c,i)=>(
-                    <div key={i} style={{display:"flex",gap:8,alignItems:"flex-start",fontSize:11,color:C.inkMid,lineHeight:1.5}}>
+                    <div key={i} style={{display:"flex",gap:8,alignItems:"flex-start",fontSize:12,color:C.inkMid,lineHeight:1.5}}>
                       <MI n="check_box_outline_blank" size={14} style={{color:C.rose,flexShrink:0,marginTop:1}}/>{c}
                     </div>
                   ))}
@@ -11357,16 +11357,16 @@ export default function OaDashboard(){
                 <div style={h}><MI n="monitoring" size={15}/> 운영 판단 기준 (주별 탭 색상과 동일)</div>
                 <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
                   <div style={{flex:1,minWidth:140,padding:"10px 12px",borderRadius:8,background:"#f0fdf4",border:"1px solid #86efac66"}}>
-                    <div style={{fontSize:11,fontWeight:800,color:C.sage}}>ROAS 400% 이상</div>
-                    <div style={{fontSize:10,color:C.inkMid,marginTop:2}}>예산 증액 + 변주 소재 제작</div>
+                    <div style={{fontSize:12,fontWeight:800,color:C.sage}}>ROAS 400% 이상</div>
+                    <div style={{fontSize:12,color:C.inkMid,marginTop:2}}>예산 증액 + 변주 소재 제작</div>
                   </div>
                   <div style={{flex:1,minWidth:140,padding:"10px 12px",borderRadius:8,background:C.cream}}>
-                    <div style={{fontSize:11,fontWeight:800,color:C.inkMid}}>ROAS 200~400%</div>
-                    <div style={{fontSize:10,color:C.inkMid,marginTop:2}}>유지하며 훅/카피 개선 테스트</div>
+                    <div style={{fontSize:12,fontWeight:800,color:C.inkMid}}>ROAS 200~400%</div>
+                    <div style={{fontSize:12,color:C.inkMid,marginTop:2}}>유지하며 훅/카피 개선 테스트</div>
                   </div>
                   <div style={{flex:1,minWidth:140,padding:"10px 12px",borderRadius:8,background:"#fff5f5",border:`1px solid ${C.bad}44`}}>
-                    <div style={{fontSize:11,fontWeight:800,color:C.bad}}>ROAS 200% 미만 · 구매 0</div>
-                    <div style={{fontSize:10,color:C.inkMid,marginTop:2}}>1주 내 중단 (상반기 낭비 32% 재발 방지)</div>
+                    <div style={{fontSize:12,fontWeight:800,color:C.bad}}>ROAS 200% 미만 · 구매 0</div>
+                    <div style={{fontSize:12,color:C.inkMid,marginTop:2}}>1주 내 중단 (상반기 낭비 32% 재발 방지)</div>
                   </div>
                 </div>
               </div>
@@ -11379,8 +11379,8 @@ export default function OaDashboard(){
                 <div style={{display:"flex",flexDirection:"column",gap:8}}>
                   <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
                     <input id="__brief_product" placeholder="제품명 (예: 소닉플로우)"
-                      style={{padding:"6px 10px",border:`1px solid ${C.border}`,borderRadius:8,fontSize:11,fontFamily:"inherit",outline:"none"}}/>
-                    <select id="__brief_goal" style={{padding:"6px 10px",border:`1px solid ${C.border}`,borderRadius:8,fontSize:11,fontFamily:"inherit"}}>
+                      style={{padding:"6px 10px",border:`1px solid ${C.border}`,borderRadius:8,fontSize:12,fontFamily:"inherit",outline:"none"}}/>
+                    <select id="__brief_goal" style={{padding:"6px 10px",border:`1px solid ${C.border}`,borderRadius:8,fontSize:12,fontFamily:"inherit"}}>
                       <option value="전환">전환 (구매유도)</option>
                       <option value="트래픽">트래픽 (유입)</option>
                       <option value="인지도">인지도 (브랜딩)</option>
@@ -11388,7 +11388,7 @@ export default function OaDashboard(){
                     </select>
                   </div>
                   <input id="__brief_target" placeholder="타겟 (예: 20대 자취녀, 헬스장 다니는 사람)" defaultValue="20-30대 여성"
-                    style={{padding:"6px 10px",border:`1px solid ${C.border}`,borderRadius:8,fontSize:11,fontFamily:"inherit",outline:"none",width:"100%",boxSizing:"border-box"}}/>
+                    style={{padding:"6px 10px",border:`1px solid ${C.border}`,borderRadius:8,fontSize:12,fontFamily:"inherit",outline:"none",width:"100%",boxSizing:"border-box"}}/>
                   <button onClick={async()=>{
                     const product=document.getElementById("__brief_product")?.value||"";
                     const goal=document.getElementById("__brief_goal")?.value||"전환";
@@ -11417,10 +11417,10 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
                       }catch{}
                     }catch(e){if(el)el.textContent="오류: "+e.message;}
                   }}
-                    style={{padding:"8px",background:C.rose,color:"#fff",border:"none",borderRadius:8,fontSize:12,fontWeight:800,cursor:"pointer",fontFamily:"inherit"}}>
+                    style={{padding:"8px",background:C.rose,color:"#fff",border:"none",borderRadius:8,fontSize:13,fontWeight:800,cursor:"pointer",fontFamily:"inherit"}}>
                     브리프 생성
                   </button>
-                  <div id="__brief_result" style={{minHeight:40,fontSize:12,color:C.ink,background:C.bg,borderRadius:8,padding:"10px 12px",lineHeight:1.7}}></div>
+                  <div id="__brief_result" style={{minHeight:40,fontSize:13,color:C.ink,background:C.bg,borderRadius:8,padding:"10px 12px",lineHeight:1.7}}></div>
                 </div>
               </div>
             </div>
@@ -11466,7 +11466,7 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
                         background:i===0?"linear-gradient(135deg,#EAF3FF,#fff)":"transparent"}}>
                       <div style={{display:"flex",alignItems:"center",gap:10}}>
                         <div style={{fontSize:14,fontWeight:800,color:C.ink}}>{p.product}</div>
-                        <div style={{fontSize:10,color:C.inkLt,display:"flex",gap:8}}>
+                        <div style={{fontSize:12,color:C.inkLt,display:"flex",gap:8}}>
                           {p.purchases>0&&<span style={{color:C.sage,fontWeight:700}}>{p.purchases}건</span>}
                           {roas>0&&<span>ROAS {roas}%</span>}
                           {cpa>0&&<span style={{color:cpa<=16000?C.good:C.bad}}>CPA {fmtW(cpa)}</span>}
@@ -11486,9 +11486,9 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
                             <div key={camp} style={{display:"flex",alignItems:"center",justifyContent:"space-between",
                               padding:"8px 10px",borderRadius:8,background:isConv?"#fff5f7":C.cream}}>
                               <div style={{flex:1,minWidth:0}}>
-                                <div style={{fontSize:11,fontWeight:700,color:isConv?C.rose:C.inkMid,
+                                <div style={{fontSize:12,fontWeight:700,color:isConv?C.rose:C.inkMid,
                                   overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{camp}</div>
-                                <div style={{fontSize:10,color:C.inkLt,display:"flex",gap:8,marginTop:2}}>
+                                <div style={{fontSize:12,color:C.inkLt,display:"flex",gap:8,marginTop:2}}>
                                   {v.purchases>0&&<span style={{color:C.sage,fontWeight:700}}>{v.purchases}건</span>}
                                   {cr&&<span>ROAS {cr}%</span>}
                                   {v.clicks>0&&<span>{v.clicks.toLocaleString()} 클릭</span>}
@@ -11510,10 +11510,10 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
         {/* ── 전환 시트 연결 모달 ── */}
         {sheetModal&&(
           <Modal title={<><MI n="table_chart"/> 전환캠페인 시트 연결</>} onClose={()=>setSheetModal(false)} wide>
-            <div style={{background:"#EAF3FF",border:"1px solid #B3D7F2",borderRadius:10,padding:"10px 14px",marginBottom:16,fontSize:11,color:"#0071E3",fontWeight:700}}>
+            <div style={{background:"#EAF3FF",border:"1px solid #B3D7F2",borderRadius:10,padding:"10px 14px",marginBottom:16,fontSize:12,color:"#0071E3",fontWeight:700}}>
               📊 전환캠페인(구매·전환값·CPA·ROAS)은 시트에서, 트래픽캠페인은 Meta API에서 자동 병합돼요.
             </div>
-            <div style={{background:C.cream,border:`1px solid ${C.border}`,borderRadius:10,padding:"14px",marginBottom:16,fontSize:11,color:C.inkMid,lineHeight:1.8}}>
+            <div style={{background:C.cream,border:`1px solid ${C.border}`,borderRadius:10,padding:"14px",marginBottom:16,fontSize:12,color:C.inkMid,lineHeight:1.8}}>
               <b style={{color:C.ink}}>연결 방법</b><br/>
               1. 메타 광고관리자 → 보고서 → CSV 내보내기<br/>
               2. 구글 시트에 붙여넣기<br/>
@@ -11539,8 +11539,8 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
 
             {/* ── 전환 캠페인 판단 기준 (제품별) ── */}
             <div style={{borderTop:`2px solid ${C.border}`,paddingTop:16,marginBottom:16}}>
-              <div style={{fontSize:12,fontWeight:800,color:C.ink,marginBottom:6}}>🎯 전환 캠페인 — 제품별 판단 기준</div>
-              <div style={{background:C.goldLt,borderRadius:10,padding:"10px 14px",marginBottom:14,fontSize:10,color:C.gold,fontWeight:700}}>
+              <div style={{fontSize:13,fontWeight:800,color:C.ink,marginBottom:6}}>🎯 전환 캠페인 — 제품별 판단 기준</div>
+              <div style={{background:C.goldLt,borderRadius:10,padding:"10px 14px",marginBottom:14,fontSize:12,color:C.gold,fontWeight:700}}>
                 광고명에 키워드가 포함되면 제품별 기준이 자동 적용돼요. 키워드 미매칭 시 기본값 적용.
               </div>
 
@@ -11565,7 +11565,7 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
                       <button key={t.id} onClick={()=>setSelTab(t.id)}
                         style={{padding:"6px 14px",borderRadius:8,border:`1px solid ${selTab===t.id?C.rose:C.border}`,
                           background:selTab===t.id?C.blush:C.white,color:selTab===t.id?C.rose:C.inkMid,
-                          fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
+                          fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
                         {t.id==='default'?'🔧 기본값':<><MI n="inventory_2" size={11}/> {t.label}</>}
                       </button>
                     ))}
@@ -11581,7 +11581,7 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
                         ctrGood:convCriteria?.ctrGood||1.2,ctrOk:convCriteria?.ctrOk||0.7};
                       setConvCriteria({...convCriteria,products:[...products,newP]});
                     }} style={{padding:"6px 14px",borderRadius:8,border:`1px dashed ${C.border}`,
-                      background:C.cream,color:C.inkMid,fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
+                      background:C.cream,color:C.inkMid,fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
                       + 제품 추가
                     </button>
                     {selTab!=='default'&&(
@@ -11589,7 +11589,7 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
                         setConvCriteria({...convCriteria,products:products.filter(p=>String(p.id)!==selTab)});
                         setSelTab('default');
                       }} style={{padding:"6px 14px",borderRadius:8,border:`1px solid ${C.bad}44`,
-                        background:"#FEF0F0",color:C.bad,fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
+                        background:"#FEF0F0",color:C.bad,fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
                         <MI n="delete" size={13}/> 삭제
                       </button>
                     )}
@@ -11599,43 +11599,43 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
                   <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:10}}>
                     <FR label="CPA 유지 (마진 대비 %)">
                       <Inp type="number" value={cur?.cpaGood||85} onChange={v=>update('cpaGood',+v)} placeholder="85"/>
-                      <div style={{fontSize:9,color:C.inkLt,marginTop:2}}>이하 → ✅ 유지</div>
+                      <div style={{fontSize:11,color:C.inkLt,marginTop:2}}>이하 → ✅ 유지</div>
                     </FR>
                     <FR label="CPA 보류 (마진 대비 %)">
                       <Inp type="number" value={cur?.cpaHold||100} onChange={v=>update('cpaHold',+v)} placeholder="100"/>
-                      <div style={{fontSize:9,color:C.inkLt,marginTop:2}}>이하 → ⚠️ 보류 / 초과 → 🔴 컷</div>
+                      <div style={{fontSize:11,color:C.inkLt,marginTop:2}}>이하 → ⚠️ 보류 / 초과 → 🔴 컷</div>
                     </FR>
                   </div>
                   <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:10,marginBottom:10}}>
                     <FR label="LPV 단가 좋음 (원)">
                       <Inp type="number" value={cur?.lpvCostGood||800} onChange={v=>update('lpvCostGood',+v)} placeholder="800"/>
-                      <div style={{fontSize:9,color:C.inkLt,marginTop:2}}>미만 → 🟢</div>
+                      <div style={{fontSize:11,color:C.inkLt,marginTop:2}}>미만 → 🟢</div>
                     </FR>
                     <FR label="LPV 단가 유지 (원)">
                       <Inp type="number" value={cur?.lpvCostOk||1200} onChange={v=>update('lpvCostOk',+v)} placeholder="1200"/>
-                      <div style={{fontSize:9,color:C.inkLt,marginTop:2}}>미만 → 🔵</div>
+                      <div style={{fontSize:11,color:C.inkLt,marginTop:2}}>미만 → 🔵</div>
                     </FR>
                     <FR label="LPV 단가 보류 (원)">
                       <Inp type="number" value={cur?.lpvCostHold||2000} onChange={v=>update('lpvCostHold',+v)} placeholder="2000"/>
-                      <div style={{fontSize:9,color:C.inkLt,marginTop:2}}>미만 → 🟡 / 초과 → 🔴</div>
+                      <div style={{fontSize:11,color:C.inkLt,marginTop:2}}>미만 → 🟡 / 초과 → 🔴</div>
                     </FR>
                   </div>
                   <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr 1fr",gap:10}}>
                     <FR label="LPV율 정상 (%)">
                       <Inp type="number" value={cur?.lpvRateGood||60} onChange={v=>update('lpvRateGood',+v)} placeholder="60"/>
-                      <div style={{fontSize:9,color:C.inkLt,marginTop:2}}>이상 → ✅</div>
+                      <div style={{fontSize:11,color:C.inkLt,marginTop:2}}>이상 → ✅</div>
                     </FR>
                     <FR label="LPV율 보통 (%)">
                       <Inp type="number" value={cur?.lpvRateOk||40} onChange={v=>update('lpvRateOk',+v)} placeholder="40"/>
-                      <div style={{fontSize:9,color:C.inkLt,marginTop:2}}>이상 → ⚠️</div>
+                      <div style={{fontSize:11,color:C.inkLt,marginTop:2}}>이상 → ⚠️</div>
                     </FR>
                     <FR label="CTR 좋음 (%)">
                       <Inp type="number" step="0.1" value={cur?.ctrGood||1.2} onChange={v=>update('ctrGood',+v)} placeholder="1.2"/>
-                      <div style={{fontSize:9,color:C.inkLt,marginTop:2}}>이상 → 🟢</div>
+                      <div style={{fontSize:11,color:C.inkLt,marginTop:2}}>이상 → 🟢</div>
                     </FR>
                     <FR label="CTR 보통 (%)">
                       <Inp type="number" step="0.1" value={cur?.ctrOk||0.7} onChange={v=>update('ctrOk',+v)} placeholder="0.7"/>
-                      <div style={{fontSize:9,color:C.inkLt,marginTop:2}}>이상 → 🟡</div>
+                      <div style={{fontSize:11,color:C.inkLt,marginTop:2}}>이상 → 🟡</div>
                     </FR>
                   </div>
                 </>);
@@ -11643,14 +11643,14 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
             </div>
 
             {/* ── 전환 캠페인 마진 ── */}
-            <div style={{fontSize:12,fontWeight:800,color:C.ink,marginBottom:10}}>🎯 전환 캠페인 — 마진 기준</div>
-            <div style={{background:C.goldLt,borderRadius:10,padding:"10px 14px",marginBottom:12,fontSize:10,color:C.gold,fontWeight:700}}>
+            <div style={{fontSize:13,fontWeight:800,color:C.ink,marginBottom:10}}>🎯 전환 캠페인 — 마진 기준</div>
+            <div style={{background:C.goldLt,borderRadius:10,padding:"10px 14px",marginBottom:12,fontSize:12,color:C.gold,fontWeight:700}}>
               광고명 키워드 포함 시 해당 마진 자동 적용 · 마진 85% 이하 → 유지 / 85~100% → 보류 / 초과 → 컷
             </div>
             <FR label="기본 마진 (키워드 미매칭 시 적용)">
               <div style={{display:"flex",gap:8,alignItems:"center"}}>
                 <Inp type="number" value={marginInput} onChange={setMarginInput} placeholder="30000" style={{flex:1}}/>
-                <span style={{fontSize:11,color:C.inkMid,whiteSpace:"nowrap"}}>원</span>
+                <span style={{fontSize:12,color:C.inkMid,whiteSpace:"nowrap"}}>원</span>
               </div>
             </FR>
             <div style={{display:"flex",gap:8,marginBottom:14}}>
@@ -11659,14 +11659,14 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
                   style={{flex:1,padding:"7px 4px",borderRadius:8,border:`1px solid ${C.border}`,
                     background:marginInput==String(v)?C.rose:C.cream,
                     color:marginInput==String(v)?C.white:C.inkMid,
-                    fontSize:10,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
+                    fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
                   ₩{v/10000}만
                 </button>
               ))}
             </div>
             <div style={{marginBottom:16}}>
               <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
-                <div style={{fontSize:11,fontWeight:800,color:C.ink}}>키워드별 마진</div>
+                <div style={{fontSize:12,fontWeight:800,color:C.ink}}>키워드별 마진</div>
                 <Btn small variant="neutral" onClick={()=>{
                   // 메타 캠페인명에서 제품 키워드 추출 — 없는 것만 추가 (마진은 기본값, 나중에 수정)
                   const names=[...new Set(metaForChart.map(r=>r.campaign||"").filter(Boolean))];
@@ -11691,17 +11691,17 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
                     <>
                       <Inp value={editingMargin.keyword} onChange={v=>setEditingMargin(e=>({...e,keyword:v}))} placeholder="키워드" style={{flex:1}}/>
                       <Inp type="number" value={editingMargin.margin} onChange={v=>setEditingMargin(e=>({...e,margin:v}))} placeholder="마진" style={{width:100}}/>
-                      <span style={{fontSize:10,color:C.inkMid}}>원</span>
+                      <span style={{fontSize:12,color:C.inkMid}}>원</span>
                       <Btn small onClick={()=>{setMargins(margins.map(x=>x.id===m.id?{...x,keyword:editingMargin.keyword,margin:+editingMargin.margin||0}:x));setEditingMargin(null);}}>✓</Btn>
                       <Btn small variant="neutral" onClick={()=>setEditingMargin(null)}>✕</Btn>
                     </>
                   ) : (
                     <>
                       <div style={{flex:1}}>
-                        <span style={{fontSize:12,fontWeight:700,color:C.ink,background:C.blush,padding:"2px 10px",borderRadius:20,border:`1px solid ${C.rose}33`}}>{m.keyword}</span>
+                        <span style={{fontSize:13,fontWeight:700,color:C.ink,background:C.blush,padding:"2px 10px",borderRadius:20,border:`1px solid ${C.rose}33`}}>{m.keyword}</span>
                       </div>
                       <span style={{fontSize:13,fontWeight:800,color:C.rose}}>₩{(+m.margin||0).toLocaleString()}</span>
-                      <span style={{fontSize:10,color:C.inkLt}}>원</span>
+                      <span style={{fontSize:12,color:C.inkLt}}>원</span>
                       <Btn small variant="neutral" onClick={()=>setEditingMargin({...m})}><MI n="edit" size={13}/></Btn>
                       <Btn small variant="danger" onClick={()=>setMargins(margins.filter(x=>x.id!==m.id))}><MI n="delete" size={13}/></Btn>
                     </>
@@ -11712,7 +11712,7 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
                 padding:"10px 12px",background:C.sageLt,borderRadius:10,border:`1px dashed ${C.sage}66`}}>
                 <Inp value={newKeyword} onChange={setNewKeyword} placeholder="키워드 (예: 프리온)" style={{flex:1}}/>
                 <Inp type="number" value={newMarginVal} onChange={setNewMarginVal} placeholder="마진" style={{width:100}}/>
-                <span style={{fontSize:10,color:C.inkMid,whiteSpace:"nowrap"}}>원</span>
+                <span style={{fontSize:12,color:C.inkMid,whiteSpace:"nowrap"}}>원</span>
                 <Btn small variant="sage" onClick={()=>{
                   if(!newKeyword||!newMarginVal) return;
                   setMargins([...margins,{id:Date.now(),keyword:newKeyword,margin:+newMarginVal}]);
@@ -11723,8 +11723,8 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
 
             {/* ── 트래픽 캠페인 기준 ── */}
             <div style={{borderTop:`2px solid ${C.border}`,paddingTop:16,marginBottom:10}}>
-              <div style={{fontSize:12,fontWeight:800,color:C.ink,marginBottom:6}}>🚦 트래픽 캠페인 — 판단 기준</div>
-              <div style={{background:C.purpleLt,borderRadius:10,padding:"10px 14px",marginBottom:12,fontSize:10,color:C.purple,fontWeight:700}}>
+              <div style={{fontSize:13,fontWeight:800,color:C.ink,marginBottom:6}}>🚦 트래픽 캠페인 — 판단 기준</div>
+              <div style={{background:C.purpleLt,borderRadius:10,padding:"10px 14px",marginBottom:12,fontSize:12,color:C.purple,fontWeight:700}}>
                 CPC·CTR·LPV율 기준 이하면 🚀올리기 / 초과면 ⚠️줄이기 or 🔴끄기
               </div>
 
@@ -11735,27 +11735,27 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
                     value={trafficCriteria?.cpcMax||600}
                     onChange={v=>setTrafficCriteria({...trafficCriteria,cpcMax:+v||600})}
                     placeholder="600"/>
-                  <div style={{fontSize:9,color:C.inkLt,marginTop:3}}>키워드 미매칭 시 적용</div>
+                  <div style={{fontSize:11,color:C.inkLt,marginTop:3}}>키워드 미매칭 시 적용</div>
                 </FR>
                 <FR label="CTR 하한 (%)">
                   <Inp type="number"
                     value={trafficCriteria?.ctrMin||1.5}
                     onChange={v=>setTrafficCriteria({...trafficCriteria,ctrMin:+v||1.5})}
                     placeholder="1.5"/>
-                  <div style={{fontSize:9,color:C.inkLt,marginTop:3}}>미달 시 줄이기</div>
+                  <div style={{fontSize:11,color:C.inkLt,marginTop:3}}>미달 시 줄이기</div>
                 </FR>
                 <FR label="LPV율 하한 (%)">
                   <Inp type="number"
                     value={trafficCriteria?.lpvMin||55}
                     onChange={v=>setTrafficCriteria({...trafficCriteria,lpvMin:+v||55})}
                     placeholder="55"/>
-                  <div style={{fontSize:9,color:C.inkLt,marginTop:3}}>미달 시 줄이기</div>
+                  <div style={{fontSize:11,color:C.inkLt,marginTop:3}}>미달 시 줄이기</div>
                 </FR>
               </div>
 
               {/* 제품별 CPC 상한 */}
-              <div style={{fontSize:11,fontWeight:800,color:C.ink,marginBottom:8}}>제품별 CPC 상한</div>
-              <div style={{fontSize:10,color:C.inkMid,marginBottom:10,background:C.cream,borderRadius:8,padding:"8px 12px"}}>
+              <div style={{fontSize:12,fontWeight:800,color:C.ink,marginBottom:8}}>제품별 CPC 상한</div>
+              <div style={{fontSize:12,color:C.inkMid,marginBottom:10,background:C.cream,borderRadius:8,padding:"8px 12px"}}>
                 💡 광고명에 키워드가 포함되면 제품별 CPC 상한이 자동 적용돼요<br/>
                 <span style={{color:C.inkLt}}>예: "소닉플로우_출근길" → 소닉플로우 기준 적용</span>
               </div>
@@ -11763,11 +11763,11 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
                 <div key={k.id} style={{display:"flex",alignItems:"center",gap:8,marginBottom:8,
                   padding:"10px 12px",background:C.cream,borderRadius:10,border:`1px solid ${C.border}`}}>
                   <div style={{flex:1}}>
-                    <span style={{fontSize:12,fontWeight:700,color:C.ink,background:C.purpleLt,
+                    <span style={{fontSize:13,fontWeight:700,color:C.ink,background:C.purpleLt,
                       padding:"2px 10px",borderRadius:20,border:`1px solid ${C.purple}33`}}>{k.keyword}</span>
                   </div>
                   <span style={{fontSize:13,fontWeight:800,color:C.purple}}>₩{(k.cpcMax||0).toLocaleString()}</span>
-                  <span style={{fontSize:10,color:C.inkLt}}>원</span>
+                  <span style={{fontSize:12,color:C.inkLt}}>원</span>
                   <Btn small variant="danger" onClick={()=>setTrafficCriteria({
                     ...trafficCriteria,
                     cpcKeywords:(trafficCriteria.cpcKeywords||[]).filter(x=>x.id!==k.id)
@@ -11779,7 +11779,7 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
                 padding:"10px 12px",background:C.purpleLt,borderRadius:10,border:`1px dashed ${C.purple}44`}}>
                 <Inp value={newCpcKeyword} onChange={setNewCpcKeyword} placeholder="키워드 (예: 소닉플로우)" style={{flex:1}}/>
                 <Inp type="number" value={newCpcVal} onChange={setNewCpcVal} placeholder="CPC 상한" style={{width:110}}/>
-                <span style={{fontSize:10,color:C.inkMid,whiteSpace:"nowrap"}}>원</span>
+                <span style={{fontSize:12,color:C.inkMid,whiteSpace:"nowrap"}}>원</span>
                 <Btn small variant="ghost" onClick={()=>{
                   if(!newCpcKeyword||!newCpcVal) return;
                   setTrafficCriteria({
@@ -11836,9 +11836,9 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
                 background:collectMode===m.id?C.blush:C.white,transition:"all 0.15s"}}>
               <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:3}}>
                 <MI n={m.icon} size={13} style={{color:collectMode===m.id?C.rose:C.inkMid}}/>
-                <span style={{fontSize:11,fontWeight:800,color:collectMode===m.id?C.rose:C.ink}}>{m.label}</span>
+                <span style={{fontSize:12,fontWeight:800,color:collectMode===m.id?C.rose:C.ink}}>{m.label}</span>
               </div>
-              <div style={{fontSize:10,color:C.inkMid}}>{m.desc}</div>
+              <div style={{fontSize:12,color:C.inkMid}}>{m.desc}</div>
             </div>
           ))}
         </div>
@@ -11849,30 +11849,30 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
             <FR label="해시태그 키워드 (띄어쓰기 없이)">
               <input value={collectKeyword} onChange={e=>setCollectKeyword(e.target.value)}
                 placeholder="예: 비건뷰티" onKeyDown={e=>{if(e.key==="Enter")handleCollect();}}
-                style={{width:"100%",boxSizing:"border-box",fontSize:12,padding:"7px 10px",borderRadius:8,
+                style={{width:"100%",boxSizing:"border-box",fontSize:13,padding:"7px 10px",borderRadius:8,
                   border:`1px solid ${C.border}`,fontFamily:"inherit",outline:"none"}}/>
             </FR>
           ):(
             <FR label={collectMode==="followers"?"브랜드/경쟁사 계정":"브랜드 계정 (태그 추출)"}>
               <input value={collectUsername} onChange={e=>setCollectUsername(e.target.value)}
                 placeholder="예: oabrand_official" onKeyDown={e=>{if(e.key==="Enter")handleCollect();}}
-                style={{width:"100%",boxSizing:"border-box",fontSize:12,padding:"7px 10px",borderRadius:8,
+                style={{width:"100%",boxSizing:"border-box",fontSize:13,padding:"7px 10px",borderRadius:8,
                   border:`1px solid ${C.border}`,fontFamily:"inherit",outline:"none"}}/>
             </FR>
           )}
           <FR label="최소 팔로워">
             <input type="number" value={collectMinFollowers} onChange={e=>setCollectMinFollowers(e.target.value)}
-              placeholder="0" style={{width:"100%",boxSizing:"border-box",fontSize:12,padding:"7px 10px",borderRadius:8,
+              placeholder="0" style={{width:"100%",boxSizing:"border-box",fontSize:13,padding:"7px 10px",borderRadius:8,
                 border:`1px solid ${C.border}`,fontFamily:"inherit",outline:"none"}}/>
           </FR>
           <FR label="최대 팔로워">
             <input type="number" value={collectMaxFollowers} onChange={e=>setCollectMaxFollowers(e.target.value)}
-              placeholder="∞" style={{width:"100%",boxSizing:"border-box",fontSize:12,padding:"7px 10px",borderRadius:8,
+              placeholder="∞" style={{width:"100%",boxSizing:"border-box",fontSize:13,padding:"7px 10px",borderRadius:8,
                 border:`1px solid ${C.border}`,fontFamily:"inherit",outline:"none"}}/>
           </FR>
           <FR label="수집 수">
             <input type="number" value={collectCount} onChange={e=>setCollectCount(e.target.value)}
-              style={{width:"100%",boxSizing:"border-box",fontSize:12,padding:"7px 10px",borderRadius:8,
+              style={{width:"100%",boxSizing:"border-box",fontSize:13,padding:"7px 10px",borderRadius:8,
                 border:`1px solid ${C.border}`,fontFamily:"inherit",outline:"none"}}/>
           </FR>
           <Btn onClick={handleCollect}
@@ -11885,12 +11885,12 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
         <FR label="카테고리 태그 (선택 · 추가 시 메모에 자동 포함)">
           <input value={collectCategory} onChange={e=>setCollectCategory(e.target.value)}
             placeholder="예: 비건뷰티" style={{width:"100%",boxSizing:"border-box",
-              fontSize:12,padding:"7px 10px",borderRadius:8,
+              fontSize:13,padding:"7px 10px",borderRadius:8,
               border:`1px solid ${C.border}`,fontFamily:"inherit",outline:"none"}}/>
         </FR>
 
         {collectError&&(
-          <div style={{fontSize:11,fontWeight:700,padding:"8px 12px",borderRadius:8,marginTop:8,
+          <div style={{fontSize:12,fontWeight:700,padding:"8px 12px",borderRadius:8,marginTop:8,
             whiteSpace:"pre-wrap",wordBreak:"break-all",
             background:collectError.startsWith("✅")?C.sageLt:"#FFF8F8",
             color:collectError.startsWith("✅")?C.good:C.bad,
@@ -11900,7 +11900,7 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
         )}
 
         {!collectResults.length&&!collectLoading&&!collectError&&(
-          <div style={{textAlign:"center",padding:"32px 0",color:C.inkLt,fontSize:12}}>
+          <div style={{textAlign:"center",padding:"32px 0",color:C.inkLt,fontSize:13}}>
             <MI n="travel_explore" size={32} style={{color:C.border,display:"block",margin:"0 auto 8px"}}/>
             {collectMode==="keyword"?"키워드를 입력하고 수집 시작을 눌러주세요":"경쟁사 계정을 입력하고 수집 시작을 눌러주세요"}
           </div>
@@ -11913,7 +11913,7 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
             <div style={{fontSize:13,fontWeight:800,color:C.ink}}>
               수집 결과 <span style={{color:C.rose}}>{collectResults.length}개</span> 계정
               {Object.values(collectSelected).filter(Boolean).length>0&&(
-                <span style={{fontSize:10,color:C.inkMid,marginLeft:8}}>{Object.values(collectSelected).filter(Boolean).length}개 선택됨</span>
+                <span style={{fontSize:12,color:C.inkMid,marginLeft:8}}>{Object.values(collectSelected).filter(Boolean).length}개 선택됨</span>
               )}
             </div>
             <div style={{display:"flex",gap:6}}>
@@ -11931,10 +11931,10 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
                   <th style={{padding:"6px 10px",width:32}}/>
                   {collectMode==="keyword"
                     ?["계정","이름","#포스트","평균좋아요","평균댓글",""].map(h=>(
-                        <th key={h} style={{padding:"6px 10px",textAlign:"left",fontSize:10,fontWeight:700,color:C.inkMid,whiteSpace:"nowrap"}}>{h}</th>
+                        <th key={h} style={{padding:"6px 10px",textAlign:"left",fontSize:12,fontWeight:700,color:C.inkMid,whiteSpace:"nowrap"}}>{h}</th>
                       ))
                     :["계정","이름","팔로워","게시물","바이오",""].map(h=>(
-                        <th key={h} style={{padding:"6px 10px",textAlign:"left",fontSize:10,fontWeight:700,color:C.inkMid,whiteSpace:"nowrap"}}>{h}</th>
+                        <th key={h} style={{padding:"6px 10px",textAlign:"left",fontSize:12,fontWeight:700,color:C.inkMid,whiteSpace:"nowrap"}}>{h}</th>
                       ))
                   }
                 </tr>
@@ -11950,33 +11950,33 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
                       onClick={()=>!isDup&&setCollectSelected(p=>({...p,[r.username]:!p[r.username]}))}>
                       <td style={{padding:"8px 10px"}}>
                         {isDup
-                          ?<span style={{fontSize:9,color:C.warn,fontWeight:700,background:"#FFF8EC",padding:"2px 6px",borderRadius:10}}>이미 있음</span>
+                          ?<span style={{fontSize:11,color:C.warn,fontWeight:700,background:"#FFF8EC",padding:"2px 6px",borderRadius:10}}>이미 있음</span>
                           :<input type="checkbox" checked={checked} readOnly style={{accentColor:C.rose}}/>}
                       </td>
                       <td style={{padding:"8px 10px"}}>
                         <div style={{display:"flex",alignItems:"center",gap:4}}>
                           <a href={r.profileUrl} target="_blank" rel="noreferrer" onClick={e=>e.stopPropagation()}
-                            style={{fontSize:12,fontWeight:800,color:C.rose,textDecoration:"none"}}>@{r.username}</a>
+                            style={{fontSize:13,fontWeight:800,color:C.rose,textDecoration:"none"}}>@{r.username}</a>
                           {r.isVerified&&<MI n="verified" size={12} style={{color:C.rose}}/>}
                         </div>
                       </td>
-                      <td style={{padding:"8px 10px",fontSize:11,color:C.inkMid}}>{r.fullName||"—"}</td>
+                      <td style={{padding:"8px 10px",fontSize:12,color:C.inkMid}}>{r.fullName||"—"}</td>
                       {collectMode==="keyword"?(
                         <>
-                          <td style={{padding:"8px 10px",fontSize:12,fontWeight:700,color:C.ink,textAlign:"center"}}>{r.posts??"-"}</td>
-                          <td style={{padding:"8px 10px",fontSize:12,fontWeight:700,color:C.rose,textAlign:"center"}}>{r.avgLikes!=null?r.avgLikes.toLocaleString():"—"}</td>
-                          <td style={{padding:"8px 10px",fontSize:11,color:C.inkMid,textAlign:"center"}}>{r.avgComments!=null?r.avgComments.toLocaleString():"—"}</td>
+                          <td style={{padding:"8px 10px",fontSize:13,fontWeight:700,color:C.ink,textAlign:"center"}}>{r.posts??"-"}</td>
+                          <td style={{padding:"8px 10px",fontSize:13,fontWeight:700,color:C.rose,textAlign:"center"}}>{r.avgLikes!=null?r.avgLikes.toLocaleString():"—"}</td>
+                          <td style={{padding:"8px 10px",fontSize:12,color:C.inkMid,textAlign:"center"}}>{r.avgComments!=null?r.avgComments.toLocaleString():"—"}</td>
                         </>
                       ):(
                         <>
-                          <td style={{padding:"8px 10px",fontSize:12,fontWeight:700,color:C.ink}}>{fmtNum(r.followers)}</td>
-                          <td style={{padding:"8px 10px",fontSize:11,color:C.inkMid}}>{r.posts??"-"}</td>
-                          <td style={{padding:"8px 10px",fontSize:10,color:C.inkMid,maxWidth:140,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{r.bio||"—"}</td>
+                          <td style={{padding:"8px 10px",fontSize:13,fontWeight:700,color:C.ink}}>{fmtNum(r.followers)}</td>
+                          <td style={{padding:"8px 10px",fontSize:12,color:C.inkMid}}>{r.posts??"-"}</td>
+                          <td style={{padding:"8px 10px",fontSize:12,color:C.inkMid,maxWidth:140,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{r.bio||"—"}</td>
                         </>
                       )}
                       <td style={{padding:"8px 10px"}}>
                         <a href={r.profileUrl} target="_blank" rel="noreferrer" onClick={e=>e.stopPropagation()}
-                          style={{fontSize:10,color:C.inkLt,textDecoration:"none"}}><MI n="open_in_new" size={12}/></a>
+                          style={{fontSize:12,color:C.inkLt,textDecoration:"none"}}><MI n="open_in_new" size={12}/></a>
                       </td>
                     </tr>
                   );
@@ -12010,7 +12010,7 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
           {id:"진행상황",icon:"table_rows"},
         ].map(t=>(
           <button key={t.id} onClick={()=>setInfTabMode(t.id)} style={{
-            fontSize:12,fontWeight:700,padding:"8px 20px",
+            fontSize:13,fontWeight:700,padding:"8px 20px",
             border:"none",borderBottom:infTabMode===t.id?`2px solid ${C.rose}`:"2px solid transparent",
             marginBottom:-2,background:"transparent",cursor:"pointer",fontFamily:"inherit",
             color:infTabMode===t.id?C.rose:C.inkMid,display:"flex",alignItems:"center",gap:5,
@@ -12049,10 +12049,10 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
         });
         const cats = Object.keys(groups).sort();
         if(cats.length === 0) return(
-          <div style={{textAlign:"center",padding:"48px 0",color:C.inkLt,fontSize:12}}>
+          <div style={{textAlign:"center",padding:"48px 0",color:C.inkLt,fontSize:13}}>
             <MI n="bookmark" size={32} style={{color:C.border,display:"block",margin:"0 auto 8px"}}/>
             저장된 인플루언서가 없어요<br/>
-            <span style={{fontSize:10}}>수집 탭에서 계정을 추가하면 여기에 모여요</span>
+            <span style={{fontSize:12}}>수집 탭에서 계정을 추가하면 여기에 모여요</span>
           </div>
         );
         return(
@@ -12068,7 +12068,7 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
                     <thead>
                       <tr style={{background:C.cream,borderBottom:`2px solid ${C.border}`}}>
                         {["계정","이름","팔로워","수집 경로",""].map(h=>(
-                          <th key={h} style={{padding:"6px 10px",textAlign:"left",fontSize:10,fontWeight:700,color:C.inkMid,whiteSpace:"nowrap"}}>{h}</th>
+                          <th key={h} style={{padding:"6px 10px",textAlign:"left",fontSize:12,fontWeight:700,color:C.inkMid,whiteSpace:"nowrap"}}>{h}</th>
                         ))}
                       </tr>
                     </thead>
@@ -12080,13 +12080,13 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
                           <tr key={f.id} style={{borderBottom:`1px solid ${C.border}`}}>
                             <td style={{padding:"8px 10px"}}>
                               <a href={url} target="_blank" rel="noreferrer"
-                                style={{fontSize:12,fontWeight:800,color:C.rose,textDecoration:"none"}}>
+                                style={{fontSize:13,fontWeight:800,color:C.rose,textDecoration:"none"}}>
                                 @{handle}
                               </a>
                             </td>
-                            <td style={{padding:"8px 10px",fontSize:11,color:C.inkMid}}>{f.displayName||"—"}</td>
-                            <td style={{padding:"8px 10px",fontSize:11,fontWeight:700,color:C.ink}}>{f.followers||"—"}</td>
-                            <td style={{padding:"8px 10px",fontSize:10,color:C.inkMid,maxWidth:160,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{getSrc(f)}</td>
+                            <td style={{padding:"8px 10px",fontSize:12,color:C.inkMid}}>{f.displayName||"—"}</td>
+                            <td style={{padding:"8px 10px",fontSize:12,fontWeight:700,color:C.ink}}>{f.followers||"—"}</td>
+                            <td style={{padding:"8px 10px",fontSize:12,color:C.inkMid,maxWidth:160,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{getSrc(f)}</td>
                             <td style={{padding:"8px 10px"}}>
                               <Btn variant="neutral" small onClick={()=>setInfModalData({mode:"edit",initial:f})}>
                                 <MI n="edit" size={11}/>
@@ -12118,14 +12118,14 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
           {infSheetStatus==="ok"?<MI n="circle" size={20} style={{color:C.good}}/>:<MI n="assignment" size={20}/>}
           <div>
             {infSheetStatus==="ok"
-              ? <><div style={{fontSize:12,fontWeight:800,color:C.good}}>구글 시트 연결됨 · {infs.length}명 로드</div>
-                  <div style={{fontSize:10,color:C.inkMid,marginTop:1}}>시트 변경 시 자동 반영</div></>
+              ? <><div style={{fontSize:13,fontWeight:800,color:C.good}}>구글 시트 연결됨 · {infs.length}명 로드</div>
+                  <div style={{fontSize:12,color:C.inkMid,marginTop:1}}>시트 변경 시 자동 반영</div></>
               : infSheetStatus==="loading"
-              ? <div style={{fontSize:12,fontWeight:700,color:C.gold}}><MI n="hourglass_empty" size={13}/> 불러오는 중...</div>
+              ? <div style={{fontSize:13,fontWeight:700,color:C.gold}}><MI n="hourglass_empty" size={13}/> 불러오는 중...</div>
               : infSheetStatus==="error"
-              ? <div style={{fontSize:12,fontWeight:800,color:C.bad}}>연결 실패 — 시트 공유 설정 또는 URL을 확인하세요</div>
-              : <><div style={{fontSize:12,fontWeight:800,color:C.gold}}>구글 시트 연결하면 인플루언서 데이터가 자동 동기화돼요</div>
-                  <div style={{fontSize:10,color:C.inkMid,marginTop:1}}>name · tier · platform · product · reach · saves · clicks · conv 등</div></>
+              ? <div style={{fontSize:13,fontWeight:800,color:C.bad}}>연결 실패 — 시트 공유 설정 또는 URL을 확인하세요</div>
+              : <><div style={{fontSize:13,fontWeight:800,color:C.gold}}>구글 시트 연결하면 인플루언서 데이터가 자동 동기화돼요</div>
+                  <div style={{fontSize:12,color:C.inkMid,marginTop:1}}>name · tier · platform · product · reach · saves · clicks · conv 등</div></>
             }
           </div>
         </div>
@@ -12141,7 +12141,7 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
       {/* 시트 URL 입력 모달 */}
       {infUrlModal&&(
         <Modal title={<><MI n="assignment"/> 인플루언서 시트 연결</>} onClose={()=>setInfUrlModal(false)}>
-          <div style={{background:C.cream,borderRadius:10,padding:"14px",marginBottom:16,fontSize:11,color:C.inkMid,lineHeight:1.7}}>
+          <div style={{background:C.cream,borderRadius:10,padding:"14px",marginBottom:16,fontSize:12,color:C.inkMid,lineHeight:1.7}}>
             <b style={{color:C.ink}}>시트 1행 헤더 그대로 사용 가능</b><br/>
             담당자 · 제품명 · 이름 · 인스타그램 아이디 · 매체 · 링크 · 제품 발송 · 제품발송일자 · 작성마감일 · 포스팅 확인 · 비고 · 기간연장<br/>
             <span style={{color:C.rose}}>※ 포스팅 확인 컬럼이 "확인완료"이면 게시완료로 인식</span>
@@ -12162,18 +12162,18 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
         <Card>
           <CardTitle title={<><MI n="payments" size={14}/> 2차활용 입금 현황</>} sub={`미입금 ${infs.filter(f=>f.reusable&&!f.paid).length}명`}/>
           {infs.filter(f=>f.reusable&&!f.paid).length===0?(
-            <div style={{textAlign:"center",padding:"24px 0",color:C.good,fontSize:12,fontWeight:700}}><MI n="check_circle" size={14}/> 모두 입금 완료</div>
+            <div style={{textAlign:"center",padding:"24px 0",color:C.good,fontSize:13,fontWeight:700}}><MI n="check_circle" size={14}/> 모두 입금 완료</div>
           ):(
             <div style={{display:"flex",flexDirection:"column",gap:6,maxHeight:220,overflowY:"auto"}}>
               {infs.filter(f=>f.reusable&&!f.paid).map((f,i)=>(
                 <div key={f.id} style={{display:"flex",alignItems:"center",justifyContent:"space-between",
                   padding:"7px 10px",borderRadius:9,background:C.cream,border:`1px solid ${C.border}`}}>
                   <div>
-                    <div style={{fontSize:11,fontWeight:800,color:C.ink}}>{f.displayName||f.name}</div>
-                    <div style={{fontSize:9,color:C.inkMid,marginTop:1}}>{f.product} · {f.note&&f.note.slice(0,30)}</div>
+                    <div style={{fontSize:12,fontWeight:800,color:C.ink}}>{f.displayName||f.name}</div>
+                    <div style={{fontSize:11,color:C.inkMid,marginTop:1}}>{f.product} · {f.note&&f.note.slice(0,30)}</div>
                   </div>
                   <button onClick={()=>setInfs(arr=>arr.map(x=>x.id===f.id?{...x,paid:true}:x))}
-                    style={{fontSize:10,fontWeight:700,padding:"4px 10px",borderRadius:20,cursor:"pointer",
+                    style={{fontSize:12,fontWeight:700,padding:"4px 10px",borderRadius:20,cursor:"pointer",
                       background:"#EDF7F1",color:C.good,border:`1px solid ${C.good}44`}}>
                     입금완료 ✓
                   </button>
@@ -12210,25 +12210,25 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
                 {expired.length>0&&expired.map(f=>(
                   <div key={f.id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",
                     padding:"6px 10px",borderRadius:8,background:"#FEF0F0",border:`1px solid ${C.bad}33`}}>
-                    <div style={{fontSize:11,fontWeight:700,color:C.bad}}>{f.displayName||f.name}</div>
-                    <span style={{fontSize:10,color:C.bad,fontWeight:700}}>만료</span>
+                    <div style={{fontSize:12,fontWeight:700,color:C.bad}}>{f.displayName||f.name}</div>
+                    <span style={{fontSize:12,color:C.bad,fontWeight:700}}>만료</span>
                   </div>
                 ))}
                 {soon.length>0&&soon.map(f=>(
                   <div key={f.id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",
                     padding:"6px 10px",borderRadius:8,background:"#FFF8EC",border:`1px solid ${C.warn}33`}}>
-                    <div style={{fontSize:11,fontWeight:700,color:C.warn}}>{f.displayName||f.name}</div>
-                    <span style={{fontSize:10,color:C.warn,fontWeight:700}}>D-{f.left}</span>
+                    <div style={{fontSize:12,fontWeight:700,color:C.warn}}>{f.displayName||f.name}</div>
+                    <span style={{fontSize:12,color:C.warn,fontWeight:700}}>D-{f.left}</span>
                   </div>
                 ))}
                 {ok.length>0&&ok.map(f=>(
                   <div key={f.id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",
                     padding:"6px 10px",borderRadius:8,background:C.cream}}>
-                    <div style={{fontSize:11,color:C.inkMid}}>{f.displayName||f.name}</div>
-                    <span style={{fontSize:10,color:C.inkLt}}>{f.left===9999?"무한":f.expiry+"까지"}</span>
+                    <div style={{fontSize:12,color:C.inkMid}}>{f.displayName||f.name}</div>
+                    <span style={{fontSize:12,color:C.inkLt}}>{f.left===9999?"무한":f.expiry+"까지"}</span>
                   </div>
                 ))}
-                {withExpiry.length===0&&<div style={{textAlign:"center",padding:"24px 0",color:C.inkLt,fontSize:11}}>데이터 없음</div>}
+                {withExpiry.length===0&&<div style={{textAlign:"center",padding:"24px 0",color:C.inkLt,fontSize:12}}>데이터 없음</div>}
               </div>
             );
           })()}
@@ -12243,11 +12243,11 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
         {/* 검색 + 필터 */}
         <div style={{display:"flex",gap:8,marginBottom:10,flexWrap:"wrap"}}>
           <input value={infSearch} onChange={e=>setInfSearch(e.target.value)} placeholder="이름 · 제품 검색"
-            style={{flex:1,minWidth:120,fontSize:11,padding:"6px 10px",borderRadius:8,
+            style={{flex:1,minWidth:120,fontSize:12,padding:"6px 10px",borderRadius:8,
               border:`1px solid ${C.border}`,fontFamily:"inherit",outline:"none"}}/>
           {["전체","미게시","대기중","완료필요","기록완료"].map(f=>(
             <button key={f} onClick={()=>setInfStatusFilter(f)}
-              style={{fontSize:10,padding:"4px 12px",borderRadius:20,border:`1px solid ${infStatusFilter===f?C.rose:C.border}`,
+              style={{fontSize:12,padding:"4px 12px",borderRadius:20,border:`1px solid ${infStatusFilter===f?C.rose:C.border}`,
                 background:infStatusFilter===f?C.rose:C.cream,color:infStatusFilter===f?C.white:C.inkMid,
                 cursor:"pointer",fontFamily:"inherit",fontWeight:700,whiteSpace:"nowrap"}}>
               {f}
@@ -12256,7 +12256,7 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
         </div>
 
         {infs.length===0&&(
-          <div style={{textAlign:"center",padding:"32px 0",color:C.inkLt,fontSize:12}}>
+          <div style={{textAlign:"center",padding:"32px 0",color:C.inkLt,fontSize:13}}>
             아직 등록된 인플루언서가 없어요<br/>
             <Btn style={{marginTop:12}} onClick={()=>setInfModalData({mode:"add",initial:null})}>+ 첫 번째 추가</Btn>
           </div>
@@ -12295,7 +12295,7 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
               <thead>
                 <tr style={{background:C.cream,borderBottom:`2px solid ${C.border}`}}>
                   {["이름","플랫폼","제품","상태","게시일","발송",""].map(h=>(
-                    <th key={h} style={{padding:"7px 10px",textAlign:"left",fontSize:10,fontWeight:700,
+                    <th key={h} style={{padding:"7px 10px",textAlign:"left",fontSize:12,fontWeight:700,
                       color:C.inkMid,whiteSpace:"nowrap"}}>{h}</th>
                   ))}
                 </tr>
@@ -12314,33 +12314,33 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
                         background:isExp?"#EAF3FF":urgent?"#FFF8F8":C.white,
                         transition:"background 0.1s"}}>
                       <td style={{padding:"9px 10px",whiteSpace:"nowrap"}}>
-                        <div style={{fontSize:12,fontWeight:800,color:C.ink}}>
+                        <div style={{fontSize:13,fontWeight:800,color:C.ink}}>
                           <a href={profileUrl} target="_blank" rel="noreferrer"
                             onClick={e=>e.stopPropagation()}
                             style={{color:C.ink,textDecoration:"none",borderBottom:`1px dashed ${C.border}`}}>
                             {f.displayName||f.name}
                           </a>
                         </div>
-                        <div style={{fontSize:9,color:C.inkLt}}>{f.name}</div>
+                        <div style={{fontSize:11,color:C.inkLt}}>{f.name}</div>
                       </td>
                       <td style={{padding:"9px 10px"}}>
-                        <span style={{color:tc,display:"flex",alignItems:"center",gap:3,fontSize:10,fontWeight:700}}>
+                        <span style={{color:tc,display:"flex",alignItems:"center",gap:3,fontSize:12,fontWeight:700}}>
                           {platIcon(f.platform)}
                         </span>
                       </td>
-                      <td style={{padding:"9px 10px",fontSize:11,color:C.inkMid,maxWidth:100,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{f.product||"—"}</td>
+                      <td style={{padding:"9px 10px",fontSize:12,color:C.inkMid,maxWidth:100,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{f.product||"—"}</td>
                       <td style={{padding:"9px 10px"}}>
                         {f.tier==="유료"?(
-                          <span style={{fontSize:10,fontWeight:700,color:st.color,background:st.bg,
+                          <span style={{fontSize:12,fontWeight:700,color:st.color,background:st.bg,
                             padding:"2px 8px",borderRadius:20,whiteSpace:"nowrap",display:"inline-flex",alignItems:"center",gap:3}}>
                             <MI n={st.icon} size={11}/> {st.label}
                           </span>
                         ):(
-                          <span style={{fontSize:10,fontWeight:700,color:C.sage,background:C.sageLt,
+                          <span style={{fontSize:12,fontWeight:700,color:C.sage,background:C.sageLt,
                             padding:"2px 8px",borderRadius:20,whiteSpace:"nowrap"}}>무료</span>
                         )}
                       </td>
-                      <td style={{padding:"9px 10px",fontSize:11,color:C.inkMid,whiteSpace:"nowrap"}}>{f.postedDate||"—"}</td>
+                      <td style={{padding:"9px 10px",fontSize:12,color:C.inkMid,whiteSpace:"nowrap"}}>{f.postedDate||"—"}</td>
                       <td style={{padding:"9px 10px"}}>
                         <MI n={f.sent?"check_circle":"radio_button_unchecked"} size={14} style={{color:f.sent?C.good:C.border}}/>
                       </td>
@@ -12362,7 +12362,7 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
                               ...(f.reusable?[{label:f.paid?"💰 입금완료":"💰 미입금",active:f.paid,onClick:()=>setInfs(arr=>arr.map(x=>x.id===f.id?{...x,paid:!x.paid}:x))}]:[]),
                               {label:f.metaUsed?"📢 메타활용":"📢 미활용",active:f.metaUsed,onClick:()=>setInfs(arr=>arr.map(x=>x.id===f.id?{...x,metaUsed:!x.metaUsed}:x))},
                             ].map(({label,active,onClick})=>(
-                              <span key={label} onClick={onClick} style={{fontSize:10,fontWeight:700,padding:"3px 10px",
+                              <span key={label} onClick={onClick} style={{fontSize:12,fontWeight:700,padding:"3px 10px",
                                 borderRadius:20,cursor:"pointer",userSelect:"none",
                                 background:active?"#EDF7F1":C.cream,color:active?C.good:C.inkMid,
                                 border:`1px solid ${active?C.good+"44":C.border}`}}>{label}</span>
@@ -12372,11 +12372,11 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
                           {f.reach!==null&&(
                             <div style={{display:"flex",gap:16,marginBottom:6}}>
                               {[{l:"도달",v:(f.reach/1000).toFixed(0)+"K",c:C.rose},{l:"저장",v:f.saves?.toLocaleString(),c:C.gold},{l:"클릭",v:f.clicks?.toLocaleString(),c:C.purple},{l:"전환",v:f.conv,c:C.good}].map(({l,v,c})=>(
-                                <div key={l}><div style={{fontSize:9,color:C.inkLt}}>{l}</div><div style={{fontSize:13,fontWeight:800,color:c}}>{v}</div></div>
+                                <div key={l}><div style={{fontSize:11,color:C.inkLt}}>{l}</div><div style={{fontSize:13,fontWeight:800,color:c}}>{v}</div></div>
                               ))}
                             </div>
                           )}
-                          {f.note&&<div style={{fontSize:10,color:C.inkMid,background:"#fff",padding:"4px 10px",borderRadius:8,display:"inline-block"}}>{f.note}</div>}
+                          {f.note&&<div style={{fontSize:12,color:C.inkMid,background:"#fff",padding:"4px 10px",borderRadius:8,display:"inline-block"}}>{f.note}</div>}
                         </td>
                       </tr>
                     )}
@@ -12384,7 +12384,7 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
                 })}
               </tbody>
             </table>
-            {filtered.length===0&&<div style={{textAlign:"center",padding:"24px 0",color:C.inkLt,fontSize:12}}>검색 결과 없음</div>}
+            {filtered.length===0&&<div style={{textAlign:"center",padding:"24px 0",color:C.inkLt,fontSize:13}}>검색 결과 없음</div>}
           </div>
           );
         })()}
@@ -12558,15 +12558,15 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
         {/* 상태 + 새로고침 */}
         <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}>
           {notionLoading?<MI n="hourglass_empty" size={15}/>:notionError?<MI n="cancel" size={15}/>:<MI n="circle" size={15} style={{color:C.good}}/>}
-          <div style={{flex:1,fontSize:11,fontWeight:700,color:notionError?C.bad:C.good}}>
+          <div style={{flex:1,fontSize:12,fontWeight:700,color:notionError?C.bad:C.good}}>
             {notionLoading?"노션 불러오는 중...":notionError?`노션 오류: ${notionError}`:`노션 연동됨 · ${notionSch.length}개 · 미완료 ${notionSch.filter(s=>s.status!=="완료").length}개`}
           </div>
-          <button onClick={()=>notionCsvInputRef.current?.click()} title="노션 CSV 업로드" style={{fontSize:12,padding:"4px 10px",borderRadius:20,
+          <button onClick={()=>notionCsvInputRef.current?.click()} title="노션 CSV 업로드" style={{fontSize:13,padding:"4px 10px",borderRadius:20,
             border:`1px solid ${C.border}`,background:C.cream,cursor:"pointer",fontFamily:"inherit",fontWeight:700,flexShrink:0}}>
             <MI n="upload_file" size={14}/>
           </button>
           <input ref={notionCsvInputRef} type="file" accept=".csv" style={{display:"none"}} onChange={handleNotionCSVUpload}/>
-          <button onClick={()=>handleFilterChange(schFilter)} style={{fontSize:12,padding:"4px 10px",borderRadius:20,
+          <button onClick={()=>handleFilterChange(schFilter)} style={{fontSize:13,padding:"4px 10px",borderRadius:20,
             border:`1px solid ${C.border}`,background:C.cream,cursor:"pointer",fontFamily:"inherit",fontWeight:700,flexShrink:0}}>
             <MI n="refresh" size={14}/>
           </button>
@@ -12575,7 +12575,7 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
             if(!targets.length){alert("처리할 항목이 없어요.");return;}
             if(!confirm(`4월 제외 미완료 ${targets.length}개를 완료 처리할까요?`))return;
             targets.forEach(s=>toggleNotionDone(s.id, true));
-          }} style={{fontSize:11,padding:"4px 10px",borderRadius:20,border:`1px solid #16a34a44`,background:"#f0fdf4",color:"#16a34a",cursor:"pointer",fontFamily:"inherit",fontWeight:700,flexShrink:0,whiteSpace:"nowrap"}}>
+          }} style={{fontSize:12,padding:"4px 10px",borderRadius:20,border:`1px solid #16a34a44`,background:"#f0fdf4",color:"#16a34a",cursor:"pointer",fontFamily:"inherit",fontWeight:700,flexShrink:0,whiteSpace:"nowrap"}}>
             ✓ 4월 외 완료
           </button>
         </div>
@@ -12586,7 +12586,7 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
             {[{n:"전체",c:C.inkMid},{n:"소리",c:"#f472b6"},{n:"영서",c:"#60a5fa"},{n:"경은",c:"#34d399"},{n:"지수",c:"#a78bfa"},{n:"행사",c:"#f97316"}].map(({n:a,c:col})=>{
               const active=assigneeFilter===a;
               return(
-                <button key={a} onClick={()=>setAssigneeFilter(a)} style={{fontSize:10,padding:"4px 12px",borderRadius:20,
+                <button key={a} onClick={()=>setAssigneeFilter(a)} style={{fontSize:12,padding:"4px 12px",borderRadius:20,
                   border:`1px solid ${active?col:C.border}`,background:active?col:C.cream,
                   color:active?C.white:C.inkMid,cursor:"pointer",fontFamily:"inherit",fontWeight:700,whiteSpace:"nowrap"}}>
                   {a==="전체"?<><MI n="group" size={12}/> 전체</>:a}
@@ -12596,7 +12596,7 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
             <div style={{width:1,background:C.border,margin:"0 4px",flexShrink:0}}/>
             {/* 완료 필터 */}
             {["미완료","전체"].map(f=>(
-              <button key={f} onClick={()=>handleFilterChange(f)} style={{fontSize:10,padding:"4px 12px",borderRadius:20,
+              <button key={f} onClick={()=>handleFilterChange(f)} style={{fontSize:12,padding:"4px 12px",borderRadius:20,
                 border:`1px solid ${schFilter===f?C.rose:C.border}`,background:schFilter===f?C.rose:C.cream,
                 color:schFilter===f?C.white:C.inkMid,cursor:"pointer",fontFamily:"inherit",fontWeight:700,whiteSpace:"nowrap"}}>
                 {f}
@@ -12615,13 +12615,13 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
             style={{background:"none",border:"none",cursor:"pointer",fontSize:18,color:C.inkMid,padding:"0 8px"}}>‹</button>
           <div style={{fontSize:16,fontWeight:900,color:C.ink}}>
             {calMonth.y}년 {months[calMonth.m]}
-            <span style={{fontSize:10,fontWeight:600,color:C.inkLt,marginLeft:8}}>
+            <span style={{fontSize:12,fontWeight:600,color:C.inkLt,marginLeft:8}}>
               {activeItems.filter(s=>s.date&&s.date.startsWith(`${calMonth.y}-${String(calMonth.m+1).padStart(2,'0')}`)).length}개
             </span>
           </div>
           <div style={{display:"flex",gap:4,alignItems:"center"}}>
             <button onClick={()=>setCalMonth({y:new Date().getFullYear(),m:new Date().getMonth()})}
-              style={{fontSize:10,padding:"3px 10px",borderRadius:20,border:`1px solid ${C.border}`,
+              style={{fontSize:12,padding:"3px 10px",borderRadius:20,border:`1px solid ${C.border}`,
                 background:C.cream,cursor:"pointer",fontFamily:"inherit",fontWeight:700,color:C.inkMid}}>오늘</button>
             <Btn small onClick={()=>{setSchModalData({mode:"add",initial:null})}}>+ 추가</Btn>
             <button onClick={()=>setCalMonth(p=>p.m===11?{y:p.y+1,m:0}:{y:p.y,m:p.m+1})}
@@ -12634,7 +12634,7 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
             {/* 요일 헤더 */}
             <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",borderBottom:`1px solid ${C.border}`}}>
               {days.map((d,i)=>(
-                <div key={d} style={{padding:"6px 0",textAlign:"center",fontSize:10,fontWeight:700,
+                <div key={d} style={{padding:"6px 0",textAlign:"center",fontSize:12,fontWeight:700,
                   color:i===0?C.bad:i===6?"#2997FF":C.inkLt}}>{d}</div>
               ))}
             </div>
@@ -12676,7 +12676,7 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
                       if(isHaengsa) return(
                         <div key={j}
                           onClick={e=>{e.stopPropagation();setSchModalData({mode:"edit",initial:{...s,notionId:s.id,note:s.memo}});}}
-                          style={{fontSize:9,fontWeight:600,padding:"1px 4px",
+                          style={{fontSize:11,fontWeight:600,padding:"1px 4px",
                             borderRadius:isFirst&&isLast?3:isFirst?"3px 0 0 3px":isLast?"0 3px 3px 0":0,
                             background:`${tc}22`,color:showTitle?tc:`${tc}55`,
                             marginBottom:2,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",
@@ -12691,7 +12691,7 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
                           draggable={!s._isChecklist&&isFirst}
                           onDragStart={e=>{e.stopPropagation();dragRef.current=s;}}
                           onClick={e=>{e.stopPropagation();setSchModalData({mode:"edit",initial:{...s,notionId:s.id,note:s.memo}});}}
-                          style={{fontSize:11,fontWeight:700,
+                          style={{fontSize:12,fontWeight:700,
                             padding:"2px 5px",
                             borderRadius:isFirst&&isLast?3:isFirst?"3px 0 0 3px":isLast?"0 3px 3px 0":0,
                             background:`${tc}${isCont?"33":"18"}`,
@@ -12708,7 +12708,7 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
                         </div>
                       );
                     })}
-                    {items.length>8&&<div style={{fontSize:10,color:C.inkLt,fontWeight:700}}>+{items.length-8}개 더</div>}
+                    {items.length>8&&<div style={{fontSize:12,color:C.inkLt,fontWeight:700}}>+{items.length-8}개 더</div>}
                   </div>
                 );
               })}
@@ -12722,7 +12722,7 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
         <Card>
           <CardTitle title={<><MI n="assignment" size={14}/> {selDay} 일정</>} sub={`${selItems.length}개`}
             action={<Btn small onClick={()=>{setSchModalData({mode:"add",initial:{date:selDay}})}}>+ 추가</Btn>}/>
-          {selItems.length===0&&<div style={{textAlign:"center",color:C.inkLt,fontSize:12,padding:"16px 0"}}>이날 일정 없음</div>}
+          {selItems.length===0&&<div style={{textAlign:"center",color:C.inkLt,fontSize:13,padding:"16px 0"}}>이날 일정 없음</div>}
           <div style={{display:"flex",flexDirection:"column",gap:8}}>
             {selItems.map(s=>{
               const tc=schTypeColor(s.type);
@@ -12742,12 +12742,12 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
                   <div key={s.id} onClick={()=>setCheckDone(prev=>({...(prev||{}),[dkCL]:!isDone}))}
                     style={{display:"flex",alignItems:"center",gap:10,padding:"10px 12px",cursor:"pointer",
                       borderRadius:10,border:`1px solid ${isDone?"#94a3b8":C.border}`,background:isDone?"#f8fafc":C.white}}>
-                    <span style={{fontSize:10,fontWeight:700,color:"#94a3b8",background:"#94a3b818",padding:"2px 8px",borderRadius:20,whiteSpace:"nowrap",flexShrink:0}}>
+                    <span style={{fontSize:12,fontWeight:700,color:"#94a3b8",background:"#94a3b818",padding:"2px 8px",borderRadius:20,whiteSpace:"nowrap",flexShrink:0}}>
                       <MI n="check_box" size={12}/> 반복
                     </span>
                     <div style={{flex:1,minWidth:0}}>
-                      <div style={{fontSize:12,fontWeight:800,color:C.ink,textDecoration:isDone?"line-through":"none",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{s.title}</div>
-                      {s.assignee&&<span style={{fontSize:10,padding:"1px 6px",borderRadius:10,background:s.assigneeColor+"22",color:s.assigneeColor,fontWeight:700}}>{s.assignee}</span>}
+                      <div style={{fontSize:13,fontWeight:800,color:C.ink,textDecoration:isDone?"line-through":"none",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{s.title}</div>
+                      {s.assignee&&<span style={{fontSize:12,padding:"1px 6px",borderRadius:10,background:s.assigneeColor+"22",color:s.assigneeColor,fontWeight:700}}>{s.assignee}</span>}
                     </div>
                     <div style={{width:22,height:22,borderRadius:6,border:`2px solid ${isDone?"#94a3b8":C.border}`,
                       background:isDone?"#94a3b8":"transparent",display:"flex",alignItems:"center",justifyContent:"center",
@@ -12758,16 +12758,16 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
               return(
                 <div key={s.id} style={{borderRadius:10,border:`1px solid ${C.border}`,background:C.white,overflow:"hidden"}}>
                   <div style={{display:"flex",alignItems:"center",gap:10,padding:"10px 12px"}}>
-                    <span style={{fontSize:9,fontWeight:700,color:tc,background:`${tc}18`,padding:"1px 6px",borderRadius:20,whiteSpace:"nowrap",flexShrink:0}}>
+                    <span style={{fontSize:11,fontWeight:700,color:tc,background:`${tc}18`,padding:"1px 6px",borderRadius:20,whiteSpace:"nowrap",flexShrink:0}}>
                       <MI n={schTypeIcon(s.type)} size={10}/> {s.type}
                     </span>
                     <div style={{flex:1,minWidth:0}}>
-                      <div style={{fontSize:12,fontWeight:800,color:C.ink,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{s.title}</div>
-                      <div style={{fontSize:10,color:C.inkLt,marginTop:1}}>
+                      <div style={{fontSize:13,fontWeight:800,color:C.ink,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{s.title}</div>
+                      <div style={{fontSize:12,color:C.inkLt,marginTop:1}}>
                         {s.endDate&&s.endDate!==s.date?`${s.date} ~ ${s.endDate}`:s.date}
                         {s.assignee&&<span style={{marginLeft:6,padding:"1px 6px",borderRadius:10,background:s.assigneeColor+"22",color:s.assigneeColor,fontWeight:700}}>{s.assignee}</span>}
                       </div>
-                      {s.memo&&<div style={{fontSize:10,color:C.inkMid,marginTop:2}}><MI n="chat_bubble" size={11}/> {s.memo}</div>}
+                      {s.memo&&<div style={{fontSize:12,color:C.inkMid,marginTop:2}}><MI n="chat_bubble" size={11}/> {s.memo}</div>}
                     </div>
                     <div style={{display:"flex",gap:4,flexShrink:0}}>
                       <Btn variant="ghost" small onClick={()=>setMoveItemId(moveItemId===s.id?null:s.id)} title="날짜 이동"><MI n="calendar_month" size={13}/></Btn>
@@ -12779,9 +12779,9 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
                   {moveItemId===s.id&&(
                     <div style={{display:"flex",alignItems:"center",gap:8,padding:"6px 12px 10px",borderTop:`1px solid ${C.border}`,background:C.cream}}>
                       <MI n="arrow_forward" size={13} style={{color:C.inkMid}}/>
-                      <span style={{fontSize:11,color:C.inkMid,flexShrink:0}}>이동할 날짜:</span>
+                      <span style={{fontSize:12,color:C.inkMid,flexShrink:0}}>이동할 날짜:</span>
                       <input type="date" defaultValue={s.date} id={`mv_${s.id}`}
-                        style={{fontSize:11,padding:"3px 8px",borderRadius:6,border:`1px solid ${C.border}`,fontFamily:"inherit",outline:"none"}}/>
+                        style={{fontSize:12,padding:"3px 8px",borderRadius:6,border:`1px solid ${C.border}`,fontFamily:"inherit",outline:"none"}}/>
                       <Btn small onClick={async()=>{
                         const el=document.getElementById(`mv_${s.id}`);
                         if(!el||!el.value) return;
@@ -12851,7 +12851,7 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
         });
         const totalToday=todayItems.length;
         const doneToday=todayItems.filter(i=>(checkDone||{})[doneKeyCL(i)]).length;
-        const inputS={width:"100%",fontSize:12,padding:"8px 10px",borderRadius:8,border:`1px solid ${C.border}`,fontFamily:"inherit",outline:"none",boxSizing:"border-box"};
+        const inputS={width:"100%",fontSize:13,padding:"8px 10px",borderRadius:8,border:`1px solid ${C.border}`,fontFamily:"inherit",outline:"none",boxSizing:"border-box"};
 
         return(<>
         <Card>
@@ -12862,9 +12862,9 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
           {/* 오늘 할 항목 */}
           {totalToday>0&&(
             <div style={{marginBottom:14}}>
-              <div style={{fontSize:10,fontWeight:700,color:C.inkMid,marginBottom:6}}>
+              <div style={{fontSize:12,fontWeight:700,color:C.inkMid,marginBottom:6}}>
                 오늘 할 항목
-                <span style={{marginLeft:8,fontSize:10,color:doneToday===totalToday?"#4DAD7A":C.inkLt}}>
+                <span style={{marginLeft:8,fontSize:12,color:doneToday===totalToday?"#4DAD7A":C.inkLt}}>
                   {doneToday===totalToday?<><MI n="celebration" size={12}/> 모두 완료!</>:`${doneToday}/${totalToday}`}
                 </span>
               </div>
@@ -12880,16 +12880,16 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
                     style={{display:"flex",alignItems:"center",gap:10,padding:"9px 12px",borderRadius:10,cursor:"pointer",
                       border:`1px solid ${done?cc.border:C.border}`,background:done?cc.bg:C.white,transition:"all 0.15s"}}>
                     <div style={{width:18,height:18,borderRadius:5,flexShrink:0,border:`2px solid ${done?cc.border:C.border}`,
-                      background:done?cc.border:"transparent",display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,color:"#fff"}}>
+                      background:done?cc.border:"transparent",display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,color:"#fff"}}>
                       {done?"✓":""}
                     </div>
                     <div style={{flex:1}}>
-                      <span style={{fontSize:12,fontWeight:700,color:C.ink,textDecoration:done?"line-through":"none"}}>{item.title}</span>
-                      {item.assignee&&<span style={{fontSize:10,color:C.inkMid,marginLeft:6}}><MI n="person" size={12}/> {item.assignee}</span>}
+                      <span style={{fontSize:13,fontWeight:700,color:C.ink,textDecoration:done?"line-through":"none"}}>{item.title}</span>
+                      {item.assignee&&<span style={{fontSize:12,color:C.inkMid,marginLeft:6}}><MI n="person" size={12}/> {item.assignee}</span>}
                     </div>
-                    <span style={{fontSize:9,fontWeight:700,color:cc.text,background:cc.bg,padding:"2px 7px",borderRadius:10,flexShrink:0}}>{cycleSub(item)}</span>
+                    <span style={{fontSize:11,fontWeight:700,color:cc.text,background:cc.bg,padding:"2px 7px",borderRadius:10,flexShrink:0}}>{cycleSub(item)}</span>
                     <button onClick={e=>{e.stopPropagation();setCheckItems(prev=>(prev||[]).filter(i=>i.id!==item.id));}}
-                      style={{fontSize:11,color:C.inkLt,background:"none",border:"none",cursor:"pointer",padding:"2px 4px"}}><MI n="delete" size={13}/></button>
+                      style={{fontSize:12,color:C.inkLt,background:"none",border:"none",cursor:"pointer",padding:"2px 4px"}}><MI n="delete" size={13}/></button>
                   </div>
                   );
                 })}
@@ -12900,17 +12900,17 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
           {/* 전체 목록 */}
           {(checkItems||[]).length>0&&(
             <div>
-              <div style={{fontSize:10,fontWeight:700,color:C.inkLt,marginBottom:6}}>전체 반복 항목</div>
+              <div style={{fontSize:12,fontWeight:700,color:C.inkLt,marginBottom:6}}>전체 반복 항목</div>
               <div style={{display:"flex",flexDirection:"column",gap:5}}>
                 {(checkItems||[]).map(item=>{
                   const cc=CYCLE_COLORS[item.cycle]||CYCLE_COLORS.daily;
                   return(
                   <div key={item.id} style={{display:"flex",alignItems:"center",gap:8,padding:"7px 10px",borderRadius:8,border:`1px solid ${C.border}`,background:C.cream}}>
-                    <span style={{fontSize:9,fontWeight:700,color:cc.text,background:cc.bg,padding:"1px 7px",borderRadius:10,flexShrink:0,whiteSpace:"nowrap"}}>{cycleSub(item)}</span>
-                    <span style={{flex:1,fontSize:11,fontWeight:700,color:C.ink}}>{item.title}</span>
-                    {item.assignee&&<span style={{fontSize:10,color:C.inkMid}}><MI n="person" size={12}/> {item.assignee}</span>}
+                    <span style={{fontSize:11,fontWeight:700,color:cc.text,background:cc.bg,padding:"1px 7px",borderRadius:10,flexShrink:0,whiteSpace:"nowrap"}}>{cycleSub(item)}</span>
+                    <span style={{flex:1,fontSize:12,fontWeight:700,color:C.ink}}>{item.title}</span>
+                    {item.assignee&&<span style={{fontSize:12,color:C.inkMid}}><MI n="person" size={12}/> {item.assignee}</span>}
                     <button onClick={()=>setCheckItems(prev=>(prev||[]).filter(i=>i.id!==item.id))}
-                      style={{fontSize:11,color:C.inkLt,background:"none",border:"none",cursor:"pointer",padding:"2px 4px"}}><MI n="delete" size={13}/></button>
+                      style={{fontSize:12,color:C.inkLt,background:"none",border:"none",cursor:"pointer",padding:"2px 4px"}}><MI n="delete" size={13}/></button>
                   </div>
                   );
                 })}
@@ -12919,7 +12919,7 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
           )}
 
           {(checkItems||[]).length===0&&(
-            <div style={{textAlign:"center",color:C.inkLt,fontSize:12,padding:"20px 0"}}>+ 추가 버튼으로 반복 업무를 등록해보세요</div>
+            <div style={{textAlign:"center",color:C.inkLt,fontSize:13,padding:"20px 0"}}>+ 추가 버튼으로 반복 업무를 등록해보세요</div>
           )}
         </Card>
 
@@ -12930,15 +12930,15 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
               <div style={{fontSize:16,fontWeight:900,marginBottom:16}}>반복 항목 추가</div>
               <div style={{display:"flex",flexDirection:"column",gap:12}}>
                 <div>
-                  <div style={{fontSize:10,fontWeight:700,color:C.inkMid,marginBottom:4}}>항목명 *</div>
+                  <div style={{fontSize:12,fontWeight:700,color:C.inkMid,marginBottom:4}}>항목명 *</div>
                   <input value={clForm.title} onChange={e=>setClForm(p=>({...p,title:e.target.value}))} placeholder="예: 메타 성과 확인" style={inputS}/>
                 </div>
                 <div>
-                  <div style={{fontSize:10,fontWeight:700,color:C.inkMid,marginBottom:4}}>주기</div>
+                  <div style={{fontSize:12,fontWeight:700,color:C.inkMid,marginBottom:4}}>주기</div>
                   <div style={{display:"flex",gap:6}}>
                     {[["daily","매일"],["weekly","매주"],["monthly","매월"]].map(([k,l])=>{
                       const cc=CYCLE_COLORS[k];
-                      return <button key={k} onClick={()=>setClForm(p=>({...p,cycle:k}))} style={{flex:1,fontSize:11,padding:"7px 0",borderRadius:10,
+                      return <button key={k} onClick={()=>setClForm(p=>({...p,cycle:k}))} style={{flex:1,fontSize:12,padding:"7px 0",borderRadius:10,
                         border:`1px solid ${clForm.cycle===k?cc.border:C.border}`,background:clForm.cycle===k?cc.bg:C.white,
                         color:clForm.cycle===k?cc.text:C.inkMid,cursor:"pointer",fontFamily:"inherit",fontWeight:700}}>{l}</button>;
                     })}
@@ -12946,10 +12946,10 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
                 </div>
                 {clForm.cycle==="weekly"&&(
                   <div>
-                    <div style={{fontSize:10,fontWeight:700,color:C.inkMid,marginBottom:4}}>요일</div>
+                    <div style={{fontSize:12,fontWeight:700,color:C.inkMid,marginBottom:4}}>요일</div>
                     <div style={{display:"flex",gap:4}}>
                       {["일","월","화","수","목","금","토"].map((d,i)=>(
-                        <button key={i} onClick={()=>setClForm(p=>({...p,weekDay:i}))} style={{flex:1,fontSize:11,padding:"6px 0",borderRadius:8,
+                        <button key={i} onClick={()=>setClForm(p=>({...p,weekDay:i}))} style={{flex:1,fontSize:12,padding:"6px 0",borderRadius:8,
                           border:`1px solid ${clForm.weekDay===i?"#c4b5fd":C.border}`,background:clForm.weekDay===i?"#f5f3ff":C.white,
                           color:clForm.weekDay===i?"#6d28d9":C.inkMid,cursor:"pointer",fontFamily:"inherit",fontWeight:700}}>{d}</button>
                       ))}
@@ -12958,10 +12958,10 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
                 )}
                 {clForm.cycle==="monthly"&&(
                   <div>
-                    <div style={{fontSize:10,fontWeight:700,color:C.inkMid,marginBottom:4}}>날짜</div>
+                    <div style={{fontSize:12,fontWeight:700,color:C.inkMid,marginBottom:4}}>날짜</div>
                     <div style={{display:"flex",flexWrap:"wrap",gap:4}}>
                       {Array.from({length:31},(_,i)=>i+1).map(d=>(
-                        <button key={d} onClick={()=>setClForm(p=>({...p,monthDay:d}))} style={{width:32,height:32,fontSize:11,borderRadius:8,
+                        <button key={d} onClick={()=>setClForm(p=>({...p,monthDay:d}))} style={{width:32,height:32,fontSize:12,borderRadius:8,
                           border:`1px solid ${clForm.monthDay===d?"#fdba74":C.border}`,background:clForm.monthDay===d?"#fff7ed":C.white,
                           color:clForm.monthDay===d?"#c2410c":C.inkMid,cursor:"pointer",fontFamily:"inherit",fontWeight:700}}>{d}</button>
                       ))}
@@ -12969,10 +12969,10 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
                   </div>
                 )}
                 <div>
-                  <div style={{fontSize:10,fontWeight:700,color:C.inkMid,marginBottom:4}}>담당자</div>
+                  <div style={{fontSize:12,fontWeight:700,color:C.inkMid,marginBottom:4}}>담당자</div>
                   <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
                     {["","소리","영서","경은","지수"].map(m=>(
-                      <button key={m} onClick={()=>setClForm(p=>({...p,assignee:m}))} style={{fontSize:11,padding:"4px 12px",borderRadius:20,
+                      <button key={m} onClick={()=>setClForm(p=>({...p,assignee:m}))} style={{fontSize:12,padding:"4px 12px",borderRadius:20,
                         border:`1px solid ${clForm.assignee===m?C.rose:C.border}`,background:clForm.assignee===m?C.rose:C.white,
                         color:clForm.assignee===m?C.white:C.inkMid,cursor:"pointer",fontFamily:"inherit",fontWeight:700}}>{m||"미지정"}</button>
                     ))}
@@ -13232,12 +13232,12 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
           <div style={{background:C.white,borderRadius:14,padding:20,width:280,boxShadow:"0 8px 32px rgba(0,0,0,0.18)"}}
             onClick={e=>e.stopPropagation()}>
             <div style={{fontSize:13,fontWeight:800,color:C.ink,marginBottom:4}}>재제작 요청</div>
-            <div style={{fontSize:11,color:C.inkMid,marginBottom:14,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{reqPopoverAd.adName}</div>
-            <div style={{fontSize:11,fontWeight:700,color:C.inkMid,marginBottom:6}}>담당자</div>
+            <div style={{fontSize:12,color:C.inkMid,marginBottom:14,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{reqPopoverAd.adName}</div>
+            <div style={{fontSize:12,fontWeight:700,color:C.inkMid,marginBottom:6}}>담당자</div>
             <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:12}}>
               {["","소리","영서","경은","지수"].map(a=>(
                 <span key={a} onClick={()=>setReqAssignee(a)}
-                  style={{fontSize:11,padding:"4px 12px",borderRadius:20,cursor:"pointer",fontWeight:700,
+                  style={{fontSize:12,padding:"4px 12px",borderRadius:20,cursor:"pointer",fontWeight:700,
                     background:reqAssignee===a?"#8b5cf6":"#f5f3ff",
                     color:reqAssignee===a?"#fff":"#8b5cf6",
                     border:`1px solid ${reqAssignee===a?"#8b5cf6":"#8b5cf644"}`}}>
@@ -13247,16 +13247,16 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
             </div>
             <input value={reqNote} onChange={e=>setReqNote(e.target.value)}
               placeholder="메모 (선택)"
-              style={{width:"100%",fontSize:11,padding:"7px 10px",borderRadius:8,
+              style={{width:"100%",fontSize:12,padding:"7px 10px",borderRadius:8,
                 border:`1px solid ${C.border}`,fontFamily:"inherit",outline:"none",marginBottom:12,boxSizing:"border-box"}}/>
             <div style={{display:"flex",gap:8}}>
               <button onClick={()=>setReqPopover(null)}
-                style={{flex:1,fontSize:11,fontWeight:700,padding:"8px 0",borderRadius:8,
+                style={{flex:1,fontSize:12,fontWeight:700,padding:"8px 0",borderRadius:8,
                   background:C.cream,color:C.inkMid,border:`1px solid ${C.border}`,cursor:"pointer",fontFamily:"inherit"}}>
                 취소
               </button>
               <button onClick={()=>{requestRecreate(reqPopoverAd);setTab("requests");}}
-                style={{flex:2,fontSize:11,fontWeight:700,padding:"8px 0",borderRadius:8,
+                style={{flex:2,fontSize:12,fontWeight:700,padding:"8px 0",borderRadius:8,
                   background:"#8b5cf6",color:"#fff",border:"none",cursor:"pointer",fontFamily:"inherit"}}>
                 요청 보내기
               </button>
@@ -13267,7 +13267,7 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
       {/* 탭 */}
       <div style={{display:"flex",gap:6,overflowX:"auto",WebkitOverflowScrolling:"touch"}}>
         {[{k:"library",label:<><MI n="grid_view" size={12}/> 소재 갤러리</>},{k:"requests",label:<><MI n="palette" size={12}/> 재제작 요청 ({pendingReqs.length})</>}].map(({k,label})=>(
-          <button key={k} onClick={()=>setTab(k)} style={{fontSize:11,padding:"6px 14px",borderRadius:20,whiteSpace:"nowrap",
+          <button key={k} onClick={()=>setTab(k)} style={{fontSize:12,padding:"6px 14px",borderRadius:20,whiteSpace:"nowrap",
             border:`1px solid ${tab===k?C.rose:C.border}`,background:tab===k?C.rose:C.white,
             color:tab===k?C.white:C.inkMid,cursor:"pointer",fontFamily:"inherit",fontWeight:700}}>
             {label}
@@ -13285,7 +13285,7 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
             action={
               <div style={{display:"flex",gap:6,alignItems:"center"}}>
                 <input value={libSearch} onChange={e=>setLibSearch(e.target.value)} placeholder="검색..."
-                  style={{width:90,padding:"4px 8px",border:`1px solid ${C.border}`,borderRadius:8,fontSize:11,fontFamily:"inherit",outline:"none",background:C.cream}}/>
+                  style={{width:90,padding:"4px 8px",border:`1px solid ${C.border}`,borderRadius:8,fontSize:12,fontFamily:"inherit",outline:"none",background:C.cream}}/>
                 {(hiddenAds||[]).length>0&&<Btn small onClick={()=>setHiddenAds([])}>숨김 복원</Btn>}
                 {(creativeLib||[]).length>0&&<Btn small onClick={()=>{
                   const headers=["이름","제품","유형","태그","메모","링크","Figma","저장일"];
@@ -13300,7 +13300,7 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
           {/* 필터 */}
           <div style={{display:"flex",gap:5,marginBottom:12,flexWrap:"wrap"}}>
             {["전체","잘나온","전환","트래픽"].map(f=>(
-              <button key={f} onClick={()=>setCrFilter(f)} style={{fontSize:10,padding:"3px 10px",borderRadius:20,
+              <button key={f} onClick={()=>setCrFilter(f)} style={{fontSize:12,padding:"3px 10px",borderRadius:20,
                 border:`1px solid ${crFilter===f?"#4DAD7A":C.border}`,
                 background:crFilter===f?"#4DAD7A":C.cream,
                 color:crFilter===f?C.white:C.inkMid,cursor:"pointer",fontFamily:"inherit",fontWeight:700}}>
@@ -13348,8 +13348,8 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
                         }
                         {/* 뱃지 오버레이 */}
                         <div style={{position:"absolute",top:5,left:5,display:"flex",gap:3,flexWrap:"wrap"}}>
-                          {quality==="good"&&<span style={{fontSize:8,fontWeight:800,padding:"1px 5px",borderRadius:6,background:"#4DAD7A",color:"#fff"}}>✓잘나옴</span>}
-                          <span style={{fontSize:8,fontWeight:700,padding:"1px 5px",borderRadius:6,
+                          {quality==="good"&&<span style={{fontSize:10,fontWeight:800,padding:"1px 5px",borderRadius:6,background:"#4DAD7A",color:"#fff"}}>✓잘나옴</span>}
+                          <span style={{fontSize:10,fontWeight:700,padding:"1px 5px",borderRadius:6,
                             background:isConv?"#8b5cf6":"#60a5fa",color:"#fff"}}>
                             {isConv?"전환":"트래픽"}
                           </span>
@@ -13359,33 +13359,33 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
                             title={figmaIsAuto?`자동 매칭: ${autoFm.name}`:"Figma"}
                             style={{position:"absolute",bottom:5,right:5,display:"flex",alignItems:"center",gap:2,padding:"2px 4px",borderRadius:5,background:"rgba(255,255,255,0.9)",border:"none",textDecoration:"none"}}>
                             <svg width="10" height="10" viewBox="0 0 38 57" fill="none"><path d="M10 28.5a9.5 9.5 0 0 1 9.5-9.5h9.5v19H19.5A9.5 9.5 0 0 1 10 28.5Z" fill="#1ABCFE"/><path d="M1 47.5A9.5 9.5 0 0 1 10.5 38H20v9.5a9.5 9.5 0 0 1-19 0Z" fill="#0ACF83"/><path d="M20 1v19h9.5a9.5 9.5 0 0 0 0-19H20Z" fill="#FF7262"/><path d="M1 9.5A9.5 9.5 0 0 0 10.5 19H20V1H10.5A9.5 9.5 0 0 0 1 9.5Z" fill="#F24E1E"/><path d="M1 28.5A9.5 9.5 0 0 0 10.5 38H20V19H10.5A9.5 9.5 0 0 0 1 28.5Z" fill="#A259FF"/></svg>
-                            {figmaIsAuto&&<span style={{fontSize:7,color:"#0d7fa8",fontWeight:700}}>자동</span>}
+                            {figmaIsAuto&&<span style={{fontSize:9,color:"#0d7fa8",fontWeight:700}}>자동</span>}
                           </a>
                         )}
                       </div>
                       {/* 텍스트 */}
                       <div style={{padding:"6px 7px"}}>
-                        <div style={{fontSize:9,fontWeight:800,color:C.ink,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",marginBottom:3}} title={ad.adName}>{ad.adName}</div>
-                        <div style={{fontSize:8,color:C.inkMid,lineHeight:1.6}}>
+                        <div style={{fontSize:11,fontWeight:800,color:C.ink,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",marginBottom:3}} title={ad.adName}>{ad.adName}</div>
+                        <div style={{fontSize:10,color:C.inkMid,lineHeight:1.6}}>
                           <span>CTR {ad.ctr.toFixed(1)}%</span>
                           <span style={{marginLeft:5}}>{isConv?`ROAS ${ad.roas.toFixed(0)}%`:`CPC ₩${Math.round(ad.cpc).toLocaleString()}`}</span>
                         </div>
-                        <div style={{fontSize:8,color:C.inkLt}}>₩{ad.spend>=10000?`${Math.round(ad.spend/10000)}만`:`${Math.round(ad.spend).toLocaleString()}`} · 점수 {Math.round(ad._score)}</div>
+                        <div style={{fontSize:10,color:C.inkLt}}>₩{ad.spend>=10000?`${Math.round(ad.spend/10000)}만`:`${Math.round(ad.spend).toLocaleString()}`} · 점수 {Math.round(ad._score)}</div>
                         {/* 버튼 */}
                         <div style={{display:"flex",gap:4,marginTop:5}}>
                           {!figmaUrl&&(
                             <button onClick={()=>{setLibForm({name:ad.adName,link:"",figmaUrl:"",product:"",note:`CTR ${ad.ctr.toFixed(1)}% · ${isConv?`ROAS ${ad.roas.toFixed(0)}%`:`CPC ${Math.round(ad.cpc)}`}`,tags:quality==="good"?"잘나온소재":""});setLibModal({mode:"add"});}}
-                              style={{fontSize:8,padding:"2px 6px",borderRadius:5,border:`1px dashed ${C.border}`,background:"none",color:C.inkLt,cursor:"pointer",fontFamily:"inherit"}}>
+                              style={{fontSize:10,padding:"2px 6px",borderRadius:5,border:`1px dashed ${C.border}`,background:"none",color:C.inkLt,cursor:"pointer",fontFamily:"inherit"}}>
                               +Figma
                             </button>
                           )}
                           <button onClick={()=>setReqPopover(reqPopover===ad.adName?null:ad.adName)}
-                            style={{fontSize:8,padding:"2px 6px",borderRadius:5,border:`1px solid #8b5cf644`,
+                            style={{fontSize:10,padding:"2px 6px",borderRadius:5,border:`1px solid #8b5cf644`,
                               background:"#f5f3ff",color:"#8b5cf6",cursor:"pointer",fontFamily:"inherit",flex:1,fontWeight:700}}>
                             재제작
                           </button>
                           <button onClick={()=>setHiddenAds(prev=>[...(prev||[]),ad.adName])}
-                            style={{fontSize:8,padding:"2px 6px",borderRadius:5,border:`1px solid ${C.bad}44`,
+                            style={{fontSize:10,padding:"2px 6px",borderRadius:5,border:`1px solid ${C.bad}44`,
                               background:"none",color:C.bad,cursor:"pointer",fontFamily:"inherit"}}>
                             삭제
                           </button>
@@ -13400,14 +13400,14 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
 
           {/* 메타 데이터 없으면 안내 */}
           {adList.length===0&&(creativeLib||[]).length===0&&(
-            <div style={{textAlign:"center",color:C.inkLt,fontSize:12,padding:"32px 0"}}>
+            <div style={{textAlign:"center",color:C.inkLt,fontSize:13,padding:"32px 0"}}>
               메타광고 탭에서 파일 업로드 후 소재가 표시돼요
             </div>
           )}
           {/* 저장된 라이브러리 항목 (항상 표시) */}
           {(creativeLib||[]).length>0&&(
             <div style={{marginTop:adList.length>0?12:0}}>
-              {adList.length>0&&<div style={{fontSize:10,fontWeight:700,color:C.inkLt,marginBottom:8,paddingTop:8,borderTop:`1px dashed ${C.border}`}}>저장된 소재 라이브러리</div>}
+              {adList.length>0&&<div style={{fontSize:12,fontWeight:700,color:C.inkLt,marginBottom:8,paddingTop:8,borderTop:`1px dashed ${C.border}`}}>저장된 소재 라이브러리</div>}
             <div style={{display:"flex",flexDirection:"column",gap:6}}>
               {(creativeLib||[]).filter(item=>!libSearch||item.name?.toLowerCase().includes(libSearch.toLowerCase())).map(item=>{
                 const t = findThumb(item.name) || item.thumbUrl;
@@ -13418,8 +13418,8 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
                     {t?<div style={{flexShrink:0,width:40,height:40,borderRadius:6,overflow:"hidden",border:`1px solid ${C.border}`}}><ThumbPreview url={t} name={item.name}/></div>
                      :<div style={{flexShrink:0,width:40,height:40,borderRadius:6,border:`1px dashed ${C.border}`,background:C.cream,display:"flex",alignItems:"center",justifyContent:"center",color:C.inkLt}}><MI n="image" size={16}/></div>}
                     <div style={{flex:1,minWidth:0}}>
-                      <div style={{fontSize:11,fontWeight:800,color:C.ink,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{item.name}</div>
-                      <div style={{fontSize:9,color:C.inkMid,marginTop:1}}>{item.note}</div>
+                      <div style={{fontSize:12,fontWeight:800,color:C.ink,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{item.name}</div>
+                      <div style={{fontSize:11,color:C.inkMid,marginTop:1}}>{item.note}</div>
                     </div>
                     <div style={{display:"flex",gap:4}}>
                       {item.figmaUrl&&<a href={item.figmaUrl} target="_blank" rel="noreferrer" style={{display:"flex",padding:"3px 5px",borderRadius:5,background:"#1ABCFE22",border:"1px solid #1ABCFE55",textDecoration:"none"}}><svg width="10" height="10" viewBox="0 0 38 57" fill="none"><path d="M10 28.5a9.5 9.5 0 0 1 9.5-9.5h9.5v19H19.5A9.5 9.5 0 0 1 10 28.5Z" fill="#1ABCFE"/><path d="M1 47.5A9.5 9.5 0 0 1 10.5 38H20v9.5a9.5 9.5 0 0 1-19 0Z" fill="#0ACF83"/><path d="M20 1v19h9.5a9.5 9.5 0 0 0 0-19H20Z" fill="#FF7262"/><path d="M1 9.5A9.5 9.5 0 0 0 10.5 19H20V1H10.5A9.5 9.5 0 0 0 1 9.5Z" fill="#F24E1E"/><path d="M1 28.5A9.5 9.5 0 0 0 10.5 38H20V19H10.5A9.5 9.5 0 0 0 1 28.5Z" fill="#A259FF"/></svg></a>}
@@ -13441,13 +13441,13 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
         <Card>
           <CardTitle title={<><MI n="palette" size={14}/> 재제작 요청</>} sub={`대기 ${pendingReqs.length}건 · 완료 ${doneReqs.length}건`}/>
           {pendingReqs.length===0&&doneReqs.length===0&&(
-            <div style={{textAlign:"center",color:C.inkLt,fontSize:12,padding:"20px 0"}}>
+            <div style={{textAlign:"center",color:C.inkLt,fontSize:13,padding:"20px 0"}}>
               소재 갤러리에서 재제작 요청을 보내보세요
             </div>
           )}
           {pendingReqs.length>0&&(
             <div style={{marginBottom:12}}>
-              <div style={{fontSize:10,fontWeight:700,color:C.inkLt,marginBottom:6}}>대기 중</div>
+              <div style={{fontSize:12,fontWeight:700,color:C.inkLt,marginBottom:6}}>대기 중</div>
               <div style={{display:"flex",flexDirection:"column",gap:8}}>
                 {pendingReqs.map(r=>(
                   <div key={r.id} style={{borderRadius:10,border:`1px solid #8b5cf644`,background:"#f5f3ff",overflow:"hidden"}}>
@@ -13459,14 +13459,14 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
                         </div>
                       ):null;})()}
                       <div style={{flex:1,minWidth:0}}>
-                        <div style={{fontSize:12,fontWeight:800,color:C.ink,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{r.adName}</div>
-                        {r.adset&&<div style={{fontSize:10,color:"#8b5cf6",marginTop:1}}><MI n="folder_open" size={11}/> {r.adset}</div>}
-                        {r.campaign&&<div style={{fontSize:10,color:C.inkMid,marginTop:1}}><MI n="campaign" size={11}/> {r.campaign}</div>}
-                        <div style={{fontSize:10,color:C.inkMid,marginTop:2,display:"flex",alignItems:"center",gap:6}}>
+                        <div style={{fontSize:13,fontWeight:800,color:C.ink,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{r.adName}</div>
+                        {r.adset&&<div style={{fontSize:12,color:"#8b5cf6",marginTop:1}}><MI n="folder_open" size={11}/> {r.adset}</div>}
+                        {r.campaign&&<div style={{fontSize:12,color:C.inkMid,marginTop:1}}><MI n="campaign" size={11}/> {r.campaign}</div>}
+                        <div style={{fontSize:12,color:C.inkMid,marginTop:2,display:"flex",alignItems:"center",gap:6}}>
                           <span>CTR {r.ctr}% · ROAS {r.roas}% · {r.requestedAt}</span>
-                          {r.assignee&&<span style={{padding:"1px 7px",borderRadius:20,background:"#8b5cf622",color:"#8b5cf6",fontWeight:700,fontSize:10}}>{r.assignee}</span>}
+                          {r.assignee&&<span style={{padding:"1px 7px",borderRadius:20,background:"#8b5cf622",color:"#8b5cf6",fontWeight:700,fontSize:12}}>{r.assignee}</span>}
                         </div>
-                        {r.note&&<div style={{fontSize:10,color:C.inkMid,marginTop:2}}><MI n="chat_bubble" size={11}/> {r.note}</div>}
+                        {r.note&&<div style={{fontSize:12,color:C.inkMid,marginTop:2}}><MI n="chat_bubble" size={11}/> {r.note}</div>}
                         {(()=>{
                           const cands=reqCandidates(r);
                           if(!cands.length) return null;
@@ -13475,19 +13475,19 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
                               {cands.map(([n,s])=>{
                                 const roas=s.spend>0?Math.round((s.convValue/s.spend)*100):0;
                                 return(
-                                  <div key={n} style={{display:"flex",alignItems:"center",gap:6,fontSize:10,
+                                  <div key={n} style={{display:"flex",alignItems:"center",gap:6,fontSize:12,
                                     padding:"4px 8px",borderRadius:6,background:"#f0f9ff",border:"1px solid #7dd3fc44"}}>
                                     <span style={{color:"#0284c7",fontWeight:800,flexShrink:0}}>신규 후보</span>
                                     <span style={{flex:1,color:C.ink,fontWeight:700,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{n}</span>
                                     <span style={{color:C.inkLt,flexShrink:0}}>ROAS {roas}%</span>
                                     <button onClick={()=>linkNewAd(r.id,n,roas)}
-                                      style={{fontSize:9,fontWeight:700,padding:"2px 8px",borderRadius:5,flexShrink:0,
+                                      style={{fontSize:11,fontWeight:700,padding:"2px 8px",borderRadius:5,flexShrink:0,
                                         border:"1px solid #0284c744",background:"#e0f2fe",color:"#0284c7",
                                         cursor:"pointer",fontFamily:"inherit"}}>연결·완료</button>
                                   </div>
                                 );
                               })}
-                              <div style={{fontSize:8,color:C.inkLt}}>요청일 이후 시작된 같은 제품 신규 소재 — 연결하면 완료 처리 + 신구 비교 기록</div>
+                              <div style={{fontSize:10,color:C.inkLt}}>요청일 이후 시작된 같은 제품 신규 소재 — 연결하면 완료 처리 + 신구 비교 기록</div>
                             </div>
                           );
                         })()}
@@ -13495,7 +13495,7 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
                         <div style={{marginTop:5}}>
                           {!r.brief?(
                             <button onClick={()=>generateBrief(r)} disabled={briefLoading===r.id}
-                              style={{fontSize:9,fontWeight:700,padding:"3px 9px",borderRadius:6,
+                              style={{fontSize:11,fontWeight:700,padding:"3px 9px",borderRadius:6,
                                 border:"1px solid #d9770644",background:"#fffbeb",color:"#d97706",
                                 cursor:briefLoading===r.id?"wait":"pointer",fontFamily:"inherit",opacity:briefLoading===r.id?0.5:1}}>
                               <MI n="auto_awesome" size={10}/> {briefLoading===r.id?"AI 브리프 생성 중… (수십 초)":"AI 브리프 생성"}
@@ -13503,7 +13503,7 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
                           ):(
                             <div>
                               <button onClick={()=>setBriefOpen(p=>({...p,[r.id]:!p[r.id]}))}
-                                style={{fontSize:9,fontWeight:700,padding:"3px 9px",borderRadius:6,
+                                style={{fontSize:11,fontWeight:700,padding:"3px 9px",borderRadius:6,
                                   border:"1px solid #d9770644",background:"#fffbeb",color:"#d97706",
                                   cursor:"pointer",fontFamily:"inherit"}}>
                                 <MI n="auto_awesome" size={10}/> AI 브리프 {briefOpen[r.id]?"접기":"보기"} ({r.brief.length}개)
@@ -13511,18 +13511,18 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
                               {briefOpen[r.id]&&(
                                 <div style={{marginTop:4,display:"flex",flexDirection:"column",gap:4}}>
                                   {r.brief.map((b,bi)=>(
-                                    <div key={bi} style={{padding:"6px 9px",borderRadius:7,background:"#fffbeb",border:"1px solid #fcd34d55",fontSize:10}}>
+                                    <div key={bi} style={{padding:"6px 9px",borderRadius:7,background:"#fffbeb",border:"1px solid #fcd34d55",fontSize:12}}>
                                       <div style={{display:"flex",alignItems:"center",gap:5,marginBottom:2}}>
                                         <span style={{fontWeight:800,color:"#d97706"}}>아이디어 {bi+1}</span>
-                                        {b.appeal&&<span style={{fontSize:8,fontWeight:700,padding:"1px 6px",borderRadius:4,background:"#d9770618",color:"#d97706"}}>{b.appeal}</span>}
+                                        {b.appeal&&<span style={{fontSize:10,fontWeight:700,padding:"1px 6px",borderRadius:4,background:"#d9770618",color:"#d97706"}}>{b.appeal}</span>}
                                       </div>
                                       <div style={{color:C.ink,fontWeight:700}}>훅: {b.hook}</div>
                                       <div style={{color:C.inkMid,marginTop:1}}>카피: {b.copy}</div>
-                                      {b.why&&<div style={{color:C.inkLt,marginTop:1,fontSize:9}}>{b.why}</div>}
+                                      {b.why&&<div style={{color:C.inkLt,marginTop:1,fontSize:11}}>{b.why}</div>}
                                     </div>
                                   ))}
                                   <button onClick={()=>generateBrief(r)} disabled={briefLoading===r.id}
-                                    style={{fontSize:8,fontWeight:700,padding:"2px 8px",borderRadius:5,alignSelf:"flex-start",
+                                    style={{fontSize:10,fontWeight:700,padding:"2px 8px",borderRadius:5,alignSelf:"flex-start",
                                       border:"1px solid #d9770633",background:"none",color:"#d97706",
                                       cursor:briefLoading===r.id?"wait":"pointer",fontFamily:"inherit"}}>
                                     {briefLoading===r.id?"생성 중…":"다시 생성"}
@@ -13541,14 +13541,14 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
                           const FigSVG = ()=><svg width="11" height="11" viewBox="0 0 38 57" fill="none"><path d="M10 28.5a9.5 9.5 0 0 1 9.5-9.5h9.5v19H19.5A9.5 9.5 0 0 1 10 28.5Z" fill="#1ABCFE"/><path d="M1 47.5A9.5 9.5 0 0 1 10.5 38H20v9.5a9.5 9.5 0 0 1-19 0Z" fill="#0ACF83"/><path d="M20 1v19h9.5a9.5 9.5 0 0 0 0-19H20Z" fill="#FF7262"/><path d="M1 9.5A9.5 9.5 0 0 0 10.5 19H20V1H10.5A9.5 9.5 0 0 0 1 9.5Z" fill="#F24E1E"/><path d="M1 28.5A9.5 9.5 0 0 0 10.5 38H20V19H10.5A9.5 9.5 0 0 0 1 28.5Z" fill="#A259FF"/></svg>;
                           return href ? (
                             <a href={href} title={isAuto?`자동 매칭: ${autoFm.name}`:"직접 입력"}
-                              style={{display:"flex",alignItems:"center",gap:4,fontSize:10,fontWeight:800,
+                              style={{display:"flex",alignItems:"center",gap:4,fontSize:12,fontWeight:800,
                                 padding:"4px 8px",borderRadius:8,background:"#1ABCFE22",color:"#0d7fa8",
                                 border:"1px solid #1ABCFE55",textDecoration:"none",whiteSpace:"nowrap"}}>
-                              <FigSVG/> Figma{isAuto&&<span style={{fontSize:8,opacity:0.6}}> 자동</span>}
+                              <FigSVG/> Figma{isAuto&&<span style={{fontSize:10,opacity:0.6}}> 자동</span>}
                             </a>
                           ) : (
                             <button onClick={()=>setReqFigmaId(reqFigmaId===r.id?null:r.id)}
-                              style={{fontSize:10,fontWeight:700,padding:"4px 8px",borderRadius:8,
+                              style={{fontSize:12,fontWeight:700,padding:"4px 8px",borderRadius:8,
                                 border:`1px dashed #8b5cf6`,background:"none",color:"#8b5cf6",
                                 cursor:"pointer",fontFamily:"inherit",whiteSpace:"nowrap"}}>
                               + Figma
@@ -13563,7 +13563,7 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
                       <div style={{display:"flex",gap:8,padding:"6px 12px 10px",borderTop:`1px solid #8b5cf622`,background:"#ede9fe"}}>
                         <input autoFocus placeholder="https://www.figma.com/..." id={`figma_${r.id}`}
                           defaultValue={r.figmaUrl||""}
-                          style={{flex:1,fontSize:11,padding:"6px 10px",borderRadius:8,
+                          style={{flex:1,fontSize:12,padding:"6px 10px",borderRadius:8,
                             border:`1px solid #a78bfa`,outline:"none",fontFamily:"inherit"}}/>
                         <Btn small onClick={()=>{
                           const el=document.getElementById(`figma_${r.id}`);
@@ -13581,15 +13581,15 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
           )}
           {doneReqs.length>0&&(
             <div>
-              <div style={{fontSize:10,fontWeight:700,color:C.inkLt,marginBottom:6}}>완료</div>
+              <div style={{fontSize:12,fontWeight:700,color:C.inkLt,marginBottom:6}}>완료</div>
               <div style={{display:"flex",flexDirection:"column",gap:6}}>
                 {doneReqs.map(r=>(
                   <div key={r.id} style={{padding:"8px 12px",borderRadius:10,border:`1px solid ${C.border}`,background:C.cream,opacity:0.7,display:"flex",alignItems:"center",gap:8}}>
                     <div style={{flex:1}}>
-                      <div style={{fontSize:11,fontWeight:700,color:C.inkMid,textDecoration:"line-through"}}>{r.adName}</div>
-                      <div style={{fontSize:9,color:C.inkLt}}>CTR {r.ctr}% · {r.requestedAt}</div>
+                      <div style={{fontSize:12,fontWeight:700,color:C.inkMid,textDecoration:"line-through"}}>{r.adName}</div>
+                      <div style={{fontSize:11,color:C.inkLt}}>CTR {r.ctr}% · {r.requestedAt}</div>
                       {r.newAdName&&(
-                        <div style={{fontSize:10,marginTop:2,color:"#0284c7",fontWeight:700}}>
+                        <div style={{fontSize:12,marginTop:2,color:"#0284c7",fontWeight:700}}>
                           → {r.newAdName}
                           {r.newRoas&&<span style={{marginLeft:6,color:Number(r.newRoas)>=Number(r.roas||0)?C.sage:C.bad}}>
                             ROAS {r.newRoas}% (기존 {r.roas||0}%)
@@ -13613,9 +13613,9 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
             <div style={{fontSize:16,fontWeight:900,marginBottom:16}}>{libModal?.mode==="edit"?"소재 편집":"소재 추가"}</div>
             {[{key:"name",label:"소재명",placeholder:"광고 소재 이름"},{key:"figmaUrl",label:"피그마 링크",placeholder:"https://www.figma.com/..."},{key:"link",label:"기타 링크",placeholder:"https://"},{key:"product",label:"제품",placeholder:"제품명"},{key:"tags",label:"태그",placeholder:"상위소재, 전환, 영상"},{key:"note",label:"메모",placeholder:"성과 메모"}].map(({key,label,placeholder})=>(
               <div key={key} style={{marginBottom:12}}>
-                <div style={{fontSize:10,fontWeight:700,color:C.inkMid,marginBottom:4}}>{label}</div>
+                <div style={{fontSize:12,fontWeight:700,color:C.inkMid,marginBottom:4}}>{label}</div>
                 <input value={libForm[key]||""} onChange={e=>setLibForm(p=>({...p,[key]:e.target.value}))}
-                  placeholder={placeholder} style={{width:"100%",fontSize:12,padding:"8px 10px",borderRadius:8,
+                  placeholder={placeholder} style={{width:"100%",fontSize:13,padding:"8px 10px",borderRadius:8,
                   border:`1px solid ${C.border}`,fontFamily:"inherit",outline:"none",boxSizing:"border-box"}}/>
               </div>
             ))}
@@ -13696,7 +13696,7 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:8}}>
           <div>
             <div style={{fontSize:20,fontWeight:900,color:C.ink}}>쿠팡 가격 모니터링</div>
-            <div style={{fontSize:12,color:C.inkMid,marginTop:2}}>오아스토어 기준 · 할인전가 vs 현재판매가 비교</div>
+            <div style={{fontSize:13,color:C.inkMid,marginTop:2}}>오아스토어 기준 · 할인전가 vs 현재판매가 비교</div>
           </div>
           <Btn small onClick={fetchProducts} disabled={loading||!savedIds.length}>
             <MI n="sync" size={13}/> {loading?"조회 중...":"가격 조회"}
@@ -13718,20 +13718,20 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
                 <Btn small onClick={()=>fileRef.current?.click()}>
                   <MI n="upload_file" size={13}/> CSV 업로드
                 </Btn>
-                <span style={{fontSize:11,color:C.inkLt}}>첫 번째 열: 등록상품ID / 두 번째 열: 상품명(선택)</span>
+                <span style={{fontSize:12,color:C.inkLt}}>첫 번째 열: 등록상품ID / 두 번째 열: 상품명(선택)</span>
                 {savedIds.length>0&&(
                   <button onClick={()=>{if(confirm("목록을 초기화할까요?"))setSavedIds([]);}}
-                    style={{marginLeft:"auto",background:"none",border:"none",cursor:"pointer",color:C.inkLt,fontSize:12}}>
+                    style={{marginLeft:"auto",background:"none",border:"none",cursor:"pointer",color:C.inkLt,fontSize:13}}>
                     초기화
                   </button>
                 )}
               </div>
               {savedIds.length===0 ? (
-                <div style={{fontSize:12,color:C.inkLt,padding:"12px 0"}}>
+                <div style={{fontSize:13,color:C.inkLt,padding:"12px 0"}}>
                   CSV 파일을 업로드하면 팀 전체에 공유됩니다
                 </div>
               ) : (
-                <div style={{fontSize:12,color:C.inkMid}}>
+                <div style={{fontSize:13,color:C.inkMid}}>
                   {savedIds.length}개 상품 등록됨 · {savedIds.slice(0,5).map(s=>s.label).join(", ")}{savedIds.length>5?` 외 ${savedIds.length-5}개`:""}
                 </div>
               )}
@@ -13742,7 +13742,7 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
               <Card>
                 <CardTitle title="가격 현황" sub="할인율기준가(originalPrice) vs 판매가(salePrice)"/>
                 <div style={{overflowX:"auto"}}>
-                  <table style={{width:"100%",borderCollapse:"collapse",fontSize:12}}>
+                  <table style={{width:"100%",borderCollapse:"collapse",fontSize:13}}>
                     <thead>
                       <tr style={{background:C.cream}}>
                         {["상품명","옵션","할인전가(기준가)","현재판매가","차이","재고","상태"].map(h=>(
@@ -13755,7 +13755,7 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
                       {products.flatMap((p,pi) => {
                         if(p.error) return [(
                           <tr key={pi} style={{borderBottom:`1px solid ${C.border}`}}>
-                            <td colSpan={7} style={{padding:"7px 10px",color:C.bad,fontSize:11}}>{p.label} — {p.error}</td>
+                            <td colSpan={7} style={{padding:"7px 10px",color:C.bad,fontSize:12}}>{p.label} — {p.error}</td>
                           </tr>
                         )];
                         return (p.items||[]).map((item,ii)=>{
@@ -13777,7 +13777,7 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
                                 {item.stockQuantity??"—"}
                               </td>
                               <td style={{padding:"7px 10px"}}>
-                                <span style={{fontSize:11,fontWeight:700,
+                                <span style={{fontSize:12,fontWeight:700,
                                   color:p.status==="APPROVED"||p.status==="판매중"?C.good:C.warn,
                                   background:p.status==="APPROVED"||p.status==="판매중"?"#F0FDF4":"#FFF7ED",
                                   padding:"2px 8px",borderRadius:10}}>{p.status||"—"}</span>
@@ -14024,14 +14024,14 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
     const twMonthLabel=activeTwMonth?`${activeTwMonth.slice(0,4)}년 ${parseInt(activeTwMonth.slice(5))}월`:"";
     const twMonths=Object.keys(twMonthGroups).sort().reverse();
 
-    const inputStyle={width:"100%",fontSize:12,padding:"8px 10px",borderRadius:8,border:`1px solid ${C.border}`,fontFamily:"inherit",outline:"none",boxSizing:"border-box"};
+    const inputStyle={width:"100%",fontSize:13,padding:"8px 10px",borderRadius:8,border:`1px solid ${C.border}`,fontFamily:"inherit",outline:"none",boxSizing:"border-box"};
 
     return(
     <div style={{display:"flex",flexDirection:"column",gap:14}}>
       <Card>
         <CardTitle title={<><MI n="assignment" size={14}/> 콘텐츠 리뷰</>} sub={`전체 ${(reviewItems||[]).length}건`}
           action={<div style={{display:"flex",gap:6}}>
-            <label style={{padding:"5px 10px",borderRadius:8,border:`1px solid ${C.border}`,fontSize:11,fontWeight:700,color:C.inkMid,cursor:"pointer",background:C.white}}>
+            <label style={{padding:"5px 10px",borderRadius:8,border:`1px solid ${C.border}`,fontSize:12,fontWeight:700,color:C.inkMid,cursor:"pointer",background:C.white}}>
               <MI n="upload_file" size={12}/> CSV
               <input type="file" accept=".csv" style={{display:"none"}} onChange={importInstagramCSV}/>
             </label>
@@ -14041,14 +14041,14 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
         {/* 플랫폼 탭 + 정렬 */}
         <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:12,flexWrap:"wrap"}}>
           {[["all","전체",C.rose,(reviewItems||[]).length],["instagram",<><MI n="photo_camera" size={12}/> 인스타그램</>,"#e1306c",instaCount],["twitter",<><MI n="flutter_dash" size={12}/> 트위터</>,"#1da1f2",twitterCount]].map(([k,l,col,cnt])=>(
-            <button key={k} onClick={()=>setRvTab(k)} style={{fontSize:11,padding:"5px 14px",borderRadius:20,
+            <button key={k} onClick={()=>setRvTab(k)} style={{fontSize:12,padding:"5px 14px",borderRadius:20,
               border:`1px solid ${rvTab===k?col:C.border}`,background:rvTab===k?col:C.white,
               color:rvTab===k?C.white:C.inkMid,cursor:"pointer",fontFamily:"inherit",fontWeight:700}}>
               {l} <span style={{opacity:0.8}}>({cnt})</span>
             </button>
           ))}
           <button onClick={()=>setRvSort(s=>s==="newest"?"oldest":"newest")}
-            style={{marginLeft:"auto",fontSize:10,padding:"4px 10px",borderRadius:20,border:`1px solid ${C.border}`,background:C.white,color:C.inkMid,cursor:"pointer",fontFamily:"inherit",fontWeight:700}}>
+            style={{marginLeft:"auto",fontSize:12,padding:"4px 10px",borderRadius:20,border:`1px solid ${C.border}`,background:C.white,color:C.inkMid,cursor:"pointer",fontFamily:"inherit",fontWeight:700}}>
             <MI n="swap_vert" size={11}/> {rvSort==="newest"?"최신순":"오래된순"}
           </button>
         </div>
@@ -14061,7 +14061,7 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
                 {igMonths.map(m=>{
                   const active=m===activeIgMonth;
                   return(
-                    <button key={m} onClick={()=>setIgSelMonth(igSelMonth===m?"":m)} style={{fontSize:10,padding:"3px 10px",borderRadius:20,border:`1px solid ${active?"#e1306c":C.border}`,background:active?"#e1306c":C.white,color:active?C.white:C.inkMid,cursor:"pointer",fontFamily:"inherit",fontWeight:700}}>
+                    <button key={m} onClick={()=>setIgSelMonth(igSelMonth===m?"":m)} style={{fontSize:12,padding:"3px 10px",borderRadius:20,border:`1px solid ${active?"#e1306c":C.border}`,background:active?"#e1306c":C.white,color:active?C.white:C.inkMid,cursor:"pointer",fontFamily:"inherit",fontWeight:700}}>
                       {m.slice(0,4)}년 {parseInt(m.slice(5))}월
                     </button>
                   );
@@ -14072,8 +14072,8 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
               <div style={{background:"linear-gradient(135deg,#fff0f5,#fce7f3)",border:"1px solid #f9a8d4",borderRadius:14,padding:"14px 16px"}}>
                 <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:10}}>
                   <MI n="photo_camera" size={14} style={{color:"#e1306c"}}/>
-                  <span style={{fontSize:12,fontWeight:800,color:"#e1306c"}}>{monthLabel} 인스타그램 성과</span>
-                  <span style={{marginLeft:"auto",fontSize:10,color:"#e1306c",opacity:0.7}}>{instaMonthItems.length}개 게시물</span>
+                  <span style={{fontSize:13,fontWeight:800,color:"#e1306c"}}>{monthLabel} 인스타그램 성과</span>
+                  <span style={{marginLeft:"auto",fontSize:12,color:"#e1306c",opacity:0.7}}>{instaMonthItems.length}개 게시물</span>
                 </div>
                 <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:8}}>
                   {[
@@ -14088,7 +14088,7 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
                     <div key={label} style={{background:"rgba(255,255,255,0.7)",borderRadius:10,padding:"10px 8px",textAlign:"center"}}>
                       <MI n={icon} size={14} style={{color}}/>
                       <div style={{fontSize:16,fontWeight:900,color,marginTop:2}}>{value.toLocaleString()}</div>
-                      <div style={{fontSize:9,color:"#9d174d",opacity:0.7,fontWeight:700,marginTop:1}}>{label}</div>
+                      <div style={{fontSize:11,color:"#9d174d",opacity:0.7,fontWeight:700,marginTop:1}}>{label}</div>
                     </div>
                   ))}
                 </div>
@@ -14105,7 +14105,7 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
                 {twMonths.map(m=>{
                   const active=m===activeTwMonth;
                   return(
-                    <button key={m} onClick={()=>setTwSelMonth(twSelMonth===m?"":m)} style={{fontSize:10,padding:"3px 10px",borderRadius:20,border:`1px solid ${active?"#1da1f2":C.border}`,background:active?"#1da1f2":C.white,color:active?C.white:C.inkMid,cursor:"pointer",fontFamily:"inherit",fontWeight:700}}>
+                    <button key={m} onClick={()=>setTwSelMonth(twSelMonth===m?"":m)} style={{fontSize:12,padding:"3px 10px",borderRadius:20,border:`1px solid ${active?"#1da1f2":C.border}`,background:active?"#1da1f2":C.white,color:active?C.white:C.inkMid,cursor:"pointer",fontFamily:"inherit",fontWeight:700}}>
                       {m.slice(0,4)}년 {parseInt(m.slice(5))}월
                     </button>
                   );
@@ -14116,8 +14116,8 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
               <div style={{background:"linear-gradient(135deg,#f0f9ff,#e0f2fe)",border:"1px solid #7dd3fc",borderRadius:14,padding:"14px 16px"}}>
                 <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:10}}>
                   <MI n="flutter_dash" size={14} style={{color:"#1da1f2"}}/>
-                  <span style={{fontSize:12,fontWeight:800,color:"#1da1f2"}}>{twMonthLabel} 트위터 성과</span>
-                  <span style={{marginLeft:"auto",fontSize:10,color:"#1da1f2",opacity:0.7}}>{twMonthItems.length}개 게시물</span>
+                  <span style={{fontSize:13,fontWeight:800,color:"#1da1f2"}}>{twMonthLabel} 트위터 성과</span>
+                  <span style={{marginLeft:"auto",fontSize:12,color:"#1da1f2",opacity:0.7}}>{twMonthItems.length}개 게시물</span>
                 </div>
                 <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:8}}>
                   {[
@@ -14130,7 +14130,7 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
                     <div key={label} style={{background:"rgba(255,255,255,0.7)",borderRadius:10,padding:"10px 8px",textAlign:"center"}}>
                       <MI n={icon} size={14} style={{color}}/>
                       <div style={{fontSize:16,fontWeight:900,color,marginTop:2}}>{value.toLocaleString()}</div>
-                      <div style={{fontSize:9,color:"#0369a1",opacity:0.7,fontWeight:700,marginTop:1}}>{label}</div>
+                      <div style={{fontSize:11,color:"#0369a1",opacity:0.7,fontWeight:700,marginTop:1}}>{label}</div>
                     </div>
                   ))}
                 </div>
@@ -14140,7 +14140,7 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
         )}
 
         {filtered.length===0&&(
-          <div style={{textAlign:"center",color:C.inkLt,fontSize:12,padding:"24px 0"}}>
+          <div style={{textAlign:"center",color:C.inkLt,fontSize:13,padding:"24px 0"}}>
             + 등록 버튼으로 콘텐츠를 추가해보세요
           </div>
         )}
@@ -14154,29 +14154,29 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
                 <div style={{flex:1,minWidth:0}}>
                   {/* 뱃지 행 */}
                   <div style={{display:"flex",alignItems:"center",gap:6,flexWrap:"wrap",marginBottom:6}}>
-                    <span style={{fontSize:11,fontWeight:700,color:pl.color}}><MI n={pl.icon} size={13}/> {pl.label}</span>
-                    {item.isAd&&<span style={{fontSize:10,fontWeight:700,color:"#8b5cf6",background:"#f5f3ff",padding:"2px 8px",borderRadius:10}}><MI n="campaign" size={11}/> 광고</span>}
-                    {item.isManyChat&&<span style={{fontSize:10,fontWeight:700,color:"#f59e0b",background:"#fffbeb",padding:"2px 8px",borderRadius:10}}><MI n="smart_toy" size={11}/> 매니챗</span>}
-                    {item.assignee&&<span style={{fontSize:10,color:C.inkMid}}><MI n="person" size={12}/> {item.assignee}</span>}
+                    <span style={{fontSize:12,fontWeight:700,color:pl.color}}><MI n={pl.icon} size={13}/> {pl.label}</span>
+                    {item.isAd&&<span style={{fontSize:12,fontWeight:700,color:"#8b5cf6",background:"#f5f3ff",padding:"2px 8px",borderRadius:10}}><MI n="campaign" size={11}/> 광고</span>}
+                    {item.isManyChat&&<span style={{fontSize:12,fontWeight:700,color:"#f59e0b",background:"#fffbeb",padding:"2px 8px",borderRadius:10}}><MI n="smart_toy" size={11}/> 매니챗</span>}
+                    {item.assignee&&<span style={{fontSize:12,color:C.inkMid}}><MI n="person" size={12}/> {item.assignee}</span>}
                   </div>
                   {/* 제목 */}
                   <div style={{fontSize:13,fontWeight:800,color:C.ink,marginBottom:6}}>{item.title}</div>
                   {/* 수치 */}
                   <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:6}}>
-                    {item.views!=null&&<span style={{fontSize:10,fontWeight:700,color:C.inkMid,background:C.cream,padding:"2px 8px",borderRadius:10}}><MI n="visibility" size={11}/> {item.views.toLocaleString()}</span>}
-                    {item.likes!=null&&<span style={{fontSize:10,fontWeight:700,color:"#e1306c",background:"#fff0f5",padding:"2px 8px",borderRadius:10}}><MI n="favorite" size={11}/> {item.likes.toLocaleString()}</span>}
-                    {item.comments!=null&&<span style={{fontSize:10,fontWeight:700,color:C.inkMid,background:C.cream,padding:"2px 8px",borderRadius:10}}><MI n="chat_bubble" size={11}/> {item.comments.toLocaleString()}</span>}
-                    {item.saves!=null&&<span style={{fontSize:10,fontWeight:700,color:"#8b5cf6",background:"#f5f3ff",padding:"2px 8px",borderRadius:10}}><MI n="bookmark" size={11}/> {item.saves.toLocaleString()}</span>}
-                    {item.isAd&&item.adSpend!=null&&<span style={{fontSize:10,fontWeight:700,color:"#8b5cf6",background:"#f5f3ff",padding:"2px 8px",borderRadius:10}}><MI n="payments" size={11}/> {item.adSpend.toLocaleString()}원</span>}
-                    {item.isAd&&item.adRoas!=null&&<span style={{fontSize:10,fontWeight:700,color:C.good,background:"#f0fdf4",padding:"2px 8px",borderRadius:10}}><MI n="trending_up" size={11}/> ROAS {item.adRoas}%</span>}
-                    {item.isAd&&item.adCtr!=null&&<span style={{fontSize:10,fontWeight:700,color:C.gold,background:"#fffbeb",padding:"2px 8px",borderRadius:10}}>CTR {item.adCtr}%</span>}
-                    {item.isAd&&item.adCpc!=null&&<span style={{fontSize:10,fontWeight:700,color:C.inkMid,background:C.cream,padding:"2px 8px",borderRadius:10}}>CPC ₩{item.adCpc.toLocaleString()}</span>}
-                    {item.isAd&&item.adPurchases!=null&&<span style={{fontSize:10,fontWeight:700,color:C.rose,background:"#fff0f5",padding:"2px 8px",borderRadius:10}}><MI n="receipt" size={11}/> {item.adPurchases}건</span>}
+                    {item.views!=null&&<span style={{fontSize:12,fontWeight:700,color:C.inkMid,background:C.cream,padding:"2px 8px",borderRadius:10}}><MI n="visibility" size={11}/> {item.views.toLocaleString()}</span>}
+                    {item.likes!=null&&<span style={{fontSize:12,fontWeight:700,color:"#e1306c",background:"#fff0f5",padding:"2px 8px",borderRadius:10}}><MI n="favorite" size={11}/> {item.likes.toLocaleString()}</span>}
+                    {item.comments!=null&&<span style={{fontSize:12,fontWeight:700,color:C.inkMid,background:C.cream,padding:"2px 8px",borderRadius:10}}><MI n="chat_bubble" size={11}/> {item.comments.toLocaleString()}</span>}
+                    {item.saves!=null&&<span style={{fontSize:12,fontWeight:700,color:"#8b5cf6",background:"#f5f3ff",padding:"2px 8px",borderRadius:10}}><MI n="bookmark" size={11}/> {item.saves.toLocaleString()}</span>}
+                    {item.isAd&&item.adSpend!=null&&<span style={{fontSize:12,fontWeight:700,color:"#8b5cf6",background:"#f5f3ff",padding:"2px 8px",borderRadius:10}}><MI n="payments" size={11}/> {item.adSpend.toLocaleString()}원</span>}
+                    {item.isAd&&item.adRoas!=null&&<span style={{fontSize:12,fontWeight:700,color:C.good,background:"#f0fdf4",padding:"2px 8px",borderRadius:10}}><MI n="trending_up" size={11}/> ROAS {item.adRoas}%</span>}
+                    {item.isAd&&item.adCtr!=null&&<span style={{fontSize:12,fontWeight:700,color:C.gold,background:"#fffbeb",padding:"2px 8px",borderRadius:10}}>CTR {item.adCtr}%</span>}
+                    {item.isAd&&item.adCpc!=null&&<span style={{fontSize:12,fontWeight:700,color:C.inkMid,background:C.cream,padding:"2px 8px",borderRadius:10}}>CPC ₩{item.adCpc.toLocaleString()}</span>}
+                    {item.isAd&&item.adPurchases!=null&&<span style={{fontSize:12,fontWeight:700,color:C.rose,background:"#fff0f5",padding:"2px 8px",borderRadius:10}}><MI n="receipt" size={11}/> {item.adPurchases}건</span>}
                   </div>
-                  {item.note&&<div style={{fontSize:11,color:C.inkMid,marginBottom:4}}><MI n="edit_note" size={12}/> {item.note}</div>}
+                  {item.note&&<div style={{fontSize:12,color:C.inkMid,marginBottom:4}}><MI n="edit_note" size={12}/> {item.note}</div>}
                   <div style={{display:"flex",gap:8,alignItems:"center"}}>
-                    {item.link&&<a href={item.link} target="_blank" rel="noreferrer" style={{fontSize:10,color:pl.color,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",maxWidth:200}}><MI n="link" size={11}/> 게시물 보기</a>}
-                    {item.postedAt&&<span style={{fontSize:9,color:C.inkLt}}>{item.postedAt} 게시</span>}
+                    {item.link&&<a href={item.link} target="_blank" rel="noreferrer" style={{fontSize:12,color:pl.color,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",maxWidth:200}}><MI n="link" size={11}/> 게시물 보기</a>}
+                    {item.postedAt&&<span style={{fontSize:11,color:C.inkLt}}>{item.postedAt} 게시</span>}
                   </div>
                 </div>
                 <div style={{display:"flex",flexDirection:"column",gap:4,flexShrink:0}}>
@@ -14198,10 +14198,10 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
             <div style={{display:"flex",flexDirection:"column",gap:10}}>
               {/* 플랫폼 */}
               <div>
-                <div style={{fontSize:10,fontWeight:700,color:C.inkMid,marginBottom:4}}>플랫폼</div>
+                <div style={{fontSize:12,fontWeight:700,color:C.inkMid,marginBottom:4}}>플랫폼</div>
                 <div style={{display:"flex",gap:6}}>
                   {Object.entries(PLATFORMS).map(([k,pl])=>(
-                    <button key={k} onClick={()=>setForm(p=>({...p,platform:k}))} style={{flex:1,fontSize:12,padding:"8px 0",borderRadius:10,
+                    <button key={k} onClick={()=>setForm(p=>({...p,platform:k}))} style={{flex:1,fontSize:13,padding:"8px 0",borderRadius:10,
                       border:`1px solid ${form.platform===k?pl.color:C.border}`,
                       background:form.platform===k?pl.bg:C.white,
                       color:form.platform===k?pl.color:C.inkMid,cursor:"pointer",fontFamily:"inherit",fontWeight:700}}>
@@ -14212,27 +14212,27 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
               </div>
               {/* 제목 */}
               <div>
-                <div style={{fontSize:10,fontWeight:700,color:C.inkMid,marginBottom:4}}>제목 *</div>
+                <div style={{fontSize:12,fontWeight:700,color:C.inkMid,marginBottom:4}}>제목 *</div>
                 <input value={form.title} onChange={e=>setForm(p=>({...p,title:e.target.value}))} placeholder="콘텐츠 제목" style={inputStyle}/>
               </div>
               {/* 링크 + 게시일 */}
               <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
                 <div>
-                  <div style={{fontSize:10,fontWeight:700,color:C.inkMid,marginBottom:4}}>게시물 링크</div>
+                  <div style={{fontSize:12,fontWeight:700,color:C.inkMid,marginBottom:4}}>게시물 링크</div>
                   <input value={form.link} onChange={e=>setForm(p=>({...p,link:e.target.value}))} placeholder="https://..." style={inputStyle}/>
                 </div>
                 <div>
-                  <div style={{fontSize:10,fontWeight:700,color:C.inkMid,marginBottom:4}}>게시일</div>
+                  <div style={{fontSize:12,fontWeight:700,color:C.inkMid,marginBottom:4}}>게시일</div>
                   <input type="date" value={form.postedAt} onChange={e=>setForm(p=>({...p,postedAt:e.target.value}))} style={inputStyle}/>
                 </div>
               </div>
               {/* 수치 */}
               <div>
-                <div style={{fontSize:10,fontWeight:700,color:C.inkMid,marginBottom:4}}>성과 수치</div>
+                <div style={{fontSize:12,fontWeight:700,color:C.inkMid,marginBottom:4}}>성과 수치</div>
                 <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
                   {[["views",<><MI n="visibility" size={11}/> 조회수</>],["likes",<><MI n="favorite" size={11}/> 좋아요</>],["comments",<><MI n="chat_bubble" size={11}/> 댓글</>],["saves",<><MI n="bookmark" size={11}/> 저장</>]].map(([k,l])=>(
                     <div key={k}>
-                      <div style={{fontSize:9,color:C.inkMid,marginBottom:2}}>{l}</div>
+                      <div style={{fontSize:11,color:C.inkMid,marginBottom:2}}>{l}</div>
                       <input value={form[k]} onChange={e=>setForm(p=>({...p,[k]:e.target.value}))} placeholder="0" style={inputStyle}/>
                     </div>
                   ))}
@@ -14241,10 +14241,10 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
               {/* 광고 여부 */}
               <div style={{display:"flex",gap:10,alignItems:"flex-start"}}>
                 <div style={{flex:1}}>
-                  <div style={{fontSize:10,fontWeight:700,color:C.inkMid,marginBottom:4}}>광고 진행</div>
+                  <div style={{fontSize:12,fontWeight:700,color:C.inkMid,marginBottom:4}}>광고 진행</div>
                   <div style={{display:"flex",gap:6}}>
                     {[["true",<><MI n="campaign" size={11}/> 했음</>],["false","없음"]].map(([v,l])=>(
-                      <button key={v} onClick={()=>setForm(p=>({...p,isAd:v==="true"}))} style={{flex:1,fontSize:11,padding:"6px 0",borderRadius:10,
+                      <button key={v} onClick={()=>setForm(p=>({...p,isAd:v==="true"}))} style={{flex:1,fontSize:12,padding:"6px 0",borderRadius:10,
                         border:`1px solid ${String(form.isAd)===v?"#8b5cf6":C.border}`,
                         background:String(form.isAd)===v?"#f5f3ff":C.white,
                         color:String(form.isAd)===v?"#8b5cf6":C.inkMid,cursor:"pointer",fontFamily:"inherit",fontWeight:700}}>{l}</button>
@@ -14253,13 +14253,13 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
                   {form.isAd&&(
                     <div style={{marginTop:8,display:"flex",flexDirection:"column",gap:6}}>
                       <div>
-                        <div style={{fontSize:9,color:C.inkMid,marginBottom:2}}><MI n="payments" size={11}/> 광고 소진액 (원)</div>
+                        <div style={{fontSize:11,color:C.inkMid,marginBottom:2}}><MI n="payments" size={11}/> 광고 소진액 (원)</div>
                         <input value={form.adSpend} onChange={e=>setForm(p=>({...p,adSpend:e.target.value}))} placeholder="0" style={inputStyle}/>
                       </div>
                       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6}}>
                         {[["adRoas","ROAS (%)","trending_up"],["adCtr","CTR (%)","percent"],["adCpc","CPC (원)","payments"],["adCpa","CPA (원)","shopping_bag"],["adPurchases","구매수","receipt"]].map(([k,l,ic])=>(
                           <div key={k}>
-                            <div style={{fontSize:9,color:C.inkMid,marginBottom:2}}><MI n={ic} size={10}/> {l}</div>
+                            <div style={{fontSize:11,color:C.inkMid,marginBottom:2}}><MI n={ic} size={10}/> {l}</div>
                             <input value={form[k]} onChange={e=>setForm(p=>({...p,[k]:e.target.value}))} placeholder="0" style={inputStyle}/>
                           </div>
                         ))}
@@ -14269,10 +14269,10 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
                 </div>
                 {/* 매니챗 */}
                 <div style={{flex:1}}>
-                  <div style={{fontSize:10,fontWeight:700,color:C.inkMid,marginBottom:4}}>매니챗</div>
+                  <div style={{fontSize:12,fontWeight:700,color:C.inkMid,marginBottom:4}}>매니챗</div>
                   <div style={{display:"flex",gap:6}}>
                     {[["true",<><MI n="smart_toy" size={11}/> 했음</>],["false","없음"]].map(([v,l])=>(
-                      <button key={v} onClick={()=>setForm(p=>({...p,isManyChat:v==="true"}))} style={{flex:1,fontSize:11,padding:"6px 0",borderRadius:10,
+                      <button key={v} onClick={()=>setForm(p=>({...p,isManyChat:v==="true"}))} style={{flex:1,fontSize:12,padding:"6px 0",borderRadius:10,
                         border:`1px solid ${String(form.isManyChat)===v?"#f59e0b":C.border}`,
                         background:String(form.isManyChat)===v?"#fffbeb":C.white,
                         color:String(form.isManyChat)===v?"#f59e0b":C.inkMid,cursor:"pointer",fontFamily:"inherit",fontWeight:700}}>{l}</button>
@@ -14282,10 +14282,10 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
               </div>
               {/* 담당자 */}
               <div>
-                <div style={{fontSize:10,fontWeight:700,color:C.inkMid,marginBottom:4}}>담당자</div>
+                <div style={{fontSize:12,fontWeight:700,color:C.inkMid,marginBottom:4}}>담당자</div>
                 <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
                   {["",...MEMBERS].map(m=>(
-                    <button key={m} onClick={()=>setForm(p=>({...p,assignee:m}))} style={{fontSize:11,padding:"4px 12px",borderRadius:20,
+                    <button key={m} onClick={()=>setForm(p=>({...p,assignee:m}))} style={{fontSize:12,padding:"4px 12px",borderRadius:20,
                       border:`1px solid ${form.assignee===m?C.rose:C.border}`,background:form.assignee===m?C.rose:C.white,
                       color:form.assignee===m?C.white:C.inkMid,cursor:"pointer",fontFamily:"inherit",fontWeight:700}}>{m||"미지정"}</button>
                   ))}
@@ -14293,7 +14293,7 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
               </div>
               {/* 메모 */}
               <div>
-                <div style={{fontSize:10,fontWeight:700,color:C.inkMid,marginBottom:4}}>메모</div>
+                <div style={{fontSize:12,fontWeight:700,color:C.inkMid,marginBottom:4}}>메모</div>
                 <input value={form.note} onChange={e=>setForm(p=>({...p,note:e.target.value}))} placeholder="특이사항, 반응 등" style={inputStyle}/>
               </div>
             </div>
@@ -14474,17 +14474,17 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
       <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:8}}>
         <div>
           <div style={{fontSize:16,fontWeight:900,color:C.ink}}>판매 가설</div>
-          <div style={{fontSize:11,color:C.inkMid,marginTop:2}}>매일 판매 데이터를 분석해 원인/액션 가설을 만들어요</div>
+          <div style={{fontSize:12,color:C.inkMid,marginTop:2}}>매일 판매 데이터를 분석해 원인/액션 가설을 만들어요</div>
         </div>
         <div style={{display:"flex",gap:6}}>
           <button onClick={()=>generateHypos(false)} disabled={hypoGenerating}
-            style={{fontSize:11,fontWeight:800,padding:"8px 14px",borderRadius:8,border:"none",
+            style={{fontSize:12,fontWeight:800,padding:"8px 14px",borderRadius:8,border:"none",
               background:hypoGenerating?C.border:C.rose,color:hypoGenerating?C.inkMid:"#fff",
               cursor:hypoGenerating?"default":"pointer",fontFamily:"inherit"}}>
             {hypoGenerating?"생성 중...":"오늘 가설 생성"}
           </button>
           <button onClick={()=>generateHypos(true)} disabled={hypoGenerating}
-            style={{fontSize:11,fontWeight:700,padding:"8px 14px",borderRadius:8,
+            style={{fontSize:12,fontWeight:700,padding:"8px 14px",borderRadius:8,
               border:`1px solid ${C.border}`,background:"#fff",color:C.inkMid,
               cursor:hypoGenerating?"default":"pointer",fontFamily:"inherit"}}>
             재생성
@@ -14493,7 +14493,7 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
       </div>
 
       {hypoMsg&&(
-        <div style={{fontSize:12,fontWeight:700,color:C.inkMid,background:C.cream,
+        <div style={{fontSize:13,fontWeight:700,color:C.inkMid,background:C.cream,
           padding:"8px 12px",borderRadius:8,border:`1px solid ${C.border}`}}>{hypoMsg}</div>
       )}
 
@@ -14504,29 +14504,29 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
             style={{padding:"8px 14px",background:"none",border:"none",
               borderBottom:`2px solid ${hypoTab===t?C.rose:"transparent"}`,
               color:hypoTab===t?C.rose:C.inkMid,fontWeight:hypoTab===t?800:600,
-              fontSize:12,cursor:"pointer",fontFamily:"inherit",marginBottom:-1}}>
+              fontSize:13,cursor:"pointer",fontFamily:"inherit",marginBottom:-1}}>
             {t==="가설"?"💡 가설":"📦 쿠팡·지그재그 실판매"}
           </button>
         ))}
       </div>
 
       {hypoTab==="실판매"&&(()=>{
-        if(realLoading||!realGroups) return <div style={{fontSize:12,color:C.inkMid,padding:20,textAlign:"center"}}>실판매 데이터 불러오는 중...</div>;
+        if(realLoading||!realGroups) return <div style={{fontSize:13,color:C.inkMid,padding:20,textAlign:"center"}}>실판매 데이터 불러오는 중...</div>;
         const rows = Object.entries(realGroups).sort((a,b)=>b[1].cpThis-a[1].cpThis);
         const pct = (t,l)=>l>0?Math.round((t-l)/l*100):null;
         const chip = p=>p===null?null:(
-          <span style={{fontSize:10,fontWeight:800,color:p>=0?"#059669":C.rose,marginLeft:4}}>
+          <span style={{fontSize:12,fontWeight:800,color:p>=0?"#059669":C.rose,marginLeft:4}}>
             {p>=0?"+":""}{p}%</span>);
         return(
         <div style={{display:"flex",flexDirection:"column",gap:10}}>
-          <div style={{fontSize:11,color:C.inkMid,background:C.cream,padding:"8px 12px",borderRadius:8}}>
+          <div style={{fontSize:12,color:C.inkMid,background:C.cream,padding:"8px 12px",borderRadius:8}}>
             실판매 = 이메일 파일 기준 실제 소비자 판매 (ERP 발주 수치와 별개). 추정재고 = 최근 28일 쿠팡 발주 − 실판매 누적이라 실제 재고와 차이 날 수 있어요.
           </div>
 
           {/* 제품별 실판매 */}
-          <div style={{fontSize:12,fontWeight:800,color:C.ink}}>제품별 실판매</div>
+          <div style={{fontSize:13,fontWeight:800,color:C.ink}}>제품별 실판매</div>
           <div style={{background:"#fff",borderRadius:12,border:`1px solid ${C.border}`,padding:"4px 8px",overflowX:"auto"}}>
-            <table style={{width:"100%",borderCollapse:"collapse",fontSize:11}}>
+            <table style={{width:"100%",borderCollapse:"collapse",fontSize:12}}>
               <thead><tr>
                 {["채널","제품명","이번주","지난주","28일 누적"].map(h=>(
                   <th key={h} style={{padding:"8px",textAlign:"left",fontWeight:700,color:C.inkMid,
@@ -14537,7 +14537,7 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
                 {realProds.map(p=>(
                   <tr key={`${p.channel}|${p.name}`} style={{borderBottom:`1px solid ${C.cream}`}}>
                     <td style={{padding:"6px 8px",whiteSpace:"nowrap"}}>
-                      <span style={{fontSize:10,fontWeight:800,padding:"2px 8px",borderRadius:10,
+                      <span style={{fontSize:12,fontWeight:800,padding:"2px 8px",borderRadius:10,
                         color:p.channel==="쿠팡"?"#b45309":"#be185d",
                         background:p.channel==="쿠팡"?"#fef3c7":"#fce7f3"}}>{p.channel}</span></td>
                     <td style={{padding:"6px 8px",fontWeight:700,color:C.ink}}>{p.name}</td>
@@ -14551,9 +14551,9 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
           </div>
 
           {/* 제품군 요약 (재고·광고 효율) */}
-          <div style={{fontSize:12,fontWeight:800,color:C.ink,marginTop:4}}>제품군 요약 — 재고·광고 효율</div>
+          <div style={{fontSize:13,fontWeight:800,color:C.ink,marginTop:4}}>제품군 요약 — 재고·광고 효율</div>
           <div style={{background:"#fff",borderRadius:12,border:`1px solid ${C.border}`,padding:"4px 8px",overflowX:"auto"}}>
-            <table style={{width:"100%",borderCollapse:"collapse",fontSize:11}}>
+            <table style={{width:"100%",borderCollapse:"collapse",fontSize:12}}>
               <thead><tr>
                 {["제품군","쿠팡 실판매 (주간)","지그재그 실판매 (주간)","쿠팡 발주 (이번주)","쿠팡 추정재고 (28일)","소진 예상","메타 광고비 (주간)","실판매 ROAS"].map(h=>(
                   <th key={h} style={{padding:"8px",textAlign:"left",fontWeight:700,color:C.inkMid,
@@ -14588,7 +14588,7 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
               </tbody>
             </table>
           </div>
-          <div style={{fontSize:10,color:C.inkLt}}>⚠️ = 이번주 발주가 실판매의 2배 초과 (과잉 입고 가능성) · 소진 예상 = 추정재고 ÷ 최근 7일 일평균 실판매 · 실판매 ROAS = (쿠팡+지그재그 주간 실판매 × ERP 평균단가) ÷ 메타 주간 광고비 — ERP 발주 기준보다 실제 효율에 가까워요</div>
+          <div style={{fontSize:12,color:C.inkLt}}>⚠️ = 이번주 발주가 실판매의 2배 초과 (과잉 입고 가능성) · 소진 예상 = 추정재고 ÷ 최근 7일 일평균 실판매 · 실판매 ROAS = (쿠팡+지그재그 주간 실판매 × ERP 평균단가) ÷ 메타 주간 광고비 — ERP 발주 기준보다 실제 효율에 가까워요</div>
         </div>);
       })()}
 
@@ -14610,9 +14610,9 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
             return(
             <div key={label} style={{flex:"1 1 100px",background:"#fff",borderRadius:12,
               border:`1px solid ${C.border}`,padding:"10px 14px"}}>
-              <div style={{fontSize:10,fontWeight:700,color:C.inkMid}}>{label} 적중률</div>
+              <div style={{fontSize:12,fontWeight:700,color:C.inkMid}}>{label} 적중률</div>
               <div style={{fontSize:20,fontWeight:900,color:col,marginTop:2}}>{s.pct}%</div>
-              <div style={{fontSize:10,color:C.inkLt}}>검증 {s.n}건 기준</div>
+              <div style={{fontSize:12,color:C.inkLt}}>검증 {s.n}건 기준</div>
             </div>);
           })}
         </div>);
@@ -14621,7 +14621,7 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
       <div style={{display:"flex",gap:6}}>
         {["전체","원인분석","마케팅액션"].map(f=>(
           <button key={f} onClick={()=>setHypoFilter(f)}
-            style={{fontSize:11,padding:"5px 12px",borderRadius:20,fontFamily:"inherit",cursor:"pointer",
+            style={{fontSize:12,padding:"5px 12px",borderRadius:20,fontFamily:"inherit",cursor:"pointer",
               border:`1px solid ${hypoFilter===f?C.rose:C.border}`,
               background:hypoFilter===f?C.rose:"#fff",
               color:hypoFilter===f?"#fff":C.inkMid,
@@ -14629,9 +14629,9 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
         ))}
       </div>
 
-      {hypoLoading&&<div style={{fontSize:12,color:C.inkMid,padding:20,textAlign:"center"}}>불러오는 중...</div>}
+      {hypoLoading&&<div style={{fontSize:13,color:C.inkMid,padding:20,textAlign:"center"}}>불러오는 중...</div>}
       {!hypoLoading&&dates.length===0&&(
-        <div style={{fontSize:12,color:C.inkMid,padding:30,textAlign:"center",
+        <div style={{fontSize:13,color:C.inkMid,padding:30,textAlign:"center",
           background:"#fff",borderRadius:12,border:`1px solid ${C.border}`}}>
           아직 가설이 없어요. "오늘 가설 생성"을 눌러보세요.
         </div>
@@ -14640,7 +14640,7 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
       {/* 날짜별 카드 */}
       {dates.map(date=>(
         <div key={date} style={{display:"flex",flexDirection:"column",gap:8}}>
-          <div style={{fontSize:12,fontWeight:800,color:C.ink,marginTop:4}}>{date}</div>
+          <div style={{fontSize:13,fontWeight:800,color:C.ink,marginTop:4}}>{date}</div>
           {byDate[date].map(h=>{
             const tc = HYPO_TYPE_COLORS[h.type]||C.inkMid;
             const pri = HYPO_PRI[h.priority]||HYPO_PRI.mid;
@@ -14649,24 +14649,24 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
             <div key={h.id} style={{background:"#fff",borderRadius:12,padding:"12px 14px",
               border:`1px solid ${C.border}`,opacity:h.status==="rejected"?0.55:1}}>
               <div style={{display:"flex",alignItems:"center",gap:6,flexWrap:"wrap",marginBottom:6}}>
-                <span style={{fontSize:10,fontWeight:800,color:tc,background:`${tc}14`,
+                <span style={{fontSize:12,fontWeight:800,color:tc,background:`${tc}14`,
                   padding:"2px 8px",borderRadius:10}}>{h.type}</span>
-                <span style={{fontSize:10,fontWeight:800,color:pri.color,background:`${pri.color}14`,
+                <span style={{fontSize:12,fontWeight:800,color:pri.color,background:`${pri.color}14`,
                   padding:"2px 8px",borderRadius:10}}>우선순위 {pri.label}</span>
-                <span style={{fontSize:10,fontWeight:700,color:st.color}}>{st.label}</span>
+                <span style={{fontSize:12,fontWeight:700,color:st.color}}>{st.label}</span>
                 {h.type==="마케팅액션"&&h.executed&&(
-                  <span style={{fontSize:10,fontWeight:800,color:"#7c3aed",background:"#7c3aed14",
+                  <span style={{fontSize:12,fontWeight:800,color:"#7c3aed",background:"#7c3aed14",
                     padding:"2px 8px",borderRadius:10}}>🚀 실행됨{h.executed_at?` ${h.executed_at.slice(5)}`:""}</span>
                 )}
-                {h.product&&<span style={{fontSize:11,fontWeight:800,color:C.ink,marginLeft:"auto"}}>{h.product}</span>}
+                {h.product&&<span style={{fontSize:12,fontWeight:800,color:C.ink,marginLeft:"auto"}}>{h.product}</span>}
               </div>
               <div style={{fontSize:13,color:C.ink,lineHeight:1.5}}>{h.hypothesis}</div>
               {h.evidence&&(
-                <div style={{fontSize:11,color:C.inkMid,marginTop:6,background:C.cream,
+                <div style={{fontSize:12,color:C.inkMid,marginTop:6,background:C.cream,
                   padding:"6px 10px",borderRadius:8}}>근거: {h.evidence}</div>
               )}
               {(h.expected_impact||h.how_to_verify)&&(
-                <div style={{fontSize:11,color:C.inkMid,marginTop:6,display:"flex",flexDirection:"column",gap:3}}>
+                <div style={{fontSize:12,color:C.inkMid,marginTop:6,display:"flex",flexDirection:"column",gap:3}}>
                   {h.expected_impact&&<div>📈 <b style={{color:C.ink}}>예상 효과</b> — {h.expected_impact}</div>}
                   {h.how_to_verify&&<div>🔬 <b style={{color:C.ink}}>검증 방법</b> — {h.how_to_verify}</div>}
                 </div>
@@ -14677,7 +14677,7 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
                   unclear:{label:"🤖 AI 판단: 불확실",color:C.inkMid}}[h.auto_verdict];
                 if(!av) return null;
                 return(
-                <div style={{fontSize:11,marginTop:6,padding:"6px 10px",borderRadius:8,
+                <div style={{fontSize:12,marginTop:6,padding:"6px 10px",borderRadius:8,
                   border:`1px dashed ${av.color}55`,background:`${av.color}0a`}}>
                   <span style={{fontWeight:800,color:av.color}}>{av.label}</span>
                   {h.auto_note&&<span style={{color:C.inkMid}}> — {h.auto_note}</span>}
@@ -14686,37 +14686,37 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
               {h.status==="open"&&(
                 <div style={{display:"flex",gap:6,marginTop:8}}>
                   <button onClick={()=>setHypoStatus(h.id,"confirmed")}
-                    style={{fontSize:10,fontWeight:700,padding:"4px 10px",borderRadius:6,
+                    style={{fontSize:12,fontWeight:700,padding:"4px 10px",borderRadius:6,
                       border:"1px solid #05966933",background:"#05966910",color:"#059669",
                       cursor:"pointer",fontFamily:"inherit"}}>검증됨</button>
                   <button onClick={()=>setHypoStatus(h.id,"rejected")}
-                    style={{fontSize:10,fontWeight:700,padding:"4px 10px",borderRadius:6,
+                    style={{fontSize:12,fontWeight:700,padding:"4px 10px",borderRadius:6,
                       border:`1px solid ${C.border}`,background:"#fff",color:C.inkMid,
                       cursor:"pointer",fontFamily:"inherit"}}>기각</button>
                   {h.type==="마케팅액션"&&!h.executed&&(
                     <button onClick={()=>setHypoExecuted(h.id,true)}
-                      style={{fontSize:10,fontWeight:700,padding:"4px 10px",borderRadius:6,
+                      style={{fontSize:12,fontWeight:700,padding:"4px 10px",borderRadius:6,
                         border:"1px solid #7c3aed33",background:"#7c3aed10",color:"#7c3aed",
                         cursor:"pointer",fontFamily:"inherit"}}>🚀 실행함</button>
                   )}
                   {h.type==="마케팅액션"&&h.executed&&(
                     <button onClick={()=>setHypoExecuted(h.id,false)}
-                      style={{fontSize:10,fontWeight:700,padding:"4px 10px",borderRadius:6,
+                      style={{fontSize:12,fontWeight:700,padding:"4px 10px",borderRadius:6,
                         border:`1px solid ${C.border}`,background:"#fff",color:C.inkLt,
                         cursor:"pointer",fontFamily:"inherit"}}>실행 취소</button>
                   )}
                   <button onClick={()=>deleteHypo(h.id)}
-                    style={{marginLeft:"auto",fontSize:10,fontWeight:700,padding:"4px 10px",borderRadius:6,
+                    style={{marginLeft:"auto",fontSize:12,fontWeight:700,padding:"4px 10px",borderRadius:6,
                       border:"none",background:"#fef2f2",color:"#dc2626",
                       cursor:"pointer",fontFamily:"inherit"}}>삭제</button>
                 </div>
               )}
               {/* 담당자 지정 + 메모 */}
               <div style={{display:"flex",alignItems:"center",gap:4,flexWrap:"wrap",marginTop:8,paddingTop:8,borderTop:`1px dashed ${C.border}`}}>
-                <span style={{fontSize:10,color:C.inkLt,fontWeight:700,marginRight:2}}>담당</span>
+                <span style={{fontSize:12,color:C.inkLt,fontWeight:700,marginRight:2}}>담당</span>
                 {TEAM_MEMBERS.map(m=>(
                   <button key={m} onClick={()=>setHypoField(h.id,{assignee:h.assignee===m?"":m})}
-                    style={{fontSize:10,fontWeight:h.assignee===m?800:600,padding:"3px 9px",borderRadius:10,
+                    style={{fontSize:12,fontWeight:h.assignee===m?800:600,padding:"3px 9px",borderRadius:10,
                       border:`1px solid ${h.assignee===m?C.rose:C.border}`,
                       background:h.assignee===m?C.rose:"#fff",color:h.assignee===m?"#fff":C.inkMid,
                       cursor:"pointer",fontFamily:"inherit"}}>{m}</button>
@@ -14725,17 +14725,17 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
                     const v=window.prompt("메모",h.memo||"");
                     if(v!==null)setHypoField(h.id,{memo:v});
                   }}
-                  style={{fontSize:10,fontWeight:700,padding:"3px 9px",borderRadius:10,marginLeft:"auto",
+                  style={{fontSize:12,fontWeight:700,padding:"3px 9px",borderRadius:10,marginLeft:"auto",
                     border:`1px solid ${C.border}`,background:"#fff",color:C.inkMid,
                     cursor:"pointer",fontFamily:"inherit"}}>{h.memo?"✏️ 메모 수정":"📝 메모"}</button>
               </div>
               {/* 실행날짜 + 마감기한 */}
               <div style={{display:"flex",alignItems:"center",gap:10,flexWrap:"wrap",marginTop:6}}>
-                <label style={{display:"flex",alignItems:"center",gap:4,fontSize:10,color:C.inkLt,fontWeight:700}}>
+                <label style={{display:"flex",alignItems:"center",gap:4,fontSize:12,color:C.inkLt,fontWeight:700}}>
                   🚀 실행일
                   <input type="date" value={h.executed_at||""}
                     onChange={e=>setHypoField(h.id,{executed_at:e.target.value||null,executed:!!e.target.value})}
-                    style={{fontSize:10,padding:"2px 4px",borderRadius:6,border:`1px solid ${C.border}`,
+                    style={{fontSize:12,padding:"2px 4px",borderRadius:6,border:`1px solid ${C.border}`,
                       fontFamily:"inherit",color:h.executed_at?C.ink:C.inkLt,outline:"none"}}/>
                 </label>
                 {(()=>{
@@ -14743,12 +14743,12 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
                   const overdue=h.due_date&&!h.executed&&h.due_date<today&&h.status==="open";
                   const dday=h.due_date?Math.round((new Date(h.due_date)-new Date(today))/86400000):null;
                   return(
-                  <label style={{display:"flex",alignItems:"center",gap:4,fontSize:10,fontWeight:700,
+                  <label style={{display:"flex",alignItems:"center",gap:4,fontSize:12,fontWeight:700,
                     color:overdue?"#dc2626":C.inkLt}}>
                     ⏰ 마감
                     <input type="date" value={h.due_date||""}
                       onChange={e=>setHypoField(h.id,{due_date:e.target.value||null})}
-                      style={{fontSize:10,padding:"2px 4px",borderRadius:6,
+                      style={{fontSize:12,padding:"2px 4px",borderRadius:6,
                         border:`1px solid ${overdue?"#fecaca":C.border}`,
                         background:overdue?"#fef2f2":"#fff",
                         fontFamily:"inherit",color:overdue?"#dc2626":h.due_date?C.ink:C.inkLt,outline:"none"}}/>
@@ -14761,7 +14761,7 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
                 })()}
               </div>
               {h.memo&&(
-                <div style={{fontSize:11,color:C.ink,marginTop:6,background:"#fffbeb",
+                <div style={{fontSize:12,color:C.ink,marginTop:6,background:"#fffbeb",
                   border:"1px solid #fde68a",padding:"6px 10px",borderRadius:8,whiteSpace:"pre-wrap"}}>📝 {h.memo}</div>
               )}
             </div>);
@@ -14788,7 +14788,7 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
     const [recSupported, setRecSupported] = useState(false);
     const recognitionRef = useRef(null);
     const mtHtmlRef = useRef(null);
-    const inputStyle={width:"100%",fontSize:12,padding:"8px 10px",borderRadius:8,border:`1px solid ${C.border}`,fontFamily:"inherit",outline:"none",boxSizing:"border-box"};
+    const inputStyle={width:"100%",fontSize:13,padding:"8px 10px",borderRadius:8,border:`1px solid ${C.border}`,fontFamily:"inherit",outline:"none",boxSizing:"border-box"};
 
     // Web Speech API 지원 확인
     useEffect(()=>{
@@ -14857,7 +14857,7 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
       <div style={{display:"flex",gap:4,padding:4,background:C.cream,borderRadius:12,width:"fit-content"}}>
         {[["board","edit_note","팀 게시판"],["meeting","mic","미팅 노트"]].map(([id,ic,l])=>(
           <button key={id} onClick={()=>setNoteTab(id)} style={{display:"flex",alignItems:"center",gap:5,
-            padding:"7px 14px",borderRadius:9,border:"none",cursor:"pointer",fontSize:11,fontWeight:700,fontFamily:"inherit",
+            padding:"7px 14px",borderRadius:9,border:"none",cursor:"pointer",fontSize:12,fontWeight:700,fontFamily:"inherit",
             background:noteTab===id?C.white:"transparent",color:noteTab===id?C.ink:C.inkMid,
             boxShadow:noteTab===id?"0 1px 4px rgba(0,0,0,0.08)":"none"}}>
             <MI n={ic} size={13}/>{l}
@@ -14876,12 +14876,12 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
           <div style={{display:"flex",gap:5,flexWrap:"wrap",alignItems:"center"}}>
             {CATS.map(c=>(
               <button key={c} onClick={()=>setCat(c)}
-                style={{fontSize:10,padding:"3px 9px",borderRadius:20,fontFamily:"inherit",fontWeight:700,cursor:"pointer",
+                style={{fontSize:12,padding:"3px 9px",borderRadius:20,fontFamily:"inherit",fontWeight:700,cursor:"pointer",
                 border:`1px solid ${cat===c?CAT_COLORS[c]:C.border}`,
                 background:cat===c?CAT_COLORS[c]:C.white,color:cat===c?C.white:C.inkMid}}>{c}</button>
             ))}
             <select value={assignee} onChange={e=>setAssignee(e.target.value)}
-              style={{marginLeft:"auto",fontSize:10,padding:"4px 7px",borderRadius:8,border:`1px solid ${C.border}`,fontFamily:"inherit",background:C.white}}>
+              style={{marginLeft:"auto",fontSize:12,padding:"4px 7px",borderRadius:8,border:`1px solid ${C.border}`,fontFamily:"inherit",background:C.white}}>
               <option value="">전체</option>
               {MEMBERS.map(m=><option key={m} value={m}>{m}</option>)}
             </select>
@@ -14891,26 +14891,26 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
         <div style={{display:"flex",gap:5,marginBottom:10,flexWrap:"wrap"}}>
           {["전체",...CATS].map(c=>(
             <button key={c} onClick={()=>setFilterCat(c)}
-              style={{fontSize:10,padding:"3px 9px",borderRadius:20,fontFamily:"inherit",fontWeight:700,cursor:"pointer",
+              style={{fontSize:12,padding:"3px 9px",borderRadius:20,fontFamily:"inherit",fontWeight:700,cursor:"pointer",
               border:`1px solid ${filterCat===c?(CAT_COLORS[c]||C.rose):C.border}`,
               background:filterCat===c?(CAT_COLORS[c]||C.rose):C.white,
               color:filterCat===c?C.white:C.inkMid}}>{c}</button>
           ))}
         </div>
         <div style={{display:"flex",flexDirection:"column",gap:8}}>
-          {filtered.length===0&&<div style={{textAlign:"center",color:C.inkLt,fontSize:12,padding:"20px 0"}}>아직 등록된 내용이 없어요</div>}
+          {filtered.length===0&&<div style={{textAlign:"center",color:C.inkLt,fontSize:13,padding:"20px 0"}}>아직 등록된 내용이 없어요</div>}
           {filtered.map(p=>{
             const col=CAT_COLORS[p.cat]||C.inkMid;
             return(
             <div key={p.id} style={{borderRadius:10,border:`1px solid ${col}33`,background:C.white,padding:"11px 13px"}}>
               <div style={{display:"flex",alignItems:"center",gap:5,marginBottom:5}}>
-                <span style={{fontSize:10,fontWeight:700,color:col,background:`${col}18`,padding:"2px 7px",borderRadius:10}}>{p.cat||"공통"}</span>
-                {p.assignee&&<span style={{fontSize:10,color:C.inkMid}}><MI n="person" size={11}/>{p.assignee}</span>}
-                <span style={{fontSize:9,color:C.inkLt,marginLeft:"auto"}}>{p.createdAt}</span>
+                <span style={{fontSize:12,fontWeight:700,color:col,background:`${col}18`,padding:"2px 7px",borderRadius:10}}>{p.cat||"공통"}</span>
+                {p.assignee&&<span style={{fontSize:12,color:C.inkMid}}><MI n="person" size={11}/>{p.assignee}</span>}
+                <span style={{fontSize:11,color:C.inkLt,marginLeft:"auto"}}>{p.createdAt}</span>
                 <button onClick={()=>setPosts(prev=>(prev||[]).filter(i=>i.id!==p.id))}
-                  style={{fontSize:11,color:C.inkLt,background:"none",border:"none",cursor:"pointer"}}>✕</button>
+                  style={{fontSize:12,color:C.inkLt,background:"none",border:"none",cursor:"pointer"}}>✕</button>
               </div>
-              <div style={{fontSize:12,color:C.ink,lineHeight:1.7,whiteSpace:"pre-wrap"}}>{p.text}</div>
+              <div style={{fontSize:13,color:C.ink,lineHeight:1.7,whiteSpace:"pre-wrap"}}>{p.text}</div>
             </div>
             );
           })}
@@ -14923,28 +14923,28 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
       <Card>
         <CardTitle title={<><MI n="mic" size={14}/> 미팅 노트</>} sub={`${(meetingNotes||[]).length}건`}
           action={<Btn small onClick={()=>{setMtForm({title:"",date:new Date().toISOString().slice(0,10),attendees:[],content:"",actions:"",htmlContent:"",htmlFileName:"",summary:""});setMtModal(true);}}>+ 새 미팅</Btn>}/>
-        {(meetingNotes||[]).length===0&&<div style={{textAlign:"center",color:C.inkLt,fontSize:12,padding:"24px 0"}}>미팅 노트를 추가해보세요</div>}
+        {(meetingNotes||[]).length===0&&<div style={{textAlign:"center",color:C.inkLt,fontSize:13,padding:"24px 0"}}>미팅 노트를 추가해보세요</div>}
         <div style={{display:"flex",flexDirection:"column",gap:10}}>
           {(meetingNotes||[]).map(m=>(
             <div key={m.id} style={{borderRadius:12,border:`1px solid ${C.border}`,background:C.white,padding:"14px"}}>
               <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",marginBottom:8}}>
                 <div>
                   <div style={{fontSize:13,fontWeight:800,color:C.ink}}>{m.title}</div>
-                  <div style={{fontSize:10,color:C.inkLt,marginTop:2}}>
+                  <div style={{fontSize:12,color:C.inkLt,marginTop:2}}>
                     <MI n="calendar_today" size={10}/> {m.date}
                     {m.attendees?.length>0&&<span style={{marginLeft:8}}><MI n="group" size={10}/> {m.attendees.join(", ")}</span>}
                   </div>
                 </div>
                 <div style={{display:"flex",gap:4}}>
                   <button onClick={()=>{setMtForm({...m});setMtModal(true);}}
-                    style={{fontSize:11,color:C.inkMid,background:"none",border:"none",cursor:"pointer",padding:"2px 6px"}}><MI n="edit" size={13}/></button>
+                    style={{fontSize:12,color:C.inkMid,background:"none",border:"none",cursor:"pointer",padding:"2px 6px"}}><MI n="edit" size={13}/></button>
                   <button onClick={()=>setMeetingNotes(prev=>(prev||[]).filter(i=>i.id!==m.id))}
-                    style={{fontSize:11,color:C.inkLt,background:"none",border:"none",cursor:"pointer"}}>✕</button>
+                    style={{fontSize:12,color:C.inkLt,background:"none",border:"none",cursor:"pointer"}}>✕</button>
                 </div>
               </div>
-              {m.content&&<div style={{fontSize:12,color:C.ink,lineHeight:1.7,whiteSpace:"pre-wrap",marginBottom:8,padding:"8px 10px",background:C.cream,borderRadius:8}}>{m.content}</div>}
+              {m.content&&<div style={{fontSize:13,color:C.ink,lineHeight:1.7,whiteSpace:"pre-wrap",marginBottom:8,padding:"8px 10px",background:C.cream,borderRadius:8}}>{m.content}</div>}
               {m.actions&&(
-                <div style={{fontSize:11,color:"#7c3aed",padding:"6px 10px",background:"#f5f3ff",borderRadius:8}}>
+                <div style={{fontSize:12,color:"#7c3aed",padding:"6px 10px",background:"#f5f3ff",borderRadius:8}}>
                   <MI n="checklist" size={11}/> <strong>액션아이템:</strong> {m.actions}
                 </div>
               )}
@@ -14952,9 +14952,9 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
               {m.htmlContent&&(
                 <div style={{marginTop:10}}>
                   <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:6}}>
-                    <span style={{fontSize:11,fontWeight:700,color:C.inkMid}}><MI n="attach_file" size={11}/> {m.htmlFileName||"첨부 파일"}</span>
+                    <span style={{fontSize:12,fontWeight:700,color:C.inkMid}}><MI n="attach_file" size={11}/> {m.htmlFileName||"첨부 파일"}</span>
                     <button onClick={()=>{const blob=new Blob([m.htmlContent],{type:"text/html;charset=utf-8"});const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download=(m.htmlFileName||m.title||"미팅")+".html";document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(url);}}
-                      style={{fontSize:11,fontWeight:700,padding:"4px 10px",borderRadius:8,border:`1px solid ${C.border}`,
+                      style={{fontSize:12,fontWeight:700,padding:"4px 10px",borderRadius:8,border:`1px solid ${C.border}`,
                         background:C.cream,color:C.inkMid,cursor:"pointer",fontFamily:"inherit",display:"flex",alignItems:"center",gap:4}}>
                       <MI n="download" size={12}/> 다운로드
                     </button>
@@ -14964,10 +14964,10 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
               )}
               {/* 미팅 종료 후 정리내용 */}
               <div style={{marginTop:10,borderTop:`1px solid ${C.border}`,paddingTop:10}}>
-                <div style={{fontSize:11,fontWeight:700,color:C.inkMid,marginBottom:4}}><MI n="summarize" size={12}/> 정리내용 (미팅 후)</div>
+                <div style={{fontSize:12,fontWeight:700,color:C.inkMid,marginBottom:4}}><MI n="summarize" size={12}/> 정리내용 (미팅 후)</div>
                 <textarea value={m.summary||""} onChange={e=>{const v=e.target.value;setMeetingNotes(prev=>(prev||[]).map(n=>n.id===m.id?{...n,summary:v}:n));}}
                   placeholder="미팅 종료 후 결론, 다음 스텝, 주요 결정사항 등 정리"
-                  style={{width:"100%",fontSize:12,padding:"8px 10px",borderRadius:8,border:`1px solid ${C.border}`,
+                  style={{width:"100%",fontSize:13,padding:"8px 10px",borderRadius:8,border:`1px solid ${C.border}`,
                     fontFamily:"inherit",outline:"none",boxSizing:"border-box",resize:"vertical",minHeight:80,lineHeight:1.7,background:C.cream}}/>
               </div>
             </div>
@@ -14988,19 +14988,19 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
             </div>
             <div style={{display:"flex",flexDirection:"column",gap:10}}>
               <div>
-                <div style={{fontSize:10,fontWeight:700,color:C.inkMid,marginBottom:4}}>제목</div>
+                <div style={{fontSize:12,fontWeight:700,color:C.inkMid,marginBottom:4}}>제목</div>
                 <input value={mtForm.title} onChange={e=>setMtForm(p=>({...p,title:e.target.value}))} placeholder="ex. 3월 4주차 주간 미팅" style={inputStyle}/>
               </div>
               <div>
-                <div style={{fontSize:10,fontWeight:700,color:C.inkMid,marginBottom:4}}>날짜</div>
+                <div style={{fontSize:12,fontWeight:700,color:C.inkMid,marginBottom:4}}>날짜</div>
                 <input type="date" value={mtForm.date} onChange={e=>setMtForm(p=>({...p,date:e.target.value}))} style={inputStyle}/>
               </div>
               <div>
-                <div style={{fontSize:10,fontWeight:700,color:C.inkMid,marginBottom:6}}>참석자</div>
+                <div style={{fontSize:12,fontWeight:700,color:C.inkMid,marginBottom:6}}>참석자</div>
                 <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
                   {MEMBERS.map(m=>(
                     <button key={m} onClick={()=>setMtForm(p=>({...p,attendees:p.attendees.includes(m)?p.attendees.filter(a=>a!==m):[...p.attendees,m]}))}
-                      style={{fontSize:11,padding:"5px 12px",borderRadius:20,fontFamily:"inherit",fontWeight:700,cursor:"pointer",
+                      style={{fontSize:12,padding:"5px 12px",borderRadius:20,fontFamily:"inherit",fontWeight:700,cursor:"pointer",
                       border:`1px solid ${mtForm.attendees.includes(m)?C.rose:C.border}`,
                       background:mtForm.attendees.includes(m)?C.rose:C.white,
                       color:mtForm.attendees.includes(m)?C.white:C.inkMid}}>{m}</button>
@@ -15009,10 +15009,10 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
               </div>
               <div>
                 <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:4}}>
-                  <div style={{fontSize:10,fontWeight:700,color:C.inkMid}}>내용</div>
+                  <div style={{fontSize:12,fontWeight:700,color:C.inkMid}}>내용</div>
                   {recSupported&&(
                     <button onClick={recording?stopRecording:startRecording}
-                      style={{display:"flex",alignItems:"center",gap:4,fontSize:10,fontWeight:700,padding:"4px 10px",borderRadius:20,
+                      style={{display:"flex",alignItems:"center",gap:4,fontSize:12,fontWeight:700,padding:"4px 10px",borderRadius:20,
                       border:`1px solid ${recording?"#dc2626":C.border}`,
                       background:recording?"#fef2f2":C.white,
                       color:recording?"#dc2626":C.inkMid,cursor:"pointer",fontFamily:"inherit"}}>
@@ -15025,25 +15025,25 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
                 <textarea value={mtForm.content} onChange={e=>setMtForm(p=>({...p,content:e.target.value}))}
                   placeholder={recSupported?"녹음 시작 버튼을 누르면 자동으로 텍스트로 변환돼요":"미팅 내용을 입력해주세요"}
                   style={{...inputStyle,resize:"vertical",minHeight:120,lineHeight:1.7}}/>
-                {recording&&<div style={{fontSize:10,color:"#dc2626",marginTop:4}}><MI n="mic" size={10}/> 녹음 중... 말하면 자동으로 입력돼요</div>}
+                {recording&&<div style={{fontSize:12,color:"#dc2626",marginTop:4}}><MI n="mic" size={10}/> 녹음 중... 말하면 자동으로 입력돼요</div>}
               </div>
               <div>
-                <div style={{fontSize:10,fontWeight:700,color:C.inkMid,marginBottom:4}}>액션아이템</div>
+                <div style={{fontSize:12,fontWeight:700,color:C.inkMid,marginBottom:4}}>액션아이템</div>
                 <textarea value={mtForm.actions} onChange={e=>setMtForm(p=>({...p,actions:e.target.value}))}
                   placeholder="ex. 소리 - 소재 3개 제작 / 영서 - 광고 세팅 확인"
                   style={{...inputStyle,resize:"vertical",minHeight:60,lineHeight:1.6}}/>
               </div>
               <div>
-                <div style={{fontSize:10,fontWeight:700,color:C.inkMid,marginBottom:4}}>HTML 자료 첨부</div>
+                <div style={{fontSize:12,fontWeight:700,color:C.inkMid,marginBottom:4}}>HTML 자료 첨부</div>
                 <div style={{display:"flex",alignItems:"center",gap:8}}>
                   <button onClick={()=>mtHtmlRef.current?.click()}
-                    style={{fontSize:11,fontWeight:700,padding:"6px 12px",borderRadius:8,border:`1px solid ${C.border}`,
+                    style={{fontSize:12,fontWeight:700,padding:"6px 12px",borderRadius:8,border:`1px solid ${C.border}`,
                       background:mtForm.htmlContent?C.sage+"22":C.cream,color:mtForm.htmlContent?C.sage:C.inkMid,
                       cursor:"pointer",fontFamily:"inherit",display:"flex",alignItems:"center",gap:4}}>
                     <MI n="attach_file" size={13}/>{mtForm.htmlContent?`✓ ${mtForm.htmlFileName||"파일 첨부됨"}`:"HTML 파일 업로드"}
                   </button>
                   {mtForm.htmlContent&&<button onClick={()=>setMtForm(p=>({...p,htmlContent:"",htmlFileName:""}))}
-                    style={{fontSize:10,color:C.inkLt,background:"none",border:"none",cursor:"pointer"}}>✕</button>}
+                    style={{fontSize:12,color:C.inkLt,background:"none",border:"none",cursor:"pointer"}}>✕</button>}
                   <input ref={mtHtmlRef} type="file" accept=".html,.htm" style={{display:"none"}} onChange={handleHtmlUpload}/>
                 </div>
               </div>
@@ -15669,7 +15669,7 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:8}}>
           <div>
             <div style={{fontSize:20,fontWeight:900,color:C.ink}}>{sec==="market"?"시장조사":"키워드 관리"}</div>
-            <div style={{fontSize:12,color:C.inkMid,marginTop:2}}>{sec==="market"?"네이버·무신사·올리브영·지그재그·에이블리 시장가 비교":"네이버 검색광고 API 연동 · 검색량 조회 및 순위 트래킹"}</div>
+            <div style={{fontSize:13,color:C.inkMid,marginTop:2}}>{sec==="market"?"네이버·무신사·올리브영·지그재그·에이블리 시장가 비교":"네이버 검색광고 API 연동 · 검색량 조회 및 순위 트래킹"}</div>
           </div>
           {mainTab==="track"&&sec!=="market"&&(
             <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
@@ -15696,7 +15696,7 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
         {sec!=="market"&&<div style={{display:"flex",gap:4,background:C.cream,borderRadius:12,padding:4,width:"fit-content"}}>
           {[{id:"track",label:"순위 트래킹"},{id:"explore",label:"키워드 탐색"}].map(t=>(
             <button key={t.id} onClick={()=>setMainTab(t.id)} style={{
-              fontSize:12,fontWeight:700,padding:"6px 18px",borderRadius:8,border:"none",cursor:"pointer",
+              fontSize:13,fontWeight:700,padding:"6px 18px",borderRadius:8,border:"none",cursor:"pointer",
               background:mainTab===t.id?C.rose:"transparent",
               color:mainTab===t.id?"#fff":C.inkMid,fontFamily:"inherit",
             }}>{t.label}</button>
@@ -15734,7 +15734,7 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
                   <div style={{textAlign:"center",padding:"20px 0",color:C.inkLt,fontSize:13}}>결과가 없어요</div>
                 ) : (
                   <div style={{overflowX:"auto"}}>
-                    <table style={{width:"100%",borderCollapse:"collapse",fontSize:12}}>
+                    <table style={{width:"100%",borderCollapse:"collapse",fontSize:13}}>
                       <thead>
                         <tr style={{background:C.cream}}>
                           {["키워드","PC 월검색","모바일 월검색","합계","경쟁도","추가"].map(h=>(
@@ -15756,19 +15756,19 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
                               <td style={{padding:"7px 10px",color:C.inkMid}}>{(k.mobileMonthly||0).toLocaleString()}</td>
                               <td style={{padding:"7px 10px",fontWeight:800,color:C.ink}}>{total.toLocaleString()}</td>
                               <td style={{padding:"7px 10px"}}>
-                                <span style={{fontSize:11,fontWeight:700,color:compColor,background:compColor+"18",
+                                <span style={{fontSize:12,fontWeight:700,color:compColor,background:compColor+"18",
                                   padding:"2px 8px",borderRadius:20}}>{compLabel}</span>
                               </td>
                               <td style={{padding:"7px 10px"}}>
                                 {alreadyTracked ? (
-                                  <span style={{fontSize:11,color:C.inkLt}}>트래킹 중</span>
+                                  <span style={{fontSize:12,color:C.inkLt}}>트래킹 중</span>
                                 ) : (
                                   <button onClick={()=>{
                                     const newKw={id:Date.now()+"",name:k.keyword,competitor:"",
                                       color:["#0071E3","#248A3D","#EA580C","#8B5CF6","#EC4899"][keywords.length%5],
                                       type:"my",addedAt:new Date().toISOString().slice(0,10)};
                                     setKwData({...kwData,keywords:[...keywords,newKw]});
-                                  }} style={{fontSize:11,fontWeight:700,padding:"3px 10px",borderRadius:8,
+                                  }} style={{fontSize:12,fontWeight:700,padding:"3px 10px",borderRadius:8,
                                     border:`1px solid ${C.rose}`,color:C.rose,background:"#fff",cursor:"pointer",fontFamily:"inherit"}}>
                                     + 트래킹
                                   </button>
@@ -15779,7 +15779,7 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
                         })}
                       </tbody>
                     </table>
-                    <div style={{marginTop:8,fontSize:11,color:C.inkLt}}>총 {searchResults.length}개 연관 키워드 · 네이버 검색광고 API 기준</div>
+                    <div style={{marginTop:8,fontSize:12,color:C.inkLt}}>총 {searchResults.length}개 연관 키워드 · 네이버 검색광고 API 기준</div>
                   </div>
                 )
               )}
@@ -15795,25 +15795,25 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
               <div style={{position:"fixed",inset:0,zIndex:1000,background:"rgba(0,0,0,0.4)",display:"flex",alignItems:"center",justifyContent:"center"}} onClick={()=>setMktProductModal(false)}>
                 <div style={{background:C.white,borderRadius:14,padding:20,width:280,boxShadow:"0 8px 32px rgba(0,0,0,0.18)"}} onClick={e=>e.stopPropagation()}>
                   <div style={{fontSize:13,fontWeight:800,marginBottom:14}}>우리 제품 추가</div>
-                  <div style={{fontSize:11,fontWeight:700,color:C.inkMid,marginBottom:4}}>카테고리</div>
+                  <div style={{fontSize:12,fontWeight:700,color:C.inkMid,marginBottom:4}}>카테고리</div>
                   <div style={{display:"flex",gap:6,marginBottom:10}}>
                     {MKT_CATEGORIES.map(cat=>(
                       <button key={cat} onClick={()=>setMktProductInput(p=>({...p,category:cat}))}
-                        style={{flex:1,padding:"6px 0",borderRadius:8,border:`1.5px solid ${(mktProductInput.category||MKT_CATEGORIES[0])===cat?C.rose:C.border}`,background:(mktProductInput.category||MKT_CATEGORIES[0])===cat?C.rose:"transparent",color:(mktProductInput.category||MKT_CATEGORIES[0])===cat?"#fff":C.inkMid,fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
+                        style={{flex:1,padding:"6px 0",borderRadius:8,border:`1.5px solid ${(mktProductInput.category||MKT_CATEGORIES[0])===cat?C.rose:C.border}`,background:(mktProductInput.category||MKT_CATEGORIES[0])===cat?C.rose:"transparent",color:(mktProductInput.category||MKT_CATEGORIES[0])===cat?"#fff":C.inkMid,fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
                         {cat}
                       </button>
                     ))}
                   </div>
-                  <div style={{fontSize:11,fontWeight:700,color:C.inkMid,marginBottom:4}}>제품명</div>
+                  <div style={{fontSize:12,fontWeight:700,color:C.inkMid,marginBottom:4}}>제품명</div>
                   <input value={mktProductInput.name} onChange={e=>setMktProductInput(p=>({...p,name:e.target.value}))}
                     placeholder="예: 프리온, 소닉플로우"
-                    style={{width:"100%",padding:"7px 10px",border:`1px solid ${C.border}`,borderRadius:8,fontSize:12,fontFamily:"inherit",outline:"none",boxSizing:"border-box",marginBottom:10}}/>
-                  <div style={{fontSize:11,fontWeight:700,color:C.inkMid,marginBottom:4}}>우리 판매가 (원)</div>
+                    style={{width:"100%",padding:"7px 10px",border:`1px solid ${C.border}`,borderRadius:8,fontSize:13,fontFamily:"inherit",outline:"none",boxSizing:"border-box",marginBottom:10}}/>
+                  <div style={{fontSize:12,fontWeight:700,color:C.inkMid,marginBottom:4}}>우리 판매가 (원)</div>
                   <input value={mktProductInput.ourPrice} onChange={e=>setMktProductInput(p=>({...p,ourPrice:e.target.value}))}
                     placeholder="예: 59000"
-                    style={{width:"100%",padding:"7px 10px",border:`1px solid ${C.border}`,borderRadius:8,fontSize:12,fontFamily:"inherit",outline:"none",boxSizing:"border-box",marginBottom:14}}/>
+                    style={{width:"100%",padding:"7px 10px",border:`1px solid ${C.border}`,borderRadius:8,fontSize:13,fontFamily:"inherit",outline:"none",boxSizing:"border-box",marginBottom:14}}/>
                   <div style={{display:"flex",gap:8}}>
-                    <button onClick={()=>setMktProductModal(false)} style={{flex:1,fontSize:11,fontWeight:700,padding:"8px 0",borderRadius:8,border:`1px solid ${C.border}`,background:C.cream,color:C.inkMid,cursor:"pointer",fontFamily:"inherit"}}>취소</button>
+                    <button onClick={()=>setMktProductModal(false)} style={{flex:1,fontSize:12,fontWeight:700,padding:"8px 0",borderRadius:8,border:`1px solid ${C.border}`,background:C.cream,color:C.inkMid,cursor:"pointer",fontFamily:"inherit"}}>취소</button>
                     <button onClick={()=>{
                       if(!mktProductInput.name.trim()) return;
                       const newProd = {id:Date.now().toString(),name:mktProductInput.name.trim(),ourPrice:parseInt(mktProductInput.ourPrice)||0,category:mktProductInput.category||MKT_CATEGORIES[0],items:[]};
@@ -15821,7 +15821,7 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
                       setMktCategoryTab(newProd.category);
                       setMktProductModal(false);
                       setMktProductInput({name:"",ourPrice:"",category:MKT_CATEGORIES[0]});
-                    }} style={{flex:2,fontSize:11,fontWeight:700,padding:"8px 0",borderRadius:8,border:"none",background:C.rose,color:"#fff",cursor:"pointer",fontFamily:"inherit"}}>추가</button>
+                    }} style={{flex:2,fontSize:12,fontWeight:700,padding:"8px 0",borderRadius:8,border:"none",background:C.rose,color:"#fff",cursor:"pointer",fontFamily:"inherit"}}>추가</button>
                   </div>
                 </div>
               </div>
@@ -15832,27 +15832,27 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
               <div style={{position:"fixed",inset:0,zIndex:1000,background:"rgba(0,0,0,0.4)",display:"flex",alignItems:"center",justifyContent:"center"}} onClick={()=>setMktBulkModal(false)}>
                 <div style={{background:C.white,borderRadius:14,padding:20,width:340,boxShadow:"0 8px 32px rgba(0,0,0,0.18)",maxHeight:"90vh",display:"flex",flexDirection:"column"}} onClick={e=>e.stopPropagation()}>
                   <div style={{fontSize:13,fontWeight:800,marginBottom:12}}>제품 일괄 추가</div>
-                  <div style={{fontSize:11,fontWeight:700,color:C.inkMid,marginBottom:6}}>카테고리</div>
+                  <div style={{fontSize:12,fontWeight:700,color:C.inkMid,marginBottom:6}}>카테고리</div>
                   <div style={{display:"flex",gap:6,marginBottom:12}}>
                     {["크롤링검색",...MKT_CATEGORIES.filter(c=>c!=="크롤링검색")].map(cat=>(
                       <button key={cat} onClick={()=>setMktBulkCategory(cat)}
-                        style={{flex:1,padding:"6px 0",borderRadius:8,border:`1.5px solid ${mktBulkCategory===cat?C.rose:C.border}`,background:mktBulkCategory===cat?C.rose:"transparent",color:mktBulkCategory===cat?"#fff":C.inkMid,fontSize:10,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
+                        style={{flex:1,padding:"6px 0",borderRadius:8,border:`1.5px solid ${mktBulkCategory===cat?C.rose:C.border}`,background:mktBulkCategory===cat?C.rose:"transparent",color:mktBulkCategory===cat?"#fff":C.inkMid,fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
                         {cat}
                       </button>
                     ))}
                   </div>
-                  <div style={{fontSize:11,fontWeight:700,color:C.inkMid,marginBottom:4}}>제품명 목록 (한 줄에 하나)</div>
+                  <div style={{fontSize:12,fontWeight:700,color:C.inkMid,marginBottom:4}}>제품명 목록 (한 줄에 하나)</div>
                   <textarea value={mktBulkText} onChange={e=>setMktBulkText(e.target.value)}
                     placeholder={"오아데일리고데기\n오아무선고데기-베이지\n..."}
-                    style={{flex:1,minHeight:260,padding:"8px 10px",border:`1px solid ${C.border}`,borderRadius:8,fontSize:11,fontFamily:"inherit",outline:"none",resize:"none",lineHeight:1.7}}/>
-                  <div style={{fontSize:10,color:C.inkLt,marginTop:4}}>
+                    style={{flex:1,minHeight:260,padding:"8px 10px",border:`1px solid ${C.border}`,borderRadius:8,fontSize:12,fontFamily:"inherit",outline:"none",resize:"none",lineHeight:1.7}}/>
+                  <div style={{fontSize:12,color:C.inkLt,marginTop:4}}>
                     {(()=>{
                       const seen=new Set();
                       return mktBulkText.split("\n").map(l=>stripColor(l.trim())).filter(n=>{if(!n||seen.has(n.toLowerCase()))return false;seen.add(n.toLowerCase());return true;}).length;
                     })()}개 제품 (색상 제거 후)
                   </div>
                   <div style={{display:"flex",gap:8,marginTop:12}}>
-                    <button onClick={()=>setMktBulkModal(false)} style={{flex:1,fontSize:11,fontWeight:700,padding:"8px 0",borderRadius:8,border:`1px solid ${C.border}`,background:C.cream,color:C.inkMid,cursor:"pointer",fontFamily:"inherit"}}>취소</button>
+                    <button onClick={()=>setMktBulkModal(false)} style={{flex:1,fontSize:12,fontWeight:700,padding:"8px 0",borderRadius:8,border:`1px solid ${C.border}`,background:C.cream,color:C.inkMid,cursor:"pointer",fontFamily:"inherit"}}>취소</button>
                     <button onClick={()=>{
                       const rawNames = mktBulkText.split("\n").map(l=>l.trim()).filter(Boolean);
                       if(!rawNames.length) return;
@@ -15870,7 +15870,7 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
                       setMktCategoryTab(mktBulkCategory);
                       setMktBulkModal(false);
                       setMktBulkText("");
-                    }} style={{flex:2,fontSize:11,fontWeight:700,padding:"8px 0",borderRadius:8,border:"none",background:C.rose,color:"#fff",cursor:"pointer",fontFamily:"inherit"}}>
+                    }} style={{flex:2,fontSize:12,fontWeight:700,padding:"8px 0",borderRadius:8,border:"none",background:C.rose,color:"#fff",cursor:"pointer",fontFamily:"inherit"}}>
                       추가
                     </button>
                   </div>
@@ -15885,14 +15885,14 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
                   <div style={{fontSize:13,fontWeight:800,marginBottom:12}}>{mktItemModal.itemId?"경쟁사 제품 수정":"경쟁사 제품 추가"}</div>
                   {/* 네이버 검색해서 고르기 */}
                   <div style={{background:C.cream,borderRadius:10,padding:"10px 12px",marginBottom:14}}>
-                    <div style={{fontSize:11,fontWeight:700,color:C.inkMid,marginBottom:6}}>네이버에서 검색해서 가져오기</div>
+                    <div style={{fontSize:12,fontWeight:700,color:C.inkMid,marginBottom:6}}>네이버에서 검색해서 가져오기</div>
                     <div style={{display:"flex",gap:6}}>
                       <input value={mktModalSearch} onChange={e=>setMktModalSearch(e.target.value)}
                         onKeyDown={e=>{if(e.key==="Enter")searchMktModal(mktModalSearch);}}
                         placeholder="모델명 검색 (예: 파나소닉 EH-NA67)"
-                        style={{flex:1,padding:"6px 10px",border:`1px solid ${C.border}`,borderRadius:8,fontSize:11,fontFamily:"inherit",outline:"none"}}/>
+                        style={{flex:1,padding:"6px 10px",border:`1px solid ${C.border}`,borderRadius:8,fontSize:12,fontFamily:"inherit",outline:"none"}}/>
                       <button onClick={()=>searchMktModal(mktModalSearch)} disabled={mktModalSearching}
-                        style={{padding:"0 12px",borderRadius:8,border:"none",background:C.rose,color:"#fff",fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit",opacity:mktModalSearching?0.6:1}}>
+                        style={{padding:"0 12px",borderRadius:8,border:"none",background:C.rose,color:"#fff",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit",opacity:mktModalSearching?0.6:1}}>
                         {mktModalSearching?"…":"검색"}
                       </button>
                     </div>
@@ -15914,8 +15914,8 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
                           }} style={{display:"flex",alignItems:"center",gap:8,padding:"6px 8px",borderRadius:8,background:C.white,cursor:"pointer",border:`1px solid ${C.border}`}}>
                             {it.image&&<img src={it.image} alt="" style={{width:32,height:32,objectFit:"cover",borderRadius:4,flexShrink:0}}/>}
                             <div style={{flex:1,overflow:"hidden"}}>
-                              <div style={{fontSize:10,fontWeight:700,color:C.ink,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{(it.title||"").replace(/<[^>]+>/g,"")}</div>
-                              <div style={{fontSize:9,color:C.inkLt}}>{it.mallName} · {it.lprice?`₩${it.lprice.toLocaleString()}`:"가격미상"}</div>
+                              <div style={{fontSize:12,fontWeight:700,color:C.ink,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{(it.title||"").replace(/<[^>]+>/g,"")}</div>
+                              <div style={{fontSize:11,color:C.inkLt}}>{it.mallName} · {it.lprice?`₩${it.lprice.toLocaleString()}`:"가격미상"}</div>
                             </div>
                           </div>
                         ))}
@@ -15932,29 +15932,29 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
                     {label:"메모",field:"note",placeholder:"예: 번들 구성, 무료배송"},
                   ].map(({label,field,type,placeholder})=>(
                     <div key={field} style={{marginBottom:10}}>
-                      <div style={{fontSize:11,fontWeight:700,color:C.inkMid,marginBottom:3}}>{label}</div>
+                      <div style={{fontSize:12,fontWeight:700,color:C.inkMid,marginBottom:3}}>{label}</div>
                       {type==="select" ? (
                         <select value={mktItemInput[field]} onChange={e=>setMktItemInput(p=>({...p,[field]:e.target.value}))}
-                          style={{width:"100%",padding:"7px 10px",border:`1px solid ${C.border}`,borderRadius:8,fontSize:12,fontFamily:"inherit",outline:"none",background:C.white}}>
+                          style={{width:"100%",padding:"7px 10px",border:`1px solid ${C.border}`,borderRadius:8,fontSize:13,fontFamily:"inherit",outline:"none",background:C.white}}>
                           {CHANNELS.map(ch=><option key={ch}>{ch}</option>)}
                         </select>
                       ) : (
                         <input value={mktItemInput[field]} onChange={e=>setMktItemInput(p=>({...p,[field]:e.target.value}))}
                           placeholder={placeholder}
-                          style={{width:"100%",padding:"7px 10px",border:`1px solid ${C.border}`,borderRadius:8,fontSize:12,fontFamily:"inherit",outline:"none",boxSizing:"border-box"}}/>
+                          style={{width:"100%",padding:"7px 10px",border:`1px solid ${C.border}`,borderRadius:8,fontSize:13,fontFamily:"inherit",outline:"none",boxSizing:"border-box"}}/>
                       )}
                     </div>
                   ))}
                   {/* 이미지 URL + 자동 추출 */}
                   <div style={{marginBottom:10}}>
-                    <div style={{fontSize:11,fontWeight:700,color:C.inkMid,marginBottom:3}}>이미지 URL</div>
+                    <div style={{fontSize:12,fontWeight:700,color:C.inkMid,marginBottom:3}}>이미지 URL</div>
                     <div style={{display:"flex",gap:6}}>
                       <input value={mktItemInput.image} onChange={e=>setMktItemInput(p=>({...p,image:e.target.value}))}
                         placeholder="https://...jpg"
-                        style={{flex:1,padding:"7px 10px",border:`1px solid ${C.border}`,borderRadius:8,fontSize:12,fontFamily:"inherit",outline:"none",boxSizing:"border-box"}}/>
+                        style={{flex:1,padding:"7px 10px",border:`1px solid ${C.border}`,borderRadius:8,fontSize:13,fontFamily:"inherit",outline:"none",boxSizing:"border-box"}}/>
                       <button onClick={()=>fetchOgImage(mktItemInput.url)} disabled={mktOgFetching||!mktItemInput.url}
                         title="링크 URL에서 이미지 자동 추출"
-                        style={{padding:"0 10px",borderRadius:8,border:`1px solid ${C.border}`,background:C.cream,cursor:"pointer",fontFamily:"inherit",fontSize:11,fontWeight:700,color:C.inkMid,whiteSpace:"nowrap",opacity:(!mktItemInput.url||mktOgFetching)?0.5:1}}>
+                        style={{padding:"0 10px",borderRadius:8,border:`1px solid ${C.border}`,background:C.cream,cursor:"pointer",fontFamily:"inherit",fontSize:12,fontWeight:700,color:C.inkMid,whiteSpace:"nowrap",opacity:(!mktItemInput.url||mktOgFetching)?0.5:1}}>
                         {mktOgFetching?"…":"자동"}
                       </button>
                     </div>
@@ -15965,7 +15965,7 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
                     )}
                   </div>
                   <div style={{display:"flex",gap:8,marginTop:4}}>
-                    <button onClick={()=>setMktItemModal(null)} style={{flex:1,fontSize:11,fontWeight:700,padding:"8px 0",borderRadius:8,border:`1px solid ${C.border}`,background:C.cream,color:C.inkMid,cursor:"pointer",fontFamily:"inherit"}}>취소</button>
+                    <button onClick={()=>setMktItemModal(null)} style={{flex:1,fontSize:12,fontWeight:700,padding:"8px 0",borderRadius:8,border:`1px solid ${C.border}`,background:C.cream,color:C.inkMid,cursor:"pointer",fontFamily:"inherit"}}>취소</button>
                     <button onClick={()=>{
                       const itemData = {
                         ...mktItemInput,
@@ -15987,7 +15987,7 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
                       }
                       setMktItemModal(null);
                       setMktItemInput({channel:"스마트스토어",productName:"",url:"",image:"",regularPrice:"",salePrice:"",promotion:"",note:""});
-                    }} style={{flex:2,fontSize:11,fontWeight:700,padding:"8px 0",borderRadius:8,border:"none",background:C.rose,color:"#fff",cursor:"pointer",fontFamily:"inherit"}}>저장</button>
+                    }} style={{flex:2,fontSize:12,fontWeight:700,padding:"8px 0",borderRadius:8,border:"none",background:C.rose,color:"#fff",cursor:"pointer",fontFamily:"inherit"}}>저장</button>
                   </div>
                 </div>
               </div>
@@ -15998,8 +15998,8 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
               <Card>
                 <div style={{textAlign:"center",padding:"32px 0",color:C.inkLt}}>
                   <MI n="storefront" size={32} style={{opacity:0.2,marginBottom:8}}/>
-                  <div style={{fontSize:12}}>우리 제품을 추가하고 경쟁사 가격을 조사해보세요</div>
-                  <button onClick={()=>setMktProductModal(true)} style={{marginTop:12,padding:"8px 20px",borderRadius:8,border:"none",background:C.rose,color:"#fff",fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
+                  <div style={{fontSize:13}}>우리 제품을 추가하고 경쟁사 가격을 조사해보세요</div>
+                  <button onClick={()=>setMktProductModal(true)} style={{marginTop:12,padding:"8px 20px",borderRadius:8,border:"none",background:C.rose,color:"#fff",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
                     + 제품 추가
                   </button>
                 </div>
@@ -16013,38 +16013,38 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
                   <>
                   <div style={{display:"flex",alignItems:"center",gap:0,borderBottom:`1px solid ${C.border}`,marginBottom:inPriceCrawl?0:8,flexWrap:"wrap"}}>
                   <button onClick={()=>setMktCategoryTab(MKT_COMPARE_TAB)}
-                    style={{padding:"8px 14px",background:"none",border:"none",borderBottom:`2px solid ${mktCategoryTab===MKT_COMPARE_TAB?"#0891b2":"transparent"}`,color:mktCategoryTab===MKT_COMPARE_TAB?"#0891b2":C.inkMid,fontWeight:mktCategoryTab===MKT_COMPARE_TAB?800:600,fontSize:12,cursor:"pointer",fontFamily:"inherit",marginBottom:-1}}>
+                    style={{padding:"8px 14px",background:"none",border:"none",borderBottom:`2px solid ${mktCategoryTab===MKT_COMPARE_TAB?"#0891b2":"transparent"}`,color:mktCategoryTab===MKT_COMPARE_TAB?"#0891b2":C.inkMid,fontWeight:mktCategoryTab===MKT_COMPARE_TAB?800:600,fontSize:13,cursor:"pointer",fontFamily:"inherit",marginBottom:-1}}>
                     📊 시장비교
                   </button>
                   {/* 제품 금액 크롤링 그룹 탭 */}
                   <button onClick={()=>{ if(!inPriceCrawl) setMktCategoryTab(PRICE_CATS[0]); }}
-                    style={{padding:"8px 14px",background:"none",border:"none",borderBottom:`2px solid ${inPriceCrawl?"#e55":"transparent"}`,color:inPriceCrawl?"#e55":C.inkMid,fontWeight:inPriceCrawl?800:600,fontSize:12,cursor:"pointer",fontFamily:"inherit",marginBottom:-1}}>
+                    style={{padding:"8px 14px",background:"none",border:"none",borderBottom:`2px solid ${inPriceCrawl?"#e55":"transparent"}`,color:inPriceCrawl?"#e55":C.inkMid,fontWeight:inPriceCrawl?800:600,fontSize:13,cursor:"pointer",fontFamily:"inherit",marginBottom:-1}}>
                     💰 제품 금액 크롤링
-                    <span style={{marginLeft:4,fontSize:10,opacity:0.7}}>
+                    <span style={{marginLeft:4,fontSize:12,opacity:0.7}}>
                       {(marketData||[]).filter(p=>PRICE_CATS.includes(p.category||"")).length}
                     </span>
                   </button>
                   {/* 크롤링검색 탭 */}
                   <button onClick={()=>setMktCategoryTab("크롤링검색")}
-                    style={{padding:"8px 14px",background:"none",border:"none",borderBottom:`2px solid ${mktCategoryTab==="크롤링검색"?C.rose:"transparent"}`,color:mktCategoryTab==="크롤링검색"?C.rose:C.inkMid,fontWeight:mktCategoryTab==="크롤링검색"?800:600,fontSize:12,cursor:"pointer",fontFamily:"inherit",marginBottom:-1}}>
+                    style={{padding:"8px 14px",background:"none",border:"none",borderBottom:`2px solid ${mktCategoryTab==="크롤링검색"?C.rose:"transparent"}`,color:mktCategoryTab==="크롤링검색"?C.rose:C.inkMid,fontWeight:mktCategoryTab==="크롤링검색"?800:600,fontSize:13,cursor:"pointer",fontFamily:"inherit",marginBottom:-1}}>
                     🔎 크롤링검색
-                    <span style={{marginLeft:4,fontSize:10,color:mktCategoryTab==="크롤링검색"?C.rose:C.inkLt}}>
+                    <span style={{marginLeft:4,fontSize:12,color:mktCategoryTab==="크롤링검색"?C.rose:C.inkLt}}>
                       {(marketData||[]).filter(p=>(p.category||MKT_CATEGORIES[0])==="크롤링검색").length}
                     </span>
                   </button>
                   <button onClick={()=>setMktCategoryTab(MKT_FAV_TAB)}
-                    style={{padding:"8px 14px",background:"none",border:"none",borderBottom:`2px solid ${mktCategoryTab===MKT_FAV_TAB?"#f59e0b":"transparent"}`,color:mktCategoryTab===MKT_FAV_TAB?"#f59e0b":C.inkMid,fontWeight:mktCategoryTab===MKT_FAV_TAB?800:600,fontSize:12,cursor:"pointer",fontFamily:"inherit",marginBottom:-1}}>
+                    style={{padding:"8px 14px",background:"none",border:"none",borderBottom:`2px solid ${mktCategoryTab===MKT_FAV_TAB?"#f59e0b":"transparent"}`,color:mktCategoryTab===MKT_FAV_TAB?"#f59e0b":C.inkMid,fontWeight:mktCategoryTab===MKT_FAV_TAB?800:600,fontSize:13,cursor:"pointer",fontFamily:"inherit",marginBottom:-1}}>
                     ⭐ 즐겨찾기
-                    <span style={{marginLeft:4,fontSize:10,color:mktCategoryTab===MKT_FAV_TAB?"#f59e0b":C.inkLt}}>
+                    <span style={{marginLeft:4,fontSize:12,color:mktCategoryTab===MKT_FAV_TAB?"#f59e0b":C.inkLt}}>
                       {(marketData||[]).reduce((s,p)=>s+(p.items||[]).filter(i=>i.favorite).length,0)}
                     </span>
                   </button>
                   <button onClick={()=>setMktCategoryTab(MKT_PRICE_TAB)}
-                    style={{padding:"8px 14px",background:"none",border:"none",borderBottom:`2px solid ${mktCategoryTab===MKT_PRICE_TAB?"#7c3aed":"transparent"}`,color:mktCategoryTab===MKT_PRICE_TAB?"#7c3aed":C.inkMid,fontWeight:mktCategoryTab===MKT_PRICE_TAB?800:600,fontSize:12,cursor:"pointer",fontFamily:"inherit",marginBottom:-1}}>
+                    style={{padding:"8px 14px",background:"none",border:"none",borderBottom:`2px solid ${mktCategoryTab===MKT_PRICE_TAB?"#7c3aed":"transparent"}`,color:mktCategoryTab===MKT_PRICE_TAB?"#7c3aed":C.inkMid,fontWeight:mktCategoryTab===MKT_PRICE_TAB?800:600,fontSize:13,cursor:"pointer",fontFamily:"inherit",marginBottom:-1}}>
                     🔍 크롤링체크
                   </button>
                   <button onClick={()=>setMktCategoryTab("📍트래킹")}
-                    style={{padding:"8px 14px",background:"none",border:"none",borderBottom:`2px solid ${mktCategoryTab==="📍트래킹"?"#0891b2":"transparent"}`,color:mktCategoryTab==="📍트래킹"?"#0891b2":C.inkMid,fontWeight:mktCategoryTab==="📍트래킹"?800:600,fontSize:12,cursor:"pointer",fontFamily:"inherit",marginBottom:-1}}>
+                    style={{padding:"8px 14px",background:"none",border:"none",borderBottom:`2px solid ${mktCategoryTab==="📍트래킹"?"#0891b2":"transparent"}`,color:mktCategoryTab==="📍트래킹"?"#0891b2":C.inkMid,fontWeight:mktCategoryTab==="📍트래킹"?800:600,fontSize:13,cursor:"pointer",fontFamily:"inherit",marginBottom:-1}}>
                     📍 트래킹
                   </button>
                   <div style={{flex:1}}/>
@@ -16059,7 +16059,7 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
                           else alert("오류: "+d.error);
                           setMktAllRunning(false);
                         }).catch(e=>{alert("오류: "+e.message);setMktAllRunning(false);});
-                    }} style={{display:"flex",alignItems:"center",gap:4,padding:"5px 12px",borderRadius:7,border:"none",background:mktAllRunning?"#e5e7eb":"#111",color:mktAllRunning?"#9ca3af":"#fff",fontWeight:700,fontSize:11,cursor:mktAllRunning?"not-allowed":"pointer",fontFamily:"inherit",whiteSpace:"nowrap"}}>
+                    }} style={{display:"flex",alignItems:"center",gap:4,padding:"5px 12px",borderRadius:7,border:"none",background:mktAllRunning?"#e5e7eb":"#111",color:mktAllRunning?"#9ca3af":"#fff",fontWeight:700,fontSize:12,cursor:mktAllRunning?"not-allowed":"pointer",fontFamily:"inherit",whiteSpace:"nowrap"}}>
                       <MI n="play_arrow" size={13}/>{mktAllRunning?"수집 중...":"전체 수집"}
                     </button>
                   )}
@@ -16069,12 +16069,12 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
                 {/* 제품 금액 크롤링 하위 탭 바 */}
                 {inPriceCrawl&&(
                   <div style={{display:"flex",alignItems:"center",gap:0,borderBottom:`1px solid ${C.border}`,marginBottom:8,background:"#fafafa",paddingLeft:8}}>
-                    <span style={{fontSize:10,color:"#e55",fontWeight:800,marginRight:6}}>▸</span>
+                    <span style={{fontSize:12,color:"#e55",fontWeight:800,marginRight:6}}>▸</span>
                     {PRICE_CATS.map(cat=>(
                       <button key={cat} onClick={()=>setMktCategoryTab(cat)}
-                        style={{padding:"6px 12px",background:"none",border:"none",borderBottom:`2px solid ${mktCategoryTab===cat?"#e55":"transparent"}`,color:mktCategoryTab===cat?"#e55":C.inkMid,fontWeight:mktCategoryTab===cat?800:600,fontSize:11,cursor:"pointer",fontFamily:"inherit",marginBottom:-1}}>
+                        style={{padding:"6px 12px",background:"none",border:"none",borderBottom:`2px solid ${mktCategoryTab===cat?"#e55":"transparent"}`,color:mktCategoryTab===cat?"#e55":C.inkMid,fontWeight:mktCategoryTab===cat?800:600,fontSize:12,cursor:"pointer",fontFamily:"inherit",marginBottom:-1}}>
                         {cat}
-                        <span style={{marginLeft:3,fontSize:9,opacity:0.7}}>
+                        <span style={{marginLeft:3,fontSize:11,opacity:0.7}}>
                           {(marketData||[]).filter(p=>(p.category||"")===cat).length}
                         </span>
                       </button>
@@ -16089,15 +16089,15 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
                   return(
                     <div>
                       <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12}}>
-                        <div style={{fontSize:12,color:C.inkMid}}>{favList.length}개 즐겨찾기 항목</div>
+                        <div style={{fontSize:13,color:C.inkMid}}>{favList.length}개 즐겨찾기 항목</div>
                         <button onClick={updateFavPrices} disabled={mktFavUpdating}
-                          style={{display:"flex",alignItems:"center",gap:5,padding:"7px 14px",borderRadius:8,border:"none",background:mktFavUpdating?C.cream:"#f59e0b",color:mktFavUpdating?C.inkMid:"#fff",fontWeight:700,fontSize:11,cursor:"pointer",fontFamily:"inherit",opacity:mktFavUpdating?0.7:1}}>
+                          style={{display:"flex",alignItems:"center",gap:5,padding:"7px 14px",borderRadius:8,border:"none",background:mktFavUpdating?C.cream:"#f59e0b",color:mktFavUpdating?C.inkMid:"#fff",fontWeight:700,fontSize:12,cursor:"pointer",fontFamily:"inherit",opacity:mktFavUpdating?0.7:1}}>
                           <MI n="sync" size={13} style={{color:mktFavUpdating?C.inkMid:"#fff"}}/>
                           {mktFavUpdating?"가격 조회 중...":"전체 가격 업데이트"}
                         </button>
                       </div>
                       {favList.length===0?(
-                        <Card><div style={{textAlign:"center",padding:"24px 0",color:C.inkLt,fontSize:12}}>⭐ 즐겨찾기한 항목이 없어요</div></Card>
+                        <Card><div style={{textAlign:"center",padding:"24px 0",color:C.inkLt,fontSize:13}}>⭐ 즐겨찾기한 항목이 없어요</div></Card>
                       ):(
                         <div style={{display:"flex",flexDirection:"column",gap:8}}>
                           {favList.map(item=>{
@@ -16110,30 +16110,30 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
                                 <div style={{display:"flex",alignItems:"center",gap:10}}>
                                   {item.image&&<img src={item.image} alt="" style={{width:40,height:40,objectFit:"cover",borderRadius:6,border:`1px solid ${C.border}`,flexShrink:0}}/>}
                                   <div style={{flex:1,minWidth:0}}>
-                                    <div style={{fontSize:10,color:C.inkLt,marginBottom:2}}>{item.prodName}</div>
+                                    <div style={{fontSize:12,color:C.inkLt,marginBottom:2}}>{item.prodName}</div>
                                     <div style={{display:"flex",alignItems:"center",gap:6,flexWrap:"wrap"}}>
-                                      <span style={{fontWeight:800,fontSize:12,color:C.ink,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{item.productName||"—"}</span>
-                                      <span style={{fontSize:10,fontWeight:700,padding:"1px 6px",borderRadius:6,background:C.cream,color:C.inkMid}}>{item.channel}</span>
+                                      <span style={{fontWeight:800,fontSize:13,color:C.ink,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{item.productName||"—"}</span>
+                                      <span style={{fontSize:12,fontWeight:700,padding:"1px 6px",borderRadius:6,background:C.cream,color:C.inkMid}}>{item.channel}</span>
                                     </div>
                                     <div style={{display:"flex",alignItems:"center",gap:8,marginTop:4,flexWrap:"wrap"}}>
                                       <span style={{fontSize:13,fontWeight:800,color:C.ink}}>{curr?`₩${curr.toLocaleString()}`:"—"}</span>
                                       {change!==null&&(
-                                        <span style={{fontSize:10,fontWeight:700,color:change>0?C.bad:C.good}}>
+                                        <span style={{fontSize:12,fontWeight:700,color:change>0?C.bad:C.good}}>
                                           {change>0?`▲ ₩${change.toLocaleString()}`:`▼ ₩${Math.abs(change).toLocaleString()}`}
                                         </span>
                                       )}
-                                      {item.url&&<a href={item.url} target="_blank" rel="noreferrer" style={{fontSize:9,color:"#2563eb",textDecoration:"none",display:"flex",alignItems:"center",gap:2}}><MI n="open_in_new" size={10}/>링크</a>}
+                                      {item.url&&<a href={item.url} target="_blank" rel="noreferrer" style={{fontSize:11,color:"#2563eb",textDecoration:"none",display:"flex",alignItems:"center",gap:2}}><MI n="open_in_new" size={10}/>링크</a>}
                                     </div>
                                   </div>
                                 </div>
                                 {history.length>0&&(
                                   <div style={{marginTop:10,borderTop:`1px solid ${C.border}`,paddingTop:8}}>
-                                    <div style={{fontSize:9,color:C.inkLt,marginBottom:4,fontWeight:700}}>가격 히스토리</div>
+                                    <div style={{fontSize:11,color:C.inkLt,marginBottom:4,fontWeight:700}}>가격 히스토리</div>
                                     <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
                                       {history.slice(-10).map((h,hi)=>(
                                         <div key={hi} style={{textAlign:"center",minWidth:52,background:C.cream,borderRadius:6,padding:"4px 6px"}}>
-                                          <div style={{fontSize:9,color:C.inkLt}}>{h.date.slice(5)}</div>
-                                          <div style={{fontSize:10,fontWeight:700,color:C.ink}}>₩{h.price.toLocaleString()}</div>
+                                          <div style={{fontSize:11,color:C.inkLt}}>{h.date.slice(5)}</div>
+                                          <div style={{fontSize:12,fontWeight:700,color:C.ink}}>₩{h.price.toLocaleString()}</div>
                                         </div>
                                       ))}
                                     </div>
@@ -16185,7 +16185,7 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
                         <div style={{display:"flex",alignItems:"center",gap:0,borderBottom:`1px solid ${C.border}`,marginBottom:2,flexWrap:"wrap"}}>
                           {COMPARE_INNER_TABS.map(t=>(
                             <button key={t.id} onClick={()=>setMktCompareInnerTab(t.id)}
-                              style={{padding:"6px 12px",background:"none",border:"none",borderBottom:`2px solid ${innerTab===t.id?t.color:"transparent"}`,color:innerTab===t.id?t.color:C.inkMid,fontWeight:innerTab===t.id?800:600,fontSize:11,cursor:"pointer",fontFamily:"inherit",marginBottom:-1,whiteSpace:"nowrap"}}>
+                              style={{padding:"6px 12px",background:"none",border:"none",borderBottom:`2px solid ${innerTab===t.id?t.color:"transparent"}`,color:innerTab===t.id?t.color:C.inkMid,fontWeight:innerTab===t.id?800:600,fontSize:12,cursor:"pointer",fontFamily:"inherit",marginBottom:-1,whiteSpace:"nowrap"}}>
                               {t.label}
                             </button>
                           ))}
@@ -16193,7 +16193,7 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
 
                         {/* API 키 오류 */}
                         {mktChApiError&&(
-                          <div style={{background:"#fef3c7",border:"1px solid #fcd34d",borderRadius:10,padding:"12px 16px",fontSize:12,color:"#92400e"}}>
+                          <div style={{background:"#fef3c7",border:"1px solid #fcd34d",borderRadius:10,padding:"12px 16px",fontSize:13,color:"#92400e"}}>
                             <strong>⚠️ 네이버 API 키 필요</strong><br/>
                             <span>Vercel 환경변수에 <code>NAVER_CLIENT_ID</code>, <code>NAVER_CLIENT_SECRET</code> 을 추가해주세요.<br/>
                             <a href="https://developers.naver.com/apps/#/register" target="_blank" rel="noopener noreferrer" style={{color:"#1d4ed8"}}>네이버 개발자센터</a>에서 "검색" API 앱 생성 후 발급받으세요.</span>
@@ -16202,12 +16202,12 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
 
                         {/* 카테고리 탭 */}
                         <div style={{display:"flex",gap:6,flexWrap:"wrap",alignItems:"center"}}>
-                          <span style={{fontSize:11,color:C.inkMid,fontWeight:600,marginRight:4}}>카테고리:</span>
+                          <span style={{fontSize:12,color:C.inkMid,fontWeight:600,marginRight:4}}>카테고리:</span>
                           {CH_QUICK_CATS.map(cat=>{
                             const active = chCat===cat && chResults!==undefined;
                             return(
                               <button key={cat} onClick={()=>selectCat(cat)} disabled={chSearching}
-                                style={{padding:"6px 14px",borderRadius:20,border:`1.5px solid ${active?accentColor:C.border}`,background:active?accentColor:"#fff",color:active?"#fff":C.ink,fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit",transition:"all .15s"}}>
+                                style={{padding:"6px 14px",borderRadius:20,border:`1.5px solid ${active?accentColor:C.border}`,background:active?accentColor:"#fff",color:active?"#fff":C.ink,fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"inherit",transition:"all .15s"}}>
                                 {cat}
                               </button>
                             );
@@ -16217,10 +16217,10 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
                             <input value={chQuery} onChange={e=>setMktChQuery(p=>({...p,[platform]:e.target.value}))}
                               onKeyDown={e=>e.key==="Enter"&&doChannelSearch(platform,chQuery)}
                               placeholder="직접 검색..."
-                              style={{width:130,padding:"5px 10px",border:`1.5px solid ${C.border}`,borderRadius:8,fontSize:11,fontFamily:"inherit",outline:"none"}}/>
+                              style={{width:130,padding:"5px 10px",border:`1.5px solid ${C.border}`,borderRadius:8,fontSize:12,fontFamily:"inherit",outline:"none"}}/>
                             <button onClick={()=>{ setMktChCategory(p=>({...p,[platform]:chQuery})); doChannelSearch(platform,chQuery); }}
                               disabled={chSearching||!chQuery.trim()}
-                              style={{padding:"5px 12px",borderRadius:8,border:"none",background:chSearching||!chQuery.trim()?"#e5e7eb":"#111",color:chSearching||!chQuery.trim()?C.inkMid:"#fff",fontWeight:700,fontSize:11,cursor:"pointer",fontFamily:"inherit",whiteSpace:"nowrap"}}>
+                              style={{padding:"5px 12px",borderRadius:8,border:"none",background:chSearching||!chQuery.trim()?"#e5e7eb":"#111",color:chSearching||!chQuery.trim()?C.inkMid:"#fff",fontWeight:700,fontSize:12,cursor:"pointer",fontFamily:"inherit",whiteSpace:"nowrap"}}>
                               {chSearching?"검색중":"검색"}
                             </button>
                           </div>
@@ -16236,22 +16236,22 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
 
                         {/* 미검색 상태 */}
                         {!chSearching&&chResults===undefined&&(
-                          <Card><div style={{textAlign:"center",padding:"32px 0",color:C.inkLt,fontSize:12}}>카테고리를 선택하면 검색됩니다</div></Card>
+                          <Card><div style={{textAlign:"center",padding:"32px 0",color:C.inkLt,fontSize:13}}>카테고리를 선택하면 검색됩니다</div></Card>
                         )}
 
                         {/* 결과 없음 */}
                         {!chSearching&&chResults!==undefined&&chResults.length===0&&!mktChApiError&&(
-                          <Card><div style={{textAlign:"center",padding:"32px 0",color:C.inkLt,fontSize:12}}>
+                          <Card><div style={{textAlign:"center",padding:"32px 0",color:C.inkLt,fontSize:13}}>
                             <div style={{fontSize:24,marginBottom:8}}>🔍</div>
                             <div>"{chCat}" 검색 결과가 없습니다</div>
-                            <div style={{fontSize:11,marginTop:4,color:C.inkLt}}>다른 키워드로 검색해보세요</div>
+                            <div style={{fontSize:12,marginTop:4,color:C.inkLt}}>다른 키워드로 검색해보세요</div>
                           </div></Card>
                         )}
 
                         {/* 결과 카드 그리드 */}
                         {!chSearching&&chResults&&chResults.length>0&&(
                           <>
-                            <div style={{fontSize:11,color:C.inkMid}}>
+                            <div style={{fontSize:12,color:C.inkMid}}>
                               <strong style={{color:accentColor}}>{platform==="naver_channel"?"네이버 쇼핑":"쿠팡"}</strong>
                               {" "}&quot;{chCat}&quot; 검색결과 {chResults.length}개
                             </div>
@@ -16272,28 +16272,28 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
                                       )}
                                       {/* 순위 배지 */}
                                       {item.rank&&(
-                                        <span style={{position:"absolute",top:8,left:8,background:rankColor,color:"#fff",fontWeight:900,fontSize:11,padding:"3px 7px",borderRadius:7,letterSpacing:"-0.5px"}}>
+                                        <span style={{position:"absolute",top:8,left:8,background:rankColor,color:"#fff",fontWeight:900,fontSize:12,padding:"3px 7px",borderRadius:7,letterSpacing:"-0.5px"}}>
                                           {item.rank}위
                                         </span>
                                       )}
                                       {/* 할인율 배지 */}
                                       {discountPct>=5&&(
-                                        <span style={{position:"absolute",top:8,right:8,background:"#dc2626",color:"#fff",fontWeight:900,fontSize:10,padding:"3px 6px",borderRadius:6}}>
+                                        <span style={{position:"absolute",top:8,right:8,background:"#dc2626",color:"#fff",fontWeight:900,fontSize:12,padding:"3px 6px",borderRadius:6}}>
                                           {discountPct}%↓
                                         </span>
                                       )}
                                       {/* OA 배지 */}
                                       {isOA&&(
-                                        <span style={{position:"absolute",bottom:6,left:6,background:"#16a34a",color:"#fff",fontSize:9,fontWeight:900,padding:"2px 6px",borderRadius:4}}>우리브랜드</span>
+                                        <span style={{position:"absolute",bottom:6,left:6,background:"#16a34a",color:"#fff",fontSize:11,fontWeight:900,padding:"2px 6px",borderRadius:4}}>우리브랜드</span>
                                       )}
                                     </div>
                                     {/* 텍스트 영역 */}
                                     <div style={{padding:"10px 11px 12px",display:"flex",flexDirection:"column",gap:3,flex:1}}>
-                                      {item.brand&&<div style={{fontSize:10,color:isOA?"#16a34a":C.inkMid,fontWeight:700,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{item.brand}</div>}
-                                      <div style={{fontSize:11,fontWeight:600,color:C.ink,lineHeight:1.4,overflow:"hidden",display:"-webkit-box",WebkitLineClamp:2,WebkitBoxOrient:"vertical"}}>{item.name}</div>
+                                      {item.brand&&<div style={{fontSize:12,color:isOA?"#16a34a":C.inkMid,fontWeight:700,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{item.brand}</div>}
+                                      <div style={{fontSize:12,fontWeight:600,color:C.ink,lineHeight:1.4,overflow:"hidden",display:"-webkit-box",WebkitLineClamp:2,WebkitBoxOrient:"vertical"}}>{item.name}</div>
                                       <div style={{marginTop:4,display:"flex",flexDirection:"column",gap:1}}>
                                         {item.originalPrice>item.price&&(
-                                          <div style={{fontSize:10,color:"#aaa",textDecoration:"line-through"}}>₩{item.originalPrice.toLocaleString()}</div>
+                                          <div style={{fontSize:12,color:"#aaa",textDecoration:"line-through"}}>₩{item.originalPrice.toLocaleString()}</div>
                                         )}
                                         <div style={{fontSize:14,fontWeight:900,color:discountPct>=5?"#dc2626":C.ink}}>
                                           ₩{item.price.toLocaleString()}
@@ -16357,7 +16357,7 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
                         <div style={{display:"flex",alignItems:"center",gap:0,borderBottom:`1px solid ${C.border}`,marginBottom:4,flexWrap:"wrap"}}>
                           {COMPARE_INNER_TABS.map(t=>(
                             <button key={t.id} onClick={()=>setMktCompareInnerTab(t.id)}
-                              style={{padding:"6px 12px",background:"none",border:"none",borderBottom:`2px solid ${innerTab===t.id?t.color:"transparent"}`,color:innerTab===t.id?t.color:C.inkMid,fontWeight:innerTab===t.id?800:600,fontSize:11,cursor:"pointer",fontFamily:"inherit",marginBottom:-1,whiteSpace:"nowrap"}}>
+                              style={{padding:"6px 12px",background:"none",border:"none",borderBottom:`2px solid ${innerTab===t.id?t.color:"transparent"}`,color:innerTab===t.id?t.color:C.inkMid,fontWeight:innerTab===t.id?800:600,fontSize:12,cursor:"pointer",fontFamily:"inherit",marginBottom:-1,whiteSpace:"nowrap"}}>
                               {t.label}
                             </button>
                           ))}
@@ -16365,7 +16365,7 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
                         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:8}}>
                           <div style={{display:"flex",gap:4,background:C.cream,borderRadius:10,padding:3}}>
                             {[{id:"prices",label:"가격 현황"},{id:"links",label:"링크 관리"}].map(t=>(
-                              <button key={t.id} onClick={()=>setMktPlatformTab(t.id)} style={{fontSize:11,fontWeight:700,padding:"5px 14px",borderRadius:8,border:"none",cursor:"pointer",background:mktPlatformTab===t.id?"#fff":"transparent",color:mktPlatformTab===t.id?C.ink:C.inkMid,fontFamily:"inherit"}}>{t.label}</button>
+                              <button key={t.id} onClick={()=>setMktPlatformTab(t.id)} style={{fontSize:12,fontWeight:700,padding:"5px 14px",borderRadius:8,border:"none",cursor:"pointer",background:mktPlatformTab===t.id?"#fff":"transparent",color:mktPlatformTab===t.id?C.ink:C.inkMid,fontFamily:"inherit"}}>{t.label}</button>
                             ))}
                           </div>
                           {mktPlatformTab==="prices"&&(
@@ -16379,10 +16379,10 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
                                     else alert("오류: "+(d.error||JSON.stringify(d)));
                                     setMktPlatformRunning(p=>({...p,[platform]:false}));
                                   }).catch(e=>{alert("오류: "+e.message);setMktPlatformRunning(p=>({...p,[platform]:false}));});
-                              }} style={{display:"flex",alignItems:"center",gap:5,padding:"7px 14px",borderRadius:8,border:"none",background:running2?"#e5e7eb":"#111",color:running2?C.inkMid:"#fff",fontWeight:700,fontSize:11,cursor:running2?"not-allowed":"pointer",fontFamily:"inherit"}}>
+                              }} style={{display:"flex",alignItems:"center",gap:5,padding:"7px 14px",borderRadius:8,border:"none",background:running2?"#e5e7eb":"#111",color:running2?C.inkMid:"#fff",fontWeight:700,fontSize:12,cursor:running2?"not-allowed":"pointer",fontFamily:"inherit"}}>
                                 <MI n="play_arrow" size={13}/>{running2?"실행 중...":"수집 실행"}
                               </button>
-                              <button onClick={()=>setMktPlatformPrices(p=>({...p,[platform]:null}))} style={{display:"flex",alignItems:"center",gap:5,padding:"7px 14px",borderRadius:8,border:"none",background:"#f3f4f6",color:C.inkMid,fontWeight:700,fontSize:11,cursor:"pointer",fontFamily:"inherit"}}>
+                              <button onClick={()=>setMktPlatformPrices(p=>({...p,[platform]:null}))} style={{display:"flex",alignItems:"center",gap:5,padding:"7px 14px",borderRadius:8,border:"none",background:"#f3f4f6",color:C.inkMid,fontWeight:700,fontSize:12,cursor:"pointer",fontFamily:"inherit"}}>
                                 <MI n="refresh" size={13}/>새로고침
                               </button>
                             </div>
@@ -16390,15 +16390,15 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
                         </div>
                         {mktPlatformTab==="prices"&&(
                           (loading2 || prices2 == null)?(
-                            <Card><div style={{textAlign:"center",padding:"32px 0",color:C.inkLt,fontSize:12}}>불러오는 중...</div></Card>
+                            <Card><div style={{textAlign:"center",padding:"32px 0",color:C.inkLt,fontSize:13}}>불러오는 중...</div></Card>
                           ):prices2.length===0?(
-                            <Card><div style={{textAlign:"center",padding:"32px 0",color:C.inkLt,fontSize:12}}>데이터 없음 — 링크 추가 후 수집 실행</div></Card>
+                            <Card><div style={{textAlign:"center",padding:"32px 0",color:C.inkLt,fontSize:13}}>데이터 없음 — 링크 추가 후 수집 실행</div></Card>
                           ):(
                             Object.entries(byKeyword2).map(([kw,items])=>(
                               <Card key={kw}>
-                                <div style={{fontSize:13,fontWeight:900,color:C.ink,marginBottom:10}}>{kw} <span style={{fontSize:10,fontWeight:500,color:C.inkLt}}>({items.length}개)</span></div>
+                                <div style={{fontSize:13,fontWeight:900,color:C.ink,marginBottom:10}}>{kw} <span style={{fontSize:12,fontWeight:500,color:C.inkLt}}>({items.length}개)</span></div>
                                 <div style={{overflowX:"auto"}}>
-                                  <table style={{width:"100%",borderCollapse:"collapse",fontSize:11}}>
+                                  <table style={{width:"100%",borderCollapse:"collapse",fontSize:12}}>
                                     <thead><tr style={{background:C.cream}}>
                                       {["이미지","상품명","순위","판매가","정가","할인율","수집일","링크"].map(h=>(
                                         <th key={h} style={{padding:"6px 8px",textAlign:"left",fontWeight:700,color:C.inkMid,borderBottom:`1px solid ${C.border}`,whiteSpace:"nowrap"}}>{h}</th>
@@ -16414,9 +16414,9 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
                                             <td style={{padding:"6px 8px",whiteSpace:"nowrap"}}>{item.rank!=null?<span style={{fontWeight:800,color:item.rank<=3?"#dc2626":item.rank<=10?"#ea580c":"#111"}}>{item.rank}위</span>:"—"}</td>
                                             <td style={{padding:"6px 8px",fontWeight:800,color:C.ink,whiteSpace:"nowrap"}}>{item.sale_price?`₩${item.sale_price.toLocaleString()}`:"—"}</td>
                                             <td style={{padding:"6px 8px",color:C.inkMid,whiteSpace:"nowrap",textDecoration:"line-through"}}>{item.original_price&&item.original_price!==item.sale_price?`₩${item.original_price.toLocaleString()}`:"—"}</td>
-                                            <td style={{padding:"6px 8px",whiteSpace:"nowrap"}}>{disc>0&&<span style={{background:"#fee2e2",color:"#dc2626",fontWeight:700,padding:"2px 6px",borderRadius:4,fontSize:10}}>{disc}%</span>}</td>
+                                            <td style={{padding:"6px 8px",whiteSpace:"nowrap"}}>{disc>0&&<span style={{background:"#fee2e2",color:"#dc2626",fontWeight:700,padding:"2px 6px",borderRadius:4,fontSize:12}}>{disc}%</span>}</td>
                                             <td style={{padding:"6px 8px",color:C.inkLt,whiteSpace:"nowrap"}}>{item.collected_at?item.collected_at.slice(0,10):"—"}</td>
-                                            <td style={{padding:"6px 8px"}}>{item.url&&<a href={item.url} target="_blank" rel="noreferrer" style={{fontSize:10,color:"#2563eb",textDecoration:"none",display:"flex",alignItems:"center",gap:2}}><MI n="open_in_new" size={10}/>보기</a>}</td>
+                                            <td style={{padding:"6px 8px"}}>{item.url&&<a href={item.url} target="_blank" rel="noreferrer" style={{fontSize:12,color:"#2563eb",textDecoration:"none",display:"flex",alignItems:"center",gap:2}}><MI n="open_in_new" size={10}/>보기</a>}</td>
                                           </tr>
                                         );
                                       })}
@@ -16430,15 +16430,15 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
                         {mktPlatformTab==="links"&&(
                           <div style={{display:"flex",flexDirection:"column",gap:10}}>
                             <Card>
-                              <div style={{fontSize:12,fontWeight:700,color:C.ink,marginBottom:8}}>링크 추가</div>
+                              <div style={{fontSize:13,fontWeight:700,color:C.ink,marginBottom:8}}>링크 추가</div>
                               <div style={{display:"flex",flexDirection:"column",gap:6}}>
                                 <input value={mktNewUrl} onChange={e=>setMktNewUrl(e.target.value)}
                                   placeholder="상품 URL"
-                                  style={{fontSize:11,padding:"7px 10px",borderRadius:8,border:`1px solid ${C.border}`,outline:"none",fontFamily:"inherit"}}/>
+                                  style={{fontSize:12,padding:"7px 10px",borderRadius:8,border:`1px solid ${C.border}`,outline:"none",fontFamily:"inherit"}}/>
                                 <div style={{display:"flex",gap:6}}>
                                   {MKT_CATEGORIES.filter(c=>c!=="크롤링검색").map(cat=>(
                                     <button key={cat} onClick={()=>setMktNewCategory(cat)}
-                                      style={{flex:1,padding:"5px 0",borderRadius:7,border:`1.5px solid ${mktNewCategory===cat?C.rose:C.border}`,background:mktNewCategory===cat?C.rose:"transparent",color:mktNewCategory===cat?"#fff":C.inkMid,fontSize:10,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
+                                      style={{flex:1,padding:"5px 0",borderRadius:7,border:`1.5px solid ${mktNewCategory===cat?C.rose:C.border}`,background:mktNewCategory===cat?C.rose:"transparent",color:mktNewCategory===cat?"#fff":C.inkMid,fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
                                       {cat}
                                     </button>
                                   ))}
@@ -16446,44 +16446,44 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
                                 <div style={{display:"flex",gap:8,alignItems:"center"}}>
                                   <input value={mktNewKeyword} onChange={e=>setMktNewKeyword(e.target.value)}
                                     placeholder="검색 키워드 (순위 추적용, 선택)"
-                                    style={{flex:1,fontSize:11,padding:"7px 10px",borderRadius:8,border:`1px solid ${C.border}`,outline:"none",fontFamily:"inherit"}}/>
+                                    style={{flex:1,fontSize:12,padding:"7px 10px",borderRadius:8,border:`1px solid ${C.border}`,outline:"none",fontFamily:"inherit"}}/>
                                   <button onClick={()=>{
                                     const url=mktNewUrl.trim(); if(!url) return;
                                     const pid=extractPid2(url);
                                     fetch("/api/market/links",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({platform,product_id:pid,url,active:true,search_keyword:mktNewKeyword.trim()||null,category:mktNewCategory||null})})
                                       .then(()=>{setMktNewUrl("");setMktNewKeyword("");setMktNewCategory("");setMktPlatformLinks(p=>({...p,[platform]:null}));setMktPlatformPrices(p=>({...p,[platform]:null}));setMktCompareData(null);});
-                                  }} style={{padding:"7px 16px",borderRadius:8,border:"none",background:"#111",color:"#fff",fontWeight:700,fontSize:11,cursor:"pointer",fontFamily:"inherit",whiteSpace:"nowrap"}}>
+                                  }} style={{padding:"7px 16px",borderRadius:8,border:"none",background:"#111",color:"#fff",fontWeight:700,fontSize:12,cursor:"pointer",fontFamily:"inherit",whiteSpace:"nowrap"}}>
                                     <MI n="add" size={13}/>추가
                                   </button>
                                 </div>
                               </div>
                             </Card>
                             <Card>
-                              <div style={{fontSize:12,fontWeight:700,color:C.ink,marginBottom:8}}>등록된 링크 <span style={{fontWeight:400,color:C.inkLt}}>({(links2||[]).length}개)</span></div>
+                              <div style={{fontSize:13,fontWeight:700,color:C.ink,marginBottom:8}}>등록된 링크 <span style={{fontWeight:400,color:C.inkLt}}>({(links2||[]).length}개)</span></div>
                               {!links2?(
-                                <div style={{color:C.inkLt,fontSize:11,textAlign:"center",padding:"16px 0"}}>불러오는 중...</div>
+                                <div style={{color:C.inkLt,fontSize:12,textAlign:"center",padding:"16px 0"}}>불러오는 중...</div>
                               ):links2.length===0?(
-                                <div style={{color:C.inkLt,fontSize:11,textAlign:"center",padding:"16px 0"}}>등록된 링크 없음</div>
+                                <div style={{color:C.inkLt,fontSize:12,textAlign:"center",padding:"16px 0"}}>등록된 링크 없음</div>
                               ):(
                                 <div style={{display:"flex",flexDirection:"column",gap:6}}>
                                   {links2.map(link=>(
                                     <div key={link.id} style={{display:"flex",alignItems:"center",gap:8,padding:"6px 0",borderBottom:`1px solid ${C.cream}`}}>
-                                      <span style={{fontSize:10,color:C.inkLt,minWidth:60}}>#{link.product_id}</span>
+                                      <span style={{fontSize:12,color:C.inkLt,minWidth:60}}>#{link.product_id}</span>
                                       <div style={{flex:1,overflow:"hidden"}}>
-                                        <a href={link.url} target="_blank" rel="noreferrer" style={{fontSize:11,color:"#2563eb",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",display:"block"}}>{link.url}</a>
+                                        <a href={link.url} target="_blank" rel="noreferrer" style={{fontSize:12,color:"#2563eb",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",display:"block"}}>{link.url}</a>
                                         {mktEditId===link.id?(
                                           <div style={{display:"flex",gap:4,marginTop:3}}>
                                             <input value={mktEditKeyword} onChange={e=>setMktEditKeyword(e.target.value)}
                                               placeholder="검색 키워드" autoFocus
-                                              style={{flex:1,fontSize:10,padding:"3px 6px",borderRadius:6,border:`1px solid ${C.border}`,outline:"none",fontFamily:"inherit"}}/>
+                                              style={{flex:1,fontSize:12,padding:"3px 6px",borderRadius:6,border:`1px solid ${C.border}`,outline:"none",fontFamily:"inherit"}}/>
                                             <button onClick={()=>{
                                               fetch("/api/market/links",{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({id:link.id,search_keyword:mktEditKeyword.trim()||null})})
                                                 .then(()=>{setMktEditId(null);setMktPlatformLinks(p=>({...p,[platform]:null}));});
-                                            }} style={{padding:"3px 8px",borderRadius:6,border:"none",background:"#111",color:"#fff",fontSize:10,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>저장</button>
-                                            <button onClick={()=>setMktEditId(null)} style={{padding:"3px 6px",borderRadius:6,border:"none",background:"#f3f4f6",color:C.inkMid,fontSize:10,cursor:"pointer",fontFamily:"inherit"}}>취소</button>
+                                            }} style={{padding:"3px 8px",borderRadius:6,border:"none",background:"#111",color:"#fff",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>저장</button>
+                                            <button onClick={()=>setMktEditId(null)} style={{padding:"3px 6px",borderRadius:6,border:"none",background:"#f3f4f6",color:C.inkMid,fontSize:12,cursor:"pointer",fontFamily:"inherit"}}>취소</button>
                                           </div>
                                         ):(
-                                          <span style={{fontSize:10,color:"#7c3aed",cursor:"pointer"}} onClick={()=>{setMktEditId(link.id);setMktEditKeyword(link.search_keyword||"");}}>
+                                          <span style={{fontSize:12,color:"#7c3aed",cursor:"pointer"}} onClick={()=>{setMktEditId(link.id);setMktEditKeyword(link.search_keyword||"");}}>
                                             {link.search_keyword?`🔍 ${link.search_keyword}`:"+ 키워드 추가"}
                                           </span>
                                         )}
@@ -16491,14 +16491,14 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
                                       <button onClick={()=>{
                                         fetch("/api/market/links",{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({id:link.id,active:!link.active})})
                                           .then(()=>setMktPlatformLinks(p=>({...p,[platform]:null})));
-                                      }} style={{padding:"3px 8px",borderRadius:6,border:"none",background:link.active?"#dcfce7":"#f3f4f6",color:link.active?"#16a34a":C.inkMid,fontSize:10,fontWeight:700,cursor:"pointer",fontFamily:"inherit",whiteSpace:"nowrap"}}>
+                                      }} style={{padding:"3px 8px",borderRadius:6,border:"none",background:link.active?"#dcfce7":"#f3f4f6",color:link.active?"#16a34a":C.inkMid,fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit",whiteSpace:"nowrap"}}>
                                         {link.active?"활성":"비활성"}
                                       </button>
                                       <button onClick={()=>{
                                         if(!confirm("삭제할까요?")) return;
                                         fetch("/api/market/links",{method:"DELETE",headers:{"Content-Type":"application/json"},body:JSON.stringify({id:link.id})})
                                           .then(()=>setMktPlatformLinks(p=>({...p,[platform]:null})));
-                                      }} style={{padding:"3px 8px",borderRadius:6,border:"none",background:"#fee2e2",color:"#dc2626",fontSize:10,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
+                                      }} style={{padding:"3px 8px",borderRadius:6,border:"none",background:"#fee2e2",color:"#dc2626",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
                                         삭제
                                       </button>
                                     </div>
@@ -16546,34 +16546,34 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
                       <div style={{display:"flex",alignItems:"center",gap:0,borderBottom:`1px solid ${C.border}`,marginBottom:4,flexWrap:"wrap"}}>
                         {COMPARE_INNER_TABS.map(t=>(
                           <button key={t.id} onClick={()=>setMktCompareInnerTab(t.id)}
-                            style={{padding:"6px 12px",background:"none",border:"none",borderBottom:`2px solid ${innerTab===t.id?t.color:"transparent"}`,color:innerTab===t.id?t.color:C.inkMid,fontWeight:innerTab===t.id?800:600,fontSize:11,cursor:"pointer",fontFamily:"inherit",marginBottom:-1,whiteSpace:"nowrap"}}>
+                            style={{padding:"6px 12px",background:"none",border:"none",borderBottom:`2px solid ${innerTab===t.id?t.color:"transparent"}`,color:innerTab===t.id?t.color:C.inkMid,fontWeight:innerTab===t.id?800:600,fontSize:12,cursor:"pointer",fontFamily:"inherit",marginBottom:-1,whiteSpace:"nowrap"}}>
                             {t.label}
                           </button>
                         ))}
                         <div style={{flex:1}}/>
-                        <button onClick={()=>{setMktCompareData(null);setMktOurProds(null);setMktCompLinkOpen(null);}} style={{display:"flex",alignItems:"center",gap:4,padding:"5px 12px",borderRadius:7,border:"none",background:"#f3f4f6",color:C.inkMid,fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
+                        <button onClick={()=>{setMktCompareData(null);setMktOurProds(null);setMktCompLinkOpen(null);}} style={{display:"flex",alignItems:"center",gap:4,padding:"5px 12px",borderRadius:7,border:"none",background:"#f3f4f6",color:C.inkMid,fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
                           <MI n="refresh" size={12}/>새로고침
                         </button>
                       </div>
                       {/* 경쟁사 비교 로딩/콘텐츠 */}
                       {isNaverLoading&&innerTab==="naver"&&(
-                        <Card><div style={{textAlign:"center",padding:24,color:C.inkMid,fontSize:12}}>불러오는 중...</div></Card>
+                        <Card><div style={{textAlign:"center",padding:24,color:C.inkMid,fontSize:13}}>불러오는 중...</div></Card>
                       )}
                       {(!isNaverLoading||innerTab!=="naver")&&(
                       <>{/* 우리 제품 추가 폼 */}
                       <Card>
-                        <div style={{fontSize:12,fontWeight:800,color:C.ink,marginBottom:10}}>우리 브랜드 제품 추가</div>
+                        <div style={{fontSize:13,fontWeight:800,color:C.ink,marginBottom:10}}>우리 브랜드 제품 추가</div>
                         <div style={{display:"flex",gap:6,flexWrap:"wrap",alignItems:"center"}}>
                           <input value={mktOurProdInput.name} onChange={e=>setMktOurProdInput(p=>({...p,name:e.target.value}))}
                             placeholder="제품명 (예: 미니고데기)"
-                            style={{flex:2,minWidth:120,padding:"6px 10px",border:`1px solid ${C.border}`,borderRadius:6,fontSize:11,fontFamily:"inherit",outline:"none"}}/>
+                            style={{flex:2,minWidth:120,padding:"6px 10px",border:`1px solid ${C.border}`,borderRadius:6,fontSize:12,fontFamily:"inherit",outline:"none"}}/>
                           <input value={mktOurProdInput.ourPrice} onChange={e=>setMktOurProdInput(p=>({...p,ourPrice:e.target.value}))}
                             placeholder="판매가"
-                            style={{width:90,padding:"6px 10px",border:`1px solid ${C.border}`,borderRadius:6,fontSize:11,fontFamily:"inherit",outline:"none"}}/>
+                            style={{width:90,padding:"6px 10px",border:`1px solid ${C.border}`,borderRadius:6,fontSize:12,fontFamily:"inherit",outline:"none"}}/>
                           <div style={{display:"flex",gap:4}}>
                             {["드라이기","고데기","케어제품"].map(cat=>(
                               <button key={cat} onClick={()=>setMktOurProdInput(p=>({...p,category:cat}))}
-                                style={{padding:"5px 10px",borderRadius:6,border:`1.5px solid ${mktOurProdInput.category===cat?"#7c3aed":C.border}`,background:mktOurProdInput.category===cat?"#7c3aed":"transparent",color:mktOurProdInput.category===cat?"#fff":C.inkMid,fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
+                                style={{padding:"5px 10px",borderRadius:6,border:`1.5px solid ${mktOurProdInput.category===cat?"#7c3aed":C.border}`,background:mktOurProdInput.category===cat?"#7c3aed":"transparent",color:mktOurProdInput.category===cat?"#fff":C.inkMid,fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
                                 {cat}
                               </button>
                             ))}
@@ -16584,7 +16584,7 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
                             await fetch("/api/market/compare-prods",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(newProd)});
                             setMktOurProds(prev=>[...(prev||[]),newProd]);
                             setMktOurProdInput(p=>({...p,name:"",ourPrice:""}));
-                          }} style={{padding:"6px 14px",borderRadius:6,border:"none",background:"#7c3aed",color:"#fff",fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
+                          }} style={{padding:"6px 14px",borderRadius:6,border:"none",background:"#7c3aed",color:"#fff",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
                             추가
                           </button>
                         </div>
@@ -16605,20 +16605,20 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
                             {/* 우리 제품 헤더 */}
                             <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12}}>
                               <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
-                                <span style={{background:"#16a34a",color:"#fff",fontSize:9,fontWeight:700,padding:"3px 7px",borderRadius:4}}>우리</span>
-                                <span style={{background:"#7c3aed",color:"#fff",fontSize:9,fontWeight:700,padding:"3px 7px",borderRadius:4}}>{prod.category}</span>
+                                <span style={{background:"#16a34a",color:"#fff",fontSize:11,fontWeight:700,padding:"3px 7px",borderRadius:4}}>우리</span>
+                                <span style={{background:"#7c3aed",color:"#fff",fontSize:11,fontWeight:700,padding:"3px 7px",borderRadius:4}}>{prod.category}</span>
                                 <span style={{fontWeight:900,fontSize:14,color:C.ink}}>{prod.name}</span>
                                 {prod.our_price>0&&<span style={{fontWeight:800,fontSize:13,color:"#16a34a"}}>₩{prod.our_price.toLocaleString()}</span>}
                               </div>
                               <div style={{display:"flex",gap:6}}>
                                 <button onClick={()=>{setMktCompLinkOpen(isOpen?null:prod.id);setMktCompLinkSearch("");}}
-                                  style={{display:"flex",alignItems:"center",gap:4,padding:"5px 10px",borderRadius:6,border:`1.5px solid ${isOpen?"#0891b2":C.border}`,background:isOpen?"#e0f2fe":"transparent",color:isOpen?"#0369a1":C.inkMid,fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
+                                  style={{display:"flex",alignItems:"center",gap:4,padding:"5px 10px",borderRadius:6,border:`1.5px solid ${isOpen?"#0891b2":C.border}`,background:isOpen?"#e0f2fe":"transparent",color:isOpen?"#0369a1":C.inkMid,fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
                                   <MI n="add_link" size={13}/>{isOpen?"닫기":"경쟁사 연결"}
                                 </button>
                                 <button onClick={async()=>{
                                   setMktOurProds(prev=>(prev||[]).filter(p=>p.id!==prod.id));
                                   await fetch("/api/market/compare-prods",{method:"DELETE",headers:{"Content-Type":"application/json"},body:JSON.stringify({id:prod.id})});
-                                }} style={{padding:"5px 8px",borderRadius:6,border:`1px solid ${C.border}`,background:"none",color:"#dc2626",fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
+                                }} style={{padding:"5px 8px",borderRadius:6,border:`1px solid ${C.border}`,background:"none",color:"#dc2626",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
                                   삭제
                                 </button>
                               </div>
@@ -16627,7 +16627,7 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
                             {/* 연결된 경쟁사 테이블 */}
                             {linkedComps.length>0&&(
                               <div style={{overflowX:"auto",marginBottom:isOpen?12:0}}>
-                                <table style={{width:"100%",borderCollapse:"collapse",fontSize:11}}>
+                                <table style={{width:"100%",borderCollapse:"collapse",fontSize:12}}>
                                   <thead><tr style={{background:C.cream}}>
                                     {["","브랜드/상품명","플랫폼","판매가","정가","할인율","비교","링크",""].map(h=>(
                                       <th key={h} style={{padding:"5px 8px",textAlign:"left",fontWeight:700,color:C.inkMid,borderBottom:`1px solid ${C.border}`,whiteSpace:"nowrap"}}>{h}</th>
@@ -16644,19 +16644,19 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
                                           <td style={{padding:"5px 8px"}}>{p.image&&<img src={p.image} alt="" style={{width:34,height:34,objectFit:"cover",borderRadius:4,border:`1px solid ${C.border}`}}/>}</td>
                                           <td style={{padding:"5px 8px",maxWidth:200,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
                                             <div style={{fontWeight:600}}>{p.brand}</div>
-                                            <div style={{color:C.inkMid,fontSize:10}}>{p.name}</div>
+                                            <div style={{color:C.inkMid,fontSize:12}}>{p.name}</div>
                                           </td>
                                           <td style={{padding:"5px 8px"}}>
-                                            <span style={{background:PLATFORM_COLOR[p.platform]||"#999",color:"#fff",fontSize:9,fontWeight:700,padding:"2px 5px",borderRadius:4,whiteSpace:"nowrap"}}>{PLATFORM_LABEL[p.platform]||p.platform}</span>
+                                            <span style={{background:PLATFORM_COLOR[p.platform]||"#999",color:"#fff",fontSize:11,fontWeight:700,padding:"2px 5px",borderRadius:4,whiteSpace:"nowrap"}}>{PLATFORM_LABEL[p.platform]||p.platform}</span>
                                           </td>
                                           <td style={{padding:"5px 8px",fontWeight:800,color:cheaper?"#dc2626":C.ink}}>{`₩${p.sale_price.toLocaleString()}`}</td>
                                           <td style={{padding:"5px 8px",color:C.inkMid,textDecoration:"line-through"}}>{p.original_price&&p.original_price!==p.sale_price?`₩${p.original_price.toLocaleString()}`:"—"}</td>
-                                          <td style={{padding:"5px 8px"}}>{disc>0&&<span style={{background:"#fee2e2",color:"#dc2626",fontWeight:700,padding:"2px 5px",borderRadius:4,fontSize:10}}>{disc}%</span>}</td>
+                                          <td style={{padding:"5px 8px"}}>{disc>0&&<span style={{background:"#fee2e2",color:"#dc2626",fontWeight:700,padding:"2px 5px",borderRadius:4,fontSize:12}}>{disc}%</span>}</td>
                                           <td style={{padding:"5px 8px",whiteSpace:"nowrap"}}>
-                                            {diff!==null&&<span style={{fontWeight:700,color:diff<0?"#dc2626":"#6b7280",fontSize:10}}>{diff<0?`▼₩${Math.abs(diff).toLocaleString()}`:`+₩${diff.toLocaleString()}`}</span>}
+                                            {diff!==null&&<span style={{fontWeight:700,color:diff<0?"#dc2626":"#6b7280",fontSize:12}}>{diff<0?`▼₩${Math.abs(diff).toLocaleString()}`:`+₩${diff.toLocaleString()}`}</span>}
                                           </td>
                                           <td style={{padding:"5px 8px"}}>
-                                            {p.url&&<a href={p.url} target="_blank" rel="noopener noreferrer" style={{display:"inline-block",padding:"2px 8px",borderRadius:4,background:"#e0f2fe",color:"#0369a1",fontSize:10,fontWeight:700,textDecoration:"none",whiteSpace:"nowrap"}}>보기</a>}
+                                            {p.url&&<a href={p.url} target="_blank" rel="noopener noreferrer" style={{display:"inline-block",padding:"2px 8px",borderRadius:4,background:"#e0f2fe",color:"#0369a1",fontSize:12,fontWeight:700,textDecoration:"none",whiteSpace:"nowrap"}}>보기</a>}
                                           </td>
                                           <td style={{padding:"5px 8px"}}>
                                             <button onClick={()=>toggleLink(prod,key)} style={{background:"none",border:"none",cursor:"pointer",color:"#dc2626",fontSize:14,lineHeight:1,padding:"0 2px"}} title="연결 해제">×</button>
@@ -16669,7 +16669,7 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
                               </div>
                             )}
                             {linkedComps.length===0&&!isOpen&&(
-                              <div style={{color:C.inkLt,fontSize:11,padding:"8px 0"}}>연결된 경쟁사 없음 — 우측 "경쟁사 연결" 버튼으로 추가하세요</div>
+                              <div style={{color:C.inkLt,fontSize:12,padding:"8px 0"}}>연결된 경쟁사 없음 — 우측 "경쟁사 연결" 버튼으로 추가하세요</div>
                             )}
 
                             {/* 경쟁사 연결 피커 */}
@@ -16679,10 +16679,10 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
                                   value={mktCompLinkSearch}
                                   onChange={e=>setMktCompLinkSearch(e.target.value)}
                                   placeholder="제품명, 브랜드, 플랫폼 검색..."
-                                  style={{width:"100%",padding:"6px 10px",border:`1px solid ${C.border}`,borderRadius:6,fontSize:11,fontFamily:"inherit",outline:"none",boxSizing:"border-box",marginBottom:8}}
+                                  style={{width:"100%",padding:"6px 10px",border:`1px solid ${C.border}`,borderRadius:6,fontSize:12,fontFamily:"inherit",outline:"none",boxSizing:"border-box",marginBottom:8}}
                                   autoFocus
                                 />
-                                {pickerItems.length===0&&<div style={{color:C.inkLt,fontSize:11,textAlign:"center",padding:"8px 0"}}>수집된 제품이 없습니다</div>}
+                                {pickerItems.length===0&&<div style={{color:C.inkLt,fontSize:12,textAlign:"center",padding:"8px 0"}}>수집된 제품이 없습니다</div>}
                                 <div style={{maxHeight:260,overflowY:"auto",display:"flex",flexDirection:"column",gap:2}}>
                                   {pickerItems.map(p=>{
                                     const key=`${p.platform}__${p.product_id}`;
@@ -16692,9 +16692,9 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
                                         style={{display:"flex",alignItems:"center",gap:8,padding:"5px 8px",borderRadius:6,cursor:"pointer",background:linked?"#dcfce7":"#fff",border:`1px solid ${linked?"#16a34a":C.border}`}}>
                                         {p.image&&<img src={p.image} alt="" style={{width:30,height:30,objectFit:"cover",borderRadius:4,flexShrink:0}}/>}
                                         <div style={{flex:1,minWidth:0}}>
-                                          <div style={{fontWeight:600,fontSize:11,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.brand} {p.name}</div>
-                                          <div style={{fontSize:10,color:C.inkMid}}>
-                                            <span style={{background:PLATFORM_COLOR[p.platform]||"#999",color:"#fff",fontSize:8,fontWeight:700,padding:"1px 4px",borderRadius:3,marginRight:4}}>{PLATFORM_LABEL[p.platform]||p.platform}</span>
+                                          <div style={{fontWeight:600,fontSize:12,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.brand} {p.name}</div>
+                                          <div style={{fontSize:12,color:C.inkMid}}>
+                                            <span style={{background:PLATFORM_COLOR[p.platform]||"#999",color:"#fff",fontSize:10,fontWeight:700,padding:"1px 4px",borderRadius:3,marginRight:4}}>{PLATFORM_LABEL[p.platform]||p.platform}</span>
                                             {p.sale_price?`₩${p.sale_price.toLocaleString()}`:""}
                                           </div>
                                         </div>
@@ -16724,9 +16724,9 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
                                       const kw = prod.category||prod.name||"드라이기";
                                       doChannelSearch(chTab, kw, `comp_${prod.id}_${chTab}`);
                                     }
-                                  }} style={{display:"flex",alignItems:"center",gap:5,background:"none",border:"none",cursor:"pointer",fontFamily:"inherit",fontSize:11,fontWeight:700,color:C.inkMid,padding:0}}>
+                                  }} style={{display:"flex",alignItems:"center",gap:5,background:"none",border:"none",cursor:"pointer",fontFamily:"inherit",fontSize:12,fontWeight:700,color:C.inkMid,padding:0}}>
                                     <span style={{fontSize:13}}>{chOpen?"▲":"▼"}</span> 채널 랭킹 보기
-                                    <span style={{fontSize:9,color:C.inkLt,fontWeight:400}}>(네이버/쿠팡 실시간)</span>
+                                    <span style={{fontSize:11,color:C.inkLt,fontWeight:400}}>(네이버/쿠팡 실시간)</span>
                                   </button>
                                   {chOpen&&(
                                     <div style={{marginTop:10,display:"flex",flexDirection:"column",gap:8}}>
@@ -16734,7 +16734,7 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
                                       {chRes===undefined&&!chSearching&&(
                                         <div style={{textAlign:"center",padding:"10px 0"}}>
                                           <button onClick={()=>doChannelSearch(chTab,prod.category||prod.name||"드라이기",chKey)}
-                                            style={{padding:"5px 16px",borderRadius:7,border:"none",background:C.rose,color:"#fff",fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
+                                            style={{padding:"5px 16px",borderRadius:7,border:"none",background:C.rose,color:"#fff",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
                                             🔍 랭킹 불러오기
                                           </button>
                                         </div>
@@ -16749,27 +16749,27 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
                                               const kw = prod.category||prod.name||"드라이기";
                                               doChannelSearch(t.id, kw, rKey);
                                             }
-                                          }} style={{padding:"5px 12px",borderRadius:20,border:`1.5px solid ${chTab===t.id?t.color:C.border}`,background:chTab===t.id?t.color:"#fff",color:chTab===t.id?"#fff":C.inkMid,fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
+                                          }} style={{padding:"5px 12px",borderRadius:20,border:`1.5px solid ${chTab===t.id?t.color:C.border}`,background:chTab===t.id?t.color:"#fff",color:chTab===t.id?"#fff":C.inkMid,fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
                                             {t.label}
                                           </button>
                                         ))}
                                         <button onClick={()=>{
                                           const kw = prod.category||prod.name||"드라이기";
                                           doChannelSearch(chTab, kw, chKey);
-                                        }} style={{marginLeft:"auto",display:"flex",alignItems:"center",gap:3,padding:"4px 10px",borderRadius:6,border:`1px solid ${C.border}`,background:"none",color:C.inkMid,fontSize:10,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
+                                        }} style={{marginLeft:"auto",display:"flex",alignItems:"center",gap:3,padding:"4px 10px",borderRadius:6,border:`1px solid ${C.border}`,background:"none",color:C.inkMid,fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
                                           <MI n="refresh" size={11}/>새로고침
                                         </button>
                                       </div>
                                       {/* 검색 중 */}
-                                      {chSearching&&<div style={{textAlign:"center",padding:"16px 0",color:C.inkMid,fontSize:11}}>검색 중...</div>}
+                                      {chSearching&&<div style={{textAlign:"center",padding:"16px 0",color:C.inkMid,fontSize:12}}>검색 중...</div>}
                                       {/* 결과 테이블 */}
                                       {!chSearching&&chRes&&chRes.length>0&&(
                                         <div style={{overflowX:"auto"}}>
-                                          <table style={{width:"100%",borderCollapse:"collapse",fontSize:11}}>
+                                          <table style={{width:"100%",borderCollapse:"collapse",fontSize:12}}>
                                             <thead>
                                               <tr style={{background:C.cream}}>
                                                 {(chTab==="amazon"?["순위","상품명","가격","별점","리뷰수","비교"]:["순위","브랜드","상품명","플랫폼","판매가","정가","할인율","비교"]).map(h=>(
-                                                  <th key={h} style={{padding:"7px 10px",textAlign:h==="순위"||h==="판매가"||h==="정가"||h==="할인율"||h==="가격"||h==="별점"||h==="리뷰수"?"center":"left",fontWeight:700,color:C.inkMid,borderBottom:`1px solid ${C.border}`,whiteSpace:"nowrap",fontSize:10}}>{h}</th>
+                                                  <th key={h} style={{padding:"7px 10px",textAlign:h==="순위"||h==="판매가"||h==="정가"||h==="할인율"||h==="가격"||h==="별점"||h==="리뷰수"?"center":"left",fontWeight:700,color:C.inkMid,borderBottom:`1px solid ${C.border}`,whiteSpace:"nowrap",fontSize:12}}>{h}</th>
                                                 ))}
                                               </tr>
                                             </thead>
@@ -16789,7 +16789,7 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
                                                     <td style={{padding:"8px 10px",maxWidth:240}}>
                                                       <a href={item.url} target="_blank" rel="noopener noreferrer" style={{textDecoration:"none",color:C.ink,display:"flex",alignItems:"center",gap:6}}>
                                                         {item.image&&<img src={item.image} alt="" style={{width:32,height:32,objectFit:"cover",borderRadius:4,flexShrink:0}}/>}
-                                                        <span style={{overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",fontSize:11}}>{item.name}</span>
+                                                        <span style={{overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",fontSize:12}}>{item.name}</span>
                                                       </a>
                                                     </td>
                                                     <td style={{padding:"8px 10px",textAlign:"center",fontWeight:700,color:C.ink,whiteSpace:"nowrap"}}>{item.priceLabel||"—"}</td>
@@ -16815,7 +16815,7 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
                                                         }
                                                         const removing=links.includes(compKey)&&!adding;
                                                         if(removing){setMktCompareData(prev=>{const existing=prev?.prices||[];return{...prev,prices:existing.filter(p=>!(p.platform==="amazon"&&p.product_id===urlHash))};});}
-                                                      }} style={{padding:"3px 10px",borderRadius:6,border:`1px solid ${isConfirmedComp?"#3b82f6":C.border}`,background:isConfirmedComp?"#eff6ff":"none",color:isConfirmedComp?"#3b82f6":C.inkMid,fontSize:10,fontWeight:700,cursor:"pointer",fontFamily:"inherit",whiteSpace:"nowrap"}}>
+                                                      }} style={{padding:"3px 10px",borderRadius:6,border:`1px solid ${isConfirmedComp?"#3b82f6":C.border}`,background:isConfirmedComp?"#eff6ff":"none",color:isConfirmedComp?"#3b82f6":C.inkMid,fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit",whiteSpace:"nowrap"}}>
                                                         {isConfirmedComp?"✓ 경쟁사":"+ 경쟁사"}
                                                       </button>
                                                     </td>
@@ -16825,26 +16825,26 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
                                                   <tr key={i} style={{borderBottom:`1px solid ${C.border}`,background:oaBrand?"#f0fdf4":isConfirmedComp?"#eff6ff":"#fff"}}>
                                                     <td style={{padding:"8px 10px",textAlign:"center",fontWeight:900,color:rankColor,whiteSpace:"nowrap"}}>{item.rank?`${item.rank}위`:"—"}</td>
                                                     <td style={{padding:"8px 10px",whiteSpace:"nowrap"}}>
-                                                      <span style={{fontWeight:700,color:oaBrand?"#16a34a":isConfirmedComp?"#3b82f6":C.ink,fontSize:11}}>
+                                                      <span style={{fontWeight:700,color:oaBrand?"#16a34a":isConfirmedComp?"#3b82f6":C.ink,fontSize:12}}>
                                                         {item.brand||item.mallName||"—"}
                                                       </span>
-                                                      {oaBrand&&<span style={{marginLeft:4,fontSize:9,background:"#16a34a",color:"#fff",padding:"1px 5px",borderRadius:8,fontWeight:700}}>우리</span>}
+                                                      {oaBrand&&<span style={{marginLeft:4,fontSize:11,background:"#16a34a",color:"#fff",padding:"1px 5px",borderRadius:8,fontWeight:700}}>우리</span>}
                                                     </td>
                                                     <td style={{padding:"8px 10px",maxWidth:200}}>
                                                       <a href={item.url} target="_blank" rel="noopener noreferrer" style={{textDecoration:"none",color:C.ink,display:"flex",alignItems:"center",gap:6}}>
                                                         {item.image&&<img src={item.image} alt="" style={{width:28,height:28,objectFit:"cover",borderRadius:4,flexShrink:0}}/>}
-                                                        <span style={{overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",fontSize:11}}>{item.name}</span>
+                                                        <span style={{overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",fontSize:12}}>{item.name}</span>
                                                       </a>
                                                     </td>
                                                     <td style={{padding:"8px 10px",textAlign:"center"}}>
-                                                      <span style={{fontSize:10,fontWeight:700,color:platformColor,background:chTab==="naver_channel"?"#f0fdf4":"#fff5f5",padding:"2px 8px",borderRadius:10}}>{platformLabel}</span>
+                                                      <span style={{fontSize:12,fontWeight:700,color:platformColor,background:chTab==="naver_channel"?"#f0fdf4":"#fff5f5",padding:"2px 8px",borderRadius:10}}>{platformLabel}</span>
                                                     </td>
                                                     <td style={{padding:"8px 10px",textAlign:"right",fontWeight:900,color:discountPct>=5?"#dc2626":C.ink,whiteSpace:"nowrap"}}>₩{item.price.toLocaleString()}</td>
                                                     <td style={{padding:"8px 10px",textAlign:"right",color:C.inkMid,whiteSpace:"nowrap"}}>{item.originalPrice>item.price?`₩${item.originalPrice.toLocaleString()}`:"—"}</td>
                                                     <td style={{padding:"8px 10px",textAlign:"center",fontWeight:800,color:discountPct>=5?"#dc2626":C.inkLt}}>{discountPct>=1?`${discountPct}%`:"—"}</td>
                                                     <td style={{padding:"6px 10px",textAlign:"center"}}>
                                                       {oaBrand ? (
-                                                        <span style={{fontSize:10,color:"#16a34a",fontWeight:700}}>우리 제품</span>
+                                                        <span style={{fontSize:12,color:"#16a34a",fontWeight:700}}>우리 제품</span>
                                                       ) : (
                                                         <button type="button" onClick={(e)=>{
                                                           e.preventDefault(); e.stopPropagation();
@@ -16864,7 +16864,7 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
                                                             fetch("/api/market/prices",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(newPriceRow)}).catch(()=>{});
                                                             document.querySelector(`[data-prod-id="${prod.id}"]`)?.scrollIntoView({behavior:"smooth",block:"start"});
                                                           }
-                                                        }} style={{padding:"3px 10px",borderRadius:8,border:`1px solid ${isConfirmedComp?"#3b82f6":C.border}`,background:isConfirmedComp?"#dbeafe":"#f9fafb",color:isConfirmedComp?"#1d4ed8":C.inkMid,fontSize:10,fontWeight:700,cursor:"pointer",fontFamily:"inherit",whiteSpace:"nowrap"}}>
+                                                        }} style={{padding:"3px 10px",borderRadius:8,border:`1px solid ${isConfirmedComp?"#3b82f6":C.border}`,background:isConfirmedComp?"#dbeafe":"#f9fafb",color:isConfirmedComp?"#1d4ed8":C.inkMid,fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit",whiteSpace:"nowrap"}}>
                                                           {isConfirmedComp?"✓ 경쟁사":"+ 경쟁사"}
                                                         </button>
                                                       )}
@@ -16876,7 +16876,7 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
                                           </table>
                                         </div>
                                       )}
-                                      {!chSearching&&chRes&&chRes.length===0&&<div style={{textAlign:"center",padding:"12px 0",color:C.inkLt,fontSize:11}}>결과 없음</div>}
+                                      {!chSearching&&chRes&&chRes.length===0&&<div style={{textAlign:"center",padding:"12px 0",color:C.inkLt,fontSize:12}}>결과 없음</div>}
                                     </div>
                                   )}
                                 </div>
@@ -16908,9 +16908,9 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
                         <div style={{display:"flex",gap:4}}>
                           {priceCats.map(cat=>(
                             <button key={cat} onClick={()=>setMktPriceCatFilter(cat)}
-                              style={{padding:"5px 12px",borderRadius:20,border:`1.5px solid ${mktPriceCatFilter===cat?"#7c3aed":C.border}`,background:mktPriceCatFilter===cat?"#7c3aed":"transparent",color:mktPriceCatFilter===cat?"#fff":C.inkMid,fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
+                              style={{padding:"5px 12px",borderRadius:20,border:`1.5px solid ${mktPriceCatFilter===cat?"#7c3aed":C.border}`,background:mktPriceCatFilter===cat?"#7c3aed":"transparent",color:mktPriceCatFilter===cat?"#fff":C.inkMid,fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
                               {cat}
-                              <span style={{marginLeft:3,fontSize:9,opacity:0.8}}>
+                              <span style={{marginLeft:3,fontSize:11,opacity:0.8}}>
                                 {cat==="전체"?allOurProds.length:allOurProds.filter(p=>{
                                   const text=((p.modelMemo||"")+(p.name||"")).toLowerCase();
                                   if(cat==="드라이기") return text.includes("드라이기")||text.includes("드라이")||text.includes("소닉")||text.includes("에어리");
@@ -16923,16 +16923,16 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
                           ))}
                         </div>
                         <div style={{display:"flex",alignItems:"center",gap:8}}>
-                          {mktLastUpdateAt&&<span style={{fontSize:10,color:C.inkLt}}>마지막 조회 {mktLastUpdateAt}</span>}
+                          {mktLastUpdateAt&&<span style={{fontSize:12,color:C.inkLt}}>마지막 조회 {mktLastUpdateAt}</span>}
                           <button onClick={updateOurBrandPrices} disabled={mktPriceUpdating}
-                            style={{display:"flex",alignItems:"center",gap:5,padding:"7px 14px",borderRadius:8,border:"none",background:mktPriceUpdating?C.cream:"#7c3aed",color:mktPriceUpdating?C.inkMid:"#fff",fontWeight:700,fontSize:11,cursor:"pointer",fontFamily:"inherit",opacity:mktPriceUpdating?0.7:1}}>
+                            style={{display:"flex",alignItems:"center",gap:5,padding:"7px 14px",borderRadius:8,border:"none",background:mktPriceUpdating?C.cream:"#7c3aed",color:mktPriceUpdating?C.inkMid:"#fff",fontWeight:700,fontSize:12,cursor:"pointer",fontFamily:"inherit",opacity:mktPriceUpdating?0.7:1}}>
                             <MI n="sync" size={13}/>
                             {mktPriceUpdating?"조회 중...":"전체 가격 업데이트"}
                           </button>
                         </div>
                       </div>
                       {ourProds.length===0?(
-                        <Card><div style={{textAlign:"center",padding:"24px 0",color:C.inkLt,fontSize:12}}>크롤링검색 탭에 제품과 채널을 먼저 추가해주세요</div></Card>
+                        <Card><div style={{textAlign:"center",padding:"24px 0",color:C.inkLt,fontSize:13}}>크롤링검색 탭에 제품과 채널을 먼저 추가해주세요</div></Card>
                       ):(
                         <div style={{display:"flex",flexDirection:"column",gap:8}}>
                           {ourProds.every(prod=>{
@@ -16956,12 +16956,12 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
                               <Card key={prod.id}>
                                 <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10,flexWrap:"wrap"}}>
                                   <span style={{fontSize:13,fontWeight:900,color:C.ink}}>{prod.name}</span>
-                                  {prod.modelMemo&&<span style={{fontSize:10,color:C.inkLt,borderBottom:`1px dashed ${C.border}`}}>{prod.modelMemo}</span>}
-                                  {officialMin&&<span style={{fontSize:11,fontWeight:700,background:"#ede9fe",color:"#7c3aed",padding:"2px 8px",borderRadius:6}}>공식가 ₩{officialMin.toLocaleString()}</span>}
+                                  {prod.modelMemo&&<span style={{fontSize:12,color:C.inkLt,borderBottom:`1px dashed ${C.border}`}}>{prod.modelMemo}</span>}
+                                  {officialMin&&<span style={{fontSize:12,fontWeight:700,background:"#ede9fe",color:"#7c3aed",padding:"2px 8px",borderRadius:6}}>공식가 ₩{officialMin.toLocaleString()}</span>}
                                   {undercutCount>0?(
-                                    <span style={{fontSize:10,fontWeight:700,background:"#fee2e2",color:"#dc2626",padding:"2px 8px",borderRadius:6}}>⚠ {undercutCount}개 이탈</span>
+                                    <span style={{fontSize:12,fontWeight:700,background:"#fee2e2",color:"#dc2626",padding:"2px 8px",borderRadius:6}}>⚠ {undercutCount}개 이탈</span>
                                   ):officialMin?(
-                                    <span style={{fontSize:10,fontWeight:700,background:"#dcfce7",color:"#16a34a",padding:"2px 8px",borderRadius:6}}>✓ 이탈 없음</span>
+                                    <span style={{fontSize:12,fontWeight:700,background:"#dcfce7",color:"#16a34a",padding:"2px 8px",borderRadius:6}}>✓ 이탈 없음</span>
                                   ):null}
                                 </div>
                                 <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
@@ -16976,21 +16976,21 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
                                         {item.image&&<img src={item.image} alt="" style={{width:28,height:28,objectFit:"cover",borderRadius:4,flexShrink:0}}/>}
                                         <div style={{flex:1,minWidth:0}}>
                                           <div style={{display:"flex",alignItems:"center",gap:4}}>
-                                            <span style={{fontSize:10,fontWeight:700,color:C.inkMid,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{item.channel||item.mallName}</span>
-                                            {ourStore&&<span style={{fontSize:8,fontWeight:700,background:"#7c3aed",color:"#fff",padding:"1px 4px",borderRadius:3,flexShrink:0}}>기준</span>}
+                                            <span style={{fontSize:12,fontWeight:700,color:C.inkMid,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{item.channel||item.mallName}</span>
+                                            {ourStore&&<span style={{fontSize:10,fontWeight:700,background:"#7c3aed",color:"#fff",padding:"1px 4px",borderRadius:3,flexShrink:0}}>기준</span>}
                                           </div>
                                           {price?(
                                             <>
-                                              <div style={{fontSize:12,fontWeight:800,color:isUndercut?"#dc2626":isMarketMin?"#16a34a":ourStore?"#7c3aed":C.ink}}>₩{price.toLocaleString()}</div>
-                                              {!ourStore&&diff!==null&&diff!==0&&<div style={{fontSize:9,color:isUndercut?"#dc2626":C.inkMid,fontWeight:isUndercut?700:400}}>
+                                              <div style={{fontSize:13,fontWeight:800,color:isUndercut?"#dc2626":isMarketMin?"#16a34a":ourStore?"#7c3aed":C.ink}}>₩{price.toLocaleString()}</div>
+                                              {!ourStore&&diff!==null&&diff!==0&&<div style={{fontSize:11,color:isUndercut?"#dc2626":C.inkMid,fontWeight:isUndercut?700:400}}>
                                                 {diff<0?`-₩${Math.abs(diff).toLocaleString()} 이탈`:`+₩${diff.toLocaleString()}`}
                                               </div>}
                                             </>
                                           ):(
-                                            <div style={{fontSize:11,color:C.inkLt}}>미입력</div>
+                                            <div style={{fontSize:12,color:C.inkLt}}>미입력</div>
                                           )}
-                                          {item.lastChecked&&<div style={{fontSize:8,color:C.inkLt,marginTop:2}}>{item.lastChecked} 조회</div>}
-                                          {(item.naverLink||item.url)&&<a href={isUndercut?(item.naverLink||item.url):item.url} target="_blank" rel="noreferrer" style={{fontSize:9,color:"#2563eb",textDecoration:"none",display:"flex",alignItems:"center",gap:1}}><MI n="open_in_new" size={9}/>링크</a>}
+                                          {item.lastChecked&&<div style={{fontSize:10,color:C.inkLt,marginTop:2}}>{item.lastChecked} 조회</div>}
+                                          {(item.naverLink||item.url)&&<a href={isUndercut?(item.naverLink||item.url):item.url} target="_blank" rel="noreferrer" style={{fontSize:11,color:"#2563eb",textDecoration:"none",display:"flex",alignItems:"center",gap:1}}><MI n="open_in_new" size={9}/>링크</a>}
                                         </div>
                                       </div>
                                     );
@@ -17050,7 +17050,7 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
                       <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:8}}>
                         <div style={{display:"flex",gap:4,background:C.cream,borderRadius:10,padding:3}}>
                           {[{id:"prices",label:"가격 현황"},{id:"links",label:"링크 관리"}].map(t=>(
-                            <button key={t.id} onClick={()=>setMktPlatformTab(t.id)} style={{fontSize:11,fontWeight:700,padding:"5px 14px",borderRadius:8,border:"none",cursor:"pointer",background:mktPlatformTab===t.id?"#fff":"transparent",color:mktPlatformTab===t.id?C.ink:C.inkMid,fontFamily:"inherit"}}>{t.label}</button>
+                            <button key={t.id} onClick={()=>setMktPlatformTab(t.id)} style={{fontSize:12,fontWeight:700,padding:"5px 14px",borderRadius:8,border:"none",cursor:"pointer",background:mktPlatformTab===t.id?"#fff":"transparent",color:mktPlatformTab===t.id?C.ink:C.inkMid,fontFamily:"inherit"}}>{t.label}</button>
                           ))}
                         </div>
                         {mktPlatformTab==="prices"&&(
@@ -17066,10 +17066,10 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
                                   else alert("오류: "+(d.error||JSON.stringify(d)));
                                   setMktPlatformRunning(p=>({...p,[platform]:false}));
                                 }).catch(e=>{alert("오류: "+e.message);setMktPlatformRunning(p=>({...p,[platform]:false}));});
-                            }} style={{display:"flex",alignItems:"center",gap:5,padding:"7px 14px",borderRadius:8,border:"none",background:running?"#e5e7eb":"#111",color:running?C.inkMid:"#fff",fontWeight:700,fontSize:11,cursor:running?"not-allowed":"pointer",fontFamily:"inherit"}}>
+                            }} style={{display:"flex",alignItems:"center",gap:5,padding:"7px 14px",borderRadius:8,border:"none",background:running?"#e5e7eb":"#111",color:running?C.inkMid:"#fff",fontWeight:700,fontSize:12,cursor:running?"not-allowed":"pointer",fontFamily:"inherit"}}>
                               <MI n="play_arrow" size={13}/>{running?"실행 중...":"수집 실행"}
                             </button>
-                            <button onClick={()=>setMktPlatformPrices(p=>({...p,[platform]:null}))} style={{display:"flex",alignItems:"center",gap:5,padding:"7px 14px",borderRadius:8,border:"none",background:"#f3f4f6",color:C.inkMid,fontWeight:700,fontSize:11,cursor:"pointer",fontFamily:"inherit"}}>
+                            <button onClick={()=>setMktPlatformPrices(p=>({...p,[platform]:null}))} style={{display:"flex",alignItems:"center",gap:5,padding:"7px 14px",borderRadius:8,border:"none",background:"#f3f4f6",color:C.inkMid,fontWeight:700,fontSize:12,cursor:"pointer",fontFamily:"inherit"}}>
                               <MI n="refresh" size={13}/>새로고침
                             </button>
                           </div>
@@ -17077,15 +17077,15 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
                       </div>
                       {mktPlatformTab==="prices"&&(
                         loading?(
-                          <Card><div style={{textAlign:"center",padding:"32px 0",color:C.inkLt,fontSize:12}}>불러오는 중...</div></Card>
+                          <Card><div style={{textAlign:"center",padding:"32px 0",color:C.inkLt,fontSize:13}}>불러오는 중...</div></Card>
                         ):!prices||prices.length===0?(
-                          <Card><div style={{textAlign:"center",padding:"32px 0",color:C.inkLt,fontSize:12}}>데이터 없음 — 링크 추가 후 수집 실행</div></Card>
+                          <Card><div style={{textAlign:"center",padding:"32px 0",color:C.inkLt,fontSize:13}}>데이터 없음 — 링크 추가 후 수집 실행</div></Card>
                         ):(
                           Object.entries(byKeyword).map(([kw,items])=>(
                             <Card key={kw}>
-                              <div style={{fontSize:13,fontWeight:900,color:C.ink,marginBottom:10}}>{kw} <span style={{fontSize:10,fontWeight:500,color:C.inkLt}}>({items.length}개)</span></div>
+                              <div style={{fontSize:13,fontWeight:900,color:C.ink,marginBottom:10}}>{kw} <span style={{fontSize:12,fontWeight:500,color:C.inkLt}}>({items.length}개)</span></div>
                               <div style={{overflowX:"auto"}}>
-                                <table style={{width:"100%",borderCollapse:"collapse",fontSize:11}}>
+                                <table style={{width:"100%",borderCollapse:"collapse",fontSize:12}}>
                                   <thead><tr style={{background:C.cream}}>
                                     {["이미지","상품명","순위","판매가","정가","할인율","수집일","링크"].map(h=>(
                                       <th key={h} style={{padding:"6px 8px",textAlign:"left",fontWeight:700,color:C.inkMid,borderBottom:`1px solid ${C.border}`,whiteSpace:"nowrap"}}>{h}</th>
@@ -17101,9 +17101,9 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
                                           <td style={{padding:"6px 8px",whiteSpace:"nowrap"}}>{item.rank!=null?<span style={{fontWeight:800,color:item.rank<=3?"#dc2626":item.rank<=10?"#ea580c":"#111"}}>{item.rank}위</span>:"—"}</td>
                                           <td style={{padding:"6px 8px",fontWeight:800,color:C.ink,whiteSpace:"nowrap"}}>{item.sale_price?`₩${item.sale_price.toLocaleString()}`:"—"}</td>
                                           <td style={{padding:"6px 8px",color:C.inkMid,whiteSpace:"nowrap",textDecoration:"line-through"}}>{item.original_price&&item.original_price!==item.sale_price?`₩${item.original_price.toLocaleString()}`:"—"}</td>
-                                          <td style={{padding:"6px 8px",whiteSpace:"nowrap"}}>{disc>0&&<span style={{background:"#fee2e2",color:"#dc2626",fontWeight:700,padding:"2px 6px",borderRadius:4,fontSize:10}}>{disc}%</span>}</td>
+                                          <td style={{padding:"6px 8px",whiteSpace:"nowrap"}}>{disc>0&&<span style={{background:"#fee2e2",color:"#dc2626",fontWeight:700,padding:"2px 6px",borderRadius:4,fontSize:12}}>{disc}%</span>}</td>
                                           <td style={{padding:"6px 8px",color:C.inkLt,whiteSpace:"nowrap"}}>{item.collected_at?item.collected_at.slice(0,10):"—"}</td>
-                                          <td style={{padding:"6px 8px"}}>{item.url&&<a href={item.url} target="_blank" rel="noreferrer" style={{fontSize:10,color:"#2563eb",textDecoration:"none",display:"flex",alignItems:"center",gap:2}}><MI n="open_in_new" size={10}/>보기</a>}</td>
+                                          <td style={{padding:"6px 8px"}}>{item.url&&<a href={item.url} target="_blank" rel="noreferrer" style={{fontSize:12,color:"#2563eb",textDecoration:"none",display:"flex",alignItems:"center",gap:2}}><MI n="open_in_new" size={10}/>보기</a>}</td>
                                         </tr>
                                       );
                                     })}
@@ -17117,15 +17117,15 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
                       {mktPlatformTab==="links"&&(
                         <div style={{display:"flex",flexDirection:"column",gap:10}}>
                           <Card>
-                            <div style={{fontSize:12,fontWeight:700,color:C.ink,marginBottom:8}}>링크 추가</div>
+                            <div style={{fontSize:13,fontWeight:700,color:C.ink,marginBottom:8}}>링크 추가</div>
                             <div style={{display:"flex",flexDirection:"column",gap:6}}>
                               <input value={mktNewUrl} onChange={e=>setMktNewUrl(e.target.value)}
                                 placeholder="상품 URL"
-                                style={{fontSize:11,padding:"7px 10px",borderRadius:8,border:`1px solid ${C.border}`,outline:"none",fontFamily:"inherit"}}/>
+                                style={{fontSize:12,padding:"7px 10px",borderRadius:8,border:`1px solid ${C.border}`,outline:"none",fontFamily:"inherit"}}/>
                               <div style={{display:"flex",gap:6}}>
                                 {MKT_CATEGORIES.filter(c=>c!=="크롤링검색").map(cat=>(
                                   <button key={cat} onClick={()=>setMktNewCategory(cat)}
-                                    style={{flex:1,padding:"5px 0",borderRadius:7,border:`1.5px solid ${mktNewCategory===cat?C.rose:C.border}`,background:mktNewCategory===cat?C.rose:"transparent",color:mktNewCategory===cat?"#fff":C.inkMid,fontSize:10,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
+                                    style={{flex:1,padding:"5px 0",borderRadius:7,border:`1.5px solid ${mktNewCategory===cat?C.rose:C.border}`,background:mktNewCategory===cat?C.rose:"transparent",color:mktNewCategory===cat?"#fff":C.inkMid,fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
                                     {cat}
                                   </button>
                                 ))}
@@ -17133,44 +17133,44 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
                               <div style={{display:"flex",gap:8,alignItems:"center"}}>
                                 <input value={mktNewKeyword} onChange={e=>setMktNewKeyword(e.target.value)}
                                   placeholder="검색 키워드 (순위 추적용, 선택)"
-                                  style={{flex:1,fontSize:11,padding:"7px 10px",borderRadius:8,border:`1px solid ${C.border}`,outline:"none",fontFamily:"inherit"}}/>
+                                  style={{flex:1,fontSize:12,padding:"7px 10px",borderRadius:8,border:`1px solid ${C.border}`,outline:"none",fontFamily:"inherit"}}/>
                                 <button onClick={()=>{
                                   const url=mktNewUrl.trim(); if(!url) return;
                                   const pid=extractPid(url);
                                   fetch("/api/market/links",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({platform,product_id:pid,url,active:true,search_keyword:mktNewKeyword.trim()||null,category:mktNewCategory||null})})
                                     .then(()=>{setMktNewUrl("");setMktNewKeyword("");setMktNewCategory("");setMktPlatformLinks(p=>({...p,[platform]:null}));setMktPlatformPrices(p=>({...p,[platform]:null}));setMktCompareData(null);});
-                                }} style={{padding:"7px 16px",borderRadius:8,border:"none",background:"#111",color:"#fff",fontWeight:700,fontSize:11,cursor:"pointer",fontFamily:"inherit",whiteSpace:"nowrap"}}>
+                                }} style={{padding:"7px 16px",borderRadius:8,border:"none",background:"#111",color:"#fff",fontWeight:700,fontSize:12,cursor:"pointer",fontFamily:"inherit",whiteSpace:"nowrap"}}>
                                   <MI n="add" size={13}/>추가
                                 </button>
                               </div>
                             </div>
                           </Card>
                           <Card>
-                            <div style={{fontSize:12,fontWeight:700,color:C.ink,marginBottom:8}}>등록된 링크 <span style={{fontWeight:400,color:C.inkLt}}>({(links||[]).length}개)</span></div>
+                            <div style={{fontSize:13,fontWeight:700,color:C.ink,marginBottom:8}}>등록된 링크 <span style={{fontWeight:400,color:C.inkLt}}>({(links||[]).length}개)</span></div>
                             {!links?(
-                              <div style={{color:C.inkLt,fontSize:11,textAlign:"center",padding:"16px 0"}}>불러오는 중...</div>
+                              <div style={{color:C.inkLt,fontSize:12,textAlign:"center",padding:"16px 0"}}>불러오는 중...</div>
                             ):links.length===0?(
-                              <div style={{color:C.inkLt,fontSize:11,textAlign:"center",padding:"16px 0"}}>등록된 링크 없음</div>
+                              <div style={{color:C.inkLt,fontSize:12,textAlign:"center",padding:"16px 0"}}>등록된 링크 없음</div>
                             ):(
                               <div style={{display:"flex",flexDirection:"column",gap:6}}>
                                 {links.map(link=>(
                                   <div key={link.id} style={{display:"flex",alignItems:"center",gap:8,padding:"6px 0",borderBottom:`1px solid ${C.cream}`}}>
-                                    <span style={{fontSize:10,color:C.inkLt,minWidth:60}}>#{link.product_id}</span>
+                                    <span style={{fontSize:12,color:C.inkLt,minWidth:60}}>#{link.product_id}</span>
                                     <div style={{flex:1,overflow:"hidden"}}>
-                                      <a href={link.url} target="_blank" rel="noreferrer" style={{fontSize:11,color:"#2563eb",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",display:"block"}}>{link.url}</a>
+                                      <a href={link.url} target="_blank" rel="noreferrer" style={{fontSize:12,color:"#2563eb",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",display:"block"}}>{link.url}</a>
                                       {mktEditId===link.id?(
                                         <div style={{display:"flex",gap:4,marginTop:3}}>
                                           <input value={mktEditKeyword} onChange={e=>setMktEditKeyword(e.target.value)}
                                             placeholder="검색 키워드" autoFocus
-                                            style={{flex:1,fontSize:10,padding:"3px 6px",borderRadius:6,border:`1px solid ${C.border}`,outline:"none",fontFamily:"inherit"}}/>
+                                            style={{flex:1,fontSize:12,padding:"3px 6px",borderRadius:6,border:`1px solid ${C.border}`,outline:"none",fontFamily:"inherit"}}/>
                                           <button onClick={()=>{
                                             fetch("/api/market/links",{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({id:link.id,search_keyword:mktEditKeyword.trim()||null})})
                                               .then(()=>{setMktEditId(null);setMktPlatformLinks(p=>({...p,[platform]:null}));});
-                                          }} style={{padding:"3px 8px",borderRadius:6,border:"none",background:"#111",color:"#fff",fontSize:10,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>저장</button>
-                                          <button onClick={()=>setMktEditId(null)} style={{padding:"3px 6px",borderRadius:6,border:"none",background:"#f3f4f6",color:C.inkMid,fontSize:10,cursor:"pointer",fontFamily:"inherit"}}>취소</button>
+                                          }} style={{padding:"3px 8px",borderRadius:6,border:"none",background:"#111",color:"#fff",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>저장</button>
+                                          <button onClick={()=>setMktEditId(null)} style={{padding:"3px 6px",borderRadius:6,border:"none",background:"#f3f4f6",color:C.inkMid,fontSize:12,cursor:"pointer",fontFamily:"inherit"}}>취소</button>
                                         </div>
                                       ):(
-                                        <span style={{fontSize:10,color:"#7c3aed",cursor:"pointer"}} onClick={()=>{setMktEditId(link.id);setMktEditKeyword(link.search_keyword||"");}}>
+                                        <span style={{fontSize:12,color:"#7c3aed",cursor:"pointer"}} onClick={()=>{setMktEditId(link.id);setMktEditKeyword(link.search_keyword||"");}}>
                                           {link.search_keyword?`🔍 ${link.search_keyword}`:"+ 키워드 추가"}
                                         </span>
                                       )}
@@ -17178,14 +17178,14 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
                                     <button onClick={()=>{
                                       fetch("/api/market/links",{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({id:link.id,active:!link.active})})
                                         .then(()=>setMktPlatformLinks(p=>({...p,[platform]:null})));
-                                    }} style={{padding:"3px 8px",borderRadius:6,border:"none",background:link.active?"#dcfce7":"#f3f4f6",color:link.active?"#16a34a":C.inkMid,fontSize:10,fontWeight:700,cursor:"pointer",fontFamily:"inherit",whiteSpace:"nowrap"}}>
+                                    }} style={{padding:"3px 8px",borderRadius:6,border:"none",background:link.active?"#dcfce7":"#f3f4f6",color:link.active?"#16a34a":C.inkMid,fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit",whiteSpace:"nowrap"}}>
                                       {link.active?"활성":"비활성"}
                                     </button>
                                     <button onClick={()=>{
                                       if(!confirm("삭제할까요?")) return;
                                       fetch("/api/market/links",{method:"DELETE",headers:{"Content-Type":"application/json"},body:JSON.stringify({id:link.id})})
                                         .then(()=>setMktPlatformLinks(p=>({...p,[platform]:null})));
-                                    }} style={{padding:"3px 8px",borderRadius:6,border:"none",background:"#fee2e2",color:"#dc2626",fontSize:10,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
+                                    }} style={{padding:"3px 8px",borderRadius:6,border:"none",background:"#fee2e2",color:"#dc2626",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
                                       삭제
                                     </button>
                                   </div>
@@ -17223,8 +17223,8 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
                         }).length;
                         return(
                           <button key={cat} onClick={()=>setMktOurBrandFilter(cat)}
-                            style={{padding:"5px 12px",borderRadius:20,border:`1.5px solid ${mktOurBrandFilter===cat?"#7c3aed":C.border}`,background:mktOurBrandFilter===cat?"#7c3aed":"transparent",color:mktOurBrandFilter===cat?"#fff":C.inkMid,fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
-                            {cat} <span style={{fontSize:9,opacity:0.8}}>{c}</span>
+                            style={{padding:"5px 12px",borderRadius:20,border:`1.5px solid ${mktOurBrandFilter===cat?"#7c3aed":C.border}`,background:mktOurBrandFilter===cat?"#7c3aed":"transparent",color:mktOurBrandFilter===cat?"#fff":C.inkMid,fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
+                            {cat} <span style={{fontSize:11,opacity:0.8}}>{c}</span>
                           </button>
                         );
                       })}
@@ -17242,14 +17242,14 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
                         <div style={{flex:1}}>
                           <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
                             <span style={{fontSize:14,fontWeight:900,color:C.ink}}>{prod.name}</span>
-                            <span style={{fontSize:11,fontWeight:700,color:C.inkMid,background:C.cream,padding:"2px 8px",borderRadius:8}}>
+                            <span style={{fontSize:12,fontWeight:700,color:C.inkMid,background:C.cream,padding:"2px 8px",borderRadius:8}}>
                               우리 판매가 {fmtP(prod.ourPrice)}
                             </span>
                             <input
                               value={prod.modelMemo||""}
                               onChange={e=>setMarketData((marketData||[]).map(p=>p.id!==prod.id?p:{...p,modelMemo:e.target.value}))}
                               placeholder="모델명/원부 메모"
-                              style={{fontSize:10,color:C.inkMid,background:"transparent",border:"none",borderBottom:`1px dashed ${C.border}`,outline:"none",padding:"1px 4px",minWidth:80,fontFamily:"inherit"}}/>
+                              style={{fontSize:12,color:C.inkMid,background:"transparent",border:"none",borderBottom:`1px dashed ${C.border}`,outline:"none",padding:"1px 4px",minWidth:80,fontFamily:"inherit"}}/>
                           </div>
                           {items.length>0&&(()=>{
                             const withSale = items.filter(i=>i.salePrice);
@@ -17259,7 +17259,7 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
                             if(!avgSale) return null;
                             const diff = prod.ourPrice ? prod.ourPrice - avgSale : null;
                             return(
-                              <div style={{fontSize:10,color:C.inkMid,marginTop:3}}>
+                              <div style={{fontSize:12,color:C.inkMid,marginTop:3}}>
                                 시장 할인가 범위: {fmtP(minSale)} ~ {fmtP(maxSale)} · 평균 {fmtP(avgSale)}
                                 {diff!==null&&<span style={{marginLeft:6,fontWeight:700,color:diff>0?C.good:C.bad}}>
                                   {diff>0?`우리가 ₩${Math.round(diff).toLocaleString()} 더 비쌈`:`우리가 ₩${Math.round(-diff).toLocaleString()} 더 저렴`}
@@ -17272,13 +17272,13 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
                           <input type="number" value={prod.ourPrice||""} onChange={e=>{
                             setMarketData((marketData||[]).map(p=>p.id!==prod.id?p:{...p,ourPrice:parseInt(e.target.value)||0}));
                           }} placeholder="판매가"
-                            style={{width:90,padding:"5px 8px",border:`1px solid ${C.border}`,borderRadius:8,fontSize:11,fontFamily:"inherit",outline:"none"}}/>
+                            style={{width:90,padding:"5px 8px",border:`1px solid ${C.border}`,borderRadius:8,fontSize:12,fontFamily:"inherit",outline:"none"}}/>
                           {(prod.items||[]).length>0&&(
                             <button onClick={()=>{if(confirm(`"${prod.name}" 경쟁사 항목 ${(prod.items||[]).length}개를 모두 삭제할까요?`))setMarketData((marketData||[]).map(p=>p.id!==prod.id?p:{...p,items:[]}));}}
-                              style={{background:"none",border:"1px solid #fca5a5",borderRadius:8,padding:"5px 8px",cursor:"pointer",fontSize:10,color:"#dc2626",fontFamily:"inherit",whiteSpace:"nowrap"}}>항목 전체삭제</button>
+                              style={{background:"none",border:"1px solid #fca5a5",borderRadius:8,padding:"5px 8px",cursor:"pointer",fontSize:12,color:"#dc2626",fontFamily:"inherit",whiteSpace:"nowrap"}}>항목 전체삭제</button>
                           )}
                           <button onClick={()=>{if(confirm(`'${prod.name}' 제품을 삭제할까요?`))setMarketData((marketData||[]).filter(p=>p.id!==prod.id));}}
-                            style={{background:"none",border:`1px solid ${C.border}`,borderRadius:6,width:24,height:24,cursor:"pointer",fontSize:12,color:C.inkLt,display:"flex",alignItems:"center",justifyContent:"center"}}>
+                            style={{background:"none",border:`1px solid ${C.border}`,borderRadius:6,width:24,height:24,cursor:"pointer",fontSize:13,color:C.inkLt,display:"flex",alignItems:"center",justifyContent:"center"}}>
                             <MI n="delete" size={13}/>
                           </button>
                         </div>
@@ -17287,7 +17287,7 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
                       {/* 경쟁사 테이블 */}
                       {items.length>0&&(
                         <div style={{overflowX:"auto",marginBottom:10}}>
-                          <table style={{width:"100%",borderCollapse:"collapse",fontSize:11}}>
+                          <table style={{width:"100%",borderCollapse:"collapse",fontSize:12}}>
                             <thead>
                               <tr style={{background:C.cream}}>
                                 {["채널","제품명","정가","할인가","차이","행사/프로모션","메모","조회일",""].map(h=>(
@@ -17302,16 +17302,16 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
                                 return(
                                   <tr key={item.id} style={{borderBottom:`1px solid ${C.border}`,background:item.favorite?"#fffbeb":item.manual?"#fefce8":undefined}}>
                                     <td style={{padding:"7px 8px",whiteSpace:"nowrap"}}>
-                                      <span style={{fontSize:10,fontWeight:700,padding:"2px 7px",borderRadius:6,background:C.cream,color:C.inkMid}}>{item.channel}</span>
+                                      <span style={{fontSize:12,fontWeight:700,padding:"2px 7px",borderRadius:6,background:C.cream,color:C.inkMid}}>{item.channel}</span>
                                     </td>
                                     <td style={{padding:"7px 8px",maxWidth:200}}>
                                       <div style={{display:"flex",alignItems:"center",gap:6}}>
                                         {item.image&&<img src={item.image} alt="" style={{width:32,height:32,objectFit:"cover",borderRadius:4,flexShrink:0,border:`1px solid ${C.border}`}}/>}
                                         <div style={{flex:1,overflow:"hidden"}}>
-                                          <div style={{fontWeight:700,color:C.ink,fontSize:11,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{item.productName||"—"}</div>
+                                          <div style={{fontWeight:700,color:C.ink,fontSize:12,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{item.productName||"—"}</div>
                                           {item.url&&(
                                             <a href={item.url} target="_blank" rel="noreferrer"
-                                              style={{display:"inline-flex",alignItems:"center",gap:2,fontSize:9,color:"#2563eb",textDecoration:"none",marginTop:1}}>
+                                              style={{display:"inline-flex",alignItems:"center",gap:2,fontSize:11,color:"#2563eb",textDecoration:"none",marginTop:1}}>
                                               <MI n="open_in_new" size={10}/>판매 페이지
                                             </a>
                                           )}
@@ -17322,14 +17322,14 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
                                     <td style={{padding:"7px 8px",whiteSpace:"nowrap"}}>
                                       <div style={{fontWeight:800,color:C.ink}}>{item.salePrice?`₩${item.salePrice.toLocaleString()}`:"—"}</div>
                                       {item.naverItems?.slice(0,2).map((ni,ni_i)=>(
-                                        <div key={ni_i} style={{fontSize:9,color:C.inkLt,marginTop:1,maxWidth:120,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
+                                        <div key={ni_i} style={{fontSize:11,color:C.inkLt,marginTop:1,maxWidth:120,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
                                           {ni.mallName} ₩{ni.lprice?.toLocaleString()}
                                         </div>
                                       ))}
                                     </td>
                                     <td style={{padding:"7px 8px",whiteSpace:"nowrap"}}>
                                       {diff!==null&&(
-                                        <span style={{fontWeight:700,fontSize:10,color:diff>0?C.bad:C.good}}>
+                                        <span style={{fontWeight:700,fontSize:12,color:diff>0?C.bad:C.good}}>
                                           {diff>0?`+₩${Math.round(diff).toLocaleString()}`:`-₩${Math.round(-diff).toLocaleString()}`}
                                           <span style={{fontWeight:400,color:C.inkLt,marginLeft:3}}>{diff>0?"우리 더 비쌈":"우리 더 저렴"}</span>
                                         </span>
@@ -17340,8 +17340,8 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
                                         ? <textarea autoFocus rows={2} value={mktEditValue} onChange={e=>setMktEditValue(e.target.value)}
                                             onBlur={e=>saveMktCell(prod.id,item.id,"promotion",e.target.value)}
                                             onKeyDown={e=>{if(e.key==="Escape")setMktEditCell(null);}}
-                                            style={{width:"100%",fontSize:10,border:`1px solid ${C.accent}`,borderRadius:4,padding:"3px 5px",resize:"vertical",minHeight:36,fontFamily:"inherit",outline:"none"}}/>
-                                        : <span style={{fontSize:10,color:item.promotion?C.warn:C.inkLt,cursor:"text",display:"block",minHeight:18,whiteSpace:"pre-wrap",wordBreak:"break-all"}} title={item.promotion||"클릭해서 입력"}>
+                                            style={{width:"100%",fontSize:12,border:`1px solid ${C.accent}`,borderRadius:4,padding:"3px 5px",resize:"vertical",minHeight:36,fontFamily:"inherit",outline:"none"}}/>
+                                        : <span style={{fontSize:12,color:item.promotion?C.warn:C.inkLt,cursor:"text",display:"block",minHeight:18,whiteSpace:"pre-wrap",wordBreak:"break-all"}} title={item.promotion||"클릭해서 입력"}>
                                             {item.promotion||<span style={{color:C.inkLt,fontStyle:"italic"}}>—</span>}
                                           </span>
                                       }
@@ -17351,18 +17351,18 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
                                         ? <textarea autoFocus rows={2} value={mktEditValue} onChange={e=>setMktEditValue(e.target.value)}
                                             onBlur={e=>saveMktCell(prod.id,item.id,"note",e.target.value)}
                                             onKeyDown={e=>{if(e.key==="Escape")setMktEditCell(null);}}
-                                            style={{width:"100%",fontSize:10,border:`1px solid ${C.accent}`,borderRadius:4,padding:"3px 5px",resize:"vertical",minHeight:36,fontFamily:"inherit",outline:"none"}}/>
-                                        : <span style={{fontSize:10,color:item.note?C.inkMid:C.inkLt,cursor:"text",display:"block",minHeight:18,whiteSpace:"pre-wrap",wordBreak:"break-all"}} title={item.note||"클릭해서 입력"}>
+                                            style={{width:"100%",fontSize:12,border:`1px solid ${C.accent}`,borderRadius:4,padding:"3px 5px",resize:"vertical",minHeight:36,fontFamily:"inherit",outline:"none"}}/>
+                                        : <span style={{fontSize:12,color:item.note?C.inkMid:C.inkLt,cursor:"text",display:"block",minHeight:18,whiteSpace:"pre-wrap",wordBreak:"break-all"}} title={item.note||"클릭해서 입력"}>
                                             {item.note||<span style={{color:C.inkLt,fontStyle:"italic"}}>—</span>}
                                           </span>
                                       }
                                     </td>
-                                    <td style={{padding:"7px 8px",color:C.inkLt,fontSize:10,whiteSpace:"nowrap"}}>{item.lastChecked||"—"}</td>
+                                    <td style={{padding:"7px 8px",color:C.inkLt,fontSize:12,whiteSpace:"nowrap"}}>{item.lastChecked||"—"}</td>
                                     <td style={{padding:"7px 8px",whiteSpace:"nowrap"}}>
                                       <div style={{display:"flex",gap:4}}>
                                         <button onClick={()=>setMarketData((marketData||[]).map(p=>p.id!==prod.id?p:{...p,items:p.items.map(i=>i.id!==item.id?i:{...i,favorite:!i.favorite})}))}
                                           title="즐겨찾기"
-                                          style={{border:`1px solid ${item.favorite?"#f59e0b":C.border}`,borderRadius:6,width:24,height:24,cursor:"pointer",fontSize:11,display:"flex",alignItems:"center",justifyContent:"center",background:item.favorite?"#fef3c7":"transparent"}}>
+                                          style={{border:`1px solid ${item.favorite?"#f59e0b":C.border}`,borderRadius:6,width:24,height:24,cursor:"pointer",fontSize:12,display:"flex",alignItems:"center",justifyContent:"center",background:item.favorite?"#fef3c7":"transparent"}}>
                                           <MI n="star" size={12} style={{color:item.favorite?"#f59e0b":C.inkLt}}/>
                                         </button>
                                         <button onClick={()=>{
@@ -17380,16 +17380,16 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
                                             setMktModalSearch("");setMktModalResults([]);
                                           }}
                                           title="수정"
-                                          style={{background:"none",border:`1px solid ${C.border}`,borderRadius:6,width:24,height:24,cursor:"pointer",fontSize:11,display:"flex",alignItems:"center",justifyContent:"center"}}>
+                                          style={{background:"none",border:`1px solid ${C.border}`,borderRadius:6,width:24,height:24,cursor:"pointer",fontSize:12,display:"flex",alignItems:"center",justifyContent:"center"}}>
                                           <MI n="edit" size={12} style={{color:C.inkMid}}/>
                                         </button>
                                         <button onClick={()=>fetchMarketPrice(prod.id,item.id)} disabled={fetching}
                                           title="네이버 쇼핑에서 가격 조회"
-                                          style={{background:"none",border:`1px solid ${C.border}`,borderRadius:6,width:24,height:24,cursor:"pointer",fontSize:11,display:"flex",alignItems:"center",justifyContent:"center",opacity:fetching?0.5:1}}>
+                                          style={{background:"none",border:`1px solid ${C.border}`,borderRadius:6,width:24,height:24,cursor:"pointer",fontSize:12,display:"flex",alignItems:"center",justifyContent:"center",opacity:fetching?0.5:1}}>
                                           <MI n="sync" size={12} style={{color:fetching?C.inkLt:C.good}}/>
                                         </button>
                                         <button onClick={()=>setMarketData((marketData||[]).map(p=>p.id!==prod.id?p:{...p,items:p.items.filter(i=>i.id!==item.id)}))}
-                                          style={{background:"none",border:`1px solid ${C.border}`,borderRadius:6,width:24,height:24,cursor:"pointer",fontSize:11,display:"flex",alignItems:"center",justifyContent:"center"}}>
+                                          style={{background:"none",border:`1px solid ${C.border}`,borderRadius:6,width:24,height:24,cursor:"pointer",fontSize:12,display:"flex",alignItems:"center",justifyContent:"center"}}>
                                           <MI n="close" size={12} style={{color:C.inkLt}}/>
                                         </button>
                                       </div>
@@ -17407,9 +17407,9 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
                           onChange={e=>setMarketData((marketData||[]).map(p=>p.id!==prod.id?p:{...p,searchKeyword:e.target.value}))}
                           placeholder="검색 키워드 (고정)"
                           onKeyDown={e=>{if(e.key==="Enter")autoFillCompetitors(prod.id,prod.searchKeyword??prod.name,prod.ourPrice,prod.category==="크롤링검색");}}
-                          style={{flex:1,minWidth:140,padding:"6px 10px",border:`1px solid ${C.border}`,borderRadius:8,fontSize:11,fontFamily:"inherit",outline:"none"}}/>
+                          style={{flex:1,minWidth:140,padding:"6px 10px",border:`1px solid ${C.border}`,borderRadius:8,fontSize:12,fontFamily:"inherit",outline:"none"}}/>
                         <button onClick={()=>autoFillCompetitors(prod.id,prod.searchKeyword??prod.name,prod.ourPrice,prod.category==="크롤링검색")} disabled={mktAutoFetching[prod.id]}
-                          style={{display:"flex",alignItems:"center",gap:5,padding:"6px 12px",borderRadius:8,border:`1px solid ${C.border}`,background:mktAutoFetching[prod.id]?C.cream:"#f0fdf4",color:C.good,fontWeight:700,fontSize:11,cursor:"pointer",fontFamily:"inherit",opacity:mktAutoFetching[prod.id]?0.6:1,whiteSpace:"nowrap"}}>
+                          style={{display:"flex",alignItems:"center",gap:5,padding:"6px 12px",borderRadius:8,border:`1px solid ${C.border}`,background:mktAutoFetching[prod.id]?C.cream:"#f0fdf4",color:C.good,fontWeight:700,fontSize:12,cursor:"pointer",fontFamily:"inherit",opacity:mktAutoFetching[prod.id]?0.6:1,whiteSpace:"nowrap"}}>
                           <MI n="auto_awesome" size={13} style={{color:C.good}}/>
                           {mktAutoFetching[prod.id]?"검색 중...":"자동 채우기"}
                         </button>
@@ -17436,14 +17436,14 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
                         <div style={{flex:1}}>
                           <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
                             <span style={{fontSize:14,fontWeight:900,color:C.ink}}>{prod.name}</span>
-                            <span style={{fontSize:11,fontWeight:700,color:C.inkMid,background:C.cream,padding:"2px 8px",borderRadius:8}}>
+                            <span style={{fontSize:12,fontWeight:700,color:C.inkMid,background:C.cream,padding:"2px 8px",borderRadius:8}}>
                               우리 판매가 {fmtP(prod.ourPrice)}
                             </span>
                             <input
                               value={prod.modelMemo||""}
                               onChange={e=>setMarketData((marketData||[]).map(p=>p.id!==prod.id?p:{...p,modelMemo:e.target.value}))}
                               placeholder="모델명/원부 메모"
-                              style={{fontSize:10,color:C.inkMid,background:"transparent",border:"none",borderBottom:`1px dashed ${C.border}`,outline:"none",padding:"1px 4px",minWidth:80,fontFamily:"inherit"}}/>
+                              style={{fontSize:12,color:C.inkMid,background:"transparent",border:"none",borderBottom:`1px dashed ${C.border}`,outline:"none",padding:"1px 4px",minWidth:80,fontFamily:"inherit"}}/>
                           </div>
                           {items.length>0&&(()=>{
                             const withSale = items.filter(i=>i.salePrice);
@@ -17453,7 +17453,7 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
                             if(!avgSale) return null;
                             const diff = prod.ourPrice ? prod.ourPrice - avgSale : null;
                             return(
-                              <div style={{fontSize:10,color:C.inkMid,marginTop:3}}>
+                              <div style={{fontSize:12,color:C.inkMid,marginTop:3}}>
                                 시장 최저 {fmtP(minSale)} · 최고 {fmtP(maxSale)} · 평균 {fmtP(avgSale)}
                                 {diff!==null&&<span style={{marginLeft:6,color:diff>0?C.good:"#dc2626",fontWeight:700}}>{diff>0?`우리가 ₩${diff.toLocaleString()} 높음`:`우리가 ₩${Math.abs(diff).toLocaleString()} 낮음`}</span>}
                               </div>
@@ -17464,18 +17464,18 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
                           <input type="number" value={prod.ourPrice||""} onChange={e=>{
                             setMarketData((marketData||[]).map(p=>p.id!==prod.id?p:{...p,ourPrice:parseInt(e.target.value)||0}));
                           }} placeholder="판매가"
-                            style={{width:90,padding:"5px 8px",border:`1px solid ${C.border}`,borderRadius:8,fontSize:11,fontFamily:"inherit",outline:"none"}}/>
+                            style={{width:90,padding:"5px 8px",border:`1px solid ${C.border}`,borderRadius:8,fontSize:12,fontFamily:"inherit",outline:"none"}}/>
                           {(prod.items||[]).length>0&&(
                             <button onClick={()=>{if(confirm(`"${prod.name}" 경쟁사 항목 ${(prod.items||[]).length}개를 모두 삭제할까요?`))setMarketData((marketData||[]).map(p=>p.id!==prod.id?p:{...p,items:[]}));}}
-                              style={{background:"none",border:"1px solid #fca5a5",borderRadius:8,padding:"5px 8px",cursor:"pointer",fontSize:10,color:"#dc2626",fontFamily:"inherit",whiteSpace:"nowrap"}}>항목 전체삭제</button>
+                              style={{background:"none",border:"1px solid #fca5a5",borderRadius:8,padding:"5px 8px",cursor:"pointer",fontSize:12,color:"#dc2626",fontFamily:"inherit",whiteSpace:"nowrap"}}>항목 전체삭제</button>
                           )}
                           <button onClick={()=>setMarketData((marketData||[]).filter(p=>p.id!==prod.id))}
-                            style={{background:"none",border:`1px solid ${C.border}`,borderRadius:8,padding:"5px 8px",cursor:"pointer",fontSize:10,color:C.inkLt,fontFamily:"inherit"}}>삭제</button>
+                            style={{background:"none",border:`1px solid ${C.border}`,borderRadius:8,padding:"5px 8px",cursor:"pointer",fontSize:12,color:C.inkLt,fontFamily:"inherit"}}>삭제</button>
                         </div>
                       </div>
                       {items.length>0&&(
                         <div style={{overflowX:"auto",marginBottom:10}}>
-                          <table style={{width:"100%",borderCollapse:"collapse",fontSize:11}}>
+                          <table style={{width:"100%",borderCollapse:"collapse",fontSize:12}}>
                             <thead>
                               <tr style={{background:C.cream}}>
                                 {["채널","제품명","정가","할인가","차이","행사/프로모션","메모","조회일",""].map(h=>(
@@ -17490,16 +17490,16 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
                                 return(
                                   <tr key={item.id} style={{borderBottom:`1px solid ${C.border}`,background:item.favorite?"#fffbeb":item.manual?"#fefce8":undefined}}>
                                     <td style={{padding:"7px 8px",whiteSpace:"nowrap"}}>
-                                      <span style={{fontSize:10,fontWeight:700,padding:"2px 7px",borderRadius:6,background:C.cream,color:C.inkMid}}>{item.channel}</span>
+                                      <span style={{fontSize:12,fontWeight:700,padding:"2px 7px",borderRadius:6,background:C.cream,color:C.inkMid}}>{item.channel}</span>
                                     </td>
                                     <td style={{padding:"7px 8px",maxWidth:200}}>
                                       <div style={{display:"flex",alignItems:"center",gap:6}}>
                                         {item.image&&<img src={item.image} alt="" style={{width:32,height:32,objectFit:"cover",borderRadius:4,flexShrink:0,border:`1px solid ${C.border}`}}/>}
                                         <div style={{flex:1,overflow:"hidden"}}>
-                                          <div style={{fontWeight:700,color:C.ink,fontSize:11,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{item.productName||"—"}</div>
+                                          <div style={{fontWeight:700,color:C.ink,fontSize:12,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{item.productName||"—"}</div>
                                           {item.url&&(
                                             <a href={item.url} target="_blank" rel="noreferrer"
-                                              style={{display:"inline-flex",alignItems:"center",gap:2,fontSize:9,color:"#2563eb",textDecoration:"none",marginTop:1}}>
+                                              style={{display:"inline-flex",alignItems:"center",gap:2,fontSize:11,color:"#2563eb",textDecoration:"none",marginTop:1}}>
                                               <MI n="open_in_new" size={10}/>판매 페이지
                                             </a>
                                           )}
@@ -17510,14 +17510,14 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
                                     <td style={{padding:"7px 8px",whiteSpace:"nowrap"}}>
                                       <div style={{fontWeight:800,color:C.ink}}>{item.salePrice?`₩${item.salePrice.toLocaleString()}`:"—"}</div>
                                       {item.naverItems?.slice(0,2).map((ni,ni_i)=>(
-                                        <div key={ni_i} style={{fontSize:9,color:C.inkLt,marginTop:1,maxWidth:120,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
+                                        <div key={ni_i} style={{fontSize:11,color:C.inkLt,marginTop:1,maxWidth:120,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
                                           {ni.mallName} ₩{ni.lprice?.toLocaleString()}
                                         </div>
                                       ))}
                                     </td>
                                     <td style={{padding:"7px 8px",whiteSpace:"nowrap"}}>
                                       {diff!==null&&(
-                                        <span style={{fontWeight:700,fontSize:10,color:diff>0?C.bad:C.good}}>
+                                        <span style={{fontWeight:700,fontSize:12,color:diff>0?C.bad:C.good}}>
                                           {diff>0?`+₩${Math.round(diff).toLocaleString()}`:`-₩${Math.round(-diff).toLocaleString()}`}
                                           <span style={{fontWeight:400,color:C.inkLt,marginLeft:3}}>{diff>0?"우리 더 비쌈":"우리 더 저렴"}</span>
                                         </span>
@@ -17528,8 +17528,8 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
                                         ? <textarea autoFocus rows={2} value={mktEditValue} onChange={e=>setMktEditValue(e.target.value)}
                                             onBlur={e=>saveMktCell(prod.id,item.id,"promotion",e.target.value)}
                                             onKeyDown={e=>{if(e.key==="Escape")setMktEditCell(null);}}
-                                            style={{width:"100%",fontSize:10,border:`1px solid ${C.accent}`,borderRadius:4,padding:"3px 5px",resize:"vertical",minHeight:36,fontFamily:"inherit",outline:"none"}}/>
-                                        : <span style={{fontSize:10,color:item.promotion?C.warn:C.inkLt,cursor:"text",display:"block",minHeight:18,whiteSpace:"pre-wrap",wordBreak:"break-all"}} title={item.promotion||"클릭해서 입력"}>
+                                            style={{width:"100%",fontSize:12,border:`1px solid ${C.accent}`,borderRadius:4,padding:"3px 5px",resize:"vertical",minHeight:36,fontFamily:"inherit",outline:"none"}}/>
+                                        : <span style={{fontSize:12,color:item.promotion?C.warn:C.inkLt,cursor:"text",display:"block",minHeight:18,whiteSpace:"pre-wrap",wordBreak:"break-all"}} title={item.promotion||"클릭해서 입력"}>
                                             {item.promotion||<span style={{color:C.inkLt,fontStyle:"italic"}}>—</span>}
                                           </span>
                                       }
@@ -17539,32 +17539,32 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
                                         ? <textarea autoFocus rows={2} value={mktEditValue} onChange={e=>setMktEditValue(e.target.value)}
                                             onBlur={e=>saveMktCell(prod.id,item.id,"note",e.target.value)}
                                             onKeyDown={e=>{if(e.key==="Escape")setMktEditCell(null);}}
-                                            style={{width:"100%",fontSize:10,border:`1px solid ${C.accent}`,borderRadius:4,padding:"3px 5px",resize:"vertical",minHeight:36,fontFamily:"inherit",outline:"none"}}/>
-                                        : <span style={{fontSize:10,color:item.note?C.inkMid:C.inkLt,cursor:"text",display:"block",minHeight:18,whiteSpace:"pre-wrap",wordBreak:"break-all"}} title={item.note||"클릭해서 입력"}>
+                                            style={{width:"100%",fontSize:12,border:`1px solid ${C.accent}`,borderRadius:4,padding:"3px 5px",resize:"vertical",minHeight:36,fontFamily:"inherit",outline:"none"}}/>
+                                        : <span style={{fontSize:12,color:item.note?C.inkMid:C.inkLt,cursor:"text",display:"block",minHeight:18,whiteSpace:"pre-wrap",wordBreak:"break-all"}} title={item.note||"클릭해서 입력"}>
                                             {item.note||<span style={{color:C.inkLt,fontStyle:"italic"}}>—</span>}
                                           </span>
                                       }
                                     </td>
-                                    <td style={{padding:"7px 8px",color:C.inkLt,fontSize:10,whiteSpace:"nowrap"}}>{item.lastChecked||"—"}</td>
+                                    <td style={{padding:"7px 8px",color:C.inkLt,fontSize:12,whiteSpace:"nowrap"}}>{item.lastChecked||"—"}</td>
                                     <td style={{padding:"7px 8px",whiteSpace:"nowrap"}}>
                                       <div style={{display:"flex",gap:4}}>
                                         <button onClick={()=>setMarketData((marketData||[]).map(p=>p.id!==prod.id?p:{...p,items:p.items.map(i=>i.id!==item.id?i:{...i,favorite:!i.favorite})}))}
                                           title="즐겨찾기"
-                                          style={{border:`1px solid ${item.favorite?"#f59e0b":C.border}`,borderRadius:6,width:24,height:24,cursor:"pointer",fontSize:11,display:"flex",alignItems:"center",justifyContent:"center",background:item.favorite?"#fef3c7":"transparent"}}>
+                                          style={{border:`1px solid ${item.favorite?"#f59e0b":C.border}`,borderRadius:6,width:24,height:24,cursor:"pointer",fontSize:12,display:"flex",alignItems:"center",justifyContent:"center",background:item.favorite?"#fef3c7":"transparent"}}>
                                           <MI n="star" size={12} style={{color:item.favorite?"#f59e0b":C.inkLt}}/>
                                         </button>
                                         <button onClick={()=>{setMktItemModal({productId:prod.id,itemId:item.id});setMktItemInput({channel:item.channel||"스마트스토어",productName:item.productName||"",url:item.url||"",image:item.image||"",regularPrice:item.regularPrice||"",salePrice:item.salePrice||"",promotion:item.promotion||"",note:item.note||""});setMktModalSearch("");setMktModalResults([]);}}
                                           title="수정"
-                                          style={{background:"none",border:`1px solid ${C.border}`,borderRadius:6,width:24,height:24,cursor:"pointer",fontSize:11,display:"flex",alignItems:"center",justifyContent:"center"}}>
+                                          style={{background:"none",border:`1px solid ${C.border}`,borderRadius:6,width:24,height:24,cursor:"pointer",fontSize:12,display:"flex",alignItems:"center",justifyContent:"center"}}>
                                           <MI n="edit" size={12} style={{color:C.inkMid}}/>
                                         </button>
                                         <button onClick={()=>fetchMarketPrice(prod.id,item.id)} disabled={fetching}
                                           title="네이버 쇼핑에서 가격 조회"
-                                          style={{background:"none",border:`1px solid ${C.border}`,borderRadius:6,width:24,height:24,cursor:"pointer",fontSize:11,display:"flex",alignItems:"center",justifyContent:"center",opacity:fetching?0.5:1}}>
+                                          style={{background:"none",border:`1px solid ${C.border}`,borderRadius:6,width:24,height:24,cursor:"pointer",fontSize:12,display:"flex",alignItems:"center",justifyContent:"center",opacity:fetching?0.5:1}}>
                                           <MI n="sync" size={12} style={{color:fetching?C.inkLt:C.good}}/>
                                         </button>
                                         <button onClick={()=>setMarketData((marketData||[]).map(p=>p.id!==prod.id?p:{...p,items:p.items.filter(i=>i.id!==item.id)}))}
-                                          style={{background:"none",border:`1px solid ${C.border}`,borderRadius:6,width:24,height:24,cursor:"pointer",fontSize:11,display:"flex",alignItems:"center",justifyContent:"center"}}>
+                                          style={{background:"none",border:`1px solid ${C.border}`,borderRadius:6,width:24,height:24,cursor:"pointer",fontSize:12,display:"flex",alignItems:"center",justifyContent:"center"}}>
                                           <MI n="close" size={12} style={{color:C.inkLt}}/>
                                         </button>
                                       </div>
@@ -17582,9 +17582,9 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
                           onChange={e=>setMarketData((marketData||[]).map(p=>p.id!==prod.id?p:{...p,searchKeyword:e.target.value}))}
                           placeholder="검색 키워드 (고정)"
                           onKeyDown={e=>{if(e.key==="Enter")autoFillCompetitors(prod.id,prod.searchKeyword??prod.name,prod.ourPrice,prod.category==="크롤링검색");}}
-                          style={{flex:1,minWidth:140,padding:"6px 10px",border:`1px solid ${C.border}`,borderRadius:8,fontSize:11,fontFamily:"inherit",outline:"none"}}/>
+                          style={{flex:1,minWidth:140,padding:"6px 10px",border:`1px solid ${C.border}`,borderRadius:8,fontSize:12,fontFamily:"inherit",outline:"none"}}/>
                         <button onClick={()=>autoFillCompetitors(prod.id,prod.searchKeyword??prod.name,prod.ourPrice,prod.category==="크롤링검색")} disabled={mktAutoFetching[prod.id]}
-                          style={{display:"flex",alignItems:"center",gap:5,padding:"6px 12px",borderRadius:8,border:`1px solid ${C.border}`,background:mktAutoFetching[prod.id]?C.cream:"#f0fdf4",color:C.good,fontWeight:700,fontSize:11,cursor:"pointer",fontFamily:"inherit",opacity:mktAutoFetching[prod.id]?0.6:1,whiteSpace:"nowrap"}}>
+                          style={{display:"flex",alignItems:"center",gap:5,padding:"6px 12px",borderRadius:8,border:`1px solid ${C.border}`,background:mktAutoFetching[prod.id]?C.cream:"#f0fdf4",color:C.good,fontWeight:700,fontSize:12,cursor:"pointer",fontFamily:"inherit",opacity:mktAutoFetching[prod.id]?0.6:1,whiteSpace:"nowrap"}}>
                           <MI n="auto_awesome" size={13} style={{color:C.good}}/>
                           {mktAutoFetching[prod.id]?"검색 중...":"자동 채우기"}
                         </button>
@@ -17611,7 +17611,7 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
             {id:"competitor",label:"경쟁사"}
           ].map(t=>(
             <button key={t.id} onClick={()=>setKwTab(t.id)} style={{
-              fontSize:11,fontWeight:700,padding:"5px 14px",borderRadius:8,border:"none",cursor:"pointer",
+              fontSize:12,fontWeight:700,padding:"5px 14px",borderRadius:8,border:"none",cursor:"pointer",
               background:kwTab===t.id?C.rose:"transparent",
               color:kwTab===t.id?"#fff":C.inkMid,fontFamily:"inherit",
             }}>{t.label}</button>
@@ -17623,7 +17623,7 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
             <div style={{textAlign:"center",padding:"40px 0",color:C.inkLt}}>
               <MI n="search" size={40} style={{display:"block",margin:"0 auto 12px"}}/>
               <div style={{fontSize:14,fontWeight:700,color:C.inkMid,marginBottom:6}}>아직 키워드가 없어요</div>
-              <div style={{fontSize:12,color:C.inkLt,marginBottom:16}}>추적할 키워드를 추가하고 매주 순위를 기록해보세요</div>
+              <div style={{fontSize:13,color:C.inkLt,marginBottom:16}}>추적할 키워드를 추가하고 매주 순위를 기록해보세요</div>
               <Btn onClick={()=>setAddKwModal(true)}><MI n="add" size={13}/> 첫 키워드 추가</Btn>
             </div>
           </Card>
@@ -17649,21 +17649,21 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
                       <div style={{display:"flex",gap:2}}>
                         <button onClick={e=>{e.stopPropagation();toggleFixed(kw.id);}}
                           title={kw.fixed?"고정 해제":"고정"}
-                          style={{background:"none",border:"none",cursor:"pointer",color:kw.fixed?"#f59e0b":C.inkLt,padding:2,fontSize:11}}>📌</button>
+                          style={{background:"none",border:"none",cursor:"pointer",color:kw.fixed?"#f59e0b":C.inkLt,padding:2,fontSize:12}}>📌</button>
                         <button onClick={e=>{e.stopPropagation();setEditKwModal(kw);setEditKwInput(kw.name);setEditCompInput(kw.competitor||"");}}
-                          style={{background:"none",border:"none",cursor:"pointer",color:C.inkLt,padding:2,fontSize:11}}>✏️</button>
+                          style={{background:"none",border:"none",cursor:"pointer",color:C.inkLt,padding:2,fontSize:12}}>✏️</button>
                         {!kw.fixed&&<button onClick={e=>{e.stopPropagation();deleteKeyword(kw.id);}}
-                          style={{background:"none",border:"none",cursor:"pointer",color:C.inkLt,padding:2,fontSize:12}}>✕</button>}
+                          style={{background:"none",border:"none",cursor:"pointer",color:C.inkLt,padding:2,fontSize:13}}>✕</button>}
                       </div>
                     </div>
-                    {kw.competitor&&<div style={{fontSize:10,color:C.inkLt,marginBottom:6}}>{kw.competitor}</div>}
+                    {kw.competitor&&<div style={{fontSize:12,color:C.inkLt,marginBottom:6}}>{kw.competitor}</div>}
                     <div style={{display:"flex",alignItems:"flex-end",gap:8}}>
                       <div style={{fontSize:kw.latest?.rank!=null?28:16,fontWeight:900,color:kw.latest?kw.color:C.inkLt,lineHeight:1}}>
                         {kw.latest ? (kw.latest.rank!=null ? `${kw.latest.rank}위` : "300위↓") : "—"}
                       </div>
-                      {ch&&<div style={{fontSize:11,fontWeight:800,color:ch.color,marginBottom:2}}>{ch.text}</div>}
+                      {ch&&<div style={{fontSize:12,fontWeight:800,color:ch.color,marginBottom:2}}>{ch.text}</div>}
                     </div>
-                    {kw.latest&&<div style={{fontSize:10,color:C.inkLt,marginTop:4,display:"flex",gap:6,flexWrap:"wrap"}}>
+                    {kw.latest&&<div style={{fontSize:12,color:C.inkLt,marginTop:4,display:"flex",gap:6,flexWrap:"wrap"}}>
                       <span>{kw.latest.date} 기준</span>
                       {kw.latest.brand&&<span style={{background:"#EAF3FF",color:C.rose,padding:"0 6px",borderRadius:8,fontWeight:700}}>브랜드: {kw.latest.brand}</span>}
                     </div>}
@@ -17672,7 +17672,7 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
                         <button onClick={e=>{e.stopPropagation();setRankModal(kw.name);}}
                           style={{flex:1,padding:"5px 0",borderRadius:8,
                             border:`1px solid ${C.border}`,background:"#fff",color:C.inkMid,
-                            fontSize:10,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
+                            fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
                           <MI n="military_tech" size={11}/> 순위 보기
                         </button>
                       )}
@@ -17685,13 +17685,13 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
                         searchKeywords(q);
                       }} style={{flex:1,padding:"5px 0",borderRadius:8,
                         border:`1px solid ${C.border}`,background:"#fff",color:C.inkMid,
-                        fontSize:10,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
+                        fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
                         <MI n="bar_chart" size={11}/> 검색량 보기
                       </button>
                     </div>
                     <button onClick={e=>{e.stopPropagation();setLogKwId(kw.id);setLogModal(true);}}
                       style={{marginTop:8,width:"100%",padding:"5px 0",borderRadius:8,border:`1px solid ${C.border}`,
-                        background:C.cream,color:C.inkMid,fontSize:10,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
+                        background:C.cream,color:C.inkMid,fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
                       + 순위 기록
                     </button>
                   </div>
@@ -17703,19 +17703,19 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
             {chartData.length > 0 && (
               <Card>
                 <CardTitle title="순위 추이" sub={selectedKwName?`"${selectedKwName}" 브랜드별 비교`:"상위 5개 키워드 · 카드 클릭 시 브랜드별 비교"}/>
-                <div style={{fontSize:10,color:C.inkLt,marginBottom:8}}>낮을수록 상위 노출 (1위가 최상위)</div>
+                <div style={{fontSize:12,color:C.inkLt,marginBottom:8}}>낮을수록 상위 노출 (1위가 최상위)</div>
                 {allDates.length < 2 && (
-                  <div style={{fontSize:11,color:"#f59e0b",background:"#fffbeb",border:"1px solid #fde68a",borderRadius:8,padding:"6px 10px",marginBottom:8}}>
+                  <div style={{fontSize:12,color:"#f59e0b",background:"#fffbeb",border:"1px solid #fde68a",borderRadius:8,padding:"6px 10px",marginBottom:8}}>
                     📅 날짜가 2일 이상 쌓여야 추이 선이 표시됩니다. 지금은 {allDates.length}일치 데이터예요.
                   </div>
                 )}
                 <ResponsiveContainer width="100%" height={200}>
                   <LineChart data={chartData}>
                     <CartesianGrid strokeDasharray="3 3" stroke={C.border}/>
-                    <XAxis dataKey="date" tick={{fontSize:10}} stroke={C.border}/>
-                    <YAxis reversed tick={{fontSize:10}} stroke={C.border} domain={['dataMin - 2','dataMax + 2']}/>
+                    <XAxis dataKey="date" tick={{fontSize:12}} stroke={C.border}/>
+                    <YAxis reversed tick={{fontSize:12}} stroke={C.border} domain={['dataMin - 2','dataMax + 2']}/>
                     <Tooltip formatter={(v,n)=>[v!=null?`${v}위`:"300위↓",n]}/>
-                    <Legend wrapperStyle={{fontSize:11}}/>
+                    <Legend wrapperStyle={{fontSize:12}}/>
                     {chartKws.map(kw=>{
                       const brand = kw.logs[kw.logs.length-1]?.brand || kw.competitor || "오아";
                       const lineKey = `${kw.name}(${brand})`;
@@ -17734,7 +17734,7 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
               <Card>
                 <CardTitle title="최근 기록" sub="최신 20개"/>
                 <div style={{overflowX:"auto"}}>
-                  <table style={{width:"100%",borderCollapse:"collapse",fontSize:12}}>
+                  <table style={{width:"100%",borderCollapse:"collapse",fontSize:13}}>
                     <thead>
                       <tr style={{background:C.cream}}>
                         {["날짜","키워드","브랜드","순위","검색량","메모",""].map(h=>(
@@ -17753,18 +17753,18 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
                               <span style={{display:"inline-flex",alignItems:"center",gap:5}}>
                                 <span style={{width:8,height:8,borderRadius:"50%",background:kw?.color||C.inkLt,flexShrink:0}}/>
                                 <span style={{fontWeight:700,color:C.ink}}>{kw?.name||"삭제됨"}</span>
-                                {kw?.competitor&&<span style={{fontSize:10,color:C.inkLt}}>({kw.competitor})</span>}
+                                {kw?.competitor&&<span style={{fontSize:12,color:C.inkLt}}>({kw.competitor})</span>}
                               </span>
                             </td>
                             <td style={{padding:"7px 10px"}}>
-                              <span style={{fontSize:11,fontWeight:700,color:C.rose,background:"#EAF3FF",padding:"2px 8px",borderRadius:10}}>
+                              <span style={{fontSize:12,fontWeight:700,color:C.rose,background:"#EAF3FF",padding:"2px 8px",borderRadius:10}}>
                                 {log.brand||"OA"}
                               </span>
                             </td>
                             <td style={{padding:"7px 10px",fontWeight:800,color:C.ink}}>{log.rank}위</td>
                             <td style={{padding:"7px 10px",color:C.inkMid}}>{log.volume?log.volume.toLocaleString():"—"}</td>
                             <td style={{padding:"7px 10px",color:C.inkMid,maxWidth:160,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
-                              {log.auto ? <span style={{fontSize:10,color:C.rose,fontWeight:700,background:"#EAF3FF",padding:"1px 6px",borderRadius:10}}>자동</span> : log.note||"—"}
+                              {log.auto ? <span style={{fontSize:12,color:C.rose,fontWeight:700,background:"#EAF3FF",padding:"1px 6px",borderRadius:10}}>자동</span> : log.note||"—"}
                             </td>
                             <td style={{padding:"4px 6px"}}>
                               <button onClick={()=>setKwData({...kwData,logs:logs.filter(l=>l.id!==log.id)})}
@@ -17800,26 +17800,26 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
                   </div>
                   <div style={{flex:1,minWidth:0}}>
                     <div style={{display:"flex",alignItems:"center",gap:5,flexWrap:"wrap"}}>
-                      {item.isTarget&&<span style={{fontSize:10,fontWeight:800,color:"#fff",background:C.rose,
+                      {item.isTarget&&<span style={{fontSize:12,fontWeight:800,color:"#fff",background:C.rose,
                         padding:"1px 6px",borderRadius:10}}>{autoRank[rankModal].brand||"OA"}</span>}
-                      {item.isCatalog&&<span style={{fontSize:9,fontWeight:800,color:"#fff",background:"#6366f1",
+                      {item.isCatalog&&<span style={{fontSize:11,fontWeight:800,color:"#fff",background:"#6366f1",
                         padding:"1px 5px",borderRadius:10}}>카탈로그{item.mallCount>1?` ${item.mallCount}개`:""}</span>}
-                      <span style={{fontSize:12,fontWeight:800,color:item.isTarget?C.rose:C.ink}}>
+                      <span style={{fontSize:13,fontWeight:800,color:item.isTarget?C.rose:C.ink}}>
                         {item.brand||item.mallName||"—"}
                       </span>
                     </div>
-                    <div style={{fontSize:11,color:C.inkMid,marginTop:1,overflow:"hidden",
+                    <div style={{fontSize:12,color:C.inkMid,marginTop:1,overflow:"hidden",
                       textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{item.title}</div>
                   </div>
                   {item.lprice&&(
-                    <div style={{fontSize:12,fontWeight:800,color:C.ink,whiteSpace:"nowrap",textAlign:"right"}}>
+                    <div style={{fontSize:13,fontWeight:800,color:C.ink,whiteSpace:"nowrap",textAlign:"right"}}>
                       {item.lprice.toLocaleString()}원
                     </div>
                   )}
                 </div>
               ))}
             </div>
-            <div style={{marginTop:8,fontSize:11,color:C.inkLt}}>네이버쇼핑 관련도순 기준 · 광고 제외 순위 · 광고 상품은 흐리게 표시</div>
+            <div style={{marginTop:8,fontSize:12,color:C.inkLt}}>네이버쇼핑 관련도순 기준 · 광고 제외 순위 · 광고 상품은 흐리게 표시</div>
           </Modal>
         )}
 
@@ -17974,11 +17974,11 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
               <img src="/oa-logo.jpg" alt="OA" style={{width:30,height:30,objectFit:"contain"}}/></div>
             <div>
               <div style={{fontSize:15,fontWeight:800,color:"#1D1D1F",letterSpacing:"-0.02em"}}>OA <span style={{color:"#0071E3"}}>HQ</span></div>
-              <div style={{fontSize:9,color:"#86868B",letterSpacing:"0.08em"}}>MARKETING DASHBOARD</div>
+              <div style={{fontSize:11,color:"#86868B",letterSpacing:"0.08em"}}>MARKETING DASHBOARD</div>
             </div>
           </div>
           <div style={{display:"flex",alignItems:"center",gap:6,padding:"7px 12px",
-            background:"rgba(0,0,0,.04)",border:"1px solid rgba(0,0,0,.05)",borderRadius:10,fontSize:11,color:"#515154",fontWeight:600}}>
+            background:"rgba(0,0,0,.04)",border:"1px solid rgba(0,0,0,.05)",borderRadius:10,fontSize:12,color:"#515154",fontWeight:600}}>
             <span style={{width:6,height:6,borderRadius:"50%",background:"#0071E3",flexShrink:0,
               boxShadow:pulse?"0 0 0 4px rgba(0,113,227,.2)":"none",transition:"box-shadow 0.4s",display:"inline-block"}}/>
             {dateStr}
@@ -18008,7 +18008,7 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
                   {n.id==="home"&&totalAlerts>0&&(
                     <span style={{marginLeft:"auto",minWidth:20,height:20,borderRadius:10,
                       background:active?C.bad:C.bad,color:C.white,
-                      fontSize:10,fontWeight:900,display:"flex",alignItems:"center",justifyContent:"center",padding:"0 5px"}}>
+                      fontSize:12,fontWeight:900,display:"flex",alignItems:"center",justifyContent:"center",padding:"0 5px"}}>
                       {totalAlerts}
                     </span>
                   )}
@@ -18018,7 +18018,7 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
           </div>
           {/* 수리중 탭 구분선 */}
           <div style={{borderTop:"1px solid rgba(0,0,0,.06)",marginTop:8,paddingTop:8}}>
-            <div style={{fontSize:10,fontWeight:800,color:"#C93400",padding:"2px 14px 6px",letterSpacing:"0.05em",display:"flex",alignItems:"center",gap:4}}>
+            <div style={{fontSize:12,fontWeight:800,color:"#C93400",padding:"2px 14px 6px",letterSpacing:"0.05em",display:"flex",alignItems:"center",gap:4}}>
               🚧 <span>수리중</span>
             </div>
             {NAVS_WIP.map(n=>{
@@ -18038,7 +18038,7 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
                 onMouseLeave={e=>{ if(!active){ e.currentTarget.style.background="transparent"; } }}>
                   <MI n={n.icon} size={18}/>
                   <span>{n.label}</span>
-                  <span style={{marginLeft:"auto",fontSize:9,fontWeight:800,color:"#f59e0b",background:"#fef3c7",borderRadius:4,padding:"1px 5px",border:"1px solid #fcd34d"}}>수리중</span>
+                  <span style={{marginLeft:"auto",fontSize:11,fontWeight:800,color:"#f59e0b",background:"#fef3c7",borderRadius:4,padding:"1px 5px",border:"1px solid #fcd34d"}}>수리중</span>
                 </button>
               );
             })}
@@ -18049,12 +18049,12 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
         {totalAlerts>0&&(
           <div style={{margin:"0 12px 20px",padding:"12px",background:"rgba(255,255,255,.8)",
             border:"1px solid rgba(0,0,0,.06)",borderRadius:12,boxShadow:"0 1px 4px rgba(0,0,0,.04)"}}>
-            <div style={{fontSize:11,fontWeight:800,color:"#C93400",marginBottom:6}}>🔔 확인 필요</div>
-            {orderStatus==="ok"&&orderRaw.length>0&&<div style={{fontSize:10,color:"#D70015",fontWeight:700,marginBottom:3}}><MI n="inventory_2" size={11}/> 발주임박 {orderRaw.length}개</div>}
-            {cutAds.length>0&&<div style={{fontSize:10,color:"#D70015",fontWeight:700,marginBottom:3}}><MI n="cancel" size={11}/> 광고교체 {cutAds.length}개</div>}
-            {holdAds.length>0&&<div style={{fontSize:10,color:"#C93400",marginBottom:3}}><MI n="pause_circle" size={11}/> 광고보류 {holdAds.length}개</div>}
-            {overdueScheds.length>0&&<div style={{fontSize:10,color:"#515154",marginBottom:3}}><MI n="calendar_month" size={11}/> 기간초과 {overdueScheds.length}건</div>}
-            {urgentScheds.length>0&&<div style={{fontSize:10,color:"#515154"}}><MI n="notifications" size={11}/> D-5임박 {urgentScheds.length}건</div>}
+            <div style={{fontSize:12,fontWeight:800,color:"#C93400",marginBottom:6}}>🔔 확인 필요</div>
+            {orderStatus==="ok"&&orderRaw.length>0&&<div style={{fontSize:12,color:"#D70015",fontWeight:700,marginBottom:3}}><MI n="inventory_2" size={11}/> 발주임박 {orderRaw.length}개</div>}
+            {cutAds.length>0&&<div style={{fontSize:12,color:"#D70015",fontWeight:700,marginBottom:3}}><MI n="cancel" size={11}/> 광고교체 {cutAds.length}개</div>}
+            {holdAds.length>0&&<div style={{fontSize:12,color:"#C93400",marginBottom:3}}><MI n="pause_circle" size={11}/> 광고보류 {holdAds.length}개</div>}
+            {overdueScheds.length>0&&<div style={{fontSize:12,color:"#515154",marginBottom:3}}><MI n="calendar_month" size={11}/> 기간초과 {overdueScheds.length}건</div>}
+            {urgentScheds.length>0&&<div style={{fontSize:12,color:"#515154"}}><MI n="notifications" size={11}/> D-5임박 {urgentScheds.length}건</div>}
           </div>
         )}
       </aside>
@@ -18075,9 +18075,9 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
           {totalAlerts>0&&(
             <div onClick={()=>setSec("home")} style={{display:"flex",alignItems:"center",gap:5,padding:"5px 10px",
               background:"rgba(215,0,21,.08)",border:"1px solid rgba(215,0,21,.2)",borderRadius:20,
-              fontSize:10,color:"#D70015",fontWeight:700,cursor:"pointer"}}>🔔 {totalAlerts}건</div>
+              fontSize:12,color:"#D70015",fontWeight:700,cursor:"pointer"}}>🔔 {totalAlerts}건</div>
           )}
-          <div style={{fontSize:10,color:"#515154",fontWeight:600,background:"rgba(0,0,0,.04)",
+          <div style={{fontSize:12,color:"#515154",fontWeight:600,background:"rgba(0,0,0,.04)",
             padding:"4px 10px",borderRadius:20,border:"1px solid rgba(0,0,0,.05)"}}>{dateStr}</div>
         </div>
       </header>
@@ -18117,12 +18117,12 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
             background:"transparent",border:"none",cursor:"pointer",padding:"4px 0",
             fontFamily:"inherit",position:"relative"}}>
             <MI n={n.icon} size={18}/>
-            <span style={{fontSize:9,fontWeight:700,color:sec===n.id?C.rose:C.inkLt}}>{n.label}</span>
+            <span style={{fontSize:11,fontWeight:700,color:sec===n.id?C.rose:C.inkLt}}>{n.label}</span>
             {sec===n.id&&<div style={{width:18,height:2,background:C.rose,borderRadius:2,marginTop:1}}/>}
             {n.id==="home"&&totalAlerts>0&&(
               <div style={{position:"absolute",top:0,right:"15%",width:14,height:14,borderRadius:"50%",
                 background:C.bad,display:"flex",alignItems:"center",justifyContent:"center",
-                fontSize:8,fontWeight:900,color:C.white}}>{totalAlerts}</div>
+                fontSize:10,fontWeight:900,color:C.white}}>{totalAlerts}</div>
             )}
           </button>
         ))}
@@ -18181,12 +18181,12 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
             <div style={{background:C.ink,padding:"14px 16px",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
               <div>
                 <div style={{fontSize:13,fontWeight:800,color:C.white}}><MI n="smart_toy" size={14}/> OA 데이터 에이전트</div>
-                <div style={{fontSize:10,opacity:0.5,color:C.white,marginTop:2}}>메타광고 · 재고 데이터 기반</div>
+                <div style={{fontSize:12,opacity:0.5,color:C.white,marginTop:2}}>메타광고 · 재고 데이터 기반</div>
               </div>
               <div style={{display:"flex",gap:6}}>
                 <button onClick={()=>setAgentMsgs([])}
                   style={{background:"rgba(255,255,255,0.1)",border:"none",borderRadius:6,padding:"4px 8px",
-                    color:"rgba(255,255,255,0.6)",fontSize:10,cursor:"pointer",fontFamily:"inherit"}}>초기화</button>
+                    color:"rgba(255,255,255,0.6)",fontSize:12,cursor:"pointer",fontFamily:"inherit"}}>초기화</button>
                 <button onClick={()=>setAgentOpen(false)}
                   style={{background:"rgba(255,255,255,0.1)",border:"none",borderRadius:6,padding:"4px 8px",
                     color:"rgba(255,255,255,0.6)",fontSize:14,cursor:"pointer"}}>✕</button>
@@ -18198,7 +18198,7 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
               {[{id:"chat",label:<><MI n="chat_bubble" size={12}/> 채팅</>},{id:"history",label:<><MI n="bookmark" size={12}/> 저장됨 {Array.isArray(agentHistory)&&agentHistory.length>0?`(${agentHistory.length})`:""}</>}].map(t=>(
                 <button key={t.id} onClick={()=>setAgentTab(t.id)}
                   style={{flex:1,padding:"8px",border:"none",background:"transparent",
-                    fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit",
+                    fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit",
                     color:agentTab===t.id?C.rose:C.inkMid,
                     borderBottom:agentTab===t.id?`2px solid ${C.rose}`:"2px solid transparent"}}>
                   {t.label}
@@ -18214,30 +18214,30 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
                   agentHistory.map((h,i)=>(
                     <div key={h.id||i} style={{background:C.cream,borderRadius:12,padding:"12px",border:`1px solid ${C.border}`}}>
                       <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:8}}>
-                        <div style={{fontSize:10,fontWeight:700,color:C.ink,flex:1}}>{h.question}</div>
+                        <div style={{fontSize:12,fontWeight:700,color:C.ink,flex:1}}>{h.question}</div>
                         <div style={{display:"flex",gap:4,flexShrink:0}}>
                           <button onClick={()=>{setAgentMsgs([{role:"user",content:h.question},{role:"assistant",content:h.answer}]);setAgentTab("chat");}}
-                            style={{fontSize:9,padding:"3px 8px",borderRadius:6,border:`1px solid ${C.border}`,background:C.white,cursor:"pointer",fontFamily:"inherit",color:C.inkMid}}>
+                            style={{fontSize:11,padding:"3px 8px",borderRadius:6,border:`1px solid ${C.border}`,background:C.white,cursor:"pointer",fontFamily:"inherit",color:C.inkMid}}>
                             불러오기
                           </button>
                           <button onClick={()=>setAgentHistory(prev=>(Array.isArray(prev)?prev:[]).filter(x=>x.id!==h.id))}
-                            style={{fontSize:9,padding:"3px 8px",borderRadius:6,border:`1px solid ${C.bad}44`,background:"#FEF0F0",cursor:"pointer",fontFamily:"inherit",color:C.bad}}>
+                            style={{fontSize:11,padding:"3px 8px",borderRadius:6,border:`1px solid ${C.bad}44`,background:"#FEF0F0",cursor:"pointer",fontFamily:"inherit",color:C.bad}}>
                             삭제
                           </button>
                         </div>
                       </div>
-                      <div style={{fontSize:10,color:C.inkMid,lineHeight:1.5,whiteSpace:"pre-wrap"}}>
+                      <div style={{fontSize:12,color:C.inkMid,lineHeight:1.5,whiteSpace:"pre-wrap"}}>
                         {h.answer.replace(/```chart[\s\S]*?```/g,"[차트]").slice(0,150)}{h.answer.length>150?"...":""}
                       </div>
-                      <div style={{fontSize:9,color:C.inkLt,marginTop:6}}>
+                      <div style={{fontSize:11,color:C.inkLt,marginTop:6}}>
                         {new Date(h.savedAt).toLocaleString("ko-KR",{month:"numeric",day:"numeric",hour:"2-digit",minute:"2-digit"})}
                       </div>
                     </div>
                   ))
                 ) : (
-                  <div style={{textAlign:"center",padding:"40px 10px",color:C.inkLt,fontSize:11}}>
+                  <div style={{textAlign:"center",padding:"40px 10px",color:C.inkLt,fontSize:12}}>
                     저장된 분석이 없어요<br/>
-                    <span style={{fontSize:10,marginTop:4,display:"block"}}>그래프 답변은 자동 저장돼요<br/>일반 답변은 💾 버튼으로 저장해요</span>
+                    <span style={{fontSize:12,marginTop:4,display:"block"}}>그래프 답변은 자동 저장돼요<br/>일반 답변은 💾 버튼으로 저장해요</span>
                   </div>
                 )
               )}
@@ -18247,8 +18247,8 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
               {agentMsgs.length===0&&(
                 <div style={{textAlign:"center",padding:"20px 10px"}}>
                   <div style={{fontSize:28,marginBottom:8}}>👋</div>
-                  <div style={{fontSize:12,fontWeight:700,color:C.ink,marginBottom:6}}>안녕하세요! 마케팅 데이터 에이전트예요</div>
-                  <div style={{fontSize:10,color:C.inkLt,lineHeight:1.6}}>현재 메타광고 · 재고 데이터를 알고 있어요.<br/>아래 질문을 눌러보세요!</div>
+                  <div style={{fontSize:13,fontWeight:700,color:C.ink,marginBottom:6}}>안녕하세요! 마케팅 데이터 에이전트예요</div>
+                  <div style={{fontSize:12,color:C.inkLt,lineHeight:1.6}}>현재 메타광고 · 재고 데이터를 알고 있어요.<br/>아래 질문을 눌러보세요!</div>
                   <div style={{marginTop:14,display:"flex",flexDirection:"column",gap:10,textAlign:"left"}}>
                     {[
                       {label:<><MI n="bar_chart" size={12}/> 성과 분석</>, qs:[
@@ -18274,12 +18274,12 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
                       ]},
                     ].map(cat=>(
                       <div key={cat.label}>
-                        <div style={{fontSize:10,fontWeight:800,color:C.ink,marginBottom:5}}>{cat.label}</div>
+                        <div style={{fontSize:12,fontWeight:800,color:C.ink,marginBottom:5}}>{cat.label}</div>
                         <div style={{display:"flex",flexDirection:"column",gap:4}}>
                           {cat.qs.map(q=>(
                             <button key={q} onClick={()=>setAgentInput(q)}
                               style={{padding:"7px 12px",borderRadius:10,border:`1px solid ${C.border}`,
-                                background:C.white,color:C.inkMid,fontSize:10,fontWeight:500,
+                                background:C.white,color:C.inkMid,fontSize:12,fontWeight:500,
                                 cursor:"pointer",fontFamily:"inherit",textAlign:"left",
                                 transition:"background 0.15s"}}
                               onMouseEnter={e=>e.target.style.background=C.cream}
@@ -18311,7 +18311,7 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
                   <div key={i} style={{display:"flex",justifyContent:isUser?"flex-end":"flex-start",flexDirection:"column",alignItems:isUser?"flex-end":"flex-start",gap:4}}>
                     <div style={{maxWidth:"85%",padding:"10px 13px",borderRadius:isUser?"16px 16px 4px 16px":"16px 16px 16px 4px",
                       background:isUser?C.rose:C.cream,color:isUser?C.white:C.ink,
-                      fontSize:11,lineHeight:1.6,whiteSpace:"pre-wrap"}}>
+                      fontSize:12,lineHeight:1.6,whiteSpace:"pre-wrap"}}>
                       {textContent}
                       {chartData&&(()=>{
                         if(!chartData.data||!chartData.data.length) return null;
@@ -18320,11 +18320,11 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
                         const chartId = `chart-${i}`;
                         return(
                           <div id={chartId} style={{marginTop:10,background:C.white,borderRadius:10,padding:"10px",width:280}}>
-                            <div style={{fontSize:10,fontWeight:700,color:C.ink,marginBottom:6}}>{chartData.title}</div>
+                            <div style={{fontSize:12,fontWeight:700,color:C.ink,marginBottom:6}}>{chartData.title}</div>
                             <ResponsiveContainer width="100%" height={160}>
                               {chartData.type==="pie"?(
                                 <PieChart>
-                                  <Pie data={data} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={60} label={({name,percent})=>`${name} ${(percent*100).toFixed(0)}%`} labelLine={false} style={{fontSize:8}}>
+                                  <Pie data={data} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={60} label={({name,percent})=>`${name} ${(percent*100).toFixed(0)}%`} labelLine={false} style={{fontSize:10}}>
                                     {data.map((_,idx)=><Cell key={idx} fill={COLORS[idx%COLORS.length]}/>)}
                                   </Pie>
                                   <Tooltip formatter={(v)=>v.toLocaleString()}/>
@@ -18332,16 +18332,16 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
                               ):chartData.type==="line"?(
                                 <LineChart data={data}>
                                   <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0"/>
-                                  <XAxis dataKey="name" tick={{fontSize:8}} axisLine={false} tickLine={false}/>
-                                  <YAxis tick={{fontSize:8}} axisLine={false} tickLine={false} width={40} tickFormatter={v=>v>=10000?`${Math.round(v/10000)}만`:v}/>
+                                  <XAxis dataKey="name" tick={{fontSize:10}} axisLine={false} tickLine={false}/>
+                                  <YAxis tick={{fontSize:10}} axisLine={false} tickLine={false} width={40} tickFormatter={v=>v>=10000?`${Math.round(v/10000)}만`:v}/>
                                   <Tooltip formatter={(v)=>v.toLocaleString()}/>
                                   <Line type="monotone" dataKey="value" stroke={C.rose} strokeWidth={2} dot={{r:3}} activeDot={{r:5}}/>
                                 </LineChart>
                               ):(
                                 <BarChart data={data}>
                                   <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0"/>
-                                  <XAxis dataKey="name" tick={{fontSize:8}} axisLine={false} tickLine={false}/>
-                                  <YAxis tick={{fontSize:8}} axisLine={false} tickLine={false} width={40} tickFormatter={v=>v>=10000?`${Math.round(v/10000)}만`:v}/>
+                                  <XAxis dataKey="name" tick={{fontSize:10}} axisLine={false} tickLine={false}/>
+                                  <YAxis tick={{fontSize:10}} axisLine={false} tickLine={false} width={40} tickFormatter={v=>v>=10000?`${Math.round(v/10000)}만`:v}/>
                                   <Tooltip formatter={(v)=>v.toLocaleString()}/>
                                   <Bar dataKey="value" radius={[4,4,0,0]}>
                                     {data.map((_,idx)=><Cell key={idx} fill={COLORS[idx%COLORS.length]}/>)}
@@ -18357,7 +18357,7 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
                     {!isUser&&(
                       <div style={{display:"flex",gap:4}}>
                         <button onClick={()=>saveAgentMsg(question, m.content)}
-                          style={{fontSize:9,padding:"3px 10px",borderRadius:6,border:`1px solid ${C.border}`,
+                          style={{fontSize:11,padding:"3px 10px",borderRadius:6,border:`1px solid ${C.border}`,
                             background:C.white,cursor:"pointer",fontFamily:"inherit",color:C.inkMid}}>
                           💾 저장
                         </button>
@@ -18373,7 +18373,7 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
                               a.download = `${chartData.title||"chart"}_${new Date().toLocaleDateString("ko-KR").replace(/\./g,"").replace(/ /g,"")}.png`;
                               a.click();
                             } catch(e) { alert("저장 실패: "+e.message); }
-                          }} style={{fontSize:9,padding:"3px 10px",borderRadius:6,border:`1px solid ${C.border}`,
+                          }} style={{fontSize:11,padding:"3px 10px",borderRadius:6,border:`1px solid ${C.border}`,
                             background:C.white,cursor:"pointer",fontFamily:"inherit",color:C.inkMid}}>
                             <MI n="image" size={11}/> 이미지
                           </button>
@@ -18385,7 +18385,7 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
               })}
               {agentLoading&&(
                 <div style={{display:"flex",justifyContent:"flex-start"}}>
-                  <div style={{padding:"10px 14px",borderRadius:"16px 16px 16px 4px",background:C.cream,fontSize:11,color:C.inkLt}}>
+                  <div style={{padding:"10px 14px",borderRadius:"16px 16px 16px 4px",background:C.cream,fontSize:12,color:C.inkLt}}>
                     <MI n="hourglass_empty" size={13}/> 분석 중...
                   </div>
                 </div>
@@ -18402,12 +18402,12 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
                 onKeyDown={e=>e.key==="Enter"&&!e.shiftKey&&sendAgentMessage()}
                 placeholder="질문을 입력하세요..."
                 style={{flex:1,padding:"9px 12px",border:`1px solid ${C.border}`,borderRadius:10,
-                  fontSize:11,fontFamily:"inherit",outline:"none",background:C.cream}}
+                  fontSize:12,fontFamily:"inherit",outline:"none",background:C.cream}}
               />
               <button onClick={sendAgentMessage} disabled={!agentInput.trim()||agentLoading}
                 style={{padding:"9px 14px",borderRadius:10,border:"none",
                   background:agentInput.trim()&&!agentLoading?C.rose:"#ddd",
-                  color:C.white,fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
+                  color:C.white,fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
                 전송
               </button>
             </div>
@@ -18432,8 +18432,8 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
               {/* 헤더 */}
               <div style={{background:C.rose,padding:"10px 16px",display:"flex",alignItems:"center",gap:8}}>
                 <MI n="campaign" size={16} style={{color:C.white}}/>
-                <span style={{fontSize:12,fontWeight:800,color:C.white,flex:1}}>📣 팀 공지</span>
-                <span style={{fontSize:10,color:"rgba(255,255,255,0.75)"}}>
+                <span style={{fontSize:13,fontWeight:800,color:C.white,flex:1}}>📣 팀 공지</span>
+                <span style={{fontSize:12,color:"rgba(255,255,255,0.75)"}}>
                   {readBy.length}/{NOTICE_MEMBERS.length} 확인
                 </span>
                 <button onClick={()=>{setNoticeInput(activeNotice.content);setNoticeEditMode(true);}}
@@ -18450,11 +18450,11 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
                     <textarea value={noticeInput} onChange={e=>setNoticeInput(e.target.value)}
                       rows={3}
                       style={{width:"100%",padding:"8px 10px",border:`1.5px solid ${C.border}`,
-                        borderRadius:8,fontSize:12,fontFamily:"inherit",outline:"none",
+                        borderRadius:8,fontSize:13,fontFamily:"inherit",outline:"none",
                         resize:"none",boxSizing:"border-box"}}/>
                     <div style={{display:"flex",gap:6,justifyContent:"flex-end"}}>
                       <button onClick={()=>setNoticeEditMode(false)}
-                        style={{fontSize:11,padding:"6px 14px",borderRadius:8,border:`1px solid ${C.border}`,
+                        style={{fontSize:12,padding:"6px 14px",borderRadius:8,border:`1px solid ${C.border}`,
                           background:C.cream,color:C.inkMid,cursor:"pointer",fontFamily:"inherit",fontWeight:700}}>
                         취소
                       </button>
@@ -18464,7 +18464,7 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
                         setNoticeReads(prev=>({...prev,[id]:[]}));
                         setNoticeEditMode(false);
                       }}
-                        style={{fontSize:11,padding:"6px 14px",borderRadius:8,border:"none",
+                        style={{fontSize:12,padding:"6px 14px",borderRadius:8,border:"none",
                           background:C.rose,color:C.white,cursor:"pointer",fontFamily:"inherit",fontWeight:700}}>
                         저장
                       </button>
@@ -18489,7 +18489,7 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
                         setNoticeReads(prev=>({...prev,[activeNotice.id]:next}));
                       }}
                         style={{flex:1,minWidth:60,padding:"8px 0",borderRadius:10,fontFamily:"inherit",
-                          fontWeight:800,fontSize:12,cursor:done?"default":"pointer",transition:"all 0.15s",
+                          fontWeight:800,fontSize:13,cursor:done?"default":"pointer",transition:"all 0.15s",
                           border:`1.5px solid ${done?"#4DAD7A":C.border}`,
                           background:done?"#EDF7F1":C.cream,
                           color:done?"#2e7d32":C.inkMid}}>
@@ -18508,7 +18508,7 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
           if(!activeNotice) return(
             <button onClick={()=>{setNoticeInput("");setNoticeEditMode(true);setActiveNotice({id:"__new__",content:"",createdAt:""});}}
               style={{position:"fixed",bottom:80,right:80,background:"#fff",border:`1.5px solid ${C.rose}55`,
-                borderRadius:12,padding:"6px 12px",fontSize:11,fontWeight:700,color:C.rose,
+                borderRadius:12,padding:"6px 12px",fontSize:12,fontWeight:700,color:C.rose,
                 cursor:"pointer",boxShadow:"0 2px 12px rgba(0,0,0,0.1)",zIndex:1999,fontFamily:"inherit",
                 display:"flex",alignItems:"center",gap:4}}>
               <MI n="campaign" size={13}/> 공지 작성
@@ -18521,7 +18521,7 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
           return(
             <button onClick={()=>{setNoticeInput("");setNoticeEditMode(true);setActiveNotice({id:"__new__",content:"",createdAt:""});}}
               style={{position:"fixed",bottom:80,right:80,background:"#fff",border:`1.5px solid ${C.rose}55`,
-                borderRadius:12,padding:"6px 12px",fontSize:11,fontWeight:700,color:C.rose,
+                borderRadius:12,padding:"6px 12px",fontSize:12,fontWeight:700,color:C.rose,
                 cursor:"pointer",boxShadow:"0 2px 12px rgba(0,0,0,0.1)",zIndex:1999,fontFamily:"inherit",
                 display:"flex",alignItems:"center",gap:4}}>
               <MI n="campaign" size={13}/> 공지 작성
