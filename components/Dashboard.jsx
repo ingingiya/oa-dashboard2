@@ -11643,7 +11643,25 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
               ))}
             </div>
             <div style={{marginBottom:16}}>
-              <div style={{fontSize:11,fontWeight:800,color:C.ink,marginBottom:8}}>키워드별 마진</div>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
+                <div style={{fontSize:11,fontWeight:800,color:C.ink}}>키워드별 마진</div>
+                <Btn small variant="neutral" onClick={()=>{
+                  // 메타 캠페인명에서 제품 키워드 추출 — 없는 것만 추가 (마진은 기본값, 나중에 수정)
+                  const names=[...new Set(metaForChart.map(r=>r.campaign||"").filter(Boolean))];
+                  const SKIP=/^(전환|트래픽|일반|행사|특가|리타겟|리타게팅|테스트|신규)$/;
+                  const cands=new Set();
+                  names.forEach(c=>{
+                    const t=String(c).split(/[_\-|/]/)[0].replace(/\(.*?\)/g,"").replace(/\s+/g," ").trim();
+                    if(t.length>=2&&!SKIP.test(t)) cands.add(t);
+                  });
+                  const existing=margins.map(m=>String(m.keyword).toLowerCase());
+                  const fresh=[...cands].filter(t=>{const tl=t.toLowerCase();return !existing.some(k=>k.includes(tl)||tl.includes(k));});
+                  if(!fresh.length){window.alert("추가할 새 키워드가 없어요 — 캠페인이 전부 기존 키워드에 매칭됩니다");return;}
+                  const base=+marginInput||30000;
+                  if(!window.confirm(`메타 캠페인에서 새 키워드 ${fresh.length}개 발견:\n${fresh.join(", ")}\n\n기본 마진 ${base.toLocaleString()}원으로 추가할까요? (마진은 개별 수정)`))return;
+                  setMargins([...margins,...fresh.map((k,i)=>({id:Date.now()+i,keyword:k,margin:base}))]);
+                }}><MI n="sync" size={13}/> 메타 캠페인에서 가져오기</Btn>
+              </div>
               {margins.map((m)=>(
                 <div key={m.id} style={{display:"flex",alignItems:"center",gap:8,marginBottom:8,
                   padding:"10px 12px",background:C.cream,borderRadius:10,border:`1px solid ${C.border}`}}>
