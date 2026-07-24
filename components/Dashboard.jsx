@@ -7271,6 +7271,19 @@ export default function OaDashboard(){
   // GFA 리포트 (소재별 CSV 업로드 → 자동 판정) — {fileName,uploadedAt,targetRoas,rows:[]}
   const [gfaReport, setGfaReport] = useSyncState("oa_gfa_report_v1", null);
   const [gfaThumbs, setGfaThumbs] = useSyncState("oa_gfa_thumbs_v1", {}); // {소재이름: 이미지URL}
+  // 포트폴리오 네이버 자동 집계 — ad_campaigns (네이버 검색광고 API 일별 적재분)
+  const [pfNaver, setPfNaver] = useState({month:null, rows:[]});
+  useEffect(()=>{
+    if(sec!=="portfolio"||pfNaver.month===pfMonth) return;
+    const SURL=process.env.NEXT_PUBLIC_SUPABASE_URL, SKEY=process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+    const [y,m]=pfMonth.split("-").map(Number);
+    const until=`${pfMonth}-${String(new Date(y,m,0).getDate()).padStart(2,"0")}`;
+    fetch(`${SURL}/rest/v1/ad_campaigns?select=date,campaign_name,spend,conversions,conv_amount&date=gte.${pfMonth}-01&date=lte.${until}&limit=10000`,
+      {headers:{apikey:SKEY,Authorization:`Bearer ${SKEY}`}})
+      .then(r=>r.ok?r.json():[])
+      .then(rows=>setPfNaver({month:pfMonth,rows:Array.isArray(rows)?rows:[]}))
+      .catch(()=>setPfNaver({month:pfMonth,rows:[]}));
+  },[sec,pfMonth,pfNaver.month]);
   // 우선순위 탭 (scripts/sync-priority.js 로컬 크론이 기록 — 읽기 전용)
   const [prioData] = useSyncState("oa_priority_v1", null);
   const [prioCat, setPrioCat] = useState("전체");
@@ -7950,6 +7963,22 @@ export default function OaDashboard(){
       }
     });
 
+    // GFA 자동 집계 — 업로드된 GFA 소재 리포트(oa_gfa_report_v1)에서 팀 키워드 매칭
+    const teamGfa={};
+    (gfaReport?.rows||[]).forEach(r=>{
+      const hay=`${r.camp||""} ${r.group||""} ${r.name||""}`.toLowerCase();
+      const t=(pfTeams||[]).find(tm=>(tm.keywords||[]).some(k=>k==="*"||(k&&hay.includes(String(k).toLowerCase()))));
+      if(t){ const a=teamGfa[t.id]=teamGfa[t.id]||{spend:0,rev:0,purch:0}; a.spend+=r.cost||0; a.rev+=r.rev||0; a.purch+=r.buy||0; }
+    });
+
+    // 네이버 자동 집계 — ad_campaigns 월 데이터, 캠페인 레벨만 (" > " 포함 행은 그룹/키워드 단위라 중복 제외)
+    const teamNaver={};
+    (pfNaver.rows||[]).filter(r=>!String(r.campaign_name||"").includes(" > ")).forEach(r=>{
+      const hay=String(r.campaign_name||"").toLowerCase();
+      const t=(pfTeams||[]).find(tm=>(tm.keywords||[]).some(k=>k==="*"||(k&&hay.includes(String(k).toLowerCase()))));
+      if(t){ const a=teamNaver[t.id]=teamNaver[t.id]||{spend:0,rev:0,purch:0}; a.spend+=r.spend||0; a.rev+=r.conv_amount||0; a.purch+=r.conversions||0; }
+    });
+
     const addTeam=()=>{
       const name=window.prompt("팀 이름 (예: 이미용, 헬스케어)"); if(!name) return;
       const kw=window.prompt("메타 캠페인/광고명 매칭 키워드 — 쉼표로 구분\n(예: 드라이기,고데기,갈바닉 · 전부 매칭은 *)")||"";
@@ -7988,6 +8017,18 @@ export default function OaDashboard(){
         const a=teamMeta[b.teamId]||{spend:0,conv:0,purch:0};
         return {spent:a.spend,rev:a.conv,purch:a.purch,
           roas:a.spend>0?a.conv/a.spend*100:null,
+          cpa:a.purch>0?a.spend/a.purch:null,auto:true};
+      }
+      if(b.source==="GFA"&&teamGfa[b.teamId]){
+        const a=teamGfa[b.teamId];
+        return {spent:a.spend,rev:a.rev,purch:a.purch,
+          roas:a.spend>0?a.rev/a.spend*100:null,
+          cpa:a.purch>0?a.spend/a.purch:null,auto:true};
+      }
+      if(b.source==="네이버"&&teamNaver[b.teamId]){
+        const a=teamNaver[b.teamId];
+        return {spent:a.spend,rev:a.rev,purch:a.purch,
+          roas:a.spend>0?a.rev/a.spend*100:null,
           cpa:a.purch>0?a.spend/a.purch:null,auto:true};
       }
       const spent=b.spent||0, rev=b.rev||0, purch=b.purch||0;
@@ -8133,7 +8174,8 @@ export default function OaDashboard(){
                       <div key={b.id} style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap",
                         background:"#F8FAFC",border:`1px solid ${C.border}`,borderRadius:12,padding:"8px 10px"}}>
                         <span style={{fontSize:12,fontWeight:900,color:col,minWidth:38}}>{b.source}</span>
-                        <span style={{fontSize:10,fontWeight:800,padding:"2px 6px",borderRadius:20,
+                        <span title={st.auto?(b.source==="GFA"?`GFA 탭 업로드 리포트 기준${gfaReport?.fileName?` (${gfaReport.fileName})`:""}`:b.source==="네이버"?"네이버 검색광고 API 자동 집계 (월 기준)":"메타 API 자동 집계"):"직접 입력"}
+                          style={{fontSize:11,fontWeight:800,padding:"2px 6px",borderRadius:20,
                           color:st.auto?"#248A3D":C.inkLt,background:st.auto?"#F0FDF4":C.cream}}>{st.auto?"자동":"수동"}</span>
                         <div style={{display:"flex",alignItems:"center",gap:4}}>
                           <span style={{fontSize:11,color:C.inkLt,fontWeight:700}}>예산</span>
