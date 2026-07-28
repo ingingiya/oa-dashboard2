@@ -9,7 +9,8 @@ export async function GET() {
   if (!token || !accountId)
     return Response.json({ error: "META_ACCESS_TOKEN 또는 META_AD_ACCOUNT_ID 없음" }, { status: 500 });
 
-  const campaignFilter = (process.env.META_CAMPAIGN_FILTER || "뷰티").toLowerCase();
+  // 쉼표 구분 다중 키워드 — 하나라도 캠페인명에 포함되면 수집
+  const campaignFilters = (process.env.META_CAMPAIGN_FILTER || "뷰티,부스터").toLowerCase().split(",").map(s=>s.trim()).filter(Boolean);
   const thumbs = {};
 
   let url = `${GRAPH}/${accountId}/ads?fields=name,campaign{name},creative{image_url,thumbnail_url}&thumbnail_width=512&thumbnail_height=512&limit=200&access_token=${token}`;
@@ -23,7 +24,7 @@ export async function GET() {
 
     for (const ad of data.data || []) {
       const camp = (ad.campaign?.name || "").toLowerCase();
-      if (!camp.includes(campaignFilter)) continue;
+      if (!campaignFilters.some(f => camp.includes(f))) continue;
       const img = ad.creative?.image_url || ad.creative?.thumbnail_url;
       if (ad.name && img && !thumbs[ad.name]) thumbs[ad.name] = img;
     }
