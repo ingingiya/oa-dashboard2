@@ -8314,7 +8314,11 @@ export default function OaDashboard(){
       return p.length>1?p.slice(1).join("_"):p[0];
     };
     const gfaBigrams=s=>{const b=new Set();for(let i=0;i<s.length-1;i++)b.add(s.slice(i,i+2));return b;};
-    const gfaSim=(fileName,creaName)=>{ // 파일명 vs 소재명 뒷부분 (0~1)
+    const gfaSim=(fileName,creaName)=>{ // 파일명 vs 소재명 (0~1)
+      // 1순위: 전체 이름 포함 매칭 — "아이스넥밴드_아빠" ⊂ "아이스넥밴드_아빠 1_피드형"
+      const fa=gfaNorm(fileName),fb=gfaNorm(creaName);
+      if(fa&&fb&&(fa.includes(fb)||fb.includes(fa))) return 1;
+      // 2순위: 제품명 접두 제거 후 컨셉명 비교
       const na=gfaNorm(gfaCore(fileName)),nb=gfaNorm(gfaCore(creaName));
       if(!na||!nb) return 0;
       if(na.includes(nb)||nb.includes(na)) return 1;
