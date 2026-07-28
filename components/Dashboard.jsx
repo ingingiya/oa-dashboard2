@@ -8373,7 +8373,15 @@ export default function OaDashboard(){
     });
     const withM=o=>({...o,ctr:o.imp?o.clk/o.imp*100:0,roas:o.cost?o.rev/o.cost*100:0,cpa:o.buy?o.cost/o.buy:null});
     const camps=Object.values(campMap).map(c=>withM({...c,days:c.start?Math.max(1,Math.floor((Date.now()-c.start.getTime())/86400000)+1):null})).sort((a,b)=>b.cost-a.cost);
-    const creas=rows.map(r=>withM({...r,days:daysRun(r.start)})).sort((a,b)=>b.cost-a.cost);
+    // 소재 집계 — 일별 리포트라 같은 소재가 날짜별 여러 행 → 소재 단위 합산 (시작일은 가장 이른 날)
+    const creaMap={};
+    rows.forEach(r=>{
+      const k=`${r.camp}|${r.group}|${r.name}`;
+      const c=creaMap[k]=creaMap[k]||{name:r.name,group:r.group,camp:r.camp,cost:0,imp:0,clk:0,conv:0,buy:0,rev:0,start:null};
+      c.cost+=r.cost;c.imp+=r.imp;c.clk+=r.clk;c.conv+=r.conv;c.buy+=r.buy;c.rev+=r.rev;
+      const d=parseGDate(r.start); if(d&&(!c.start||d<c.start)) c.start=d;
+    });
+    const creas=Object.values(creaMap).map(c=>withM({...c,start:c.start?`${c.start.getFullYear()}.${String(c.start.getMonth()+1).padStart(2,"0")}.${String(c.start.getDate()).padStart(2,"0")}.`:"",days:c.start?Math.max(1,Math.floor((Date.now()-c.start.getTime())/86400000)+1):null})).sort((a,b)=>b.cost-a.cost);
 
     // 판정 — 구매완료 기준 (장바구니 제외) · 운영기간 반영
     const judge=c=>{
@@ -8388,15 +8396,15 @@ export default function OaDashboard(){
 
     const tot=withM(camps.reduce((a,c)=>({cost:a.cost+c.cost,imp:a.imp+c.imp,clk:a.clk+c.clk,conv:a.conv+c.conv,buy:a.buy+c.buy,rev:a.rev+c.rev}),{cost:0,imp:0,clk:0,conv:0,buy:0,rev:0}));
 
-    // 제품별 합산 — 소재명 첫 토큰(제품명) 기준
+    // 제품별 합산 — 소재명 첫 토큰(제품명) 기준 (소재 수는 고유 소재명 기준 — 일별 행 중복 방지)
     const prodMap={};
     rows.forEach(r=>{
       const prod=String(r.name||"").split(/[_ ]/)[0]||"(기타)";
-      const p=prodMap[prod]=prodMap[prod]||{prod,cost:0,imp:0,clk:0,conv:0,buy:0,rev:0,cnt:0,start:null};
-      p.cost+=r.cost;p.imp+=r.imp;p.clk+=r.clk;p.conv+=r.conv;p.buy+=r.buy;p.rev+=r.rev;p.cnt++;
+      const p=prodMap[prod]=prodMap[prod]||{prod,cost:0,imp:0,clk:0,conv:0,buy:0,rev:0,names:new Set(),start:null};
+      p.cost+=r.cost;p.imp+=r.imp;p.clk+=r.clk;p.conv+=r.conv;p.buy+=r.buy;p.rev+=r.rev;p.names.add(r.name);
       const d=parseGDate(r.start); if(d&&(!p.start||d<p.start)) p.start=d;
     });
-    const prods=Object.values(prodMap).map(p=>withM({...p,days:p.start?Math.max(1,Math.floor((Date.now()-p.start.getTime())/86400000)+1):null})).sort((a,b)=>b.cost-a.cost);
+    const prods=Object.values(prodMap).map(p=>withM({...p,cnt:p.names.size,days:p.start?Math.max(1,Math.floor((Date.now()-p.start.getTime())/86400000)+1):null})).sort((a,b)=>b.cost-a.cost);
     const winners=creas.filter(r=>r.cost>=10000&&r.roas>=TARGET).sort((a,b)=>b.roas-a.roas).slice(0,8);
     const losers =creas.filter(r=>r.cost>=50000&&r.roas<50).slice(0,8);
 

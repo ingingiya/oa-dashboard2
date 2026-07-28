@@ -3,39 +3,41 @@
 // Vercel에서 MySQL 직접 접속 불가(ETIMEDOUT)라 로컬 크론으로 동기화
 // 실행: node scripts/sync-priority.js  · 크론: 매일 9:15
 
-const mysql = require('mysql2/promise');
+// 2026-07-27: MySQL 직접 접속 차단 → 원격 MCP 경유 (scripts/mcp-db.js)
+const { queryAll } = require('./mcp-db');
 
 const SUPA_URL = 'https://lugqeflqusqsyotdiaxg.supabase.co';
 const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx1Z3FlZmxxdXNxc3lvdGRpYXhnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMxOTkzMzksImV4cCI6MjA4ODc3NTMzOX0.ls7CN3iISLM_JcGEaVRV_JDSvm4BFqYMU6m4iBGiRA0';
 
 async function main() {
   console.log(`[${new Date().toLocaleString('ko-KR')}] 우선순위 동기화 시작`);
-  const pool = mysql.createPool({
-    host: '52.78.125.230',
-    port: 3306,
-    user: 'user_for_ai_sm',
-    password: '1234',
-    database: 'db_for_ai_sm',
-    connectionLimit: 2,
-  });
   try {
     // 1) 품목×일자 매출 (v_daily_sales_detail = 전 채널 ERP 매출, 오아 브랜드만)
     //    일별로 저장해 대시보드에서 기간 자유 선택 (기본 30일 vs 이전 30일)
     //    ⚠️ v_daily_sales_management는 쿠팡만 들어있는 뷰 — 매출 소스로 쓰지 말 것 (2026-07-20 발견)
-    const [rows] = await pool.query(`
-      SELECT d.\`품목명\` AS product,
-        COALESCE(c.\`카테고리1\`, d.\`카테고리\`) AS cat1,
-        COALESCE(c.\`카테고리2\`, d.\`카테고리\`) AS cat2,
-        DATE_FORMAT(d.\`판매날짜\`, '%Y-%m-%d') AS date,
-        ROUND(SUM(d.\`총매출액\`)) AS amt,
-        SUM(d.\`판매수량\`) AS qty
-      FROM v_daily_sales_detail d
-      LEFT JOIN v_sales_category c ON c.\`품목명\` = d.\`품목명\`
-      WHERE d.\`판매날짜\` >= DATE_SUB(CURDATE(), INTERVAL 180 DAY)
-        AND d.\`브랜드명\` = '오아'
-        AND (c.\`카테고리1\` IS NULL OR c.\`카테고리1\` <> '식품')
-      GROUP BY 1, 2, 3, 4
-    `);
+    // 큰 OFFSET은 MCP 서버 타임아웃 → 30일 단위 분할 (GROUP BY에 날짜 포함이라 결과 동일)
+    const rows = [];
+    for (let dd = 180; dd > 0; dd -= 30) {
+      const chunk = await queryAll(`
+        SELECT d.\`품목명\` AS product,
+          COALESCE(c.\`카테고리1\`, d.\`카테고리\`) AS cat1,
+          COALESCE(c.\`카테고리2\`, d.\`카테고리\`) AS cat2,
+          DATE_FORMAT(d.\`판매날짜\`, '%Y-%m-%d') AS date,
+          ROUND(SUM(d.\`총매출액\`)) AS amt,
+          SUM(d.\`판매수량\`) AS qty
+        FROM db_for_ai_sm.v_daily_sales_detail d
+        LEFT JOIN db_for_ai_sm.v_sales_category c ON c.\`품목명\` = d.\`품목명\`
+        WHERE d.\`판매날짜\` >= DATE_SUB(CURDATE(), INTERVAL ${dd} DAY)
+          ${dd - 30 > 0 ? `AND d.\`판매날짜\` < DATE_SUB(CURDATE(), INTERVAL ${dd - 30} DAY)` : ''}
+          AND d.\`브랜드명\` = '오아'
+          AND (c.\`카테고리1\` IS NULL OR c.\`카테고리1\` <> '식품')
+        GROUP BY 1, 2, 3, 4
+        ORDER BY 1, 2, 3, 4
+      `, { quiet: true });
+      rows.push(...chunk);
+      process.stdout.write(`\r  매출 조회 중... ${rows.length}행 (D-${dd}~)`);
+    }
+    console.log('');
     const itemMap = {}; // product → {product,cat1,cat2}
     const daily = {};   // product → [[date,amt,qty],...]
     for (const r of rows) {
@@ -46,28 +48,37 @@ async function main() {
     console.log(`  → 품목 ${items.length}개 · 일별 ${rows.length}행 (180일)`);
 
     // 1.5) 작년 같은 시기 성장률 (시즌성 판정용) — 작년 최근30일(365~395일 전) vs 그 이전 30일(395~425일 전)
-    const [lyRows] = await pool.query(`
+    const lyRows = await queryAll(`
       SELECT \`품목명\` AS product,
         ROUND(SUM(CASE WHEN \`판매날짜\` >= DATE_SUB(CURDATE(), INTERVAL 395 DAY) THEN \`총매출액\` ELSE 0 END)) AS same,
         ROUND(SUM(CASE WHEN \`판매날짜\` <  DATE_SUB(CURDATE(), INTERVAL 395 DAY) THEN \`총매출액\` ELSE 0 END)) AS prev
-      FROM v_daily_sales_detail
+      FROM db_for_ai_sm.v_daily_sales_detail
       WHERE \`판매날짜\` >= DATE_SUB(CURDATE(), INTERVAL 425 DAY)
         AND \`판매날짜\` < DATE_SUB(CURDATE(), INTERVAL 365 DAY)
         AND \`브랜드명\` = '오아'
       GROUP BY 1
+      ORDER BY 1
     `);
     const ly = {}; // product → [작년 같은 30일, 작년 그 이전 30일]
     for (const r of lyRows) ly[r.product] = [Number(r.same) || 0, Number(r.prev) || 0];
     console.log(`  → 작년 동기 데이터 ${lyRows.length}개 품목`);
 
     // 2) 네이버 제품별 일별 광고비 — 광고그룹이 제품 단위 ("선풍기_아이스볼트미스트(상품형)")
-    const [navRows] = await pool.query(`
-      SELECT adgroup_name AS name, DATE_FORMAT(stat_date, '%Y-%m-%d') AS date,
-        ROUND(SUM(sales_amt)) AS spend, SUM(imp_cnt) AS imp, SUM(clk_cnt) AS clk, SUM(conv_cnt) AS conv
-      FROM ad_daily_adgroup
-      WHERE stat_date >= DATE_SUB(CURDATE(), INTERVAL 180 DAY)
-      GROUP BY 1, 2
-    `);
+    const navRows = [];
+    for (let dd = 180; dd > 0; dd -= 30) {
+      const chunk = await queryAll(`
+        SELECT adgroup_name AS name, DATE_FORMAT(stat_date, '%Y-%m-%d') AS date,
+          ROUND(SUM(sales_amt)) AS spend, SUM(imp_cnt) AS imp, SUM(clk_cnt) AS clk, SUM(conv_cnt) AS conv
+        FROM db_for_ai_sm.ad_daily_adgroup
+        WHERE stat_date >= DATE_SUB(CURDATE(), INTERVAL ${dd} DAY)
+          ${dd - 30 > 0 ? `AND stat_date < DATE_SUB(CURDATE(), INTERVAL ${dd - 30} DAY)` : ''}
+        GROUP BY 1, 2
+        ORDER BY 1, 2
+      `, { quiet: true });
+      navRows.push(...chunk);
+      process.stdout.write(`\r  네이버 광고 조회 중... ${navRows.length}행 (D-${dd}~)`);
+    }
+    console.log('');
     // 광고그룹명 정규화: "(상품형)" 등 괄호 제거, "카테고리_" 접두 제거, 공백 제거
     const tokenOf = (n) => (n || '').replace(/\(.*?\)/g, '').split('_').pop().replace(/\s/g, '').trim();
     // 제품 키 = 품목명에서 '오아' 접두 제거. 광고그룹명→제품 매칭은 이름당 1회만 계산(캐시)
@@ -101,12 +112,13 @@ async function main() {
     console.log(`  → 네이버 광고그룹 ${Object.keys(matchCache).length}개 중 ${navMatched}개 제품 매칭`);
 
     // 4) 카테고리별 월 광고비 (오아 브랜드, 최근 2개월)
-    const [ads] = await pool.query(`
+    const ads = await queryAll(`
       SELECT \`집행월\` AS month, \`카테고리\` AS cat, ROUND(SUM(\`금액\`)) AS spend
-      FROM v_sales_ad_cost
+      FROM db_for_ai_sm.v_sales_ad_cost
       WHERE \`브랜드\` = '오아'
         AND \`집행월\` >= DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL 2 MONTH), '%Y-%m')
       GROUP BY 1, 2
+      ORDER BY 1, 2
     `);
 
     const value = {
@@ -133,8 +145,6 @@ async function main() {
   } catch (e) {
     console.error('❌ 오류:', e.message);
     process.exit(1);
-  } finally {
-    await pool.end().catch(() => {});
   }
 }
 
