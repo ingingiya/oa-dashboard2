@@ -7380,6 +7380,8 @@ export default function OaDashboard(){
     }
     setToggleStates(p => ({ ...p, [adName]: undefined }));
   };
+  // 메타 실제 상태 기준 꺼짐 여부 (상태 미로드 시 false — 지출 기반 휴리스틱만 적용)
+  const metaAdOff = name => adStatuses?.[name] ? adStatuses[name] !== "ACTIVE" : false;
   useEffect(()=>{
     if(!metaRaw.length){ setMetaBackfill([]); return; }
     const byDate={};
@@ -10288,7 +10290,7 @@ export default function OaDashboard(){
                   const all = campTab==="conversion" ? d.convCamps : d.trafficCamps;
                   const ended = all.filter(c=>{
                     const a = c.lastActiveDate&&sheetMaxDate ? Math.floor((new Date(sheetMaxDate)-new Date(c.lastActiveDate))/86400000) : null;
-                    return a===null||a>3;
+                    return a===null||a>3||metaAdOff(c.name);
                   }).length;
                   if(!ended) return null;
                   return(
@@ -10313,7 +10315,7 @@ export default function OaDashboard(){
                 const topAds = camps.filter(c=>{
                   const lad = c.lastActiveDate;
                   const isActive = lad && sheetMaxDate && Math.floor((new Date(sheetMaxDate)-new Date(lad))/86400000)<=1;
-                  if(!isActive) return false;
+                  if(!isActive||metaAdOff(c.name)) return false;
                   if(campTab==="conversion"){
                     const adMargin = getAdMargin(c.name,c.campaign,margins,margin);
                     const cpa = cpaStatus(c.spend,c.purchases,adMargin,getConvCriteria(c.name,c.campaign,convCriteria));
@@ -10407,7 +10409,7 @@ export default function OaDashboard(){
                 // 비활성(마지막 지출이 시트 최신일 기준 3일 초과) 자동 숨김 + 광고비순 정렬
                 const isLive = c=>{
                   const a = c.lastActiveDate&&sheetMaxDate ? Math.floor((new Date(sheetMaxDate)-new Date(c.lastActiveDate))/86400000) : null;
-                  return a!==null&&a<=3;
+                  return a!==null&&a<=3&&!metaAdOff(c.name);
                 };
                 const camps = (showEnded ? allCamps : allCamps.filter(isLive))
                   .slice().sort((a,b)=>(b.spend||0)-(a.spend||0));
