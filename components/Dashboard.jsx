@@ -7272,6 +7272,8 @@ export default function OaDashboard(){
   const [gfaReport, setGfaReport] = useSyncState("oa_gfa_report_v1", null);
   const [gfaThumbs, setGfaThumbs] = useSyncState("oa_gfa_thumbs_v1", {}); // {소재이름: 이미지URL}
   const [gfaProdFilter, setGfaProdFilter] = useState("전체"); // 소재 전체 목록 제품 필터
+  const [gfaAI, setGfaAI] = useSyncState("oa_gfa_analysis_v1", null); // AI 분석 결과 (팀 공유)
+  const [gfaAILoading, setGfaAILoading] = useState(false);
   // 포트폴리오 네이버 자동 집계 — ad_campaigns (네이버 검색광고 API 일별 적재분)
   const [pfNaver, setPfNaver] = useState({month:null, rows:[]});
   useEffect(()=>{
@@ -8399,6 +8401,18 @@ export default function OaDashboard(){
       <GfaThumbCell name={name} size={size} url={gfaResolveThumb(name)} onFile={ev=>onGfaThumbRow(name,ev)} borderColor={C.border} plusColor={C.inkLt}/>
     );
 
+    // AI 분석 실행 — /api/gfa-analysis (Claude가 OFF/증액/예산이동 판단)
+    const runGfaAI=async()=>{
+      setGfaAILoading(true);
+      try{
+        const res=await fetch("/api/gfa-analysis",{method:"POST"});
+        const d=await res.json();
+        if(d.error) throw new Error(d.error);
+        setGfaAI({reportId:d.reportId,fileName:d.fileName,at:new Date().toISOString(),...d.analysis});
+      }catch(err){ window.alert("분석 실패: "+err.message); }
+      setGfaAILoading(false);
+    };
+
     const rows=gfaReport?.rows||[];
     // 운영 경과일 — "2026.07.23." → 일수
     const parseGDate=s=>{const m=String(s||"").match(/(\d{4})\.(\d{1,2})\.(\d{1,2})/);return m?new Date(+m[1],+m[2]-1,+m[3]):null;};
@@ -8508,6 +8522,42 @@ export default function OaDashboard(){
               </Card>
             ))}
           </div>
+
+          {/* AI 판단 — 리포트 전체 보고 액션 추천 */}
+          <Card>
+            <div style={{display:"flex",alignItems:"center",gap:10,flexWrap:"wrap"}}>
+              <div style={{flex:1,minWidth:200}}>
+                <div style={{fontSize:14,fontWeight:900,color:C.ink}}>🤖 AI 운용 판단</div>
+                <div style={{fontSize:12.5,color:C.inkLt,marginTop:2}}>
+                  유형·디바이스·제품 패턴까지 보고 OFF/증액/예산이동을 추천합니다
+                  {gfaAI?.at&&<span> · 마지막 분석 {gfaAI.at.slice(0,16).replace("T"," ")}{gfaAI.reportId!==(gfaReport?.uploadedAt||"")&&<b style={{color:C.warn}}> (이전 리포트 기준 — 다시 실행 권장)</b>}</span>}
+                </div>
+              </div>
+              <button onClick={runGfaAI} disabled={gfaAILoading}
+                style={{padding:"8px 16px",borderRadius:10,background:gfaAILoading?C.inkLt:C.ink,color:"#fff",fontWeight:800,fontSize:13,cursor:gfaAILoading?"wait":"pointer",border:"none",fontFamily:"inherit"}}>
+                {gfaAILoading?"분석 중… (~20초)":gfaAI?"다시 분석":"AI 분석 실행"}
+              </button>
+            </div>
+            {gfaAI?.summary&&(
+              <div style={{marginTop:12}}>
+                <div style={{fontSize:13.5,fontWeight:800,color:C.ink,padding:"10px 12px",background:"rgba(0,0,0,.04)",borderRadius:10}}>{gfaAI.summary}</div>
+                <div style={{display:"flex",flexDirection:"column",gap:8,marginTop:10}}>
+                  {(gfaAI.actions||[]).map((a,i)=>{
+                    const col=a.action==="OFF"?{c:C.bad,bg:"#FEF0F0"}:a.action==="증액"?{c:C.good,bg:"#EDF7EF"}:a.action==="예산이동"?{c:C.rose,bg:"#EAF3FD"}:a.action==="테스트"?{c:C.warn,bg:"#FFF8EC"}:{c:C.inkMid,bg:"rgba(0,0,0,.05)"};
+                    return(
+                      <div key={i} style={{display:"flex",gap:10,alignItems:"flex-start",padding:"9px 10px",borderRadius:10,border:`1px solid ${C.border}`}}>
+                        <span style={{fontSize:12.5,fontWeight:900,color:col.c,background:col.bg,padding:"3px 10px",borderRadius:20,whiteSpace:"nowrap"}}>{a.action}</span>
+                        <div style={{flex:1,fontSize:13}}>
+                          <div style={{fontWeight:800,color:C.ink}}>{a.target}</div>
+                          <div style={{color:C.inkMid,marginTop:1}}>{a.reason}</div>
+                          {a.impact&&<div style={{color:C.inkLt,marginTop:1,fontSize:12.5}}>→ {a.impact}</div>}
+                        </div>
+                      </div>);
+                  })}
+                </div>
+              </div>
+            )}
+          </Card>
 
           {/* 캠페인 판정 */}
           <Card>
