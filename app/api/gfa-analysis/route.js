@@ -33,7 +33,7 @@ export async function POST() {
   rows.forEach(r2 => {
     acc(typeMap, `${objOf(r2.camp)}|${typeOf(r2.name)}`, r2);
     acc(prodMap, prodOf(r2.name), r2);
-    acc(creaMap, r2.name, r2);
+    acc(creaMap, `[${r2.camp}] ${r2.name}`, r2); // 같은 소재명이 여러 캠페인에 있으면 분리 (합산 오인 방지)
     const ty = typeOf(r2.name);
     if (/배너형/.test(ty)) acc(bannerMap, `${prodOf(r2.name)}|${/PC/.test(ty) ? 'PC' : '모바일'}`, r2);
   });
@@ -59,8 +59,10 @@ ${fmtMap(prodMap)}
 ## 배너형 PC vs 모바일 (제품|디바이스)
 ${fmtMap(bannerMap)}
 
-## 소재별 지출 상위 20
+## 소재별 지출 상위 20 ([캠페인] 소재명 — 같은 소재명이라도 캠페인이 다르면 별도 행)
 ${fmtMap(creaMap, 20)}
+
+주의: 소재 지출을 언급할 때 반드시 해당 캠페인 한 줄의 금액만 인용하세요. 여러 캠페인의 동일 소재명을 합쳐 말하지 마세요.
 
 ## 판단 원칙
 - 지출 3만원 미만은 판단 보류 (데이터 부족)
