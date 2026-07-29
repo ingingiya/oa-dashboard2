@@ -8326,7 +8326,13 @@ export default function OaDashboard(){
       let inter=0; A.forEach(x=>{if(B.has(x))inter++;});
       return (2*inter)/(A.size+B.size||1);
     };
+    // 전체 이름 앞부분 포함 매칭 — "아이스넥밴드_아빠" ⊂ "아이스넥밴드_아빠 1_피드형" (제품명 포함이라 타 제품 오매칭 없음)
+    const gfaFullHit=(fileName,creaName)=>{
+      const fa=gfaNorm(fileName),fb=gfaNorm(creaName);
+      return !!(fa&&fb&&(fa.includes(fb)||fb.includes(fa)));
+    };
     const gfaBestMatch=(fileName,names)=>{
+      const full=names.find(n2=>gfaFullHit(fileName,n2)); if(full) return full;
       let best=null,bs=0;
       names.forEach(n2=>{const s=gfaSim(fileName,n2);if(s>bs){bs=s;best=n2;}});
       return bs>=0.35?best:null;
@@ -8337,8 +8343,10 @@ export default function OaDashboard(){
       const names=[...new Set((gfaReport?.rows||[]).map(r=>r.name))];
       let ok=[],miss=[];
       for(const f of files){
-        // 컨셉명이 포함 관계(=1)면 같은 컨셉의 지면 배리에이션 전부에 적용, 아니면 최고 유사 1개
-        let hits=names.filter(n2=>gfaSim(f.name,n2)>=0.99);
+        // 1순위: 제품명 포함 앞부분 매칭 (아이스넥밴드_아빠 → 아이스넥밴드_아빠 배리에이션 전부, 타 제품 제외)
+        let hits=names.filter(n2=>gfaFullHit(f.name,n2));
+        // 2순위: 컨셉명 포함 관계 → 3순위: 최고 유사 1개
+        if(!hits.length) hits=names.filter(n2=>gfaSim(f.name,n2)>=0.99);
         if(!hits.length){ const b=gfaBestMatch(f.name,names); if(b) hits=[b]; }
         if(!hits.length){ miss.push(f.name); continue; }
         try{

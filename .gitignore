@@ -6,3 +6,5 @@ node_modules
 .vercel
 .env*.local
 .env*
+
+scripts/gfa/.gfa_profile/
