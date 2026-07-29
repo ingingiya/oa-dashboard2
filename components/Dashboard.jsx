@@ -8444,16 +8444,19 @@ export default function OaDashboard(){
       const d=parseGDate(r.start); if(d&&(!p.start||d<p.start)) p.start=d;
     });
     const prods=Object.values(prodMap).map(p=>withM({...p,cnt:p.names.size,days:p.start?Math.max(1,Math.floor((Date.now()-p.start.getTime())/86400000)+1):null})).sort((a,b)=>b.cost-a.cost);
-    // 유형별 합산 — 소재명 마지막 토큰(지면형: 배너형(PC)/피드형/스퀘어형/피드형(2:3) 등) 기준
+    // 유형별 합산 — 캠페인 목적(전환/트래픽) × 소재명 마지막 토큰(지면형) 기준
     const typeMap={};
     rows.forEach(r=>{
       const last=(String(r.name||"").split("_").pop()||"").trim();
       const ty=/형/.test(last)?last:"(기타)";
-      const p=typeMap[ty]=typeMap[ty]||{type:ty,cost:0,imp:0,clk:0,conv:0,buy:0,rev:0,names:new Set()};
+      const obj=/트래픽/.test(String(r.camp||""))?"트래픽":"전환";
+      const p=typeMap[obj+"|"+ty]=typeMap[obj+"|"+ty]||{obj,type:ty,cost:0,imp:0,clk:0,conv:0,buy:0,rev:0,names:new Set()};
       p.cost+=r.cost;p.imp+=r.imp;p.clk+=r.clk;p.conv+=r.conv;p.buy+=r.buy;p.rev+=r.rev;p.names.add(r.name);
     });
-    const types=Object.values(typeMap).map(p=>withM({...p,cnt:p.names.size})).sort((a,b)=>b.cost-a.cost);
-    const bestTypeRoas=Math.max(...types.map(t=>t.roas),0);
+    const types=Object.values(typeMap).map(p=>withM({...p,cnt:p.names.size})).sort((a,b)=>a.obj===b.obj?b.cost-a.cost:(a.obj==="전환"?-1:1));
+    // 목적별 최고 — 전환은 ROAS, 트래픽은 CTR 기준
+    const bestType={};
+    types.forEach(t2=>{const v=t2.obj==="트래픽"?t2.ctr:t2.roas;const c=bestType[t2.obj];if(v>0&&(!c||v>(c.obj==="트래픽"?c.ctr:c.roas)))bestType[t2.obj]=t2;});
     const winners=creas.filter(r=>r.cost>=10000&&r.roas>=TARGET).sort((a,b)=>b.roas-a.roas).slice(0,8);
     const losers =creas.filter(r=>r.cost>=50000&&r.roas<50).slice(0,8);
 
@@ -8558,12 +8561,13 @@ export default function OaDashboard(){
 
           {/* 유형별 성과 — 지면형 비교 */}
           <Card>
-            <div style={{fontSize:14,fontWeight:900,color:C.ink,marginBottom:10}}>유형별 성과 <span style={{fontSize:12,fontWeight:700,color:C.inkLt}}>— 어떤 지면 유형이 잘 나오는지 · 구매완료 기준</span></div>
+            <div style={{fontSize:14,fontWeight:900,color:C.ink,marginBottom:10}}>유형별 성과 <span style={{fontSize:12,fontWeight:700,color:C.inkLt}}>— 전환/트래픽 캠페인 분리 · 어떤 지면 유형이 잘 나오는지 · 구매완료 기준</span></div>
             <div style={{overflowX:"auto"}}>
               <table style={{width:"100%",borderCollapse:"collapse",fontSize:13}}>
-                <thead><tr>{["유형","소재수","지출","노출","클릭","CTR","구매완료","구매당비용","매출","ROAS",""].map((h,i)=><th key={i} style={th}>{h}</th>)}</tr></thead>
-                <tbody>{types.map(t2=>(
-                  <tr key={t2.type} style={{borderBottom:`1px solid rgba(0,0,0,.04)`,background:t2.roas===bestTypeRoas&&t2.roas>0?"#EDF7EF":"transparent"}}>
+                <thead><tr>{["목적","유형","소재수","지출","노출","클릭","CTR","구매완료","구매당비용","매출","ROAS",""].map((h,i)=><th key={i} style={th}>{h}</th>)}</tr></thead>
+                <tbody>{types.map((t2,i)=>(
+                  <tr key={t2.obj+t2.type} style={{borderBottom:`1px solid rgba(0,0,0,.04)`,borderTop:i>0&&types[i-1].obj!==t2.obj?`2px solid ${C.border}`:undefined,background:bestType[t2.obj]===t2?"#EDF7EF":"transparent"}}>
+                    <td style={{...td,fontWeight:900,color:t2.obj==="전환"?C.rose:C.inkMid}}>{i===0||types[i-1].obj!==t2.obj?t2.obj:""}</td>
                     <td style={{...td,fontWeight:800}}>{t2.type}</td>
                     <td style={{...td,color:C.inkMid}}>{t2.cnt}개</td>
                     <td style={td}>{fmtW(t2.cost)}</td>
@@ -8574,7 +8578,7 @@ export default function OaDashboard(){
                     <td style={td}>{t2.cpa?`${fmtW(t2.cpa)}원`:"—"}</td>
                     <td style={td}>{fmtW(t2.rev)}</td>
                     <td style={{...td,fontWeight:900,color:t2.roas>=TARGET?C.good:t2.roas>=100?C.rose:t2.roas>0?C.warn:C.bad}}>{t2.roas.toFixed(0)}%</td>
-                    <td style={td}>{t2.roas===bestTypeRoas&&t2.roas>0&&<span style={{fontSize:12,fontWeight:900,color:C.good}}>🏆 최고</span>}</td>
+                    <td style={td}>{bestType[t2.obj]===t2&&<span style={{fontSize:12,fontWeight:900,color:C.good}}>🏆 {t2.obj==="트래픽"?"CTR 최고":"ROAS 최고"}</span>}</td>
                   </tr>))}
                 </tbody>
               </table>
