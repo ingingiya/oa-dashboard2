@@ -7271,6 +7271,7 @@ export default function OaDashboard(){
   // GFA 리포트 (소재별 CSV 업로드 → 자동 판정) — {fileName,uploadedAt,targetRoas,rows:[]}
   const [gfaReport, setGfaReport] = useSyncState("oa_gfa_report_v1", null);
   const [gfaThumbs, setGfaThumbs] = useSyncState("oa_gfa_thumbs_v1", {}); // {소재이름: 이미지URL}
+  const [gfaProdFilter, setGfaProdFilter] = useState("전체"); // 소재 전체 목록 제품 필터
   // 포트폴리오 네이버 자동 집계 — ad_campaigns (네이버 검색광고 API 일별 적재분)
   const [pfNaver, setPfNaver] = useState({month:null, rows:[]});
   useEffect(()=>{
@@ -8546,11 +8547,22 @@ export default function OaDashboard(){
           {/* 소재 전체 */}
           <Card>
             <details>
-              <summary style={{fontSize:14,fontWeight:900,color:C.ink,cursor:"pointer"}}>소재 전체 ({creas.length}개) — 비용순</summary>
+              <summary style={{fontSize:14,fontWeight:900,color:C.ink,cursor:"pointer"}}>소재 전체 ({(gfaProdFilter==="전체"?creas:creas.filter(r=>(String(r.name||"").split(/[_ ]/)[0]||"(기타)")===gfaProdFilter)).length}개) — 비용순{gfaProdFilter!=="전체"&&<span style={{color:C.rose}}> · {gfaProdFilter}</span>}</summary>
+              {/* 제품 필터 칩 */}
+              <div style={{display:"flex",flexWrap:"wrap",gap:6,marginTop:10}}>
+                {["전체",...prods.map(p=>p.prod)].map(pn=>(
+                  <button key={pn} onClick={()=>setGfaProdFilter(pn)}
+                    style={{padding:"5px 12px",borderRadius:20,fontSize:12.5,fontWeight:800,cursor:"pointer",fontFamily:"inherit",
+                      border:`1px solid ${gfaProdFilter===pn?C.rose:C.border}`,
+                      background:gfaProdFilter===pn?C.rose:"#fff",color:gfaProdFilter===pn?"#fff":C.inkMid}}>
+                    {pn}
+                  </button>
+                ))}
+              </div>
               <div style={{overflowX:"auto",marginTop:10}}>
                 <table style={{width:"100%",borderCollapse:"collapse",fontSize:13}}>
                   <thead><tr>{["","소재","캠페인","운영","지출","노출","클릭","CTR","구매완료","구매당비용","매출","ROAS"].map((h,i)=><th key={i} style={th}>{h}</th>)}</tr></thead>
-                  <tbody>{creas.map((r,i)=>(
+                  <tbody>{(gfaProdFilter==="전체"?creas:creas.filter(r=>(String(r.name||"").split(/[_ ]/)[0]||"(기타)")===gfaProdFilter)).map((r,i)=>(
                     <tr key={i} style={{borderBottom:"1px solid rgba(0,0,0,.04)"}}>
                       <td style={td}>{GThumb({name:r.name,size:30})}</td>
                       <td style={{...td,fontWeight:600,maxWidth:240,overflow:"hidden",textOverflow:"ellipsis"}}>{r.name}</td>
