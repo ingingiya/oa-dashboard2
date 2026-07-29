@@ -5978,6 +5978,7 @@ export default function OaDashboard(){
   const [homeInsights, setHomeInsights] = useState([]);
   const [homeRankChanges, setHomeRankChanges] = useState([]);
   const [metaTab,setMetaTab]   = useState("overview");
+  const [metaProdFilter,setMetaProdFilter] = useState("전체"); // 캠페인 탭 제품별 필터 (마진 키워드 기준)
   const [campTab,setCampTab]   = useState("conversion");
   const [showEnded,setShowEnded] = useState(false); // 캠페인 탭: 종료 광고 표시 여부
   const [pulse,setPulse]       = useState(false);
@@ -10411,9 +10412,14 @@ export default function OaDashboard(){
                   const a = c.lastActiveDate&&sheetMaxDate ? Math.floor((new Date(sheetMaxDate)-new Date(c.lastActiveDate))/86400000) : null;
                   return a!==null&&a<=3&&!metaAdOff(c.name);
                 };
-                const camps = (showEnded ? allCamps : allCamps.filter(isLive))
+                const campsAll = (showEnded ? allCamps : allCamps.filter(isLive))
                   .slice().sort((a,b)=>(b.spend||0)-(a.spend||0));
-                if(camps.length===0) return(
+                // 제품별 구분 — 마진 키워드(제품명)를 광고명+캠페인명에 매칭
+                const prodKws = [...new Set((margins||[]).map(m=>m.keyword).filter(Boolean))];
+                const prodOfAd = c=>prodKws.find(k=>((c.name||"")+" "+(c.campaign||"")).toLowerCase().includes(k.toLowerCase()))||"기타";
+                const prodsPresent = [...new Set(campsAll.map(prodOfAd))];
+                const camps = metaProdFilter==="전체" ? campsAll : campsAll.filter(c=>prodOfAd(c)===metaProdFilter);
+                if(campsAll.length===0) return(
                   <div style={{textAlign:"center",padding:"32px",color:C.inkLt,fontSize:13}}>
                     집행중인 광고가 없습니다<br/>
                     <span style={{fontSize:12,marginTop:4,display:"block"}}>위 "종료 광고 숨겨짐" 버튼으로 지난 광고를 볼 수 있어요</span>
@@ -10421,6 +10427,18 @@ export default function OaDashboard(){
                 );
                 return(
                   <>
+                    {/* 제품별 필터 칩 — 마진 키워드 기준, 선택 시 아래 합산·리스트 전부 해당 제품만 */}
+                    <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
+                      {["전체",...prodsPresent].map(pn=>(
+                        <button key={pn} onClick={()=>setMetaProdFilter(pn)}
+                          style={{padding:"5px 12px",borderRadius:20,fontSize:12,fontWeight:800,cursor:"pointer",fontFamily:"inherit",
+                            border:`1px solid ${metaProdFilter===pn?C.rose:C.border}`,
+                            background:metaProdFilter===pn?C.rose:C.white,color:metaProdFilter===pn?"#fff":C.inkMid}}>
+                          {pn}
+                        </button>
+                      ))}
+                    </div>
+                    {camps.length===0&&<div style={{textAlign:"center",padding:"24px",color:C.inkLt,fontSize:13}}>"{metaProdFilter}" 제품의 집행중 광고가 없습니다</div>}
                     {(()=>{
                       const totalSpend = camps.reduce((s,c)=>s+(c.spend||0),0);
                       const totalPurch = camps.reduce((s,c)=>s+(c.purchases||0),0);
