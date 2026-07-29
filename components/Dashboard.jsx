@@ -8338,11 +8338,16 @@ export default function OaDashboard(){
       names.forEach(n2=>{const s=gfaSim(fileName,n2);if(s>bs){bs=s;best=n2;}});
       return bs>=0.35?best:null;
     };
+    // 병합 저장 — 다른 탭이 통째로 덮어써서 유실되는 것 방지 (서버 최신값과 합친 뒤 저장)
+    const gfaSaveThumbs=async(pairs)=>{
+      let server={}; try{ const v=await getSetting("oa_gfa_thumbs_v1"); if(v&&typeof v==="object") server=v; }catch{}
+      setGfaThumbs(prev=>({...server,...(prev||{}),...pairs}));
+    };
     const onGfaThumbBulk=async(e)=>{
       const files=[...(e.target.files||[])]; e.target.value="";
       if(!files.length) return;
       const names=[...new Set((gfaReport?.rows||[]).map(r=>r.name))];
-      let ok=[],miss=[];
+      let ok=[],miss=[],pairs={};
       for(const f of files){
         // 1순위: 제품명 포함 앞부분 매칭 (아이스넥밴드_아빠 → 아이스넥밴드_아빠 배리에이션 전부, 타 제품 제외)
         let hits=names.filter(n2=>gfaFullHit(f.name,n2));
@@ -8352,15 +8357,16 @@ export default function OaDashboard(){
         if(!hits.length){ miss.push(f.name); continue; }
         try{
           const up=await uploadAdImage(f,`gfa_${hits[0]}`);
-          setGfaThumbs(prev=>{const nx={...(prev||{})};hits.forEach(h=>{nx[h]=up.url;});return nx;});
+          hits.forEach(h=>{pairs[h]=up.url;});
           ok.push(`${f.name} → ${hits.length>1?`${hits.length}개 배리에이션`:hits[0]}`);
         }catch(err){ miss.push(f.name); }
       }
+      if(Object.keys(pairs).length) await gfaSaveThumbs(pairs);
       window.alert(`매칭 업로드 ${ok.length}건 완료${ok.length?`\n${ok.slice(0,6).join("\n")}${ok.length>6?"\n…":""}`:""}${miss.length?`\n\n미매칭/실패 ${miss.length}건: ${miss.slice(0,5).join(", ")}${miss.length>5?" …":""}\n(미매칭은 소재 전체 표에서 개별 업로드)`:""}`);
     };
     const onGfaThumbRow=async(name,e)=>{
       const f=e.target.files?.[0]; e.target.value=""; if(!f) return;
-      try{ const up=await uploadAdImage(f,`gfa_${name}`); setGfaThumbs(prev=>({...(prev||{}),[name]:up.url})); }
+      try{ const up=await uploadAdImage(f,`gfa_${name}`); await gfaSaveThumbs({[name]:up.url}); }
       catch(err){ window.alert("업로드 실패: "+err.message); }
     };
     const gfaResolveThumb=name=>{
@@ -8418,6 +8424,16 @@ export default function OaDashboard(){
       const d=parseGDate(r.start); if(d&&(!p.start||d<p.start)) p.start=d;
     });
     const prods=Object.values(prodMap).map(p=>withM({...p,cnt:p.names.size,days:p.start?Math.max(1,Math.floor((Date.now()-p.start.getTime())/86400000)+1):null})).sort((a,b)=>b.cost-a.cost);
+    // 유형별 합산 — 소재명 마지막 토큰(지면형: 배너형(PC)/피드형/스퀘어형/피드형(2:3) 등) 기준
+    const typeMap={};
+    rows.forEach(r=>{
+      const last=(String(r.name||"").split("_").pop()||"").trim();
+      const ty=/형/.test(last)?last:"(기타)";
+      const p=typeMap[ty]=typeMap[ty]||{type:ty,cost:0,imp:0,clk:0,conv:0,buy:0,rev:0,names:new Set()};
+      p.cost+=r.cost;p.imp+=r.imp;p.clk+=r.clk;p.conv+=r.conv;p.buy+=r.buy;p.rev+=r.rev;p.names.add(r.name);
+    });
+    const types=Object.values(typeMap).map(p=>withM({...p,cnt:p.names.size})).sort((a,b)=>b.cost-a.cost);
+    const bestTypeRoas=Math.max(...types.map(t=>t.roas),0);
     const winners=creas.filter(r=>r.cost>=10000&&r.roas>=TARGET).sort((a,b)=>b.roas-a.roas).slice(0,8);
     const losers =creas.filter(r=>r.cost>=50000&&r.roas<50).slice(0,8);
 
@@ -8515,6 +8531,31 @@ export default function OaDashboard(){
                     <td style={{...td,fontWeight:900,color:p.roas>=TARGET?C.good:p.roas>=100?C.rose:p.roas>0?C.warn:C.bad}}>{p.roas.toFixed(0)}%</td>
                     <td style={td}>{chip(j)}</td>
                   </tr>);})}
+                </tbody>
+              </table>
+            </div>
+          </Card>
+
+          {/* 유형별 성과 — 지면형 비교 */}
+          <Card>
+            <div style={{fontSize:14,fontWeight:900,color:C.ink,marginBottom:10}}>유형별 성과 <span style={{fontSize:12,fontWeight:700,color:C.inkLt}}>— 어떤 지면 유형이 잘 나오는지 · 구매완료 기준</span></div>
+            <div style={{overflowX:"auto"}}>
+              <table style={{width:"100%",borderCollapse:"collapse",fontSize:13}}>
+                <thead><tr>{["유형","소재수","지출","노출","클릭","CTR","구매완료","구매당비용","매출","ROAS",""].map((h,i)=><th key={i} style={th}>{h}</th>)}</tr></thead>
+                <tbody>{types.map(t2=>(
+                  <tr key={t2.type} style={{borderBottom:`1px solid rgba(0,0,0,.04)`,background:t2.roas===bestTypeRoas&&t2.roas>0?"#EDF7EF":"transparent"}}>
+                    <td style={{...td,fontWeight:800}}>{t2.type}</td>
+                    <td style={{...td,color:C.inkMid}}>{t2.cnt}개</td>
+                    <td style={td}>{fmtW(t2.cost)}</td>
+                    <td style={td}>{t2.imp.toLocaleString()}</td>
+                    <td style={td}>{t2.clk.toLocaleString()}</td>
+                    <td style={td}>{t2.ctr.toFixed(2)}%</td>
+                    <td style={{...td,fontWeight:800}}>{t2.buy}</td>
+                    <td style={td}>{t2.cpa?`${fmtW(t2.cpa)}원`:"—"}</td>
+                    <td style={td}>{fmtW(t2.rev)}</td>
+                    <td style={{...td,fontWeight:900,color:t2.roas>=TARGET?C.good:t2.roas>=100?C.rose:t2.roas>0?C.warn:C.bad}}>{t2.roas.toFixed(0)}%</td>
+                    <td style={td}>{t2.roas===bestTypeRoas&&t2.roas>0&&<span style={{fontSize:12,fontWeight:900,color:C.good}}>🏆 최고</span>}</td>
+                  </tr>))}
                 </tbody>
               </table>
             </div>
