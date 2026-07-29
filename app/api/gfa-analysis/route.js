@@ -4,9 +4,13 @@ export const maxDuration = 60;
 import Anthropic from '@anthropic-ai/sdk';
 
 // GFA 리포트(oa_gfa_report_v1) → 집계 → Claude 판단 (OFF/증액/예산이동 등 액션 추천)
-export async function POST() {
+export async function POST(request) {
   const key = process.env.ANTHROPIC_API_KEY;
   if (!key) return Response.json({ error: 'ANTHROPIC_API_KEY 없음' }, { status: 500 });
+
+  // 사용자가 "실행함"으로 표시한 과거 액션 목록 (효과 리뷰용)
+  const body = await request.json().catch(() => ({}));
+  const executed = Array.isArray(body?.executed) ? body.executed.slice(0, 20) : [];
 
   // 리포트 로드
   const supaUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -63,6 +67,11 @@ ${fmtMap(bannerMap)}
 ${fmtMap(creaMap, 20)}
 
 주의: 소재 지출을 언급할 때 반드시 해당 캠페인 한 줄의 금액만 인용하세요. 여러 캠페인의 동일 소재명을 합쳐 말하지 마세요.
+${executed.length ? `
+## 이전에 실행한 액션 (사용자가 실제로 실행했다고 표시)
+${executed.map(e => `- [${e.action}] ${e.target} — ${String(e.executedAt || '').slice(0, 10)} 실행, 실행시점 전체: 지출 ${Math.round(e.baseline?.cost || 0).toLocaleString()}원 / 구매 ${e.baseline?.buy ?? '?'}건 / ROAS ${e.baseline?.roas ?? '?'}%`).join('\n')}
+
+위 실행 액션들이 효과가 있었는지 현재 데이터와 비교 평가하세요. 새 추천(actions)은 이미 실행한 것과 중복되지 않게 하세요.` : ''}
 
 ## 판단 원칙
 - 지출 3만원 미만은 판단 보류 (데이터 부족)
@@ -74,13 +83,13 @@ ${fmtMap(creaMap, 20)}
 
 ## 요청
 바로 실행 가능한 액션을 최대 6개 제안하세요. JSON만 출력:
-{"summary":"현 상황 한 줄 총평","actions":[{"action":"OFF|증액|예산이동|테스트|유지","target":"대상 (제품/유형/소재 묶음)","reason":"데이터 근거 1문장 (숫자 포함)","impact":"기대 효과 1문장"}]}`;
+{"summary":"현 상황 한 줄 총평","actions":[{"action":"OFF|증액|예산이동|테스트|유지","target":"대상 (제품/유형/소재 묶음)","reason":"데이터 근거 1문장 (숫자 포함)","impact":"기대 효과 1문장"}]${executed.length ? `,"review":[{"target":"실행 액션의 target 문자열 그대로","verdict":"효과있음|효과없음|판단보류","note":"현재 지표 근거 1문장 (숫자 포함)"}]` : ''}}`;
 
   try {
     const client = new Anthropic({ apiKey: key });
     const msg = await client.messages.create({
       model: 'claude-opus-4-6',
-      max_tokens: 1800,
+      max_tokens: executed.length ? 2400 : 1800,
       messages: [{ role: 'user', content: prompt }],
     });
     const text = msg.content?.[0]?.text || '';

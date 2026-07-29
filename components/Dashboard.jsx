@@ -7275,6 +7275,7 @@ export default function OaDashboard(){
   const [gfaProdFilter, setGfaProdFilter] = useState("전체"); // 소재 전체 목록 제품 필터
   const [gfaAI, setGfaAI] = useSyncState("oa_gfa_analysis_v1", null); // AI 분석 결과 (팀 공유)
   const [gfaAILoading, setGfaAILoading] = useState(false);
+  const [gfaExec, setGfaExec] = useSyncState("oa_gfa_exec_v1", []); // AI 추천 중 실제 실행한 액션 기록
   // 포트폴리오 네이버 자동 집계 — ad_campaigns (네이버 검색광고 API 일별 적재분)
   const [pfNaver, setPfNaver] = useState({month:null, rows:[]});
   useEffect(()=>{
@@ -8408,7 +8409,8 @@ export default function OaDashboard(){
     const runGfaAI=async()=>{
       setGfaAILoading(true);
       try{
-        const res=await fetch("/api/gfa-analysis",{method:"POST"});
+        const res=await fetch("/api/gfa-analysis",{method:"POST",headers:{"Content-Type":"application/json"},
+          body:JSON.stringify({executed:(gfaExec||[]).map(e=>({action:e.action,target:e.target,executedAt:e.executedAt,baseline:e.baseline}))})});
         const d=await res.json();
         if(d.error) throw new Error(d.error);
         setGfaAI({reportId:d.reportId,fileName:d.fileName,at:new Date().toISOString(),...d.analysis});
@@ -8451,6 +8453,17 @@ export default function OaDashboard(){
     };
 
     const tot=withM(camps.reduce((a,c)=>({cost:a.cost+c.cost,imp:a.imp+c.imp,clk:a.clk+c.clk,conv:a.conv+c.conv,buy:a.buy+c.buy,rev:a.rev+c.rev}),{cost:0,imp:0,clk:0,conv:0,buy:0,rev:0}));
+
+    // AI 액션 실행 기록 — "실행" 표시 시 실행시점 전체 지표 스냅샷 저장, 다음 분석에서 효과 리뷰
+    const execKey=a=>`${a.action}|${a.target}`;
+    const execOf=a=>(gfaExec||[]).find(e=>e.key===execKey(a));
+    const toggleExec=a=>{
+      const cur=gfaExec||[], k=execKey(a);
+      if(cur.some(e=>e.key===k)){ if(window.confirm("실행 기록을 취소할까요?")) setGfaExec(cur.filter(e=>e.key!==k)); return; }
+      setGfaExec([...cur,{key:k,action:a.action,target:a.target,reason:a.reason,executedAt:new Date().toISOString(),reportId:gfaAI?.reportId||"",
+        baseline:{cost:Math.round(tot.cost),buy:tot.buy,rev:Math.round(tot.rev),roas:+tot.roas.toFixed(0)}}]);
+    };
+    const reviewOf=t=>(gfaAI?.review||[]).find(r=>r.target===t);
 
     // 제품별 합산 — 소재명 첫 토큰(제품명) 기준 (소재 수는 고유 소재명 기준 — 일별 행 중복 방지)
     const prodMap={};
@@ -8547,14 +8560,46 @@ export default function OaDashboard(){
                 <div style={{display:"flex",flexDirection:"column",gap:8,marginTop:10}}>
                   {(gfaAI.actions||[]).map((a,i)=>{
                     const col=a.action==="OFF"?{c:C.bad,bg:"#FEF0F0"}:a.action==="증액"?{c:C.good,bg:"#EDF7EF"}:a.action==="예산이동"?{c:C.rose,bg:"#EAF3FD"}:a.action==="테스트"?{c:C.warn,bg:"#FFF8EC"}:{c:C.inkMid,bg:"rgba(0,0,0,.05)"};
+                    const ex=execOf(a);
                     return(
-                      <div key={i} style={{display:"flex",gap:10,alignItems:"flex-start",padding:"9px 10px",borderRadius:10,border:`1px solid ${C.border}`}}>
+                      <div key={i} style={{display:"flex",gap:10,alignItems:"flex-start",padding:"9px 10px",borderRadius:10,border:`1px solid ${ex?C.good:C.border}`,background:ex?"rgba(46,125,50,.03)":"transparent"}}>
                         <span style={{fontSize:12.5,fontWeight:900,color:col.c,background:col.bg,padding:"3px 10px",borderRadius:20,whiteSpace:"nowrap"}}>{a.action}</span>
                         <div style={{flex:1,fontSize:13}}>
                           <div style={{fontWeight:800,color:C.ink}}>{a.target}</div>
                           <div style={{color:C.inkMid,marginTop:1}}>{a.reason}</div>
                           {a.impact&&<div style={{color:C.inkLt,marginTop:1,fontSize:12.5}}>→ {a.impact}</div>}
                         </div>
+                        <button onClick={()=>toggleExec(a)}
+                          style={{padding:"5px 12px",borderRadius:8,border:`1px solid ${ex?C.good:C.border}`,background:ex?C.good:"#fff",color:ex?"#fff":C.inkMid,fontWeight:800,fontSize:12,cursor:"pointer",fontFamily:"inherit",whiteSpace:"nowrap"}}>
+                          {ex?"✓ 실행됨":"실행"}
+                        </button>
+                      </div>);
+                  })}
+                </div>
+              </div>
+            )}
+            {(gfaExec||[]).length>0&&(
+              <div style={{marginTop:14}}>
+                <div style={{fontSize:13,fontWeight:900,color:C.ink,marginBottom:8}}>📋 실행한 액션 ({gfaExec.length}) — 다음 "다시 분석" 때 효과를 평가합니다</div>
+                <div style={{display:"flex",flexDirection:"column",gap:6}}>
+                  {gfaExec.slice().sort((a,b)=>String(b.executedAt).localeCompare(String(a.executedAt))).map(e=>{
+                    const rv=reviewOf(e.target);
+                    const rvCol=rv?.verdict==="효과있음"?{c:C.good,bg:"#EDF7EF"}:rv?.verdict==="효과없음"?{c:C.bad,bg:"#FEF0F0"}:{c:C.inkMid,bg:"rgba(0,0,0,.05)"};
+                    return(
+                      <div key={e.key} style={{display:"flex",gap:10,alignItems:"flex-start",padding:"8px 10px",borderRadius:10,background:"rgba(0,0,0,.03)"}}>
+                        <div style={{flex:1,fontSize:12.5}}>
+                          <div style={{fontWeight:800,color:C.ink}}>[{e.action}] {e.target}</div>
+                          <div style={{color:C.inkLt,marginTop:1}}>
+                            {String(e.executedAt||"").slice(0,10)} 실행 · 실행시점 ROAS {e.baseline?.roas??"?"}% / 구매 {e.baseline?.buy??"?"}건
+                            {e.baseline&&<span> → 현재 ROAS <b style={{color:tot.roas>=(e.baseline.roas||0)?C.good:C.bad}}>{tot.roas.toFixed(0)}%</b> / 구매 {tot.buy}건</span>}
+                          </div>
+                          {rv&&<div style={{marginTop:4,display:"flex",gap:6,alignItems:"flex-start"}}>
+                            <span style={{fontSize:11.5,fontWeight:900,color:rvCol.c,background:rvCol.bg,padding:"2px 8px",borderRadius:20,whiteSpace:"nowrap"}}>{rv.verdict}</span>
+                            <span style={{color:C.inkMid}}>{rv.note}</span>
+                          </div>}
+                        </div>
+                        <button onClick={()=>toggleExec(e)} title="실행 기록 취소"
+                          style={{padding:"3px 9px",borderRadius:8,border:`1px solid ${C.border}`,background:"#fff",color:C.inkLt,fontWeight:800,fontSize:11.5,cursor:"pointer",fontFamily:"inherit"}}>취소</button>
                       </div>);
                   })}
                 </div>
