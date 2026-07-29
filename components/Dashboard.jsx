@@ -8327,6 +8327,16 @@ export default function OaDashboard(){
       let inter=0; A.forEach(x=>{if(B.has(x))inter++;});
       return (2*inter)/(A.size+B.size||1);
     };
+    // 파일명 사이즈/유형 인식 — 342x228→배너형(PC), 1200x628→피드형, 1200x1200→스퀘어형, 1200x1800→피드형(2:3), 유형명 직접 표기도 인식
+    const gfaTypePred=f=>{ // 파일명 → 해당 유형(norm된 소재 마지막 토큰) 판별 함수, 없으면 null
+      const s=String(f||"").replace(/\.[a-zA-Z0-9]+$/,"");
+      if(/342\s*[xX×]\s*228/.test(s)||/배너형/.test(s))                       return t=>t.startsWith("배너형");
+      if(/1200\s*[xX×]\s*1800/.test(s)||/피드형\s*\(?\s*2\s*[:.]\s*3\s*\)?/.test(s)) return t=>t==="피드형23";
+      if(/1200\s*[xX×]\s*1200/.test(s)||/스퀘어형/.test(s))                   return t=>t==="스퀘어형";
+      if(/1200\s*[xX×]\s*628/.test(s)||/피드형/.test(s))                      return t=>t==="피드형";
+      return null;
+    };
+    const gfaStripType=f=>String(f||"").replace(/\.[a-zA-Z0-9]+$/,"").replace(/\d{3,4}\s*[xX×]\s*\d{3,4}/g,"").replace(/배너형\s*\(?\s*PC\s*\)?|피드형\s*\(?\s*2\s*[:.]\s*3\s*\)?|스퀘어형|피드형|배너형/g,"");
     // 전체 이름 앞부분 포함 매칭 — "아이스넥밴드_아빠" ⊂ "아이스넥밴드_아빠 1_피드형" (제품명 포함이라 타 제품 오매칭 없음)
     const gfaFullHit=(fileName,creaName)=>{
       const fa=gfaNorm(fileName),fb=gfaNorm(creaName);
@@ -8349,8 +8359,18 @@ export default function OaDashboard(){
       const names=[...new Set((gfaReport?.rows||[]).map(r=>r.name))];
       let ok=[],miss=[],pairs={};
       for(const f of files){
+        // 0순위: 사이즈/유형 지정 매칭 — "아이스넥밴드_아빠_1200x628" → 아이스넥밴드_아빠의 피드형만
+        let hits=[];
+        const pred=gfaTypePred(f.name);
+        if(pred){
+          const base=gfaStripType(f.name);
+          hits=names.filter(n2=>{
+            const parts=String(n2||"").split("_"); if(parts.length<2) return false;
+            return pred(gfaNorm(parts[parts.length-1]))&&gfaFullHit(base,parts.slice(0,-1).join("_"));
+          });
+        }
         // 1순위: 제품명 포함 앞부분 매칭 (아이스넥밴드_아빠 → 아이스넥밴드_아빠 배리에이션 전부, 타 제품 제외)
-        let hits=names.filter(n2=>gfaFullHit(f.name,n2));
+        if(!hits.length) hits=names.filter(n2=>gfaFullHit(f.name,n2));
         // 2순위: 컨셉명 포함 관계 → 3순위: 최고 유사 1개
         if(!hits.length) hits=names.filter(n2=>gfaSim(f.name,n2)>=0.99);
         if(!hits.length){ const b=gfaBestMatch(f.name,names); if(b) hits=[b]; }
