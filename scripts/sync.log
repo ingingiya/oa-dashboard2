@@ -172,3 +172,188 @@ Node.js v24.14.0
   조회 중... 15행
   → payload 1485KB
 ✅ 동기화 완료
+쿠팡 파일 없음
+지그재그 파일 없음
+경고: 쿠팡: 파일 없음; 지그재그: 파일 없음
+업서트 대상: 0행 (2026-06-24 ~ 2026-07-29)
+[2026. 7. 29. AM 9:05:00] 랭킹 실판매 동기화 시작
+  조회 중... 10행
+  → 10행 조회
+✅ 동기화 완료
+[2026. 7. 29. AM 9:10:01] 전제품 검색순위 동기화 시작
+  조회 중... 3250행 (D-90~)  조회 중... 6210행 (D-83~)  조회 중... 9547행 (D-76~)  조회 중... 12760행 (D-69~)  조회 중... 15697행 (D-62~)[2026. 7. 29. AM 9:15:00] 우선순위 동기화 시작
+  조회 중... 19016행 (D-55~)  조회 중... 22450행 (D-48~)  조회 중... 25781행 (D-41~)  매출 조회 중... 7589행 (D-180~)  조회 중... 29187행 (D-34~)node:fs:440
+    return binding.readFileUtf8(path, stringToFlags(options.flag));
+                   ^
+
+Error: ENOENT: no such file or directory, open '"/Users/kirby/.naverworks/private.key"'
+    at readFileSync (node:fs:440:20)
+    at file:///Users/kirby/oa-dashboard2/scripts/nworks-auth.mjs:18:13
+    at ModuleJob.run (node:internal/modules/esm/module_job:430:25)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:661:26)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5) {
+  errno: -2,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: '"/Users/kirby/.naverworks/private.key"'
+}
+
+Node.js v24.14.0
+  조회 중... 32596행 (D-27~)  조회 중... 35875행 (D-20~)  조회 중... 39323행 (D-13~)  매출 조회 중... 15305행 (D-150~)  조회 중... 42782행 (D-6~)
+  → 키워드 529개 · 42782행 (90일)
+  조회 중... 200행  조회 중... 400행  조회 중... 600행  조회 중... 800행  조회 중... 1000행  조회 중... 1200행  조회 중... 1400행  조회 중... 1600행  조회 중... 1800행  조회 중... 2000행  조회 중... 2200행  조회 중... 2400행  조회 중... 2600행  조회 중... 2800행  조회 중... 3000행  조회 중... 3200행  조회 중... 3400행  조회 중... 3600행  조회 중... 3800행  조회 중... 4000행  조회 중... 4200행  조회 중... 4400행  조회 중... 4600행  조회 중... 4800행  조회 중... 5000행  조회 중... 5200행  조회 중... 5400행  조회 중... 5600행  조회 중... 5800행  조회 중... 6000행  조회 중... 6200행  조회 중... 6400행  조회 중... 6600행  조회 중... 6800행  조회 중... 7000행  조회 중... 7200행  조회 중... 7400행  조회 중... 7600행  조회 중... 7800행  조회 중... 8000행  조회 중... 8200행  조회 중... 8281행
+  → payload 781KB
+✅ 동기화 완료
+스마트스토어 동기화 실패: 토큰 실패: {"code":"GW.IP_NOT_ALLOWED","message":"호출이 허용되지 않은 IP입니다.","timestamp":"2026-07-29T09:25:10.880+09:00","traceId":"AZ9AUKXBe0WpXaSluRjuog^1783490454179^135074093"}
+  매출 조회 중... 23129행 (D-120~)  매출 조회 중... 31075행 (D-90~)❌ 오류: fetch failed
+node:fs:440
+    return binding.readFileUtf8(path, stringToFlags(options.flag));
+                   ^
+
+Error: ENOENT: no such file or directory, open '"/Users/kirby/.naverworks/private.key"'
+    at readFileSync (node:fs:440:20)
+    at file:///Users/kirby/oa-dashboard2/scripts/nworks-auth.mjs:18:13
+    at ModuleJob.run (node:internal/modules/esm/module_job:430:25)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:661:26)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5) {
+  errno: -2,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: '"/Users/kirby/.naverworks/private.key"'
+}
+
+Node.js v24.14.0
+쿠팡 파일 없음
+지그재그 파일 없음
+경고: 쿠팡: 파일 없음; 지그재그: 파일 없음
+텔레그램 알림 실패: <urlopen error [Errno 8] nodename nor servname provided, or not known>
+업서트 대상: 0행 (2026-06-26 ~ 2026-07-31)
+[2026. 7. 31. AM 9:05:00] 랭킹 실판매 동기화 시작
+❌ 오류: fetch failed
+[2026. 7. 31. AM 9:10:00] 전제품 검색순위 동기화 시작
+❌ 오류: fetch failed
+[2026. 7. 31. AM 9:15:00] 우선순위 동기화 시작
+❌ 오류: fetch failed
+node:fs:440
+    return binding.readFileUtf8(path, stringToFlags(options.flag));
+                   ^
+
+Error: ENOENT: no such file or directory, open '"/Users/kirby/.naverworks/private.key"'
+    at readFileSync (node:fs:440:20)
+    at file:///Users/kirby/oa-dashboard2/scripts/nworks-auth.mjs:18:13
+    at ModuleJob.run (node:internal/modules/esm/module_job:430:25)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:661:26)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5) {
+  errno: -2,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: '"/Users/kirby/.naverworks/private.key"'
+}
+
+Node.js v24.14.0
+스마트스토어 동기화 실패: fetch failed
+node:fs:440
+    return binding.readFileUtf8(path, stringToFlags(options.flag));
+                   ^
+
+Error: ENOENT: no such file or directory, open '"/Users/kirby/.naverworks/private.key"'
+    at readFileSync (node:fs:440:20)
+    at file:///Users/kirby/oa-dashboard2/scripts/nworks-auth.mjs:18:13
+    at ModuleJob.run (node:internal/modules/esm/module_job:430:25)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:661:26)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5) {
+  errno: -2,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: '"/Users/kirby/.naverworks/private.key"'
+}
+
+Node.js v24.14.0
+[2026. 8. 1. AM 9:05:00] 랭킹 실판매 동기화 시작
+  조회 중... 10행
+  → 10행 조회
+✅ 동기화 완료
+[2026. 8. 1. AM 9:15:29] 전제품 검색순위 동기화 시작
+[2026. 8. 1. AM 9:15:29] 우선순위 동기화 시작
+  조회 중... 2961행 (D-90~)  조회 중... 6312행 (D-83~)  조회 중... 9623행 (D-76~)  조회 중... 12881행 (D-69~)  조회 중... 15713행 (D-62~)  매출 조회 중... 7627행 (D-180~)  조회 중... 19150행 (D-55~)  조회 중... 22568행 (D-48~)  조회 중... 25925행 (D-41~)  매출 조회 중... 15351행 (D-150~)  조회 중... 29311행 (D-34~)  조회 중... 32660행 (D-27~)  조회 중... 36021행 (D-20~)  조회 중... 39475행 (D-13~)  매출 조회 중... 23158행 (D-120~)  조회 중... 42434행 (D-6~)
+  → 키워드 529개 · 42434행 (90일)
+  조회 중... 200행  조회 중... 400행  조회 중... 600행  조회 중... 800행  조회 중... 1000행  조회 중... 1200행  조회 중... 1400행  조회 중... 1600행  조회 중... 1800행  조회 중... 2000행  조회 중... 2200행  조회 중... 2400행  조회 중... 2600행  조회 중... 2800행  조회 중... 3000행  조회 중... 3200행  조회 중... 3400행  조회 중... 3600행  조회 중... 3800행  조회 중... 4000행  조회 중... 4200행  조회 중... 4400행  조회 중... 4600행  조회 중... 4800행  조회 중... 5000행  조회 중... 5200행  조회 중... 5400행  조회 중... 5587행
+  → payload 775KB
+✅ 동기화 완료
+  매출 조회 중... 31101행 (D-90~)  매출 조회 중... 38847행 (D-60~)  매출 조회 중... 46804행 (D-30~)
+  → 품목 382개 · 일별 46804행 (180일)
+  조회 중... 200행  조회 중... 319행
+  → 작년 동기 데이터 319개 품목
+  네이버 광고 조회 중... 0행 (D-180~)  네이버 광고 조회 중... 0행 (D-150~)  네이버 광고 조회 중... 0행 (D-120~)  네이버 광고 조회 중... 1322행 (D-90~)  네이버 광고 조회 중... 24643행 (D-60~)  네이버 광고 조회 중... 40256행 (D-30~)
+  → 네이버 광고그룹 819개 중 490개 제품 매칭
+  조회 중... 7행
+  → payload 1484KB
+✅ 동기화 완료
+node:fs:440
+    return binding.readFileUtf8(path, stringToFlags(options.flag));
+                   ^
+
+Error: ENOENT: no such file or directory, open '"/Users/kirby/.naverworks/private.key"'
+    at readFileSync (node:fs:440:20)
+    at file:///Users/kirby/oa-dashboard2/scripts/nworks-auth.mjs:18:13
+    at ModuleJob.run (node:internal/modules/esm/module_job:430:25)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:661:26)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5) {
+  errno: -2,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: '"/Users/kirby/.naverworks/private.key"'
+}
+
+Node.js v24.14.0
+[2026. 8. 2. AM 9:10:00] 전제품 검색순위 동기화 시작
+  조회 중... 2956행 (D-90~)  조회 중... 6304행 (D-83~)  조회 중... 9618행 (D-76~)  조회 중... 12885행 (D-69~)  조회 중... 15718행 (D-62~)  조회 중... 19158행 (D-55~)  조회 중... 22577행 (D-48~)  조회 중... 25926행 (D-41~)  조회 중... 29316행 (D-34~)  조회 중... 32664행 (D-27~)  조회 중... 36027행 (D-20~)  조회 중... 39484행 (D-13~)  조회 중... 41952행 (D-6~)
+  → 키워드 529개 · 41952행 (90일)
+  조회 중... 200행  조회 중... 400행  조회 중... 600행  조회 중... 800행  조회 중... 1000행  조회 중... 1200행  조회 중... 1400행  조회 중... 1600행  조회 중... 1800행  조회 중... 2000행  조회 중... 2200행  조회 중... 2400행  조회 중... 2600행  조회 중... 2800행  조회 중... 2800행
+  → payload 766KB
+✅ 동기화 완료
+[2026. 8. 3. AM 7:00:00] 이미용 동기화 시작 (MCP 경유, 최근 30일)
+MySQL(MCP) 조회 중...
+  조회 중... 200건  조회 중... 400건  조회 중... 600건  조회 중... 800건  조회 중... 1000건  조회 중... 1200건  조회 중... 1400건  조회 중... 1600건  조회 중... 1800건  조회 중... 2000건  조회 중... 2200건  조회 중... 2400건  조회 중... 2600건  조회 중... 2800건  조회 중... 3000건  조회 중... 3200건  조회 중... 3400건  조회 중... 3600건  조회 중... 3800건  조회 중... 4000건  조회 중... 4200건  조회 중... 4400건  조회 중... 4600건  조회 중... 4800건  조회 중... 5000건  조회 중... 5200건  조회 중... 5400건  조회 중... 5600건  조회 중... 5800건  조회 중... 6000건  조회 중... 6200건  조회 중... 6400건  조회 중... 6600건  조회 중... 6800건  조회 중... 7000건  조회 중... 7200건  조회 중... 7400건  조회 중... 7600건  조회 중... 7800건  조회 중... 8000건  조회 중... 8200건  조회 중... 8400건  조회 중... 8600건  조회 중... 8800건  조회 중... 9000건  조회 중... 9200건  조회 중... 9400건  조회 중... 9600건  조회 중... 9800건  조회 중... 10000건  조회 중... 10200건  조회 중... 10400건  조회 중... 10600건  조회 중... 10800건  조회 중... 11000건  조회 중... 11200건  조회 중... 11400건  조회 중... 11600건  조회 중... 11800건  조회 중... 12000건  조회 중... 12200건  조회 중... 12400건  조회 중... 12600건  조회 중... 12800건  조회 중... 13000건  조회 중... 13200건  조회 중... 13400건  조회 중... 13600건  조회 중... 13800건  조회 중... 14000건  조회 중... 14200건  조회 중... 14400건  조회 중... 14600건  조회 중... 14800건  조회 중... 15000건  조회 중... 15200건  조회 중... 15400건  조회 중... 15600건  조회 중... 15800건  조회 중... 15952건
+  → 15952건 조회됨
+Supabase 업로드 중...
+  ↑ 500/15952건 완료
+  ↑ 1000/15952건 완료
+  ↑ 1500/15952건 완료
+  ↑ 2000/15952건 완료
+  ↑ 2500/15952건 완료
+  ↑ 3000/15952건 완료
+  ↑ 3500/15952건 완료
+  ↑ 4000/15952건 완료
+  ↑ 4500/15952건 완료
+  ↑ 5000/15952건 완료
+  ↑ 5500/15952건 완료
+  ↑ 6000/15952건 완료
+  ↑ 6500/15952건 완료
+  ↑ 7000/15952건 완료
+  ↑ 7500/15952건 완료
+  ↑ 8000/15952건 완료
+  ↑ 8500/15952건 완료
+  ↑ 9000/15952건 완료
+  ↑ 9500/15952건 완료
+  ↑ 10000/15952건 완료
+  ↑ 10500/15952건 완료
+  ↑ 11000/15952건 완료
+❌ 오류: Supabase upsert 실패: {"code":"21000","details":null,"hint":"Ensure that no rows proposed for insertion within the same command have duplicate constrained values.","message":"ON CONFLICT DO UPDATE command cannot affect row a second time"}
+node:fs:440
+    return binding.readFileUtf8(path, stringToFlags(options.flag));
+                   ^
+
+Error: ENOENT: no such file or directory, open '"/Users/kirby/.naverworks/private.key"'
+    at readFileSync (node:fs:440:20)
+    at file:///Users/kirby/oa-dashboard2/scripts/nworks-auth.mjs:18:13
+    at ModuleJob.run (node:internal/modules/esm/module_job:430:25)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:661:26)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5) {
+  errno: -2,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: '"/Users/kirby/.naverworks/private.key"'
+}
+
+Node.js v24.14.0

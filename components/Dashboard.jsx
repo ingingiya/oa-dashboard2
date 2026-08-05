@@ -776,30 +776,43 @@ function InfluencerArchiveSection() {
     setFetchError("");
     setModal({mode:"edit", item});
   }
-  function saveItem() {
+  // 동시 편집 안전장치: 저장 직전 서버 최신본을 다시 읽어 그 위에 변경 적용
+  // (여러 명이 각자 탭을 열어두고 저장해도 서로의 항목을 덮어쓰지 않음)
+  async function getLatestArchive() {
+    try {
+      const latest = await getSetting("oa_inf_archive_v1");
+      if (Array.isArray(latest)) return latest;
+    } catch {}
+    return items;
+  }
+  async function saveItem() {
     const entry = {
       ...form,
       followers: form.followers !== "" ? Number(String(form.followers).replace(/,/g,"")) || null : null,
       addedAt: modal.item?.addedAt || new Date().toISOString().slice(0,10),
       id: modal.item?.id || Date.now().toString(),
     };
+    const latest = await getLatestArchive();
     if (modal.mode === "add") {
       const acct = (form.account||"").trim().toLowerCase();
       const url  = (form.profileUrl||"").trim().toLowerCase();
-      const dup = items.find(x =>
+      const dup = latest.find(x =>
         (acct && (x.account||"").trim().toLowerCase() === acct) ||
         (url  && (x.profileUrl||"").trim().toLowerCase() === url)
       );
       if (dup && !window.confirm(`"${dup.account||dup.name}" 이(가) 이미 저장돼 있어요.\n그래도 추가할까요?`)) return;
-      setArchive([...items, entry]);
+      setArchive([...latest, entry]);
     } else {
-      setArchive(items.map(x => x.id === entry.id ? entry : x));
+      setArchive(latest.some(x => x.id === entry.id)
+        ? latest.map(x => x.id === entry.id ? entry : x)
+        : [...latest, entry]);
     }
     setModal(null);
   }
-  function deleteItem(id) {
+  async function deleteItem(id) {
     if (!confirm("삭제할까요?")) return;
-    setArchive(items.filter(x => x.id !== id));
+    const latest = await getLatestArchive();
+    setArchive(latest.filter(x => x.id !== id));
   }
   function openSettle(item) {
     setSettleTab("shipping");
@@ -825,9 +838,9 @@ function InfluencerArchiveSection() {
     });
     setSettleModal(item);
   }
-  function saveSettle() {
-    const updated = items.map(x => x.id === settleModal.id ? {...x, ...settleForm} : x);
-    setArchive(updated);
+  async function saveSettle() {
+    const latest = await getLatestArchive();
+    setArchive(latest.map(x => x.id === settleModal.id ? {...x, ...settleForm} : x));
     setSettleModal(null);
   }
   function exportWithholdingXlsx(inf, sf) {
@@ -1109,10 +1122,10 @@ function InfluencerArchiveSection() {
                 )}
                 <button onClick={()=>openEdit(p)} style={{flex:1,padding:"5px 0",borderRadius:7,border:`1px solid ${C.border}`,background:C.white,color:C.ink,fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>편집</button>
                 <button onClick={()=>openSettle(p)} style={{flex:1,padding:"5px 0",borderRadius:7,border:"none",background:"#eff6ff",color:"#2563eb",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>정산·배송</button>
-                <button onClick={()=>{
+                <button onClick={async ()=>{
                   const done = !p.shippingDone;
-                  const updated = items.map(x => x.id===p.id ? {...x, shippingDone:done, shippingDate: done ? new Date().toISOString().slice(0,10) : ""} : x);
-                  setArchive(updated);
+                  const latest = await getLatestArchive();
+                  setArchive(latest.map(x => x.id===p.id ? {...x, shippingDone:done, shippingDate: done ? new Date().toISOString().slice(0,10) : ""} : x));
                 }} style={{padding:"5px 8px",borderRadius:7,border:"none",background:p.shippingDone?"#dcfce7":"#f3f4f6",color:p.shippingDone?"#16a34a":C.inkMid,fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit",whiteSpace:"nowrap"}}>
                   {p.shippingDone?"✅발송":"배송완료"}
                 </button>
