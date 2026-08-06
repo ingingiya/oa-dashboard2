@@ -143,94 +143,133 @@ export default function DetailBuilder() {
   }
 
   return (
-    <div style={{ maxWidth: 900, margin: "0 auto", padding: 24 }}>
-      <h1 style={{ fontSize: 24, fontWeight: 800 }}>상세페이지 생성기</h1>
+    <div style={{ background: C.bg, minHeight: "100vh",
+      fontFamily: "-apple-system,BlinkMacSystemFont,'Apple SD Gothic Neo','Pretendard','Noto Sans KR',sans-serif" }}>
+      <style>{`@import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css');
+        *{box-sizing:border-box} input:focus,textarea:focus{border-color:#0071E3 !important}`}</style>
+      <div style={{ maxWidth: 960, margin: "0 auto", padding: "28px 20px 60px" }}>
 
-      <div style={{ display: "flex", gap: 12, marginTop: 16 }}>
-        <input value={slug} onChange={(e) => setSlug(e.target.value)}
-          placeholder="제품 슬러그" style={inp} />
-        <input value={trigger} onChange={(e) => setTrigger(e.target.value)}
-          placeholder="LoRA 트리거워드" style={inp} />
-      </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <a href="/" style={{ fontSize: 13, fontWeight: 700, color: C.inkMid, textDecoration: "none",
+            background: C.white, border: `1px solid ${C.border}`, borderRadius: 10, padding: "7px 14px" }}>← 대시보드</a>
+          <h1 style={{ fontSize: 22, fontWeight: 800, color: C.ink, letterSpacing: "-0.02em" }}>상세페이지 생성기</h1>
+        </div>
 
-      <h2 style={h2}>① 제품 정보 → 카피 생성</h2>
-      <div style={{ display: "flex", gap: 12, marginTop: 12 }}>
-        <input value={form.productName}
-          onChange={(e) => setForm((f) => ({ ...f, productName: e.target.value }))}
-          placeholder="제품명 (예: 클린이스윙P)" style={{ ...inp, flex: 1 }} />
-        <input value={form.category}
-          onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))}
-          placeholder="카테고리 (예: 음파전동칫솔)" style={{ ...inp, flex: 1 }} />
-      </div>
-      <textarea value={form.specs}
-        onChange={(e) => setForm((f) => ({ ...f, specs: e.target.value }))}
-        placeholder={"스펙 (줄 단위)\n진동수: 분당 38,000회\n충전: USB-C\n방수: IPX7"}
-        style={{ ...inp, width: "100%", height: 90, marginTop: 12 }} />
-      {form.points.map((p, i) => (
-        <input key={i} value={p}
-          onChange={(e) =>
-            setForm((f) => ({ ...f, points: f.points.map((x, j) => (j === i ? e.target.value : x)) }))}
-          placeholder={`핵심 소구점 ${i + 1}`}
-          style={{ ...inp, width: "100%", marginTop: 8 }} />
-      ))}
-      <button onClick={generateCopy} disabled={copyBusy} style={btn}>
-        {copyBusy ? "카피 생성 중… (10~20초)" : "카피 생성 (Claude)"}
-      </button>
-
-      <textarea value={productJson} onChange={(e) => setProductJson(e.target.value)}
-        placeholder="카피 생성 결과 JSON (직접 수정 가능 / 붙여넣기도 가능)"
-        style={{ ...inp, width: "100%", height: 160, marginTop: 12, fontFamily: "monospace" }} />
-
-      <h2 style={h2}>② 컷 생성 / 재생성</h2>
-      <button onClick={() => generateCuts(cuts.map((_, i) => i))} style={btn}>
-        전체 컷 생성
-      </button>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 12, marginTop: 12 }}>
-        {cuts.map((c, i) => (
-          <div key={c.file} style={{ border: "1px solid #e5e5e5", borderRadius: 12, padding: 10 }}>
-            <div style={{ fontSize: 13, fontWeight: 700 }}>{c.label}</div>
-            <input value={c.prompt} placeholder="컷 프롬프트"
-              onChange={(e) =>
-                setCuts((p) => p.map((x, j) => (j === i ? { ...x, prompt: e.target.value } : x)))
-              }
-              style={{ ...inp, width: "100%", fontSize: 12, marginTop: 6 }} />
-            <div style={{ marginTop: 8, aspectRatio: "1", background: "#f5f5f5", borderRadius: 8,
-              display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
-              {c.loading ? "생성중…" : c.url
-                ? <img src={c.url} style={{ width: "100%" }} />
-                : <span style={{ fontSize: 12, color: "#aaa" }}>미생성</span>}
-            </div>
-            <div style={{ display: "flex", gap: 6, marginTop: 8 }}>
-              <button onClick={() => generateCuts([i])} style={{ ...btnS }}>재생성</button>
-              <label style={{ ...btnS, cursor: "pointer" }}>
-                실사
-                <input type="file" accept="image/*" hidden
-                  onChange={(e) => e.target.files?.[0] && uploadReal(i, e.target.files[0])} />
-              </label>
-            </div>
+        <div style={card}>
+          <div style={cardTitle}>기본 설정</div>
+          <div style={cardSub}>제품 슬러그는 저장 폴더명, 트리거워드는 LoRA 프롬프트 앞에 자동으로 붙어요</div>
+          <div style={{ display: "flex", gap: 12 }}>
+            <input value={slug} onChange={(e) => setSlug(e.target.value)}
+              placeholder="제품 슬러그" style={{ ...inp, flex: 1 }} />
+            <input value={trigger} onChange={(e) => setTrigger(e.target.value)}
+              placeholder="LoRA 트리거워드" style={{ ...inp, flex: 1 }} />
           </div>
-        ))}
-      </div>
+        </div>
 
-      <h2 style={h2}>③ 최종 렌더</h2>
-      <button onClick={renderPage} style={{ ...btn, background: "#222", color: "#fff" }}>
-        상세페이지 렌더 → 분할 JPG
-      </button>
-      {busy && <p style={{ marginTop: 8, color: "#888" }}>{busy}</p>}
-      {sliceUrls.length > 0 && (
-        <ul style={{ marginTop: 12 }}>
-          {sliceUrls.map((u, i) => (
-            <li key={u}><a href={u} target="_blank">detail_{String(i + 1).padStart(2, "0")}.jpg</a></li>
+        <div style={card}>
+          <div style={cardTitle}>① 제품 정보 → 카피 생성</div>
+          <div style={cardSub}>스펙·소구점을 넣으면 Claude가 상세페이지 전체 카피(JSON)를 만들어요</div>
+          <div style={{ display: "flex", gap: 12 }}>
+            <input value={form.productName}
+              onChange={(e) => setForm((f) => ({ ...f, productName: e.target.value }))}
+              placeholder="제품명 (예: 클린이스윙P)" style={{ ...inp, flex: 1 }} />
+            <input value={form.category}
+              onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))}
+              placeholder="카테고리 (예: 음파전동칫솔)" style={{ ...inp, flex: 1 }} />
+          </div>
+          <textarea value={form.specs}
+            onChange={(e) => setForm((f) => ({ ...f, specs: e.target.value }))}
+            placeholder={"스펙 (줄 단위)\n진동수: 분당 38,000회\n충전: USB-C\n방수: IPX7"}
+            style={{ ...inp, width: "100%", height: 90, marginTop: 10, resize: "vertical" as const }} />
+          {form.points.map((p, i) => (
+            <input key={i} value={p}
+              onChange={(e) =>
+                setForm((f) => ({ ...f, points: f.points.map((x, j) => (j === i ? e.target.value : x)) }))}
+              placeholder={`핵심 소구점 ${i + 1}`}
+              style={{ ...inp, width: "100%", marginTop: 8 }} />
           ))}
-        </ul>
-      )}
+          <button onClick={generateCopy} disabled={copyBusy}
+            style={{ ...btn, opacity: copyBusy ? 0.6 : 1 }}>
+            {copyBusy ? "카피 생성 중… (10~20초)" : "카피 생성 (Claude)"}
+          </button>
+          <textarea value={productJson} onChange={(e) => setProductJson(e.target.value)}
+            placeholder="카피 생성 결과 JSON (직접 수정 가능 / 붙여넣기도 가능)"
+            style={{ ...inp, width: "100%", height: 160, marginTop: 12, fontFamily: "monospace", fontSize: 12 }} />
+        </div>
+
+        <div style={card}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+            <div>
+              <div style={cardTitle}>② 컷 생성 / 재생성</div>
+              <div style={cardSub}>AI 생성(LoRA) 또는 실사 업로드(자동 배경제거) — 슬롯별로 섞어 써도 돼요</div>
+            </div>
+            <button onClick={() => generateCuts(cuts.map((_, i) => i))} style={{ ...btn, marginTop: 0 }}>
+              전체 컷 생성
+            </button>
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 12, marginTop: 4 }}>
+            {cuts.map((c, i) => (
+              <div key={c.file} style={{ border: `1px solid ${C.border}`, borderRadius: 14, padding: 10, background: C.white }}>
+                <div style={{ fontSize: 12, fontWeight: 800, color: C.ink }}>{c.label}</div>
+                <input value={c.prompt} placeholder="컷 프롬프트"
+                  onChange={(e) =>
+                    setCuts((p) => p.map((x, j) => (j === i ? { ...x, prompt: e.target.value } : x)))
+                  }
+                  style={{ ...inp, width: "100%", fontSize: 12, marginTop: 6, padding: "6px 8px" }} />
+                <div style={{ marginTop: 8, aspectRatio: "1", background: C.bg, borderRadius: 10,
+                  display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
+                  {c.loading ? <span style={{ fontSize: 12, color: C.rose, fontWeight: 700 }}>생성중…</span> : c.url
+                    ? <img src={c.url} style={{ width: "100%" }} />
+                    : <span style={{ fontSize: 12, color: C.inkLt }}>미생성</span>}
+                </div>
+                <div style={{ display: "flex", gap: 6, marginTop: 8 }}>
+                  <button onClick={() => generateCuts([i])} style={{ ...btnS }}>재생성</button>
+                  <label style={{ ...btnS, cursor: "pointer" }}>
+                    실사
+                    <input type="file" accept="image/*" hidden
+                      onChange={(e) => e.target.files?.[0] && uploadReal(i, e.target.files[0])} />
+                  </label>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div style={card}>
+          <div style={cardTitle}>③ 최종 렌더</div>
+          <div style={cardSub}>서버에서 860px 상세페이지를 렌더해 세로 분할 JPG로 업로드해요</div>
+          <button onClick={renderPage} style={btn}>
+            상세페이지 렌더 → 분할 JPG
+          </button>
+          {busy && <p style={{ marginTop: 8, fontSize: 13, color: C.inkLt }}>{busy}</p>}
+          {sliceUrls.length > 0 && (
+            <ul style={{ marginTop: 12, listStyle: "none", padding: 0 }}>
+              {sliceUrls.map((u, i) => (
+                <li key={u} style={{ padding: "6px 0", borderBottom: `1px solid ${C.border}` }}>
+                  <a href={u} target="_blank" style={{ fontSize: 13, fontWeight: 700, color: C.rose, textDecoration: "none" }}>
+                    detail_{String(i + 1).padStart(2, "0")}.jpg
+                  </a>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
 
-const inp = { border: "1px solid #ddd", borderRadius: 8, padding: "8px 12px", fontSize: 14 };
-const btn = { border: "1px solid #222", borderRadius: 8, padding: "10px 20px",
-  fontSize: 14, fontWeight: 700, background: "#fff", cursor: "pointer", marginTop: 8 };
-const btnS = { border: "1px solid #ddd", borderRadius: 6, padding: "4px 10px",
-  fontSize: 12, background: "#fff", flex: 1, textAlign: "center" as const };
-const h2 = { fontSize: 18, fontWeight: 800, marginTop: 28 };
+const C = { rose: "#0071E3", blush: "#EAF3FF", ink: "#1D1D1F", inkMid: "#515154",
+  inkLt: "#86868B", border: "#E5E5EA", bg: "#F5F5F7", white: "#FFFFFF" };
+const inp = { border: `1px solid ${C.border}`, borderRadius: 10, padding: "9px 12px",
+  fontSize: 13, fontFamily: "inherit", outline: "none", background: C.white, color: C.ink };
+const btn = { border: "none", borderRadius: 10, padding: "10px 20px", fontSize: 13,
+  fontWeight: 800 as const, background: C.rose, color: "#fff", cursor: "pointer", marginTop: 10,
+  fontFamily: "inherit", boxShadow: "0 4px 12px rgba(0,113,227,.25)" };
+const btnS = { border: `1px solid ${C.border}`, borderRadius: 8, padding: "5px 10px",
+  fontSize: 12, fontWeight: 700 as const, background: C.white, color: C.inkMid, flex: 1,
+  textAlign: "center" as const, cursor: "pointer", fontFamily: "inherit" };
+const card = { background: C.white, border: "1px solid rgba(0,0,0,.06)", borderRadius: 18,
+  padding: "20px 18px", boxShadow: "0 2px 8px rgba(0,0,0,.04)", marginTop: 16 };
+const cardTitle = { fontSize: 14, fontWeight: 800 as const, color: C.ink, letterSpacing: "-0.02em" };
+const cardSub = { fontSize: 12, color: C.inkLt, marginTop: 2, marginBottom: 12 };
