@@ -114,7 +114,8 @@ export async function POST(req: NextRequest) {
       if (!tmpUrl) throw new Error(`"${node.name}" export URL 없음`);
       const png = Buffer.from(await (await fetch(tmpUrl)).arrayBuffer());
       const name = node.name.replace(/^sec:/, "").trim();
-      const filePath = `figma-template/${name}.png`;
+      // Supabase Storage 키는 한글 불가 — 순번 기반 ASCII 키 사용
+      const filePath = `figma-template/sec-${String(sections.length + 1).padStart(2, "0")}.png`;
       const { error } = await supabase.storage
         .from(ASSET_BUCKET)
         .upload(filePath, png, { contentType: "image/png", upsert: true });
