@@ -1,7 +1,7 @@
 "use client";
 // app/detail/page.tsx
 // 상세페이지 생성기 — 원스톱 UI
-// 흐름: ① 제품 정보 입력 → ② 컷 생성(RunPod) + 미리보기/재생성 → ③ 상세페이지 렌더 → 분할 JPG 링크
+// 흐름: ① 제품 정보 입력 → ② 컷 생성(Comfy Cloud 나노바나나2 + 실사 앵커) + 미리보기/재생성 → ③ 상세페이지 렌더 → 분할 JPG 링크
 // 실사 업로드 슬롯은 브라우저에서 배경제거(@imgly/background-removal) 후 Supabase 업로드
 // 설치: npm i @imgly/background-removal @supabase/supabase-js
 
@@ -14,19 +14,30 @@ const supabase = createClient(
 );
 
 const DEFAULT_CUTS = [
-  { file: "hook.png", label: "후킹(문제제기)", prompt: "" },
-  { file: "usp1.png", label: "USP 1", prompt: "" },
-  { file: "usp2.png", label: "USP 2", prompt: "" },
-  { file: "usp3.png", label: "USP 3", prompt: "" },
-  { file: "scene1.png", label: "사용씬 1", prompt: "" },
-  { file: "scene2.png", label: "사용씬 2", prompt: "" },
-  { file: "cert.png", label: "인증/실험", prompt: "" },
-  { file: "packshot.png", label: "팩샷(CTA)", prompt: "" },
+  { file: "hook.png", label: "후킹(문제제기)",
+    prompt: "Dramatic hero shot: the product floating upright on a dark charcoal background, single spotlight from above, subtle rim light, cinematic premium product photography." },
+  { file: "usp1.png", label: "USP 1",
+    prompt: "Extreme close-up of the key functional part of the product, pure white background, crisp studio product photo." },
+  { file: "usp2.png", label: "USP 2",
+    prompt: "The product standing upright, clean white background, soft studio lighting, minimal product photo." },
+  { file: "usp3.png", label: "USP 3",
+    prompt: "Close-up of the product's control/display detail, soft light-gray gradient background, premium tech product photo." },
+  { file: "scene1.png", label: "사용씬 1",
+    prompt: "Lifestyle shot: the product placed in its natural home environment, soft morning window light, airy clean interior." },
+  { file: "scene2.png", label: "사용씬 2",
+    prompt: "Lifestyle shot: the product on a marble shelf with a small green plant, warm cozy evening light, shallow depth of field." },
+  { file: "cert.png", label: "인증/실험",
+    prompt: "The product on a clean cool blue gradient background, clinical laboratory mood, subtle floating light particles, trust concept." },
+  { file: "packshot.png", label: "팩샷(CTA)",
+    prompt: "Clean front-view packshot: the product on a pure white background, even studio lighting, e-commerce product photo." },
 ];
 
 export default function DetailBuilder() {
   const [slug, setSlug] = useState("cleanswingP");
   const [trigger, setTrigger] = useState("cleanswingP");
+  const [anchorUrl, setAnchorUrl] = useState(
+    "https://lugqeflqusqsyotdiaxg.supabase.co/storage/v1/object/public/detail-assets/cleanswingP/anchor.jpg"
+  );
   const [cuts, setCuts] = useState(
     DEFAULT_CUTS.map((c) => ({ ...c, url: "", loading: false }))
   );
@@ -99,7 +110,7 @@ export default function DetailBuilder() {
     const res = await fetch("/api/detail/generate", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ productSlug: slug, cuts: targets }),
+      body: JSON.stringify({ productSlug: slug, cuts: targets, anchorUrl }),
     }).then((r) => r.json());
 
     setCuts((p) =>
@@ -184,13 +195,15 @@ export default function DetailBuilder() {
 
         <div style={card}>
           <div style={cardTitle}>기본 설정</div>
-          <div style={cardSub}>제품 슬러그는 저장 폴더명, 트리거워드는 LoRA 프롬프트 앞에 자동으로 붙어요</div>
+          <div style={cardSub}>슬러그는 저장 폴더명 · 앵커는 제품 실사 공개 URL(나노바나나가 이 이미지 그대로 그려요)</div>
           <div style={{ display: "flex", gap: 12 }}>
             <input value={slug} onChange={(e) => setSlug(e.target.value)}
               placeholder="제품 슬러그" style={{ ...inp, flex: 1 }} />
             <input value={trigger} onChange={(e) => setTrigger(e.target.value)}
-              placeholder="LoRA 트리거워드" style={{ ...inp, flex: 1 }} />
+              placeholder="제품명(프롬프트 접두어)" style={{ ...inp, flex: 1 }} />
           </div>
+          <input value={anchorUrl} onChange={(e) => setAnchorUrl(e.target.value)}
+            placeholder="앵커 실사 이미지 URL (필수)" style={{ ...inp, width: "100%", marginTop: 8 }} />
         </div>
 
         <div style={card}>
