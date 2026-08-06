@@ -16,6 +16,9 @@ export const maxDuration = 120; // Pro 플랜: 최대 300까지 가능
 export const dynamic = "force-dynamic";
 
 const PAGE_WIDTH = 860;
+// 서버리스 크로미움엔 한글 폰트가 없음 — 웹폰트 필수
+const FONT_CSS =
+  "https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css";
 const SLICE_HEIGHT = 6000;
 const BUCKET = "detail-pages";
 
@@ -65,6 +68,7 @@ function buildFigmaHtml(template: any, product: any): string {
     .join("");
 
   return `<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8">
+  <link rel="stylesheet" href="${FONT_CSS}">
   <style>*{margin:0;padding:0;box-sizing:border-box}body{width:${PAGE_WIDTH}px;background:#fff}</style>
   </head><body>${sections}</body></html>`;
 }
@@ -92,7 +96,8 @@ function buildHtml(p: any): string {
     )
     .join("");
 
-  return `<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8"><style>
+  return `<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8">
+  <link rel="stylesheet" href="${FONT_CSS}"><style>
   *{margin:0;padding:0;box-sizing:border-box}
   body{width:${PAGE_WIDTH}px;font-family:'Pretendard','Apple SD Gothic Neo',sans-serif;color:#222;background:#fff}
   img{width:100%;display:block}section{padding:80px 60px}.center{text-align:center}
