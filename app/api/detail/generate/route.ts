@@ -12,6 +12,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { appendHistory } from "../../../../lib/detailHistory";
 
 export const maxDuration = 300;
 export const dynamic = "force-dynamic";
@@ -141,6 +142,12 @@ export async function POST(req: NextRequest) {
         results.push({ file: cut.file, url: data.publicUrl });
       })
     );
+
+    await appendHistory(getSupabase(), {
+      type: "cuts",
+      slug: productSlug,
+      urls: results.map((r) => r.url),
+    });
 
     return NextResponse.json({ ok: true, results });
   } catch (e: any) {

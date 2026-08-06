@@ -5,7 +5,7 @@
 // 실사 업로드 슬롯은 브라우저에서 배경제거(@imgly/background-removal) 후 Supabase 업로드
 // 설치: npm i @imgly/background-removal @supabase/supabase-js
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { createClient } from "@supabase/supabase-js";
 
 const supabase = createClient(
@@ -121,6 +121,7 @@ export default function DetailBuilder() {
           : { ...c, loading: false };
       })
     );
+    loadHistory();
   }
 
   // ── 실사 업로드 (브라우저 배경제거) ──
@@ -157,6 +158,30 @@ export default function DetailBuilder() {
     );
   }
 
+  // ── 생성 기록 ──
+  type HistItem = { id: string; at: string; type: string; slug: string; urls: string[]; deleted?: boolean };
+  const [history, setHistory] = useState<HistItem[]>([]);
+  const [histBusy, setHistBusy] = useState("");
+
+  async function loadHistory() {
+    const res = await fetch("/api/detail/history").then((r) => r.json());
+    if (res.ok) setHistory(res.items);
+  }
+  useEffect(() => { loadHistory(); }, []);
+
+  async function deleteHistory(id: string) {
+    if (!confirm("스토리지 파일을 삭제할까요? (기록은 남습니다)")) return;
+    setHistBusy(id);
+    const res = await fetch("/api/detail/history", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id }),
+    }).then((r) => r.json());
+    if (!res.ok) alert("삭제 실패: " + res.error);
+    await loadHistory();
+    setHistBusy("");
+  }
+
   // ── 최종 렌더 ──
   async function renderPage() {
     setBusy("렌더링 중… (30초~1분)");
@@ -178,6 +203,7 @@ export default function DetailBuilder() {
     }).then((r) => r.json());
     setSliceUrls(res.urls || []);
     setBusy(res.ok ? "" : "실패: " + res.error);
+    loadHistory();
   }
 
   return (
@@ -309,6 +335,43 @@ export default function DetailBuilder() {
               ))}
             </ul>
           )}
+        </div>
+
+        <div style={card}>
+          <div style={cardTitle}>생성 기록</div>
+          <div style={cardSub}>모든 컷/렌더 결과가 남아요 — 삭제해도 기록은 보존되고 파일만 지워져요</div>
+          {history.length === 0 && <p style={{ fontSize: 13, color: C.inkLt }}>기록 없음</p>}
+          {history.map((h) => (
+            <div key={h.id} style={{ borderTop: `1px solid ${C.border}`, padding: "12px 0" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <span style={{ fontSize: 11, fontWeight: 800, color: "#fff", borderRadius: 6,
+                  padding: "3px 8px", background: h.type === "render" ? C.rose : C.inkMid }}>
+                  {h.type === "render" ? "렌더" : "컷"}
+                </span>
+                <span style={{ fontSize: 13, fontWeight: 700, color: C.ink }}>{h.slug}</span>
+                <span style={{ fontSize: 12, color: C.inkLt }}>
+                  {new Date(h.at).toLocaleString("ko-KR", { timeZone: "Asia/Seoul" })} · {h.urls.length}장
+                </span>
+                {h.deleted ? (
+                  <span style={{ fontSize: 12, color: "#D70015", fontWeight: 700, marginLeft: "auto" }}>파일 삭제됨</span>
+                ) : (
+                  <button onClick={() => deleteHistory(h.id)} disabled={histBusy === h.id}
+                    style={{ ...btnS, flex: "none", marginLeft: "auto", color: "#D70015" }}>
+                    {histBusy === h.id ? "삭제 중…" : "파일 삭제"}
+                  </button>
+                )}
+              </div>
+              {!h.deleted && (
+                <div style={{ display: "flex", gap: 8, marginTop: 8, overflowX: "auto" }}>
+                  {h.urls.map((u) => (
+                    <a key={u} href={u} target="_blank">
+                      <img src={u} style={{ height: 90, borderRadius: 8, border: `1px solid ${C.border}` }} />
+                    </a>
+                  ))}
+                </div>
+              )}
+            </div>
+          ))}
         </div>
       </div>
     </div>

@@ -11,6 +11,7 @@ import chromium from "@sparticuz/chromium";
 import { chromium as playwright } from "playwright-core";
 import sharp from "sharp";
 import { createClient } from "@supabase/supabase-js";
+import { appendHistory } from "../../../../lib/detailHistory";
 
 export const maxDuration = 120; // Pro 플랜: 최대 300까지 가능
 export const dynamic = "force-dynamic";
@@ -194,6 +195,8 @@ export async function POST(req: NextRequest) {
       const { data } = getSupabase().storage.from(BUCKET).getPublicUrl(filePath);
       urls.push(data.publicUrl);
     }
+
+    await appendHistory(getSupabase(), { type: "render", slug, urls });
 
     return NextResponse.json({ ok: true, count, urls });
   } catch (e: any) {
