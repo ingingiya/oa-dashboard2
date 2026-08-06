@@ -10,6 +10,7 @@
   "dependencies": {
     "@anthropic-ai/sdk": "^0.80.0",
     "@elevenlabs/elevenlabs-js": "^2.49.1",
+    "@sparticuz/chromium": "^149.0.0",
     "@supabase/ssr": "^0.10.2",
     "@supabase/supabase-js": "^2.105.1",
     "bcryptjs": "^3.0.3",
@@ -17,9 +18,11 @@
     "mysql2": "^3.22.0",
     "next": "14.2.3",
     "pdf-parse": "^1.1.1",
+    "playwright-core": "^1.62.1",
     "react": "^18",
     "react-dom": "^18",
     "recharts": "^3.8.0",
+    "sharp": "^0.35.3",
     "xlsx": "^0.18.5"
   },
   "devDependencies": {
