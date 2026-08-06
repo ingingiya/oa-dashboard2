@@ -164,7 +164,12 @@ export async function POST(req: NextRequest) {
     // ---------- 2. sharp로 세로 분할 ----------
     const meta = await sharp(fullPng).metadata();
     const count = Math.ceil(meta.height! / SLICE_HEIGHT);
-    const slug = `${product.productName}-${Date.now()}`;
+    // Storage 키는 한글 불가 — ASCII만 남기고 비면 detail로 폴백
+    const safeName =
+      String(product.productName || "")
+        .replace(/[^A-Za-z0-9_-]/g, "")
+        .slice(0, 40) || "detail";
+    const slug = `${safeName}-${Date.now()}`;
     const urls: string[] = [];
 
     for (let i = 0; i < count; i++) {
