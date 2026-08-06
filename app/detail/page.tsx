@@ -34,6 +34,33 @@ export default function DetailBuilder() {
   const [sliceUrls, setSliceUrls] = useState<string[]>([]);
   const [busy, setBusy] = useState("");
 
+  // ── 피그마 템플릿 동기화 ──
+  const [figmaUrl, setFigmaUrl] = useState("");
+  const [syncBusy, setSyncBusy] = useState(false);
+  const [syncMsg, setSyncMsg] = useState("");
+
+  async function syncFigma() {
+    if (!figmaUrl) return alert("피그마 파일 링크를 입력하세요");
+    setSyncBusy(true);
+    setSyncMsg("");
+    try {
+      const res = await fetch("/api/detail/figma-sync", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ figmaUrl }),
+      }).then((r) => r.json());
+      if (!res.ok) throw new Error(res.error || "동기화 실패");
+      setSyncMsg(
+        `동기화 완료 — 섹션 ${res.sections.length}개: ` +
+          res.sections.map((s: any) => `${s.name}(${s.placeholders.length})`).join(", ")
+      );
+    } catch (e: any) {
+      setSyncMsg("실패: " + e.message);
+    } finally {
+      setSyncBusy(false);
+    }
+  }
+
   // ── 카피 생성 폼 ──
   const [form, setForm] = useState({
     productName: "",
@@ -164,6 +191,22 @@ export default function DetailBuilder() {
             <input value={trigger} onChange={(e) => setTrigger(e.target.value)}
               placeholder="LoRA 트리거워드" style={{ ...inp, flex: 1 }} />
           </div>
+        </div>
+
+        <div style={card}>
+          <div style={cardTitle}>피그마 템플릿 동기화</div>
+          <div style={cardSub}>
+            {"디자인 수정 후 딸깍 — sec: 프레임 + {{경로}} 레이어(숨김) 규칙, 미동기화 시 기본 템플릿 사용"}
+          </div>
+          <div style={{ display: "flex", gap: 12 }}>
+            <input value={figmaUrl} onChange={(e) => setFigmaUrl(e.target.value)}
+              placeholder="https://www.figma.com/design/..." style={{ ...inp, flex: 1 }} />
+            <button onClick={syncFigma} disabled={syncBusy}
+              style={{ ...btn, marginTop: 0, opacity: syncBusy ? 0.6 : 1 }}>
+              {syncBusy ? "동기화 중…" : "피그마 동기화"}
+            </button>
+          </div>
+          {syncMsg && <p style={{ marginTop: 8, fontSize: 13, color: syncMsg.startsWith("실패") ? "#D70015" : C.inkMid }}>{syncMsg}</p>}
         </div>
 
         <div style={card}>

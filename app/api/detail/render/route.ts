@@ -26,7 +26,50 @@ const getSupabase = () =>
     process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   );
 
-// ---------- 템플릿 (컴포넌트 문자열 — 필요시 별도 파일로 분리) ----------
+// ---------- 피그마 템플릿 렌더 (figma-sync로 저장된 settings 키 사용) ----------
+const TEMPLATE_KEY = "oa_detail_template_v1";
+
+// "usp[0].headline" 같은 경로로 product JSON에서 값 꺼내기
+function getPath(obj: any, path: string): any {
+  return path
+    .replace(/\[(\d+)\]/g, ".$1")
+    .split(".")
+    .reduce((o, k) => (o == null ? undefined : o[k]), obj);
+}
+
+function buildFigmaHtml(template: any, product: any): string {
+  const sections = template.sections
+    .map((sec: any) => {
+      const layers = sec.placeholders
+        .map((p: any) => {
+          const val = getPath(product, p.path);
+          if (val == null || val === "") return "";
+          const pos = `position:absolute;left:${p.x}px;top:${p.y}px;width:${p.w}px;`;
+
+          if (p.kind === "image") {
+            return `<img src="${val}" style="${pos}height:${p.h}px;object-fit:cover;border-radius:${p.radius || 0}px;">`;
+          }
+          // 텍스트 — 피그마 스타일 그대로
+          return `<div style="${pos}min-height:${p.h}px;
+            font-family:'${p.fontFamily}','Pretendard','Apple SD Gothic Neo',sans-serif;
+            font-size:${p.fontSize}px;font-weight:${p.fontWeight};
+            line-height:${p.lineHeight};letter-spacing:${p.letterSpacing}px;
+            color:${p.color};text-align:${p.align};white-space:pre-line;">${val}</div>`;
+        })
+        .join("");
+
+      return `<div style="position:relative;width:${sec.width}px;height:${sec.height}px;
+        background-image:url('${sec.bgUrl}');background-size:${sec.width}px ${sec.height}px;">
+        ${layers}</div>`;
+    })
+    .join("");
+
+  return `<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8">
+  <style>*{margin:0;padding:0;box-sizing:border-box}body{width:${PAGE_WIDTH}px;background:#fff}</style>
+  </head><body>${sections}</body></html>`;
+}
+
+// ---------- 기본 템플릿 (피그마 동기화 전 폴백) ----------
 function buildHtml(p: any): string {
   const usp = p.usp
     .map(
@@ -89,7 +132,19 @@ function buildHtml(p: any): string {
 export async function POST(req: NextRequest) {
   try {
     const product = await req.json();
-    const html = buildHtml(product);
+
+    // 피그마 동기화 템플릿이 있으면 그걸로, 없으면 기본 템플릿으로 렌더
+    let html: string;
+    const { data: tplRow } = await getSupabase()
+      .from("settings")
+      .select("value")
+      .eq("key", TEMPLATE_KEY)
+      .maybeSingle();
+    if (tplRow?.value?.sections?.length) {
+      html = buildFigmaHtml(tplRow.value, product);
+    } else {
+      html = buildHtml(product);
+    }
 
     // ---------- 1. 서버리스 크로미움으로 캡처 ----------
     const browser = await playwright.launch({
@@ -102,7 +157,7 @@ export async function POST(req: NextRequest) {
       deviceScaleFactor: 1, // 서버리스 메모리 절약 — 화질 더 필요하면 1.5
     });
     await page.setContent(html, { waitUntil: "networkidle" });
-    await page.waitForTimeout(500);
+    await page.waitForTimeout(800); // 배경 PNG + 컷 이미지 로딩 여유
     const fullPng = await page.screenshot({ fullPage: true });
     await browser.close();
 
