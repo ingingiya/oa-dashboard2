@@ -9180,6 +9180,7 @@ export default function OaDashboard(){
     {id:"guide",     icon:"menu_book",      label:"가이드"},
     {id:"inf_archive",icon:"photo_library", label:"아카이브"},
     {id:"launch",    icon:"rocket_launch",  label:"런칭"},
+    {id:"detailgen", icon:"design_services",label:"상세 생성기", href:"/detail"},
     {id:"schedule",  icon:"calendar_month", label:"스케줄"},
     {id:"creative",  icon:"palette",        label:"소재"},
     {id:"insight",   icon:"edit_note",      label:"팀 노트"},
@@ -18292,7 +18293,7 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
             {NAVS.map(n=>{
               const active = sec===n.id;
               return(
-                <button key={n.id} onClick={()=>setSec(n.id)} style={{
+                <button key={n.id} onClick={()=>n.href?window.location.assign(n.href):setSec(n.id)} style={{
                   width:"100%",display:"flex",alignItems:"center",gap:12,
                   padding:"11px 14px",borderRadius:11,border:"none",cursor:"pointer",
                   fontFamily:"inherit",fontWeight:700,fontSize:13,
@@ -18325,7 +18326,7 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
             {NAVS_WIP.map(n=>{
               const active = sec===n.id;
               return(
-                <button key={n.id} onClick={()=>setSec(n.id)} style={{
+                <button key={n.id} onClick={()=>n.href?window.location.assign(n.href):setSec(n.id)} style={{
                   width:"100%",display:"flex",alignItems:"center",gap:12,
                   padding:"11px 14px",borderRadius:11,border:"none",cursor:"pointer",
                   fontFamily:"inherit",fontWeight:700,fontSize:13,
@@ -18413,7 +18414,7 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
         borderTop:"1px solid rgba(0,0,0,.06)",padding:"6px 0 max(6px,env(safe-area-inset-bottom))",
         zIndex:200}}>
         {NAVS.map(n=>(
-          <button key={n.id} onClick={()=>setSec(n.id)} style={{
+          <button key={n.id} onClick={()=>n.href?window.location.assign(n.href):setSec(n.id)} style={{
             flex:1,display:"flex",flexDirection:"column",alignItems:"center",gap:2,
             background:"transparent",border:"none",cursor:"pointer",padding:"4px 0",
             fontFamily:"inherit",position:"relative"}}>
