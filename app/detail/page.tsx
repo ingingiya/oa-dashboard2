@@ -678,9 +678,16 @@ export default function DetailBuilder() {
   const [phoneBusy, setPhoneBusy] = useState("");
   const [phoneResults, setPhoneResults] = useState<{ angle: string; label: string; url: string }[]>([]);
 
-  // 아이폰 HEIC/HEIF → JPEG (heic2any CDN — 번들 제외)
+  // 아이폰 HEIC/HEIF → JPEG (CDN 로드 — 번들 제외)
+  // 1차 heic-to(최신 libheif — iOS 17/18 HEIC 지원), 실패 시 heic2any 폴백 (구 libheif라 최신 아이폰 사진에서 ERR_LIBHEIF)
   async function heicToJpeg(file: File): Promise<Blob> {
     if (!/hei[cf]/i.test(file.type) && !/\.hei[cf]$/i.test(file.name)) return file;
+    try {
+      const { heicTo } = await import(
+        /* webpackIgnore: true */ "https://cdn.jsdelivr.net/npm/heic-to@1.5.2/dist/heic-to.js" as any
+      );
+      return await heicTo({ blob: file, type: "image/jpeg", quality: 0.9 });
+    } catch (e) { console.warn("heic-to 실패 → heic2any 폴백:", e); }
     if (!(window as any).heic2any) {
       await new Promise((res, rej) => {
         const s = document.createElement("script");
