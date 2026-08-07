@@ -33,6 +33,27 @@ const getSupabase = () =>
 
 // ---------- 피그마 템플릿 렌더 (figma-sync로 저장된 settings 키 사용) ----------
 const TEMPLATE_KEY = "oa_detail_template_v1";
+// 템플릿 레퍼런스 분석으로 생성된 HTML 템플릿 (/api/detail/style)
+const HTML_TEMPLATE_KEY = "oa_detail_html_template_v1";
+
+// {{경로}} 치환 + specsTable/certItems/faqItems 확장
+function fillHtmlTemplate(tplHtml: string, p: any): string {
+  const derived: any = {
+    ...p,
+    specsTable:
+      `<table class="specs-table">` +
+      (p.specs || []).map((s: any) => `<tr><th>${s.label}</th><td>${s.value}</td></tr>`).join("") +
+      `</table>`,
+    certItems: (p.cert?.items || []).map((c: string) => `<li>${c}</li>`).join(""),
+    faqItems: (p.faq || [])
+      .map((f: any) => `<div class="faq-item"><div class="q">Q. ${f.q}</div><div class="a">A. ${f.a}</div></div>`)
+      .join(""),
+  };
+  return tplHtml.replace(/\{\{([^}]+)\}\}/g, (_, path) => {
+    const v = getPath(derived, String(path).trim());
+    return v == null ? "" : String(v);
+  });
+}
 
 // "usp[0].headline" 같은 경로로 product JSON에서 값 꺼내기
 function getPath(obj: any, path: string): any {
@@ -140,15 +161,18 @@ export async function POST(req: NextRequest) {
   try {
     const product = await req.json();
 
-    // 피그마 동기화 템플릿이 있으면 그걸로, 없으면 기본 템플릿으로 렌더
+    // 템플릿 우선순위: 피그마 동기화 > 템플릿 레퍼런스(HTML) > 기본
     let html: string;
-    const { data: tplRow } = await getSupabase()
+    const { data: tplRows } = await getSupabase()
       .from("settings")
-      .select("value")
-      .eq("key", TEMPLATE_KEY)
-      .maybeSingle();
-    if (tplRow?.value?.sections?.length) {
-      html = buildFigmaHtml(tplRow.value, product);
+      .select("key,value")
+      .in("key", [TEMPLATE_KEY, HTML_TEMPLATE_KEY]);
+    const figmaTpl = tplRows?.find((r) => r.key === TEMPLATE_KEY)?.value;
+    const htmlTpl = tplRows?.find((r) => r.key === HTML_TEMPLATE_KEY)?.value;
+    if (figmaTpl?.sections?.length) {
+      html = buildFigmaHtml(figmaTpl, product);
+    } else if (htmlTpl?.html) {
+      html = fillHtmlTemplate(htmlTpl.html, product);
     } else {
       html = buildHtml(product);
     }

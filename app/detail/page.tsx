@@ -73,6 +73,77 @@ export default function DetailBuilder() {
     }
   }
 
+  // ── 템플릿 레퍼런스 (따라하고 싶은 상세페이지 캡쳐 → AI가 디자인 모사 HTML 템플릿 생성) ──
+  const [styleFiles, setStyleFiles] = useState<{ url: string; media_type: string }[]>([]);
+  const [styleBusy, setStyleBusy] = useState("");
+  const [styleActive, setStyleActive] = useState(false);
+  useEffect(() => {
+    fetch("/api/detail/style").then((r) => r.json())
+      .then((res) => setStyleActive(!!res.active)).catch(() => {});
+  }, []);
+
+  async function addStyleFiles(list: FileList | File[]) {
+    setStyleBusy("업로드 중…");
+    const out: { url: string; media_type: string }[] = [];
+    try {
+      for (const file of Array.from(list)) {
+        if (!file.type.startsWith("image/")) continue;
+        const img = await createImageBitmap(file);
+        // 통짜 긴 캡쳐는 AI가 읽을 수 있게 세로로 잘라서 업로드 (폭 860, 조각 높이 폭×2.2)
+        const w = Math.min(img.width, 860);
+        const scale = w / img.width;
+        const h = Math.round(img.height * scale);
+        const chunk = Math.round(w * 2.2);
+        for (let y = 0; y < h && styleFiles.length + out.length < 8; y += chunk) {
+          const ch = Math.min(chunk, h - y);
+          if (ch < 100) break;
+          const cv = document.createElement("canvas");
+          cv.width = w; cv.height = ch;
+          cv.getContext("2d")!.drawImage(img, 0, y / scale, img.width, ch / scale, 0, 0, w, ch);
+          const blob = await new Promise<Blob | null>((res) => cv.toBlob(res, "image/jpeg", 0.85));
+          if (!blob) continue;
+          const fd = new FormData();
+          fd.append("file", new File([blob], "style.jpg", { type: "image/jpeg" }));
+          const res = await fetch("/api/detail/copy-upload", { method: "POST", body: fd }).then((r) => r.json());
+          if (!res.ok) throw new Error(res.error);
+          out.push({ url: res.url, media_type: "image/jpeg" });
+        }
+      }
+      setStyleFiles((p) => [...p, ...out].slice(0, 8));
+      setStyleBusy("");
+    } catch (e: any) {
+      setStyleBusy("업로드 실패: " + e.message);
+    }
+  }
+
+  async function applyStyle() {
+    if (!styleFiles.length) return alert("따라할 상세페이지 캡쳐를 먼저 첨부하세요");
+    setStyleBusy("디자인 분석 중… (1~2분)");
+    try {
+      const res = await fetch("/api/detail/style", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ images: styleFiles }),
+      }).then((r) => r.json());
+      if (!res.ok) throw new Error(res.error);
+      setStyleActive(true);
+      setStyleBusy("적용 완료 — 이제 최종 렌더가 이 스타일로 나와요");
+    } catch (e: any) {
+      setStyleBusy("실패: " + e.message);
+    }
+  }
+
+  async function resetStyle() {
+    await fetch("/api/detail/style", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ reset: true }),
+    });
+    setStyleActive(false);
+    setStyleFiles([]);
+    setStyleBusy("해제됨 — 기본 템플릿으로 렌더돼요");
+  }
+
   // ── 카피 생성 폼 ──
   const [form, setForm] = useState({
     raw: "",
@@ -388,6 +459,28 @@ export default function DetailBuilder() {
             </button>
           </div>
           {syncMsg && <p style={{ marginTop: 8, fontSize: 13, color: syncMsg.startsWith("실패") ? "#D70015" : C.inkMid }}>{syncMsg}</p>}
+        </div>
+
+        <div style={card}>
+          <div style={cardTitle}>템플릿 레퍼런스
+            {styleActive && <span style={{ marginLeft: 8, fontSize: 11, fontWeight: 800, color: "#fff",
+              background: "#34C759", borderRadius: 6, padding: "3px 8px" }}>적용 중</span>}
+          </div>
+          <div style={cardSub}>따라하고 싶은 상세페이지 캡쳐를 넣으면 AI가 디자인(컬러·타이포·섹션 구조)을 분석해 렌더 템플릿으로 만들어요 — 피그마 동기화 템플릿이 있으면 그게 우선</div>
+          <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+            <label style={{ ...btnS, cursor: "pointer" }}>
+              + 캡쳐 첨부 (통짜여도 OK)
+              <input type="file" accept="image/*" multiple hidden
+                onChange={(e) => { if (e.target.files?.length) addStyleFiles(e.target.files); e.target.value = ""; }} />
+            </label>
+            {styleFiles.length > 0 && (
+              <span style={{ fontSize: 12, fontWeight: 700, color: C.inkMid }}>조각 {styleFiles.length}/8</span>
+            )}
+            <button onClick={applyStyle} disabled={!!styleBusy && styleBusy.includes("중")}
+              style={{ ...btnS, background: C.rose, color: "#fff" }}>디자인 분석 → 템플릿 적용</button>
+            {styleActive && <button onClick={resetStyle} style={btnS}>해제</button>}
+          </div>
+          {styleBusy && <p style={{ marginTop: 8, fontSize: 13, color: styleBusy.startsWith("실패") || styleBusy.startsWith("업로드 실패") ? "#D70015" : C.inkMid }}>{styleBusy}</p>}
         </div>
 
         <div style={card}>
