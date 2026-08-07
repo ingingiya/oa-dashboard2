@@ -170,9 +170,9 @@ export async function POST(req: NextRequest) {
       headless: true,
     });
 
-    // Storage 키는 한글 불가 — ASCII만 남기고 비면 detail로 폴백
+    // Storage 키는 한글 불가 — 슬러그 우선, ASCII만 남기고 비면 detail로 폴백
     const safeName =
-      String(product.productName || "")
+      String(product.slug || product.productName || "")
         .replace(/[^A-Za-z0-9_-]/g, "")
         .slice(0, 40) || "detail";
     const slug = `${safeName}-${Date.now()}`;
@@ -187,9 +187,6 @@ export async function POST(req: NextRequest) {
       await page.setContent(html, { waitUntil: "networkidle" });
       await page.waitForTimeout(800); // 배경 PNG + 컷 이미지 로딩 여유
 
-      const totalHeight: number = await page.evaluate(
-        () => document.body.scrollHeight
-      );
       // 최상위 섹션들의 하단 경계 (디자이너 방식: 섹션 경계에서 자름)
       const bottoms: number[] = await page.evaluate(() =>
         Array.from(document.body.children).map((el) => {
@@ -197,6 +194,15 @@ export async function POST(req: NextRequest) {
           return e.offsetTop + e.offsetHeight;
         })
       );
+      // body.scrollHeight가 뷰포트 높이로 잘못 나오는 케이스가 있어 섹션 경계와 max로 보정
+      const scrollH: number = await page.evaluate(() =>
+        Math.max(
+          document.body.scrollHeight,
+          document.documentElement.scrollHeight,
+          document.body.offsetHeight
+        )
+      );
+      const totalHeight = Math.max(scrollH, ...(bottoms.length ? bottoms : [0]));
 
       // GIF 조각: product.gifs = [{ after: 섹션번호(1-base), url }] — 캡처하지 않고 원본 그대로 끼움
       const gifReqs: { after: number; url: string }[] = Array.isArray(product.gifs)

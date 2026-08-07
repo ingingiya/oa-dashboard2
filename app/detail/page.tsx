@@ -304,6 +304,7 @@ export default function DetailBuilder() {
     product.scene.images = [u("scene1.png"), u("scene2.png")];
     product.cert.image = u("cert.png");
     product.cta.image = u("packshot.png");
+    product.slug = slug; // 저장 폴더명 (한글 제품명 대신 기본설정 슬러그 사용)
     product.gifs = gifRows
       .map((r) => ({ after: Number(r.after) || 0, url: r.url.trim() }))
       .filter((g) => g.after > 0 && g.url);
