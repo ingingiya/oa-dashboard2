@@ -528,33 +528,49 @@ export default function DetailBuilder() {
         tplMood = r.imageStyle ? `Match the detail-page design mood: ${r.imageStyle}` : "";
       } catch {}
     }
-    const res = await fetch("/api/detail/generate", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        productSlug: slug,
-        cuts: targets,
-        anchorUrls: anchors,
-        aspectRatio: aspect,
-        modelUrl,
-        lockNote,
-        banNote,
-        styleBlock: [presetStyleBlock() || (selConcept >= 0 ? concepts[selConcept]?.styleBlock : ""), tplMood]
-          .filter(Boolean).join(" "),
-      }),
-    }).then((r) => r.json());
-
-    setCuts((p) =>
-      p.map((c) => {
-        const hit = res.results?.find((r: any) => r.file === c.file);
-        return hit
-          ? { ...c, url: hit.url + "?t=" + Date.now(), loading: false,
-              history: [c.url, ...(c.history || [])].filter(Boolean).slice(0, 12) }
-          : { ...c, loading: false };
+    // 컷마다 개별 요청 — 먼저 끝난 컷부터 즉시 화면에 뜬다 (한 덩어리로 묶으면 제일 느린 컷까지 전부 대기)
+    const styleBlockAll = [presetStyleBlock() || (selConcept >= 0 ? concepts[selConcept]?.styleBlock : ""), tplMood]
+      .filter(Boolean).join(" ");
+    let okCount = 0;
+    let lastErr = "";
+    await Promise.all(
+      targets.map(async (t) => {
+        try {
+          const res = await fetch("/api/detail/generate", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              productSlug: slug,
+              cuts: [t],
+              anchorUrls: anchors,
+              aspectRatio: aspect,
+              modelUrl,
+              lockNote,
+              banNote,
+              styleBlock: styleBlockAll,
+            }),
+          }).then((r) => r.json());
+          const hit = res.results?.find((r: any) => r.file === t.file);
+          if (!hit && res.error) lastErr = res.error;
+          if (hit) okCount++;
+          setCuts((p) =>
+            p.map((c) =>
+              c.file === t.file
+                ? hit
+                  ? { ...c, url: hit.url + "?t=" + Date.now(), loading: false,
+                      history: [c.url, ...(c.history || [])].filter(Boolean).slice(0, 12) }
+                  : { ...c, loading: false }
+                : c
+            )
+          );
+        } catch (e: any) {
+          lastErr = e?.message || String(e);
+          setCuts((p) => p.map((c) => (c.file === t.file ? { ...c, loading: false } : c)));
+        }
       })
     );
     if (indices.length >= 4)
-      notify(`🖼 컷 생성 완료 — ${slug} ${res.results?.length ?? 0}/${targets.length}장${res.ok === false ? ` (오류: ${res.error})` : ""}`);
+      notify(`🖼 컷 생성 완료 — ${slug} ${okCount}/${targets.length}장${lastErr ? ` (오류: ${lastErr})` : ""}`);
     loadHistory();
   }
 
