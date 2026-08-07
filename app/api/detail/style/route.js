@@ -1,5 +1,5 @@
 export const dynamic = 'force-dynamic';
-export const maxDuration = 120;
+export const maxDuration = 300;
 
 import Anthropic from '@anthropic-ai/sdk';
 import { createClient } from '@supabase/supabase-js';
@@ -70,11 +70,13 @@ export async function POST(request) {
   try {
     const client = new Anthropic({ apiKey });
     const blocks = images.map((f) => ({ type: 'image', source: { type: 'url', url: f.url } }));
-    const msg = await client.messages.create({
-      model: 'claude-opus-4-6',
-      max_tokens: 12000,
+    // 긴 HTML 생성이라 스트리밍으로 수집 (논스트리밍은 타임아웃)
+    const stream = client.messages.stream({
+      model: 'claude-sonnet-4-6',
+      max_tokens: 16000,
       messages: [{ role: 'user', content: [...blocks, { type: 'text', text: prompt }] }],
     });
+    const msg = await stream.finalMessage();
     const text = (msg.content || []).find((b) => b.type === 'text')?.text || '';
     const html = text.replace(/^```html?\s*|```\s*$/g, '').trim();
     if (!html.toLowerCase().startsWith('<!doctype')) throw new Error('HTML 생성 실패: ' + html.slice(0, 80));
