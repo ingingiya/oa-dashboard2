@@ -42,7 +42,12 @@ const MODEL_BASE =
   "Standing naturally facing the camera, visible head-to-toe including shoes, relaxed " +
   "posture, soft friendly smile. Clean light-gray seamless studio background, soft " +
   "wraparound beauty light, premium K-beauty commercial fashion lookbook quality, " +
-  "8K sharpness, no text, no watermark. ";
+  "no text, no watermark. " +
+  "PHOTOREALISM RULES: she must look like a REAL person photographed on a real set, NOT AI-generated — " +
+  "realistic natural skin texture with visible pores and fine facial micro-details, NOT airbrushed plastic, " +
+  "NOT AI-perfect symmetry, a few natural flyaway hairs, real fabric weave and natural wrinkles in clothing, " +
+  "natural catch-lights in the eyes. Shot on an 85mm lens at f/2.8 like a real fashion lookbook photo, " +
+  "natural editorial color grade, subtle fine film grain. ";
 
 // 후보마다 다른 헤어/의상 (여러 명 중 고르는 용도)
 const VARIATIONS = [

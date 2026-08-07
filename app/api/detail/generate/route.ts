@@ -41,7 +41,12 @@ const BEAUTY_BLOCK =
   "The woman is a BEAUTIFUL KOREAN WOMAN in her mid-20s with the polished look of a " +
   "K-drama actress — luminous clear glowing skin, large bright expressive eyes, elegant " +
   "symmetrical features, full natural lips, a soft V-line jaw — soft beauty light, " +
-  "premium K-beauty commercial quality. ";
+  "premium K-beauty commercial quality. " +
+  "PHOTOREALISM RULES: she must look like a REAL person photographed on a real set, NOT AI-generated — " +
+  "realistic natural skin texture with visible pores and fine facial micro-details, NOT airbrushed plastic, " +
+  "NOT AI-perfect symmetry, a few natural flyaway hairs, real fabric weave and wrinkles in clothing, " +
+  "natural catch-lights in the eyes. Shot on an 85mm lens at f/2.8, natural editorial color grade, " +
+  "subtle fine film grain. ";
 
 const hasPerson = (p: string) =>
   /woman|female|model|person|lady|girl|hand|인물|여성|모델|사람|손/i.test(p);
