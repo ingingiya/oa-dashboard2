@@ -131,13 +131,26 @@ export default function DetailBuilder() {
 
   const [styleUrl, setStyleUrl] = useState("");
   async function applyStyle() {
-    if (!styleFiles.length) return alert("따라할 상세페이지 캡쳐를 먼저 첨부하세요");
-    setStyleBusy("디자인 분석 중… (2~4분, 최고 성능 모델)");
+    let imgs = styleFiles;
     try {
+      // 캡쳐 첨부 없이 URL만 있으면 서버가 직접 접속해서 캡쳐
+      if (!imgs.length) {
+        if (!styleUrl.trim()) return alert("레퍼런스 URL을 넣거나 캡쳐를 첨부하세요");
+        setStyleBusy("페이지 접속해서 자동 캡쳐 중… (~1분)");
+        const cap = await fetch("/api/detail/style-capture", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ url: styleUrl.trim() }),
+        }).then((r) => r.json());
+        if (!cap.ok) throw new Error(cap.error);
+        imgs = cap.files;
+        setStyleFiles(imgs);
+      }
+      setStyleBusy("디자인 분석 중… (2~4분, 최고 성능 모델)");
       const res = await fetch("/api/detail/style", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ images: styleFiles, refUrl: styleUrl.trim() }),
+        body: JSON.stringify({ images: imgs, refUrl: styleUrl.trim() }),
       }).then((r) => r.json());
       if (!res.ok) throw new Error(res.error);
       setStyleLib({ items: res.items || [], activeId: res.activeId || null });
@@ -576,7 +589,7 @@ export default function DetailBuilder() {
             {styleActive && <button onClick={resetStyle} style={btnS}>해제</button>}
           </div>
           <input value={styleUrl} onChange={(e) => setStyleUrl(e.target.value)}
-            placeholder="레퍼런스 페이지 URL (선택 — 넣으면 실제 HTML/CSS까지 긁어서 컬러·폰트 정확도 ↑)"
+            placeholder="레퍼런스 페이지 URL — 이것만 넣고 분석 눌러도 서버가 알아서 캡쳐+HTML까지 긁어와요"
             style={{ ...inp, width: "100%", marginTop: 10 }} />
           {styleLib.items.length > 0 && (
             <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 12 }}>

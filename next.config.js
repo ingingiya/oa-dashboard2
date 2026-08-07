@@ -6,6 +6,7 @@ const nextConfig = {
     // chromium 압축 바이너리(bin/*.br)가 트레이싱에서 빠져 서버리스에 미포함되는 문제 방지
     outputFileTracingIncludes: {
       '/api/detail/render': ['./node_modules/@sparticuz/chromium/bin/**'],
+      '/api/detail/style-capture': ['./node_modules/@sparticuz/chromium/bin/**'],
     },
   },
 }
