@@ -56,7 +56,8 @@ const MODEL_REF =
   "Two reference images are provided. The FIRST is the product — keep its design, " +
   "proportions, logo placement and materials EXACTLY identical, do not invent buttons or text. " +
   "The SECOND is the model — the EXACT SAME woman (same face, same hairstyle, same features) " +
-  "must appear in this shot, naturally interacting with the product. " +
+  "must appear in this shot, naturally interacting with the product, wearing the SAME outfit " +
+  "as in her reference photo — clean, neatly pressed and well-fitted. " +
   "Her FACE MUST BE CLEARLY VISIBLE — front or three-quarter view toward the camera, " +
   "never a back view, never cropped above the chin, never hidden by hair, hands or the product. No watermark. ";
 

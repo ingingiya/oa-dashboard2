@@ -284,7 +284,9 @@ export default function DetailBuilder() {
   const [models, setModels] = useState<ModelItem[]>([]);
   const [selModel, setSelModel] = useState("");
   const [modelPrompt, setModelPrompt] = useState("");
+  const [modelOutfit, setModelOutfit] = useState("");
   const [modelBusy, setModelBusy] = useState("");
+  const [zoomUrl, setZoomUrl] = useState(""); // 이미지 확대 보기 (라이트박스)
   useEffect(() => {
     fetch("/api/detail/model").then((r) => r.json())
       .then((res) => res.ok && setModels(res.items || [])).catch(() => {});
@@ -295,7 +297,7 @@ export default function DetailBuilder() {
     try {
       const res = await fetch("/api/detail/model", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ generate: { prompt: modelPrompt, count: 4 } }),
+        body: JSON.stringify({ generate: { prompt: modelPrompt, outfit: modelOutfit, count: 4 } }),
       }).then((r) => r.json());
       if (!res.ok) throw new Error(res.error);
       setModels(res.items || []);
@@ -309,6 +311,26 @@ export default function DetailBuilder() {
       body: JSON.stringify({ remove: id }),
     }).then((r) => r.json());
     if (res.ok) { setModels(res.items || []); if (selModel === id) setSelModel(""); }
+  }
+
+  // 모델 사용컷 포즈 프리셋 — 칩 클릭으로 슬롯 추가 (같은 포즈 여러 장 가능)
+  const MODEL_POSES = [
+    { label: "소파에 앉아", prompt: "The model sitting comfortably on a modern sofa in a bright living room, using the product naturally, relaxed posture, knee-up shot, soft window light." },
+    { label: "스툴 전신", prompt: "Full-body shot of the model sitting on a minimal stool in a clean studio, legs elegantly crossed, holding the product, visible head-to-toe." },
+    { label: "화장대 앞", prompt: "The model sitting at a bright vanity table with a mirror, using the product as part of her routine, waist-up shot, warm morning light." },
+    { label: "침대에서", prompt: "The model relaxing on a neatly made bed in a cozy bright bedroom, casually using the product, candid lifestyle feel, soft daylight." },
+    { label: "옆모습", prompt: "Side-profile shot of the model standing and using the product, elegant posture, clean studio background, her face clearly visible in profile." },
+    { label: "걸으며", prompt: "The model walking in a bright modern interior while holding the product, natural mid-stride motion, full-body lifestyle shot." },
+    { label: "로우앵글", prompt: "Low-angle full-body shot of the model standing confidently holding the product, dynamic premium editorial framing, clean background." },
+    { label: "테이블", prompt: "The model seated at a clean wooden table, the product placed in front of her as she interacts with it, top-lit cafe-like atmosphere, waist-up shot." },
+  ];
+  function addPoseCut(p: { label: string; prompt: string }) {
+    const id = Date.now().toString(36).slice(-4);
+    setCuts((prev) => [
+      ...prev,
+      { file: `model_pose_${id}.png`, label: `모델 ${p.label}`, withModel: true, aspect: "",
+        prompt: p.prompt, url: "", loading: false },
+    ]);
   }
 
   // 모델컷 추가 슬롯 (전신/사용/클로즈업 — 렌더 슬롯과 별개로 여러 장 뽑는 용도)
@@ -1082,10 +1104,13 @@ ${h.urls.map((u) => `<img src="${u}" alt="">`).join("\n")}
                 후보를 뽑아 한 명을 선택하면 "모델" 체크된 컷마다 같은 인물이 제품을 들고 등장해요
               </span>
             </div>
-            <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
+            <div style={{ display: "flex", gap: 8, marginTop: 10, flexWrap: "wrap" }}>
               <input value={modelPrompt} onChange={(e) => setModelPrompt(e.target.value)}
-                placeholder="모델 스타일 (선택 — 예: 20대 여성, 단발, 흰 셔츠 · 비우면 4명 다른 스타일)"
-                style={{ ...inp, flex: 1 }} />
+                placeholder="모델 스타일 (선택 — 예: 20대 여성, 단발 · 비우면 4명 다른 스타일)"
+                style={{ ...inp, flex: 1, minWidth: 200 }} />
+              <input value={modelOutfit} onChange={(e) => setModelOutfit(e.target.value)}
+                placeholder="의상 (선택 — 예: 흰 셔츠에 베이지 슬랙스 · 비우면 깔끔한 기본 의상)"
+                style={{ ...inp, flex: 1, minWidth: 200 }} />
               <button onClick={generateModels} disabled={modelBusy.includes("생성 중")}
                 style={{ ...btnS, flex: "none", opacity: modelBusy.includes("생성 중") ? 0.6 : 1 }}>
                 {modelBusy.includes("생성 중") ? "생성 중…" : "모델 후보 4명 생성"}
@@ -1094,6 +1119,15 @@ ${h.urls.map((u) => `<img src="${u}" alt="">`).join("\n")}
                 style={{ ...btnS, flex: "none" }}>
                 + 모델컷 3종 추가
               </button>
+            </div>
+            <div style={{ display: "flex", gap: 6, marginTop: 8, flexWrap: "wrap", alignItems: "center" }}>
+              <span style={{ fontSize: 12, color: C.inkMid, fontWeight: 700 }}>포즈 추가:</span>
+              {MODEL_POSES.map((p) => (
+                <button key={p.label} onClick={() => addPoseCut(p)} title={p.prompt}
+                  style={{ ...btnS, flex: "none", padding: "4px 10px", fontSize: 12 }}>
+                  + {p.label}
+                </button>
+              ))}
             </div>
             {modelBusy && (
               <p style={{ fontSize: 12.5, color: modelBusy.startsWith("실패") ? "#D70015" : C.inkMid, margin: "8px 0 0" }}>{modelBusy}</p>
@@ -1112,6 +1146,9 @@ ${h.urls.map((u) => `<img src="${u}" alt="">`).join("\n")}
                     <button onClick={(e) => { e.stopPropagation(); if (confirm("이 모델을 삭제할까요?")) removeModel(m.id); }}
                       style={{ position: "absolute", top: 4, right: 4, border: "none", borderRadius: 6,
                         background: "rgba(0,0,0,.45)", color: "#fff", fontSize: 11, cursor: "pointer", padding: "2px 6px" }}>✕</button>
+                    <button onClick={(e) => { e.stopPropagation(); setZoomUrl(m.url); }} title="크게 보기"
+                      style={{ position: "absolute", bottom: 26, right: 4, border: "none", borderRadius: 6,
+                        background: "rgba(0,0,0,.45)", color: "#fff", fontSize: 11, cursor: "zoom-in", padding: "2px 6px" }}>🔍</button>
                     <div style={{ fontSize: 11, color: C.inkMid, padding: "3px 6px" }}>{m.name}</div>
                   </div>
                 ))}
@@ -1140,7 +1177,8 @@ ${h.urls.map((u) => `<img src="${u}" alt="">`).join("\n")}
                 <div style={{ marginTop: 8, aspectRatio: aspect.replace(":", "/"), background: C.bg, borderRadius: 10,
                   display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
                   {c.loading ? <span style={{ fontSize: 12, color: C.rose, fontWeight: 700 }}>생성중…</span> : c.url
-                    ? <img src={c.url} style={{ width: "100%" }} />
+                    ? <img src={c.url} onClick={() => setZoomUrl(c.url)} title="클릭하면 크게 보기"
+                        style={{ width: "100%", cursor: "zoom-in" }} />
                     : <span style={{ fontSize: 12, color: C.inkLt }}>미생성</span>}
                 </div>
                 <div style={{ display: "flex", gap: 6, marginTop: 8 }}>
@@ -1459,6 +1497,20 @@ ${h.urls.map((u) => `<img src="${u}" alt="">`).join("\n")}
         </div>
         )}
       </div>
+
+      {/* 이미지 확대 라이트박스 — 아무 곳이나 클릭하면 닫힘 */}
+      {zoomUrl && (
+        <div onClick={() => setZoomUrl("")}
+          style={{ position: "fixed", inset: 0, zIndex: 9999, background: "rgba(0,0,0,.82)",
+            display: "flex", alignItems: "center", justifyContent: "center", cursor: "zoom-out", padding: 24 }}>
+          <img src={zoomUrl} style={{ maxWidth: "94vw", maxHeight: "94vh", borderRadius: 12,
+            boxShadow: "0 12px 48px rgba(0,0,0,.5)" }} />
+          <button onClick={() => setZoomUrl("")}
+            style={{ position: "fixed", top: 16, right: 20, border: "none", borderRadius: 10,
+              background: "rgba(255,255,255,.15)", color: "#fff", fontSize: 16, fontWeight: 800,
+              padding: "6px 12px", cursor: "pointer" }}>✕ 닫기</button>
+        </div>
+      )}
     </div>
   );
 }

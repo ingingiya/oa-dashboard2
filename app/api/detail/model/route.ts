@@ -49,15 +49,31 @@ const MODEL_BASE =
   "natural catch-lights in the eyes. Shot on an 85mm lens at f/2.8 like a real fashion lookbook photo, " +
   "natural editorial color grade, subtle fine film grain. ";
 
-// 후보마다 다른 헤어/의상 (여러 명 중 고르는 용도)
-const VARIATIONS = [
-  "Long natural black hair, crisp white blouse and beige slacks.",
-  "Chin-length bob hair, light-blue shirt and white wide pants.",
-  "Long soft-wave brown hair, ivory knit one-piece dress.",
-  "Neat low ponytail, casual white t-shirt and light denim jeans.",
-  "Shoulder-length dark hair with see-through bangs, gray blazer over white top.",
-  "Half-up long hair, pastel-pink cardigan and white skirt.",
+// 후보마다 다른 헤어 (여러 명 중 고르는 용도) — 의상은 별도 지정 가능
+const HAIR_VARIATIONS = [
+  "Long natural black hair.",
+  "Chin-length bob hair.",
+  "Long soft-wave brown hair.",
+  "Neat low ponytail.",
+  "Shoulder-length dark hair with see-through bangs.",
+  "Half-up long hair.",
 ];
+
+// 깔끔한 기본 의상 로테이션 (의상 미지정 시)
+const OUTFIT_VARIATIONS = [
+  "a crisp white blouse and tailored beige slacks",
+  "a light-blue oxford shirt and white wide-leg pants",
+  "an ivory fine-knit one-piece dress",
+  "a plain white t-shirt and clean light-beige chinos",
+  "a gray tailored blazer over a white top with slim black slacks",
+  "a pastel-pink cardigan and an A-line white skirt",
+];
+
+// 의상 공통 스타일링 — 깔끔·정돈 강제
+const OUTFIT_STYLE =
+  "The outfit is CLEAN and NEATLY styled like a fashion lookbook: freshly pressed, " +
+  "well-fitted, perfectly tucked and arranged by a stylist, no stains, no clutter, " +
+  "no odd layering, simple minimal design with no busy patterns or logos. ";
 
 function buildWorkflow(prompt: string, prefix: string) {
   return {
@@ -142,13 +158,19 @@ export async function POST(req: NextRequest) {
 
     if (body.generate) {
       const userStyle = String(body.generate.prompt || "").trim();
+      const outfit = String(body.generate.outfit || "").trim();
       const count = Math.min(6, Math.max(1, Number(body.generate.count) || 4));
       const batch = Date.now().toString(36);
       const made: ModelItem[] = [];
 
       await Promise.all(
         Array.from({ length: count }, async (_, i) => {
-          const prompt = MODEL_BASE + (userStyle ? userStyle + ". " : VARIATIONS[i % VARIATIONS.length]);
+          const wear = `She is wearing ${outfit || OUTFIT_VARIATIONS[i % OUTFIT_VARIATIONS.length]}. `;
+          const prompt =
+            MODEL_BASE +
+            (userStyle ? userStyle + ". " : HAIR_VARIATIONS[i % HAIR_VARIATIONS.length] + " ") +
+            wear +
+            OUTFIT_STYLE;
           const buf = await generateOne(prompt, `model_${batch}_${i}`);
           const path = `models/m_${batch}_${i}.png`;
           const { error } = await sb.storage
