@@ -100,9 +100,13 @@ export async function POST(request) {
 첨부된 상세페이지 디자인 캡쳐를 분석해, 그 디자인 시스템(컬러 팔레트·타이포 위계·섹션 구조·뱃지/하이라이트 같은 장식 장치·여백 리듬)을 최대한 따라한 HTML 템플릿 한 개를 만드세요.
 
 ## 규칙
-- 폭 860px 고정, 순수 HTML+인라인 <style> 한 파일. 외부 리소스는 폰트 CSS 한 개만:
+- 폭 860px 고정, 순수 HTML+인라인 <style> 한 파일. 외부 리소스는 폰트만 허용:
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
-  font-family는 'Pretendard','Apple SD Gothic Neo',sans-serif 기본.
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/sun-typeface/SUIT/fonts/variable/woff2/SUIT-Variable.css">
+  그리고 필요하면 <style> 안에 아래 @font-face 사용 가능 (다른 URL 발명 금지):
+  @font-face{font-family:'Paperlogy';src:url('https://fastly.jsdelivr.net/gh/projectnoonnu/2408-3@1.0/Paperlogy-8ExtraBold.woff2') format('woff2');font-weight:800}
+  @font-face{font-family:'GmarketSans';src:url('https://fastly.jsdelivr.net/gh/projectnoonnu/noonfonts_2001@1.1/GmarketSansBold.woff') format('woff');font-weight:700}
+  본문은 'Pretendard' 기본. 헤드라인은 레퍼런스 무드에 맞춰 선택 — 임팩트/프로모션 무드면 'Paperlogy' 또는 'GmarketSans', 모던/미니멀이면 'SUIT Variable' 또는 Pretendard 고밀도 웨이트. 폴백 'Apple SD Gothic Neo',sans-serif 필수.
 - 사진/일러스트 넣지 말 것 — 이미지는 아래 플레이스홀더 URL만. 장식은 전부 CSS(그라데이션·뱃지·형광펜 하이라이트 등)로.
 - 데이터는 이중 중괄호 플레이스홀더 그대로 출력 (치환은 서버가 함):
   {{productName}} {{tagline}}
@@ -123,6 +127,11 @@ export async function POST(request) {
 - 여백 리듬: 섹션 상하 패딩 80~110px, 헤드라인↔본문 사이 20~28px — 답답하게 붙이지 말 것.
 - 이미지 플레이스홀더는 <img src="{{…}}" style="width:100%;display:block"> 기본, 디자인에 맞게 radius 등 조정.
 - 섹션 순서는 첨부 디자인의 흐름을 따르되 위 데이터가 전부 들어가야 함 (훅→USP 3개→사용씬→스펙→인증→FAQ→CTA 골격 안에서 변형).
+- **이미지 구성도 레퍼런스를 따라할 것**: 레퍼런스가 이미지를 어떻게 쓰는지 관찰해 동일하게 —
+  풀블리드(여백 없이 꽉 채움)/카드형(radius+그림자)/텍스트 오버레이/좌우 분할 등 배치 방식,
+  이미지 크기 비중(이미지가 큰 페이지면 크게), 이미지와 텍스트의 리듬(교차 배치 등)을 모사.
+  레퍼런스에 움직임(GIF/영상 프레임)이 들어간 구간이 보이면 그 위치의 섹션을 반드시 독립 섹션으로 분리
+  (서버가 섹션 사이에 GIF 조각을 끼우는 구조라, 경계가 있어야 모션을 넣을 수 있음).
 - 각 섹션은 <body> 바로 아래 최상위 요소로 (서버가 섹션 경계에서 이미지를 자름).
 
 ## 출력
