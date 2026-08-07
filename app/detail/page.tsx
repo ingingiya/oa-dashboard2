@@ -946,6 +946,7 @@ ${datas.map((d) => `<img src="${d}" alt="">`).join("\n")}
   // 미리보기 — 렌더 없이 채워진 HTML을 iframe으로 (카피 수정 → 새로고침으로 즉시 확인)
   const [previewHtml, setPreviewHtml] = useState("");
   const [previewBusy, setPreviewBusy] = useState(false);
+  const [previewBig, setPreviewBig] = useState(false); // 미리보기 확대 모드
   async function loadPreview() {
     if (!productJson) return alert("카피를 먼저 만들어주세요 (1단계)");
     setPreviewBusy(true);
@@ -1656,11 +1657,11 @@ ${datas.map((d) => `<img src="${d}" alt="">`).join("\n")}
                     : <span style={{ fontSize: 12, color: C.inkLt }}>미생성</span>}
                 </div>
                 {(c.history?.length ?? 0) > 0 && (
-                  <div style={{ marginTop: 6 }}>
-                    <div style={{ fontSize: 10.5, color: C.inkLt, fontWeight: 700, marginBottom: 3 }}>
-                      이전 버전 {c.history.length}개 — 클릭하면 이 버전으로 교체
-                    </div>
-                    <div style={{ display: "flex", gap: 4, overflowX: "auto" }}>
+                  <details style={{ marginTop: 6 }}>
+                    <summary style={{ fontSize: 10.5, color: C.inkLt, fontWeight: 700, cursor: "pointer", userSelect: "none" }}>
+                      이전 버전 {c.history.length}개 보기 (클릭=교체)
+                    </summary>
+                    <div style={{ display: "flex", gap: 4, overflowX: "auto", marginTop: 4 }}>
                       {c.history.map((h) => (
                         <img key={h} src={h} title="클릭: 이 버전을 상세페이지에 사용 (현재 이미지는 히스토리로 이동)"
                           onClick={() =>
@@ -1675,7 +1676,7 @@ ${datas.map((d) => `<img src="${d}" alt="">`).join("\n")}
                             cursor: "pointer", border: `1px solid ${C.border}`, flex: "none" }} />
                       ))}
                     </div>
-                  </div>
+                  </details>
                 )}
                 <input value={c.fixNote || ""} placeholder="수정사항 — 잘못 나온 부분 (재생성 시 반영)"
                   onChange={(e) => setCuts((p) => p.map((x, j) => (j === i ? { ...x, fixNote: e.target.value } : x)))}
@@ -1753,12 +1754,17 @@ ${datas.map((d) => `<img src="${d}" alt="">`).join("\n")}
                 style={{ ...btnS, flex: "none", marginLeft: "auto", opacity: previewBusy ? 0.6 : 1 }}>
                 {previewBusy ? "불러오는 중…" : previewHtml ? "미리보기 새로고침" : "미리보기 보기"}
               </button>
+              {previewHtml && (
+                <button onClick={() => setPreviewBig((v) => !v)} style={{ ...btnS, flex: "none" }}>
+                  {previewBig ? "작게" : "크게 보기"}
+                </button>
+              )}
             </div>
             {previewHtml && (
               <>
                 <div style={{ marginTop: 10, border: `1px solid ${C.border}`, borderRadius: 10, overflow: "hidden", background: "#fff" }}>
                   <iframe srcDoc={previewHtml} title="미리보기"
-                    style={{ width: "100%", height: 640, border: "none", display: "block" }} />
+                    style={{ width: "100%", height: previewBig ? "88vh" : "72vh", minHeight: 640, border: "none", display: "block" }} />
                 </div>
                 {copyEditor}
               </>
