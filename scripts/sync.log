@@ -374,3 +374,20 @@ Error: ENOENT: no such file or directory, open '"/Users/kirby/.naverworks/privat
 }
 
 Node.js v24.14.0
+node:fs:440
+    return binding.readFileUtf8(path, stringToFlags(options.flag));
+                   ^
+
+Error: ENOENT: no such file or directory, open '"/Users/kirby/.naverworks/private.key"'
+    at readFileSync (node:fs:440:20)
+    at file:///Users/kirby/oa-dashboard2/scripts/nworks-auth.mjs:18:13
+    at ModuleJob.run (node:internal/modules/esm/module_job:430:25)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:661:26)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5) {
+  errno: -2,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: '"/Users/kirby/.naverworks/private.key"'
+}
+
+Node.js v24.14.0

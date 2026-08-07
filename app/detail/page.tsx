@@ -42,7 +42,7 @@ export default function DetailBuilder() {
   ]);
   const [anchorInput, setAnchorInput] = useState("");
   const [cuts, setCuts] = useState(
-    DEFAULT_CUTS.map((c) => ({ ...c, url: "", loading: false }))
+    DEFAULT_CUTS.map((c) => ({ ...c, url: "", loading: false, withModel: false, aspect: "" }))
   );
   const [productJson, setProductJson] = useState("");
   const [sliceUrls, setSliceUrls] = useState<string[]>([]);
@@ -277,6 +277,55 @@ export default function DetailBuilder() {
   // ── 컷 이미지 사이즈 (많이 쓰는 비율 프리셋) ──
   const [aspect, setAspect] = useState("1:1");
 
+  // ── 모델(인물) 라이브러리 — 후보 생성 → 한 명 선택하면 "모델" 체크된 컷에 동일 인물로 등장 ──
+  type ModelItem = { id: string; url: string; name: string; at: string };
+  const [models, setModels] = useState<ModelItem[]>([]);
+  const [selModel, setSelModel] = useState("");
+  const [modelPrompt, setModelPrompt] = useState("");
+  const [modelBusy, setModelBusy] = useState("");
+  useEffect(() => {
+    fetch("/api/detail/model").then((r) => r.json())
+      .then((res) => res.ok && setModels(res.items || [])).catch(() => {});
+  }, []);
+
+  async function generateModels() {
+    setModelBusy("모델 후보 4명 생성 중… (1~2분)");
+    try {
+      const res = await fetch("/api/detail/model", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ generate: { prompt: modelPrompt, count: 4 } }),
+      }).then((r) => r.json());
+      if (!res.ok) throw new Error(res.error);
+      setModels(res.items || []);
+      setModelBusy("완료 — 마음에 드는 모델을 클릭해 선택하세요");
+    } catch (e: any) { setModelBusy("실패: " + e.message); }
+  }
+
+  async function removeModel(id: string) {
+    const res = await fetch("/api/detail/model", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ remove: id }),
+    }).then((r) => r.json());
+    if (res.ok) { setModels(res.items || []); if (selModel === id) setSelModel(""); }
+  }
+
+  // 모델컷 추가 슬롯 (전신/사용/클로즈업 — 렌더 슬롯과 별개로 여러 장 뽑는 용도)
+  const MODEL_CUTS = [
+    { file: "model_full.png", label: "모델 전신샷", withModel: true, aspect: "2:3",
+      prompt: "Full-body shot of the model standing and holding the product at chest height, soft smile, clean bright studio background, visible head-to-toe, premium fashion lookbook style." },
+    { file: "model_use.png", label: "모델 사용컷", withModel: true, aspect: "",
+      prompt: "The model naturally using the product in a bright modern Korean home interior, candid lifestyle moment, waist-up shot, soft window light." },
+    { file: "model_close.png", label: "모델 클로즈업", withModel: true, aspect: "",
+      prompt: "Close-up of the model holding the product beside her face, looking at the camera with a gentle smile, soft beauty lighting, clean background." },
+  ];
+  function addModelCuts() {
+    setCuts((p) => [
+      ...p,
+      ...MODEL_CUTS.filter((m) => !p.some((c) => c.file === m.file))
+        .map((m) => ({ ...m, url: "", loading: false })),
+    ]);
+  }
+
   // ── 생성 컨셉 프리셋 (AI 추천과 별개: 깔끔 누끼 / 컬러 배경) ──
   const [preset, setPreset] = useState<"" | "nukki" | "color">("");
   const [presetColor, setPresetColor] = useState("#EAF3FF");
@@ -291,11 +340,16 @@ export default function DetailBuilder() {
   // ── 컷 생성 (개별/전체 동일 라우트) ──
   async function generateCuts(indices: number[]) {
     if (!anchors.length) return alert("제품 실사(앵커)를 최소 1장 넣어주세요");
-    setCuts((p) => p.map((c, i) => (indices.includes(i) ? { ...c, loading: true } : c)));
     const targets = indices.map((i) => ({
       file: cuts[i].file,
       prompt: `${trigger}, ${cuts[i].prompt}`,
+      withModel: !!cuts[i].withModel,
+      aspect: cuts[i].aspect || "",
     }));
+    const modelUrl = models.find((m) => m.id === selModel)?.url || "";
+    if (targets.some((t) => t.withModel) && !modelUrl)
+      return alert('"모델" 체크된 컷이 있어요 — 상단 모델 섹션에서 모델을 먼저 생성/선택해주세요');
+    setCuts((p) => p.map((c, i) => (indices.includes(i) ? { ...c, loading: true } : c)));
     const res = await fetch("/api/detail/generate", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -304,6 +358,7 @@ export default function DetailBuilder() {
         cuts: targets,
         anchorUrls: anchors,
         aspectRatio: aspect,
+        modelUrl,
         styleBlock: presetStyleBlock() || (selConcept >= 0 ? concepts[selConcept]?.styleBlock : ""),
       }),
     }).then((r) => r.json());
@@ -828,7 +883,45 @@ ${h.urls.map((u) => `<img src="${u}" alt="">`).join("\n")}
             style={{ ...btn, opacity: copyBusy ? 0.6 : 1 }}>
             {copyBusy ? "카피 생성 중… (10~20초)" : "카피 생성 (Claude)"}
           </button>
-          {productJson && <p style={{ marginTop: 10, fontSize: 13, color: "#34C759", fontWeight: 700 }}>✓ 카피 준비 완료 — 아래에서 컷을 만들고 최종 렌더를 누르면 돼요</p>}
+          {productJson && <p style={{ marginTop: 10, fontSize: 13, color: "#34C759", fontWeight: 700 }}>✓ 카피 준비 완료 — 아래 칸에서 문구를 바로 고칠 수 있어요 (최종 렌더에 그대로 반영)</p>}
+          {/* 카피 직접 수정 칸 — productJson을 파싱해 필드별 입력으로 노출 */}
+          {productJson && (() => {
+            let p: any;
+            try { p = JSON.parse(productJson); } catch { return null; }
+            const set = (fn: (o: any) => void) => {
+              const o = JSON.parse(productJson); fn(o); setProductJson(JSON.stringify(o, null, 2));
+            };
+            const F = (label: string, value: string, on: (v: string) => void, area = false) => (
+              <div key={label}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: C.inkLt, marginBottom: 3 }}>{label}</div>
+                {area ? (
+                  <textarea value={value || ""} onChange={(e) => on(e.target.value)}
+                    style={{ ...inp, width: "100%", height: 52, fontSize: 12.5, resize: "vertical" }} />
+                ) : (
+                  <input value={value || ""} onChange={(e) => on(e.target.value)}
+                    style={{ ...inp, width: "100%", fontSize: 12.5 }} />
+                )}
+              </div>
+            );
+            return (
+              <div style={{ marginTop: 10, border: `1px solid ${C.border}`, borderRadius: 12, padding: 14,
+                display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, background: "#fbfbfd" }}>
+                {F("제품명", p.productName, (v) => set((o) => { o.productName = v; }))}
+                {F("태그라인", p.tagline, (v) => set((o) => { o.tagline = v; }))}
+                {F("훅 헤드라인", p.hook?.headline, (v) => set((o) => { (o.hook ||= {}).headline = v; }), true)}
+                {F("훅 서브카피", p.hook?.sub, (v) => set((o) => { (o.hook ||= {}).sub = v; }), true)}
+                {(p.usp || []).slice(0, 3).map((u2: any, i2: number) => (
+                  <div key={"usp" + i2} style={{ display: "grid", gap: 8 }}>
+                    {F(`USP${i2 + 1} 헤드라인`, u2?.headline, (v) => set((o) => { o.usp[i2].headline = v; }))}
+                    {F(`USP${i2 + 1} 설명`, u2?.desc, (v) => set((o) => { o.usp[i2].desc = v; }), true)}
+                  </div>
+                ))}
+                {F("사용씬 헤드라인", p.scene?.headline, (v) => set((o) => { (o.scene ||= {}).headline = v; }))}
+                {F("인증 헤드라인", p.cert?.headline, (v) => set((o) => { (o.cert ||= {}).headline = v; }))}
+                {F("CTA 헤드라인", p.cta?.headline, (v) => set((o) => { (o.cta ||= {}).headline = v; }))}
+              </div>
+            );
+          })()}
           <details style={{ marginTop: 8 }}>
             <summary style={{ fontSize: 12.5, color: C.inkMid, cursor: "pointer" }}>고급: 카피 JSON 직접 보기/수정</summary>
             <textarea value={productJson} onChange={(e) => setProductJson(e.target.value)}
@@ -912,10 +1005,65 @@ ${h.urls.map((u) => `<img src="${u}" alt="">`).join("\n")}
             </div>
           </div>
           {bulkBusy && <p style={{ fontSize: 13, color: bulkBusy.startsWith("실패") ? "#D70015" : C.inkMid, marginBottom: 8 }}>{bulkBusy}</p>}
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 12, marginTop: 4 }}>
+
+          {/* 모델 생성/선택 */}
+          <div style={{ border: `1px solid ${C.border}`, borderRadius: 14, padding: 14, margin: "12px 0 4px", background: "#faf8ff" }}>
+            <div style={{ display: "flex", alignItems: "baseline", gap: 8, flexWrap: "wrap" }}>
+              <span style={{ fontSize: 13.5, fontWeight: 800, color: C.ink }}>모델</span>
+              <span style={{ fontSize: 12, color: C.inkMid }}>
+                후보를 뽑아 한 명을 선택하면 "모델" 체크된 컷마다 같은 인물이 제품을 들고 등장해요
+              </span>
+            </div>
+            <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
+              <input value={modelPrompt} onChange={(e) => setModelPrompt(e.target.value)}
+                placeholder="모델 스타일 (선택 — 예: 20대 여성, 단발, 흰 셔츠 · 비우면 4명 다른 스타일)"
+                style={{ ...inp, flex: 1 }} />
+              <button onClick={generateModels} disabled={modelBusy.includes("생성 중")}
+                style={{ ...btnS, flex: "none", opacity: modelBusy.includes("생성 중") ? 0.6 : 1 }}>
+                {modelBusy.includes("생성 중") ? "생성 중…" : "모델 후보 4명 생성"}
+              </button>
+              <button onClick={addModelCuts} title="전신샷/사용컷/클로즈업 슬롯을 컷 목록에 추가"
+                style={{ ...btnS, flex: "none" }}>
+                + 모델컷 3종 추가
+              </button>
+            </div>
+            {modelBusy && (
+              <p style={{ fontSize: 12.5, color: modelBusy.startsWith("실패") ? "#D70015" : C.inkMid, margin: "8px 0 0" }}>{modelBusy}</p>
+            )}
+            {models.length > 0 && (
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(105px,1fr))", gap: 8, marginTop: 10 }}>
+                {models.map((m) => (
+                  <div key={m.id} onClick={() => setSelModel(selModel === m.id ? "" : m.id)}
+                    style={{ position: "relative", borderRadius: 10, overflow: "hidden", cursor: "pointer", background: "#fff",
+                      border: selModel === m.id ? "3px solid #AF52DE" : `1px solid ${C.border}` }}>
+                    <img src={m.url} style={{ width: "100%", aspectRatio: "2/3", objectFit: "cover", display: "block" }} />
+                    {selModel === m.id && (
+                      <span style={{ position: "absolute", top: 4, left: 4, background: "#AF52DE", color: "#fff",
+                        fontSize: 10.5, fontWeight: 800, borderRadius: 6, padding: "2px 6px" }}>✓ 선택됨</span>
+                    )}
+                    <button onClick={(e) => { e.stopPropagation(); if (confirm("이 모델을 삭제할까요?")) removeModel(m.id); }}
+                      style={{ position: "absolute", top: 4, right: 4, border: "none", borderRadius: 6,
+                        background: "rgba(0,0,0,.45)", color: "#fff", fontSize: 11, cursor: "pointer", padding: "2px 6px" }}>✕</button>
+                    <div style={{ fontSize: 11, color: C.inkMid, padding: "3px 6px" }}>{m.name}</div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 12, marginTop: 8 }}>
             {cuts.map((c, i) => (
               <div key={c.file} style={{ border: `1px solid ${C.border}`, borderRadius: 14, padding: 10, background: C.white }}>
-                <div style={{ fontSize: 12, fontWeight: 800, color: C.ink }}>{c.label}</div>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <span style={{ fontSize: 12, fontWeight: 800, color: C.ink }}>{c.label}</span>
+                  <label title="이 컷에 선택된 모델을 등장시켜요"
+                    style={{ fontSize: 11, fontWeight: 700, color: c.withModel ? "#AF52DE" : C.inkLt,
+                      cursor: "pointer", display: "flex", alignItems: "center", gap: 3 }}>
+                    <input type="checkbox" checked={!!c.withModel}
+                      onChange={(e) => setCuts((p) => p.map((x, j) => (j === i ? { ...x, withModel: e.target.checked } : x)))} />
+                    모델
+                  </label>
+                </div>
                 <input value={c.prompt} placeholder="컷 프롬프트"
                   onChange={(e) =>
                     setCuts((p) => p.map((x, j) => (j === i ? { ...x, prompt: e.target.value } : x)))

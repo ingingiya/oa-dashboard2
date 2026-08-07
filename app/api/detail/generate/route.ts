@@ -46,6 +46,13 @@ const BEAUTY_BLOCK =
 const hasPerson = (p: string) =>
   /woman|female|model|person|lady|girl|hand|인물|여성|모델|사람|손/i.test(p);
 
+// 모델컷: 제품 앵커 + 모델 사진 2장 참조 → 동일 인물 유지 지시문
+const MODEL_REF =
+  "Two reference images are provided. The FIRST is the product — keep its design, " +
+  "proportions, logo placement and materials EXACTLY identical, do not invent buttons or text. " +
+  "The SECOND is the model — the EXACT SAME woman (same face, same hairstyle, same features) " +
+  "must appear in this shot, naturally interacting with the product. No watermark. ";
+
 // 빌드 타임엔 env가 없을 수 있어 lazy 초기화
 const getSupabase = () =>
   createClient(
@@ -82,8 +89,8 @@ async function uploadAnchor(anchorUrl: string): Promise<string> {
 
 const ASPECTS = new Set(["1:1", "4:5", "3:4", "9:16", "16:9", "4:3", "2:3", "3:2", "21:9"]);
 
-function buildWorkflow(anchorName: string, prompt: string, prefix: string, aspect: string) {
-  return {
+function buildWorkflow(anchorName: string, prompt: string, prefix: string, aspect: string, modelName?: string) {
+  const wf: any = {
     "1": { class_type: "LoadImage", inputs: { image: anchorName } },
     "2": {
       class_type: "GeminiNanoBanana2",
@@ -100,15 +107,22 @@ function buildWorkflow(anchorName: string, prompt: string, prefix: string, aspec
     },
     "3": { class_type: "SaveImage", inputs: { images: ["2", 0], filename_prefix: prefix } },
   };
+  if (modelName) {
+    // 제품(1) + 모델(10)을 배치로 묶어 나노바나나에 2장 참조로 전달
+    wf["10"] = { class_type: "LoadImage", inputs: { image: modelName } };
+    wf["11"] = { class_type: "ImageBatch", inputs: { image1: ["1", 0], image2: ["10", 0] } };
+    wf["2"].inputs.images = ["11", 0];
+  }
+  return wf;
 }
 
-async function generateOne(anchorName: string, prompt: string, prefix: string, aspect: string): Promise<Buffer> {
+async function generateOne(anchorName: string, prompt: string, prefix: string, aspect: string, modelName?: string): Promise<Buffer> {
   const submit = await (
     await comfy("/api/prompt", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        prompt: buildWorkflow(anchorName, prompt, prefix, aspect),
+        prompt: buildWorkflow(anchorName, prompt, prefix, aspect, modelName),
         // API 노드(나노바나나 등)는 이 인증이 없으면 "Please login first" 에러
         extra_data: { api_key_comfy_org: comfyKey() },
       }),
@@ -196,7 +210,7 @@ ${cuts.map((c) => `- ${c.file}: ${c.prompt}`).join("\n")}
 
 export async function POST(req: NextRequest) {
   try {
-    const { productSlug, cuts, anchorUrl, anchorUrls, refPrompt, styleBlock, aspectRatio } = await req.json();
+    const { productSlug, cuts, anchorUrl, anchorUrls, refPrompt, styleBlock, aspectRatio, modelUrl } = await req.json();
     const aspect = ASPECTS.has(aspectRatio) ? aspectRatio : "1:1";
     const anchors: string[] = (
       Array.isArray(anchorUrls) && anchorUrls.length ? anchorUrls : [anchorUrl]
@@ -205,22 +219,31 @@ export async function POST(req: NextRequest) {
     const ref = refPrompt || DEFAULT_REF;
     const style = styleBlock ? String(styleBlock).trim() + " " : "";
 
-    const [anchorNames, pickMap] = await Promise.all([
+    const needModel = !!modelUrl && cuts.some((c: any) => c.withModel);
+    const [anchorNames, pickMap, modelName] = await Promise.all([
       Promise.all(anchors.map(uploadAnchor)),
       pickAnchors(anchors, cuts),
+      needModel ? uploadAnchor(modelUrl) : Promise.resolve(""),
     ]);
     const results: { file: string; url: string }[] = [];
 
     // Gemini API 노드는 병렬 제출 가능
     await Promise.all(
-      cuts.map(async (cut: { file: string; prompt: string }) => {
+      cuts.map(async (cut: { file: string; prompt: string; withModel?: boolean; aspect?: string }) => {
         const prefix = "gen_" + cut.file.replace(/\.\w+$/, "");
         const anchorName = anchorNames[pickMap[cut.file] ?? 0];
-        // 인물 컷: "No people" 해제 + 시그니처 미모 블록 삽입
-        const cutRef = hasPerson(cut.prompt)
+        const useModel = !!(modelName && cut.withModel);
+        const cutAspect = cut.aspect && ASPECTS.has(cut.aspect) ? cut.aspect : aspect;
+        // 모델컷: 제품+모델 2장 참조 / 인물 컷: "No people" 해제 + 시그니처 미모 블록 삽입
+        const cutRef = useModel
+          ? MODEL_REF + BEAUTY_BLOCK
+          : hasPerson(cut.prompt)
           ? ref.replace(/No people, no hands, /i, "") + BEAUTY_BLOCK
           : ref;
-        const buf = await generateOne(anchorName, cutRef + style + cut.prompt + DETAIL_BLOCK, prefix, aspect);
+        const buf = await generateOne(
+          anchorName, cutRef + style + cut.prompt + DETAIL_BLOCK, prefix, cutAspect,
+          useModel ? modelName : undefined
+        );
         const filePath = `${productSlug}/${cut.file}`;
         const { error } = await getSupabase().storage
           .from(BUCKET)
