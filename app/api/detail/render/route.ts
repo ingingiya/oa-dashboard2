@@ -35,6 +35,7 @@ const getSupabase = () =>
 const TEMPLATE_KEY = "oa_detail_template_v1";
 // 템플릿 레퍼런스 분석으로 생성된 HTML 템플릿 (/api/detail/style)
 const HTML_TEMPLATE_KEY = "oa_detail_html_template_v1";
+const HTML_TEMPLATE_LIB_KEY = "oa_detail_html_templates_v1";
 
 // {{경로}} 치환 + specsTable/certItems/faqItems 확장
 function fillHtmlTemplate(tplHtml: string, p: any): string {
@@ -161,15 +162,21 @@ export async function POST(req: NextRequest) {
   try {
     const product = await req.json();
 
-    // 템플릿 우선순위: 피그마 동기화 > 템플릿 레퍼런스(HTML) > 기본
+    // 템플릿 우선순위: 요청에 실린 templateId(사용자별 선택 — 전역 활성값 충돌 방지) > 피그마 동기화 > 활성 템플릿(HTML) > 기본
     let html: string;
     const { data: tplRows } = await getSupabase()
       .from("settings")
       .select("key,value")
-      .in("key", [TEMPLATE_KEY, HTML_TEMPLATE_KEY]);
+      .in("key", [TEMPLATE_KEY, HTML_TEMPLATE_KEY, HTML_TEMPLATE_LIB_KEY]);
     const figmaTpl = tplRows?.find((r) => r.key === TEMPLATE_KEY)?.value;
     const htmlTpl = tplRows?.find((r) => r.key === HTML_TEMPLATE_KEY)?.value;
-    if (figmaTpl?.sections?.length) {
+    const tplLib = tplRows?.find((r) => r.key === HTML_TEMPLATE_LIB_KEY)?.value;
+    const reqTpl = product.templateId
+      ? tplLib?.items?.find((t: any) => t.id === product.templateId)
+      : null;
+    if (reqTpl?.html) {
+      html = fillHtmlTemplate(reqTpl.html, product);
+    } else if (figmaTpl?.sections?.length) {
       html = buildFigmaHtml(figmaTpl, product);
     } else if (htmlTpl?.html) {
       html = fillHtmlTemplate(htmlTpl.html, product);

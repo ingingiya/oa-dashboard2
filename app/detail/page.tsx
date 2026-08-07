@@ -32,6 +32,14 @@ const DEFAULT_CUTS = [
     prompt: "Clean front-view packshot: the product on a pure white background, even studio lighting, e-commerce product photo." },
 ];
 
+// 화면 표시용 축소 썸네일 — 원본(2K PNG ~5MB)을 그대로 로드하면 그리드가 늦게 뜬다.
+// Supabase 이미지 변환으로 지정 폭만 받아옴. GIF·외부 URL은 원본 그대로.
+function thumb(u: string, w = 700) {
+  if (!u || !u.includes("/storage/v1/object/public/") || /\.gif(\?|$)/i.test(u)) return u;
+  const [base, q] = u.split("?");
+  return base.replace("/object/public/", "/render/image/public/") + `?width=${w}&quality=75` + (q ? "&" + q : "");
+}
+
 export default function DetailBuilder() {
   const [tab, setTab] = useState<"gen" | "phone" | "renders" | "refs" | "reffind" | "hist" | "credits">("gen");
   const [slug, setSlug] = useState("");
@@ -1035,6 +1043,7 @@ ${datas.map((d) => `<img src="${d}" alt="">`).join("\n")}
     product.cert.image = u("cert.png");
     product.cta.image = u("packshot.png");
     product.slug = slug; // 저장 폴더명 (한글 제품명 대신 기본설정 슬러그 사용)
+    product.templateId = styleLib.activeId || ""; // 선택한 템플릿을 요청에 직접 실음 — 전역 활성값이 남이 바꿔도 안 섞임
     product.gifs = gifRows
       .map((r) => ({ after: Number(r.after) || 0, url: String(r.url || "").trim() }))
       .filter((g) => g.after > 0 && g.url);
@@ -1341,7 +1350,7 @@ ${datas.map((d) => `<img src="${d}" alt="">`).join("\n")}
           <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", marginTop: 10 }}>
             {anchors.map((a, i) => (
               <div key={i} style={{ position: "relative" }}>
-                <img src={a} style={{ width: 64, height: 64, objectFit: "cover", borderRadius: 10,
+                <img src={thumb(a, 200)} style={{ width: 64, height: 64, objectFit: "cover", borderRadius: 10,
                   border: `1px solid ${C.border}`, background: "#fff" }} />
                 <span onClick={() => setAnchors((p) => p.filter((_, j) => j !== i))}
                   style={{ position: "absolute", top: -6, right: -6, width: 18, height: 18, lineHeight: "17px",
@@ -1614,7 +1623,7 @@ ${datas.map((d) => `<img src="${d}" alt="">`).join("\n")}
                 style={{ ...inp, flex: 1, minWidth: 200, opacity: modelOutfitUrl ? 0.5 : 1 }} />
               {modelOutfitUrl ? (
                 <span style={{ position: "relative", flex: "none" }}>
-                  <img src={modelOutfitUrl} onClick={() => setZoomUrl(modelOutfitUrl)}
+                  <img src={thumb(modelOutfitUrl, 300)} onClick={() => setZoomUrl(modelOutfitUrl)}
                     style={{ width: 38, height: 38, objectFit: "cover", borderRadius: 8,
                       border: `1px solid ${C.border}`, cursor: "zoom-in", display: "block" }} />
                   <span onClick={() => setModelOutfitUrl("")}
@@ -1666,7 +1675,7 @@ ${datas.map((d) => `<img src="${d}" alt="">`).join("\n")}
                   <div key={m.id} onClick={() => setSelModel(selModel === m.id ? "" : m.id)}
                     style={{ position: "relative", borderRadius: 10, overflow: "hidden", cursor: "pointer", background: "#fff",
                       border: selModel === m.id ? "3px solid #AF52DE" : `1px solid ${C.border}` }}>
-                    <img src={m.url} style={{ width: "100%", aspectRatio: "3/2", objectFit: "cover", display: "block" }} />
+                    <img src={thumb(m.url, 500)} style={{ width: "100%", aspectRatio: "3/2", objectFit: "cover", display: "block" }} />
                     {selModel === m.id && (
                       <span style={{ position: "absolute", top: 4, left: 4, background: "#AF52DE", color: "#fff",
                         fontSize: 10.5, fontWeight: 800, borderRadius: 6, padding: "2px 6px" }}>✓ 선택됨</span>
@@ -1756,7 +1765,7 @@ ${datas.map((d) => `<img src="${d}" alt="">`).join("\n")}
                 <div style={{ marginTop: 8, aspectRatio: aspect.replace(":", "/"), background: C.bg, borderRadius: 10,
                   display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
                   {c.loading ? <span style={{ fontSize: 12, color: C.rose, fontWeight: 700 }}>생성중…</span> : c.url
-                    ? <img src={c.url} onClick={() => setZoomUrl(c.url)} title="클릭하면 크게 보기"
+                    ? <img src={thumb(c.url)} onClick={() => setZoomUrl(c.url)} title="클릭하면 크게 보기"
                         style={{ width: "100%", cursor: "zoom-in" }} />
                     : <span style={{ fontSize: 12, color: C.inkLt }}>미생성</span>}
                 </div>
@@ -1911,7 +1920,7 @@ ${datas.map((d) => `<img src="${d}" alt="">`).join("\n")}
                 <div style={{ marginTop: 10, display: "flex", flexDirection: "column", gap: 6 }}>
                   {gifRows.map((r, gi) => r.url ? (
                     <div key={gi} style={rowS}>
-                      <img src={r.url} onClick={() => setZoomUrl(r.url)}
+                      <img src={thumb(r.url, 150)} onClick={() => setZoomUrl(r.url)}
                         style={{ height: 44, borderRadius: 6, cursor: "zoom-in" }} />
                       <span style={{ fontSize: 12, fontWeight: 700, color: C.ink, flex: "none" }}>
                         {cuts.find((c) => c.url.split("?")[0] === r.url)?.label || "GIF"}
@@ -1924,7 +1933,7 @@ ${datas.map((d) => `<img src="${d}" alt="">`).join("\n")}
                   ) : null)}
                   {extras.map((c) => (
                     <div key={c.file} style={{ ...rowS, borderStyle: "dashed" }}>
-                      <img src={c.url} onClick={() => setZoomUrl(c.url)}
+                      <img src={thumb(c.url, 150)} onClick={() => setZoomUrl(c.url)}
                         style={{ height: 44, borderRadius: 6, cursor: "zoom-in" }} />
                       <span style={{ fontSize: 12, fontWeight: 700, color: C.ink, flex: "none" }}>{c.label}</span>
                       {posSelect("", (v) => setGifRows((rs) => [...rs, { after: v, url: c.url.split("?")[0] }]))}
@@ -2121,7 +2130,7 @@ ${datas.map((d) => `<img src="${d}" alt="">`).join("\n")}
                   <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                     {phonePhotos.map((u, i) => (
                       <div key={u} style={{ position: "relative" }}>
-                        <img src={u} onClick={() => setZoomUrl(u)}
+                        <img src={thumb(u, 200)} onClick={() => setZoomUrl(u)}
                           style={{ width: 90, height: 90, objectFit: "cover", borderRadius: 10,
                             border: `1px solid ${C.border}`, cursor: "zoom-in", display: "block" }} />
                         <span onClick={() => setPhonePhotos((p) => p.filter((_, j) => j !== i))}
@@ -2145,7 +2154,7 @@ ${datas.map((d) => `<img src="${d}" alt="">`).join("\n")}
                 <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
                   {phoneResults.map((r) => (
                     <div key={r.angle} style={{ width: 160 }}>
-                      <img src={r.url} onClick={() => setZoomUrl(r.url)}
+                      <img src={thumb(r.url, 400)} onClick={() => setZoomUrl(r.url)}
                         style={{ width: "100%", borderRadius: 12, border: `1px solid ${C.border}`, cursor: "zoom-in", display: "block" }} />
                       <div style={{ fontSize: 12, fontWeight: 700, color: C.inkMid, margin: "6px 0 4px" }}>{r.label}</div>
                       <button onClick={() => setAnchors((p) => (p.includes(r.url) ? p : [...p, r.url]))}
