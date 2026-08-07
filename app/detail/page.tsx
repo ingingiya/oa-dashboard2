@@ -131,7 +131,7 @@ export default function DetailBuilder() {
 
   async function applyStyle() {
     if (!styleFiles.length) return alert("따라할 상세페이지 캡쳐를 먼저 첨부하세요");
-    setStyleBusy("디자인 분석 중… (1~2분)");
+    setStyleBusy("디자인 분석 중… (2~4분, 최고 성능 모델)");
     try {
       const res = await fetch("/api/detail/style", {
         method: "POST",
