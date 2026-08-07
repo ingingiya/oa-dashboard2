@@ -333,6 +333,57 @@ export default function DetailBuilder() {
     if (res.ok) { setModels(res.items || []); if (selModel === id) setSelModel(""); }
   }
 
+  // 컷 컨셉 프리셋 — 한 번에 8개 슬롯의 방향을 정한다 (프롬프트+모델 체크 일괄 적용)
+  const CUT_CONCEPTS: { label: string; desc: string; map: Record<string, { prompt: string; withModel?: boolean }> }[] = [
+    {
+      label: "제품 스튜디오",
+      desc: "기본 — 제품 단독 스튜디오 컷 위주",
+      map: Object.fromEntries(DEFAULT_CUTS.map((c) => [c.file, { prompt: c.prompt, withModel: false }])),
+    },
+    {
+      label: "모델 실사용",
+      desc: "모델이 실제로 쓰는 모습 중심 (모델 선택 필요)",
+      map: {
+        "hook.png": { prompt: "The model in a bright bathroom or vanity mirror scene, holding the product about to use it, intrigued expression, lifestyle commercial photo.", withModel: true },
+        "usp1.png": { prompt: "Extreme close-up of the key functional part of the product, pure white background, crisp studio product photo." },
+        "usp2.png": { prompt: "Close-up of the model's hands operating the product's key feature, soft natural light, realistic usage detail shot.", withModel: true },
+        "usp3.png": { prompt: "Close-up of the product's control/display detail, soft light-gray gradient background, premium tech product photo." },
+        "scene1.png": { prompt: "The model naturally using the product in a bright modern Korean home, candid mid-action lifestyle moment, waist-up, soft window light.", withModel: true },
+        "scene2.png": { prompt: "The model relaxing after using the product, satisfied soft smile, product visible beside her, warm cozy evening light.", withModel: true },
+        "cert.png": { prompt: "The product on a clean cool blue gradient background, clinical laboratory mood, subtle floating light particles, trust concept." },
+        "packshot.png": { prompt: "Clean front-view packshot: the product on a pure white background, even studio lighting, e-commerce product photo." },
+      },
+    },
+    {
+      label: "라이프스타일 홈",
+      desc: "따뜻한 집 안 무드, 제품 단독",
+      map: {
+        "hook.png": { prompt: "The product in a beautiful sunlit Korean home interior, hero placement on a wooden table, warm morning atmosphere, editorial lifestyle photo." },
+        "usp1.png": { prompt: "Extreme close-up of the key functional part of the product on a linen cloth, soft warm daylight, tactile detail shot." },
+        "usp2.png": { prompt: "The product on a bedside table with soft morning light streaming in, cozy airy interior, shallow depth of field." },
+        "usp3.png": { prompt: "Close-up of the product's control/display detail, warm bokeh home background, premium lifestyle tech photo." },
+        "scene1.png": { prompt: "Lifestyle shot: the product placed in its natural home environment, soft morning window light, airy clean interior." },
+        "scene2.png": { prompt: "The product on a marble shelf with a small green plant and a candle, warm cozy evening light, shallow depth of field." },
+        "cert.png": { prompt: "The product on a clean bright windowsill with soft daylight, fresh trustworthy clean mood, minimal styling." },
+        "packshot.png": { prompt: "Clean front-view packshot: the product on a warm ivory background, soft even lighting, e-commerce product photo." },
+      },
+    },
+    {
+      label: "미니멀 화이트",
+      desc: "누끼 느낌 순백 스튜디오 통일",
+      map: Object.fromEntries(DEFAULT_CUTS.map((c) => [c.file, {
+        prompt: `Pure white seamless background, clean minimal studio product photography, soft even lighting, faint natural contact shadow only. ${c.prompt.replace(/,[^,]*background[^,]*/gi, "")}`,
+        withModel: false,
+      }])),
+    },
+  ];
+  function applyCutConcept(concept: (typeof CUT_CONCEPTS)[number]) {
+    setCuts((prev) => prev.map((c) => {
+      const m = concept.map[c.file];
+      return m ? { ...c, prompt: m.prompt, withModel: !!m.withModel } : c;
+    }));
+  }
+
   // 모델 사용컷 포즈 프리셋 — 칩 클릭으로 슬롯 추가 (같은 포즈 여러 장 가능)
   const MODEL_POSES = [
     { label: "소파에 앉아", prompt: "The model sitting comfortably on a modern sofa in a bright living room, using the product naturally, relaxed posture, knee-up shot, soft window light." },
@@ -1231,6 +1282,22 @@ ${h.urls.map((u) => `<img src="${u}" alt="">`).join("\n")}
                 </div>
               );
             })()}
+          </div>
+
+          <div style={{ display: "flex", gap: 6, marginTop: 12, flexWrap: "wrap", alignItems: "center" }}>
+            <span style={{ fontSize: 12, color: C.inkMid, fontWeight: 700 }}>컷 컨셉:</span>
+            {CUT_CONCEPTS.map((cc) => (
+              <button key={cc.label} title={cc.desc}
+                onClick={() => {
+                  if (cc.map["hook.png"]?.withModel && !selModel)
+                    alert("모델 실사용 컨셉은 위에서 모델을 먼저 선택하면 좋아요 (프롬프트는 지금 적용됨)");
+                  applyCutConcept(cc);
+                }}
+                style={{ ...btnS, flex: "none", padding: "5px 12px" }}>
+                {cc.label}
+              </button>
+            ))}
+            <span style={{ fontSize: 11.5, color: C.inkLt }}>— 8개 기본 슬롯의 프롬프트·모델 체크를 한 번에 바꿔요</span>
           </div>
 
           <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 12, marginTop: 8 }}>
