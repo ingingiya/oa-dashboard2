@@ -295,9 +295,19 @@ export async function POST(req: NextRequest) {
       await browser.close().catch(() => {});
     }
 
-    await appendHistory(getSupabase(), { type: "render", slug, urls });
+    // 렌더 HTML 원본도 저장 — 피그마 html.to.design 플러그인으로 열면 텍스트/이미지가 편집 가능한 레이어로 들어감
+    let htmlUrl = "";
+    try {
+      const htmlPath = `${slug}/index.html`;
+      const { error: hErr } = await getSupabase().storage
+        .from(BUCKET)
+        .upload(htmlPath, Buffer.from(html, "utf-8"), { contentType: "text/html; charset=utf-8", upsert: true });
+      if (!hErr) htmlUrl = getSupabase().storage.from(BUCKET).getPublicUrl(htmlPath).data.publicUrl;
+    } catch {}
 
-    return NextResponse.json({ ok: true, count, urls });
+    await appendHistory(getSupabase(), { type: "render", slug, urls, htmlUrl });
+
+    return NextResponse.json({ ok: true, count, urls, htmlUrl });
   } catch (e: any) {
     console.error(e);
     return NextResponse.json({ ok: false, error: e.message }, { status: 500 });

@@ -428,7 +428,7 @@ export default function DetailBuilder() {
   }, []);
 
   // ── 생성 기록 ──
-  type HistItem = { id: string; at: string; type: string; slug: string; urls: string[]; deleted?: boolean };
+  type HistItem = { id: string; at: string; type: string; slug: string; urls: string[]; htmlUrl?: string; deleted?: boolean };
   const [history, setHistory] = useState<HistItem[]>([]);
   const [histBusy, setHistBusy] = useState("");
 
@@ -483,6 +483,39 @@ export default function DetailBuilder() {
 ${h.urls.map((u) => `<img src="${u}" alt="">`).join("\n")}
 </body></html>`;
     saveBlob(new Blob([html], { type: "text/html" }), `${h.slug}_detail.html`);
+  }
+
+  // 피그마로 복사: 조각을 세로로 이어붙인 PNG 한 장을 클립보드에 → 피그마 캔버스에 Cmd+V
+  async function copyToFigma(h: HistItem) {
+    setDlBusy("figma_" + h.id);
+    try {
+      const imgs = await Promise.all(
+        h.urls.map((u) => new Promise<HTMLImageElement>((res, rej) => {
+          const img = new Image();
+          img.crossOrigin = "anonymous";
+          img.onload = () => res(img);
+          img.onerror = () => rej(new Error("이미지 로드 실패: " + u.split("/").pop()));
+          img.src = u;
+        }))
+      );
+      const width = Math.max(...imgs.map((m) => m.naturalWidth));
+      const heights = imgs.map((m) => Math.round(m.naturalHeight * (width / m.naturalWidth)));
+      const canvas = document.createElement("canvas");
+      canvas.width = width;
+      canvas.height = heights.reduce((a, b) => a + b, 0);
+      const ctx = canvas.getContext("2d")!;
+      ctx.fillStyle = "#fff";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      let y = 0;
+      imgs.forEach((m, i) => { ctx.drawImage(m, 0, y, width, heights[i]); y += heights[i]; });
+      const blob: Blob = await new Promise((res, rej) =>
+        canvas.toBlob((b) => (b ? res(b) : rej(new Error("PNG 변환 실패"))), "image/png"));
+      await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]);
+      alert("복사 완료 — 피그마 캔버스에서 Cmd+V 붙여넣기 하세요 (GIF 조각은 첫 프레임으로 들어가요)");
+    } catch (e: any) {
+      alert("복사 실패: " + e.message);
+    }
+    setDlBusy("");
   }
 
   // ── 최종 렌더 ──
@@ -966,6 +999,21 @@ ${h.urls.map((u) => `<img src="${u}" alt="">`).join("\n")}
                   {new Date(h.at).toLocaleString("ko-KR", { timeZone: "Asia/Seoul" })} · 조각 {h.urls.length}장
                 </span>
                 <div style={{ display: "flex", gap: 6, marginLeft: "auto" }}>
+                  <button onClick={() => copyToFigma(h)} disabled={dlBusy === "figma_" + h.id}
+                    title="조각을 이어붙인 PNG 한 장을 클립보드에 복사 — 피그마에 Cmd+V"
+                    style={{ ...btnS, flex: "none", opacity: dlBusy === "figma_" + h.id ? 0.6 : 1 }}>
+                    {dlBusy === "figma_" + h.id ? "복사 중…" : "피그마로 복사"}
+                  </button>
+                  {h.htmlUrl && (
+                    <button onClick={() => {
+                        navigator.clipboard.writeText(h.htmlUrl!);
+                        alert("HTML 링크 복사됨!\n\n피그마에서 수정 가능하게 가져오는 법:\n1. 피그마에서 html.to.design 플러그인 실행 (무료)\n2. URL 붙여넣기 → Import\n3. 텍스트·이미지가 전부 편집 가능한 레이어로 들어와요");
+                      }}
+                      title="html.to.design 플러그인으로 열면 텍스트/이미지가 편집 가능한 레이어로 임포트돼요"
+                      style={{ ...btnS, flex: "none" }}>
+                      피그마 편집용 링크
+                    </button>
+                  )}
                   <button onClick={() => downloadAll(h)} disabled={dlBusy === h.id}
                     style={{ ...btnS, flex: "none", opacity: dlBusy === h.id ? 0.6 : 1 }}>
                     {dlBusy === h.id ? "다운로드 중…" : "전체 다운로드"}

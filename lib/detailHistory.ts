@@ -12,6 +12,7 @@ export type HistoryItem = {
   type: "render" | "cuts";
   slug: string;
   urls: string[];
+  htmlUrl?: string; // 렌더 HTML 원본 (피그마 html.to.design 편집용)
   deleted?: boolean;
 };
 
