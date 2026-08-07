@@ -33,7 +33,7 @@ const DEFAULT_CUTS = [
 ];
 
 export default function DetailBuilder() {
-  const [tab, setTab] = useState<"gen" | "refs" | "hist">("gen");
+  const [tab, setTab] = useState<"gen" | "renders" | "refs" | "hist">("gen");
   const [slug, setSlug] = useState("cleanswingP");
   const [trigger, setTrigger] = useState("cleanswingP");
   // 앵커 실사 여러 장(여러 각도) — 컷마다 어울리는 각도를 AI가 자동 선택
@@ -451,8 +451,8 @@ export default function DetailBuilder() {
         </div>
 
         <div style={{ display: "flex", gap: 8, marginTop: 16 }}>
-          {([["gen", "생성기"], ["refs", "모션 레퍼런스"], ["hist", "생성 기록"]] as const).map(([k, label]) => (
-            <button key={k} onClick={() => { setTab(k); if (k === "hist") loadHistory(); }}
+          {([["gen", "생성기"], ["renders", "최종 렌더 모음"], ["refs", "모션 레퍼런스"], ["hist", "생성 기록"]] as const).map(([k, label]) => (
+            <button key={k} onClick={() => { setTab(k); if (k === "hist" || k === "renders") loadHistory(); }}
               style={{ border: "none", borderRadius: 10, padding: "9px 18px", fontSize: 13,
                 fontWeight: 800, cursor: "pointer", fontFamily: "inherit",
                 background: tab === k ? C.rose : C.white, color: tab === k ? "#fff" : C.inkMid,
@@ -810,6 +810,34 @@ export default function DetailBuilder() {
               ))}
             </div>
           </div>
+        )}
+
+        {tab === "renders" && (
+        <div style={card}>
+          <div style={cardTitle}>최종 렌더 모음</div>
+          <div style={cardSub}>렌더가 끝나면 자동으로 여기 쌓여요 — 조각을 클릭하면 원본이 열려요</div>
+          {history.filter((h) => h.type === "render" && !h.deleted).length === 0 && (
+            <p style={{ fontSize: 13, color: C.inkLt }}>아직 렌더 결과가 없어요 — 생성기 탭에서 최종 렌더를 눌러보세요</p>
+          )}
+          {history.filter((h) => h.type === "render" && !h.deleted).map((h) => (
+            <div key={h.id} style={{ borderTop: `1px solid ${C.border}`, padding: "14px 0" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
+                <span style={{ fontSize: 14, fontWeight: 800, color: C.ink }}>{h.slug}</span>
+                <span style={{ fontSize: 12, color: C.inkLt }}>
+                  {new Date(h.at).toLocaleString("ko-KR", { timeZone: "Asia/Seoul" })} · 조각 {h.urls.length}장
+                </span>
+              </div>
+              <div style={{ display: "flex", gap: 8, overflowX: "auto", paddingBottom: 4 }}>
+                {h.urls.map((u, i) => (
+                  <a key={u} href={u} target="_blank" style={{ flex: "none", textAlign: "center", textDecoration: "none" }}>
+                    <img src={u} style={{ height: 150, borderRadius: 8, border: `1px solid ${C.border}`, display: "block" }} />
+                    <span style={{ fontSize: 11, color: C.inkLt }}>{String(i + 1).padStart(2, "0")}</span>
+                  </a>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
         )}
 
         {tab === "hist" && (
