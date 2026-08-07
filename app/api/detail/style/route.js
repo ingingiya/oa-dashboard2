@@ -139,7 +139,7 @@ export async function POST(request) {
     }));
     // 긴 HTML 생성이라 스트리밍으로 수집 (논스트리밍은 타임아웃)
     const stream = client.messages.stream({
-      model: 'claude-sonnet-4-6',
+      model: 'claude-opus-4-6',
       max_tokens: 16000,
       messages: [{ role: 'user', content: [...blocks, { type: 'text', text: prompt }] }],
     });
