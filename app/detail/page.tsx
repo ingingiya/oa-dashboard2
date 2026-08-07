@@ -33,7 +33,7 @@ const DEFAULT_CUTS = [
 ];
 
 export default function DetailBuilder() {
-  const [tab, setTab] = useState<"gen" | "renders" | "refs" | "reffind" | "hist">("gen");
+  const [tab, setTab] = useState<"gen" | "renders" | "refs" | "reffind" | "hist" | "credits">("gen");
   const [slug, setSlug] = useState("cleanswingP");
   const [trigger, setTrigger] = useState("cleanswingP");
   // 앵커 실사 여러 장(여러 각도) — 컷마다 어울리는 각도를 AI가 자동 선택
@@ -42,7 +42,7 @@ export default function DetailBuilder() {
   ]);
   const [anchorInput, setAnchorInput] = useState("");
   const [cuts, setCuts] = useState(
-    DEFAULT_CUTS.map((c) => ({ ...c, url: "", loading: false, withModel: false, aspect: "", fixNote: "" }))
+    DEFAULT_CUTS.map((c) => ({ ...c, url: "", loading: false, withModel: false, aspect: "", fixNote: "", sel: false }))
   );
   const [productJson, setProductJson] = useState("");
   // 제품 고정사항 (컬러/불변 부위) — 모든 컷 프롬프트에 강제로 붙는다
@@ -294,6 +294,7 @@ export default function DetailBuilder() {
   }, []);
 
   async function generateModels() {
+    if (!(await spend("모델 후보 4명 생성", 4))) return;
     setModelBusy("모델 후보 4명 생성 중… (1~2분)");
     try {
       const res = await fetch("/api/detail/model", {
@@ -311,6 +312,7 @@ export default function DetailBuilder() {
   async function makeModelSample() {
     if (!selModel) return;
     if (!anchors.length) return alert("스텝1에서 제품 실사 앵커를 먼저 등록해주세요");
+    if (!(await spend("모델 예시샷 생성", 1))) return;
     setSampleBusy(true);
     try {
       const res = await fetch("/api/detail/model", {
@@ -398,7 +400,7 @@ export default function DetailBuilder() {
     setCuts((prev) => [
       ...prev,
       { file: `model_pose_${id}.png`, label: `모델 ${p.label}`, withModel: true, aspect: "",
-        prompt: p.prompt, url: "", loading: false, fixNote: "" },
+        prompt: p.prompt, url: "", loading: false, fixNote: "", sel: false },
     ]);
   }
 
@@ -415,7 +417,7 @@ export default function DetailBuilder() {
     setCuts((p) => [
       ...p,
       ...MODEL_CUTS.filter((m) => !p.some((c) => c.file === m.file))
-        .map((m) => ({ ...m, url: "", loading: false, fixNote: "" })),
+        .map((m) => ({ ...m, url: "", loading: false, fixNote: "", sel: false })),
     ]);
   }
 
@@ -443,6 +445,7 @@ export default function DetailBuilder() {
     const modelUrl = models.find((m) => m.id === selModel)?.url || "";
     if (targets.some((t) => t.withModel) && !modelUrl)
       return alert('"모델" 체크된 컷이 있어요 — 상단 모델 섹션에서 모델을 먼저 생성/선택해주세요');
+    if (!(await spend(`컷 생성 ${targets.length}장 (${slug})`, targets.length))) return;
     setCuts((p) => p.map((c, i) => (indices.includes(i) ? { ...c, loading: true } : c)));
     // 활성 템플릿의 디자인 무드를 추출해 컷 톤을 맞춘다 (서버 캐시라 두 번째부턴 즉시)
     let tplMood = "";
@@ -479,6 +482,8 @@ export default function DetailBuilder() {
           : { ...c, loading: false };
       })
     );
+    if (indices.length >= 4)
+      notify(`🖼 컷 생성 완료 — ${slug} ${res.results?.length ?? 0}/${targets.length}장${res.ok === false ? ` (오류: ${res.error})` : ""}`);
     loadHistory();
   }
 
@@ -645,6 +650,92 @@ export default function DetailBuilder() {
     if (res.ok) setHistory(res.items);
   }
   useEffect(() => { loadHistory(); }, []);
+
+  // ── 팀 로그인 + 크레딧 (지급/차감/랭킹) ──
+  type CreditTeam = { id: string; name: string; granted: number; used: number; balance: number };
+  const [team, setTeam] = useState<{ id: string; name: string } | null>(null);
+  const [creditTeams, setCreditTeams] = useState<CreditTeam[]>([]);
+  const [creditLedger, setCreditLedger] = useState<{ at: string; team: string; action: string; cost: number }[]>([]);
+  const [loginForm, setLoginForm] = useState({ name: "", pin: "" });
+  const [adminForm, setAdminForm] = useState({ pin: "", teamName: "", teamPin: "", grantId: "", amount: "" });
+  const [creditMsg, setCreditMsg] = useState("");
+  useEffect(() => {
+    try { const t = localStorage.getItem("oa_detail_team_v1"); if (t) setTeam(JSON.parse(t)); } catch {}
+    loadCredits();
+  }, []);
+  async function loadCredits() {
+    try {
+      const r = await fetch("/api/detail/credits").then((r) => r.json());
+      if (r.ok) { setCreditTeams(r.teams); setCreditLedger(r.ledger); }
+    } catch {}
+  }
+  async function creditPost(body: any): Promise<any> {
+    const r = await fetch("/api/detail/credits", {
+      method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
+    }).then((r) => r.json());
+    return r;
+  }
+  async function teamLogin() {
+    const r = await creditPost({ login: loginForm });
+    if (!r.ok) return setCreditMsg("실패: " + r.error);
+    setTeam({ id: r.team.id, name: r.team.name });
+    localStorage.setItem("oa_detail_team_v1", JSON.stringify({ id: r.team.id, name: r.team.name }));
+    setCreditMsg(`${r.team.name} 로그인 — 잔액 ${r.team.balance} 크레딧`);
+    loadCredits();
+  }
+  function teamLogout() {
+    setTeam(null);
+    localStorage.removeItem("oa_detail_team_v1");
+  }
+  // 생성류 실행 전 차감 — 실패(미로그인/잔액부족) 시 false
+  async function spend(action: string, cost: number): Promise<boolean> {
+    if (!team) {
+      alert("팀 로그인이 필요해요 — 크레딧 탭에서 로그인해주세요");
+      setTab("credits"); loadCredits();
+      return false;
+    }
+    const r = await creditPost({ spend: { id: team.id, action, cost } });
+    if (!r.ok) { alert(r.error); setTab("credits"); loadCredits(); return false; }
+    setCreditTeams((ts) => ts.map((t) => (t.id === team.id ? { ...t, used: t.used + cost, balance: r.balance } : t)));
+    return true;
+  }
+  const myBalance = creditTeams.find((t) => t.id === team?.id)?.balance;
+
+  // 완료 텔레그램 알림 (실패해도 무시)
+  const notify = (text: string) =>
+    fetch("/api/notify", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text }),
+    }).catch(() => {});
+
+  // 렌더 결과를 런칭 파이프라인 상세페이지 단계로 보내기
+  async function sendToLaunch(h: HistItem) {
+    setDlBusy("launch_" + h.id);
+    try {
+      const list = await fetch("/api/detail/to-launch").then((r) => r.json());
+      if (!list.ok) throw new Error(list.error);
+      if (!list.launches.length) throw new Error("런칭이 없어요 — 대시보드 런칭 탭에서 먼저 런칭을 만들어주세요");
+      let pick = list.launches[0].id;
+      if (list.launches.length > 1) {
+        const sel = prompt(
+          "어느 런칭에 연결할까요? 번호 입력:\n" +
+            list.launches.map((l: any, i: number) => `${i + 1}. ${l.name}`).join("\n"), "1");
+        if (sel == null) { setDlBusy(""); return; }
+        const idx = Number(sel) - 1;
+        if (!(idx >= 0 && idx < list.launches.length)) throw new Error("잘못된 번호");
+        pick = list.launches[idx].id;
+      }
+      const res = await fetch("/api/detail/to-launch", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ launch: pick, urls: h.urls, htmlUrl: h.htmlUrl, slug: h.slug }),
+      }).then((r) => r.json());
+      if (!res.ok) throw new Error(res.error);
+      alert(`런칭 "${res.name}" 상세페이지 단계에 연결 완료 — 대시보드 런칭 탭에서 확인하세요`);
+    } catch (e: any) {
+      alert("런칭 연결 실패: " + e.message);
+    }
+    setDlBusy("");
+  }
 
   async function deleteHistory(id: string) {
     if (!confirm("스토리지 파일을 삭제할까요? (기록은 남습니다)")) return;
@@ -829,6 +920,7 @@ ${h.urls.map((u) => `<img src="${u}" alt="">`).join("\n")}
   async function generateGif() {
     const cut = cuts.find((c) => c.file === gifCutFile && c.url);
     if (!cut) return alert("생성된 컷을 먼저 선택해주세요");
+    if (!(await spend(`GIF 생성 (${cut.label})`, 3))) return;
     setGifBusy("시댄스2 모션 생성 중… (1~3분)");
     try {
       const res = await fetch("/api/detail/gif", {
@@ -845,6 +937,7 @@ ${h.urls.map((u) => `<img src="${u}" alt="">`).join("\n")}
   }
 
   async function renderPage() {
+    if (!(await spend(`최종 렌더 (${slug})`, 2))) return;
     setBusy("렌더링 중… (30초~1분)");
     const product = buildProduct();
 
@@ -855,6 +948,9 @@ ${h.urls.map((u) => `<img src="${u}" alt="">`).join("\n")}
     }).then((r) => r.json());
     setSliceUrls(res.urls || []);
     setBusy(res.ok ? "" : "실패: " + res.error);
+    notify(res.ok
+      ? `✅ 상세페이지 렌더 완료 — ${slug} (조각 ${res.count}장)\n첫 조각: ${res.urls?.[0] || ""}`
+      : `❌ 상세페이지 렌더 실패 — ${slug}: ${res.error}`);
     loadHistory();
   }
 
@@ -911,8 +1007,8 @@ ${h.urls.map((u) => `<img src="${u}" alt="">`).join("\n")}
         </div>
 
         <div style={{ display: "flex", gap: 8, marginTop: 16 }}>
-          {([["gen", "생성기"], ["renders", "최종 렌더 모음"], ["refs", "모션 레퍼런스"], ["reffind", "레퍼런스 찾기"], ["hist", "생성 기록"]] as const).map(([k, label]) => (
-            <button key={k} onClick={() => { setTab(k); if (k === "hist" || k === "renders") loadHistory(); if (k === "reffind") loadRefSites(); }}
+          {([["gen", "생성기"], ["renders", "최종 렌더 모음"], ["refs", "모션 레퍼런스"], ["reffind", "레퍼런스 찾기"], ["hist", "생성 기록"], ["credits", "크레딧"]] as const).map(([k, label]) => (
+            <button key={k} onClick={() => { setTab(k); if (k === "hist" || k === "renders") loadHistory(); if (k === "reffind") loadRefSites(); if (k === "credits") loadCredits(); }}
               style={{ border: "none", borderRadius: 10, padding: "9px 18px", fontSize: 13,
                 fontWeight: 800, cursor: "pointer", fontFamily: "inherit",
                 background: tab === k ? C.rose : C.white, color: tab === k ? "#fff" : C.inkMid,
@@ -920,8 +1016,15 @@ ${h.urls.map((u) => `<img src="${u}" alt="">`).join("\n")}
               {label}
             </button>
           ))}
+          <button onClick={() => { setTab("credits"); loadCredits(); }}
+            title={team ? "크레딧 탭으로" : "팀 로그인하러 가기"}
+            style={{ marginLeft: "auto", border: `1px solid ${team ? "#B7E4C7" : C.border}`, borderRadius: 10,
+              padding: "9px 14px", fontSize: 12, fontWeight: 800, cursor: "pointer", fontFamily: "inherit",
+              background: team ? "#E8F8EE" : C.white, color: team ? "#1F9D55" : "#D70015" }}>
+            {team ? `${team.name} · 잔액 ${myBalance ?? "…"}` : "팀 로그인 필요"}
+          </button>
           <button onClick={clearDraft} title="자동저장된 작업을 지우고 초기화"
-            style={{ marginLeft: "auto", border: `1px solid ${C.border}`, borderRadius: 10, padding: "9px 14px",
+            style={{ border: `1px solid ${C.border}`, borderRadius: 10, padding: "9px 14px",
               fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit",
               background: C.white, color: C.inkLt }}>
             초기화
@@ -1213,6 +1316,17 @@ ${h.urls.map((u) => `<img src="${u}" alt="">`).join("\n")}
                 <input type="file" accept="image/*" multiple hidden
                   onChange={(e) => e.target.files?.length && bulkUpload(e.target.files)} />
               </label>
+              <button
+                onClick={() => {
+                  const sel = cuts.map((c, i) => (c.sel ? i : -1)).filter((i) => i >= 0);
+                  if (!sel.length) return alert("재생성할 컷을 체크박스로 먼저 선택해주세요 (슬롯 제목 옆 ☑)");
+                  generateCuts(sel);
+                }}
+                disabled={!cuts.some((c) => c.sel)}
+                title="체크한 슬롯만 일괄 재생성"
+                style={{ ...btnS, opacity: cuts.some((c) => c.sel) ? 1 : 0.45 }}>
+                선택 재생성 ({cuts.filter((c) => c.sel).length})
+              </button>
               <button onClick={() => generateCuts(cuts.map((_, i) => i))} style={{ ...btn, marginTop: 0 }}>
                 전체 컷 생성
               </button>
@@ -1352,7 +1466,11 @@ ${h.urls.map((u) => `<img src="${u}" alt="">`).join("\n")}
             {cuts.map((c, i) => (
               <div key={c.file} style={{ border: `1px solid ${C.border}`, borderRadius: 14, padding: 10, background: C.white }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <span style={{ fontSize: 12, fontWeight: 800, color: C.ink }}>{c.label}</span>
+                  <label title="선택 재생성 대상 체크" style={{ display: "flex", alignItems: "center", gap: 4, cursor: "pointer" }}>
+                    <input type="checkbox" checked={!!c.sel}
+                      onChange={(e) => setCuts((p) => p.map((x, j) => (j === i ? { ...x, sel: e.target.checked } : x)))} />
+                    <span style={{ fontSize: 12, fontWeight: 800, color: C.ink }}>{c.label}</span>
+                  </label>
                   <label title="이 컷에 선택된 모델을 등장시켜요"
                     style={{ fontSize: 11, fontWeight: 700, color: c.withModel ? "#AF52DE" : C.inkLt,
                       cursor: "pointer", display: "flex", alignItems: "center", gap: 3 }}>
@@ -1361,11 +1479,13 @@ ${h.urls.map((u) => `<img src="${u}" alt="">`).join("\n")}
                     모델
                   </label>
                 </div>
-                <input value={c.prompt} placeholder="컷 프롬프트"
+                <textarea value={c.prompt} placeholder="컷 프롬프트 (직접 수정 가능 — 늘려서 편집)"
+                  rows={2}
                   onChange={(e) =>
                     setCuts((p) => p.map((x, j) => (j === i ? { ...x, prompt: e.target.value } : x)))
                   }
-                  style={{ ...inp, width: "100%", fontSize: 12, marginTop: 6, padding: "6px 8px" }} />
+                  style={{ ...inp, width: "100%", fontSize: 12, marginTop: 6, padding: "6px 8px",
+                    resize: "vertical", lineHeight: 1.4, fontFamily: "inherit" }} />
                 <div style={{ marginTop: 8, aspectRatio: aspect.replace(":", "/"), background: C.bg, borderRadius: 10,
                   display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
                   {c.loading ? <span style={{ fontSize: 12, color: C.rose, fontWeight: 700 }}>생성중…</span> : c.url
@@ -1675,6 +1795,12 @@ ${h.urls.map((u) => `<img src="${u}" alt="">`).join("\n")}
                   {new Date(h.at).toLocaleString("ko-KR", { timeZone: "Asia/Seoul" })} · 조각 {h.urls.length}장
                 </span>
                 <div style={{ display: "flex", gap: 6, marginLeft: "auto" }}>
+                  <button onClick={() => sendToLaunch(h)} disabled={dlBusy === "launch_" + h.id}
+                    title="대시보드 런칭 탭의 상세페이지 단계에 이 렌더 결과를 연결"
+                    style={{ ...btnS, flex: "none", background: "#34C759", color: "#fff",
+                      opacity: dlBusy === "launch_" + h.id ? 0.6 : 1 }}>
+                    {dlBusy === "launch_" + h.id ? "연결 중…" : "런칭으로 보내기"}
+                  </button>
                   <button onClick={() => copyToFigma(h)} disabled={dlBusy === "figma_" + h.id}
                     title="조각을 이어붙인 PNG 한 장을 클립보드에 복사 — 피그마에 Cmd+V"
                     style={{ ...btnS, flex: "none", opacity: dlBusy === "figma_" + h.id ? 0.6 : 1 }}>
@@ -1749,6 +1875,123 @@ ${h.urls.map((u) => `<img src="${u}" alt="">`).join("\n")}
               )}
             </div>
           ))}
+        </div>
+        )}
+
+        {tab === "credits" && (
+        <div style={card}>
+          <div style={cardTitle}>크레딧 <span style={{ color: C.inkMid, fontWeight: 400, fontSize: 12 }}>팀별 로그인 · 지급 · 사용량 랭킹</span></div>
+          <div style={cardSub}>생성(컷 1장=1 · 모델 4명=4 · 예시샷=1 · GIF=3 · 렌더=2)마다 로그인한 팀에서 차감돼요</div>
+
+          {/* 로그인 / 내 팀 */}
+          <div style={{ border: `1px solid ${C.border}`, borderRadius: 14, padding: 14, background: "#fbfdff" }}>
+            {team ? (
+              <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+                <span style={{ fontSize: 14, fontWeight: 800, color: "#1F9D55" }}>✓ {team.name} 로그인됨</span>
+                <span style={{ fontSize: 13, color: C.inkMid }}>잔액 <b>{myBalance ?? "…"}</b> 크레딧</span>
+                <button onClick={teamLogout} style={{ ...btnS, flex: "none", marginLeft: "auto", color: "#D70015" }}>로그아웃</button>
+              </div>
+            ) : (
+              <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+                <span style={{ fontSize: 13, fontWeight: 800, color: C.ink }}>팀 로그인</span>
+                {creditTeams.length ? (
+                  <select value={loginForm.name} onChange={(e) => setLoginForm((f) => ({ ...f, name: e.target.value }))}
+                    style={{ ...inp, width: 160, cursor: "pointer" }}>
+                    <option value="">팀 선택</option>
+                    {creditTeams.map((t) => <option key={t.id} value={t.name}>{t.name}</option>)}
+                  </select>
+                ) : (
+                  <span style={{ fontSize: 12.5, color: C.inkLt }}>아직 팀이 없어요 — 아래 관리에서 팀을 먼저 추가하세요</span>
+                )}
+                <input type="password" value={loginForm.pin} placeholder="PIN"
+                  onChange={(e) => setLoginForm((f) => ({ ...f, pin: e.target.value }))}
+                  onKeyDown={(e) => e.key === "Enter" && teamLogin()}
+                  style={{ ...inp, width: 100 }} />
+                <button onClick={teamLogin} style={{ ...btn, marginTop: 0, padding: "9px 18px" }}>로그인</button>
+              </div>
+            )}
+            {creditMsg && <p style={{ fontSize: 12.5, color: creditMsg.startsWith("실패") ? "#D70015" : C.inkMid, margin: "8px 0 0" }}>{creditMsg}</p>}
+          </div>
+
+          {/* 사용량 랭킹 */}
+          <div style={{ marginTop: 14 }}>
+            <div style={{ fontSize: 13, fontWeight: 800, color: C.ink, marginBottom: 6 }}>팀별 사용량 랭킹</div>
+            {creditTeams.length === 0 && <p style={{ fontSize: 12.5, color: C.inkLt }}>팀 없음</p>}
+            {creditTeams.map((t, i) => (
+              <div key={t.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 0",
+                borderTop: `1px solid ${C.border}` }}>
+                <span style={{ fontSize: 12, fontWeight: 800, color: i === 0 ? "#FF9500" : C.inkLt, width: 22 }}>{i + 1}위</span>
+                <span style={{ fontSize: 13.5, fontWeight: 800, color: C.ink, width: 140 }}>{t.name}</span>
+                <div style={{ flex: 1, height: 8, background: "#f0f0f2", borderRadius: 99, overflow: "hidden" }}>
+                  <div style={{ width: `${Math.min(100, (t.used / Math.max(1, creditTeams[0]?.used || 1)) * 100)}%`,
+                    height: "100%", background: "#0071E3" }} />
+                </div>
+                <span style={{ fontSize: 12.5, color: C.inkMid, width: 170, textAlign: "right" }}>
+                  사용 <b>{t.used}</b> · 지급 {t.granted} · 잔액 <b style={{ color: t.balance <= 0 ? "#D70015" : "#1F9D55" }}>{t.balance}</b>
+                </span>
+              </div>
+            ))}
+          </div>
+
+          {/* 최근 차감 내역 */}
+          {creditLedger.length > 0 && (
+            <details style={{ marginTop: 14 }}>
+              <summary style={{ fontSize: 13, fontWeight: 800, color: C.ink, cursor: "pointer" }}>최근 내역 {creditLedger.length}건</summary>
+              <div style={{ marginTop: 8 }}>
+                {creditLedger.map((l, i) => (
+                  <div key={i} style={{ display: "flex", gap: 10, fontSize: 12.5, padding: "5px 0",
+                    borderTop: `1px solid ${C.border}`, color: C.inkMid }}>
+                    <span style={{ width: 130, color: C.inkLt }}>
+                      {new Date(l.at).toLocaleString("ko-KR", { timeZone: "Asia/Seoul", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" })}
+                    </span>
+                    <b style={{ width: 110, color: C.ink }}>{l.team}</b>
+                    <span style={{ flex: 1 }}>{l.action}</span>
+                    <b style={{ color: l.cost > 0 ? "#D70015" : "#1F9D55" }}>{l.cost > 0 ? `-${l.cost}` : `+${-l.cost}`}</b>
+                  </div>
+                ))}
+              </div>
+            </details>
+          )}
+
+          {/* 관리 (관리자 PIN) */}
+          <details style={{ marginTop: 14 }}>
+            <summary style={{ fontSize: 13, fontWeight: 800, color: C.ink, cursor: "pointer" }}>관리 — 팀 추가 · 크레딧 지급 (관리자 PIN 필요)</summary>
+            <div style={{ marginTop: 10, display: "grid", gap: 10 }}>
+              <input type="password" value={adminForm.pin} placeholder="관리자 PIN (초기값 7777 — 바꾸려면 알려주세요)"
+                onChange={(e) => setAdminForm((f) => ({ ...f, pin: e.target.value }))}
+                style={{ ...inp, width: 280 }} />
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+                <span style={{ fontSize: 12.5, fontWeight: 700, color: C.inkMid, width: 60 }}>팀 추가</span>
+                <input value={adminForm.teamName} placeholder="팀 이름 (예: 뷰티팀)"
+                  onChange={(e) => setAdminForm((f) => ({ ...f, teamName: e.target.value }))}
+                  style={{ ...inp, width: 160 }} />
+                <input value={adminForm.teamPin} placeholder="팀 PIN"
+                  onChange={(e) => setAdminForm((f) => ({ ...f, teamPin: e.target.value }))}
+                  style={{ ...inp, width: 100 }} />
+                <button onClick={async () => {
+                    const r = await creditPost({ addTeam: { name: adminForm.teamName, pin: adminForm.teamPin, adminPin: adminForm.pin } });
+                    if (r.ok) { setCreditTeams(r.teams); setCreditLedger(r.ledger); setAdminForm((f) => ({ ...f, teamName: "", teamPin: "" })); setCreditMsg("팀 추가 완료"); }
+                    else setCreditMsg("실패: " + r.error);
+                  }} style={{ ...btnS, flex: "none" }}>추가</button>
+              </div>
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+                <span style={{ fontSize: 12.5, fontWeight: 700, color: C.inkMid, width: 60 }}>지급</span>
+                <select value={adminForm.grantId} onChange={(e) => setAdminForm((f) => ({ ...f, grantId: e.target.value }))}
+                  style={{ ...inp, width: 160, cursor: "pointer" }}>
+                  <option value="">팀 선택</option>
+                  {creditTeams.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
+                </select>
+                <input value={adminForm.amount} placeholder="수량 (음수=회수)" type="number"
+                  onChange={(e) => setAdminForm((f) => ({ ...f, amount: e.target.value }))}
+                  style={{ ...inp, width: 130 }} />
+                <button onClick={async () => {
+                    const r = await creditPost({ grant: { id: adminForm.grantId, amount: adminForm.amount, adminPin: adminForm.pin } });
+                    if (r.ok) { setCreditTeams(r.teams); setCreditLedger(r.ledger); setAdminForm((f) => ({ ...f, amount: "" })); setCreditMsg("지급 완료"); }
+                    else setCreditMsg("실패: " + r.error);
+                  }} style={{ ...btnS, flex: "none" }}>지급</button>
+              </div>
+            </div>
+          </details>
         </div>
         )}
       </div>
