@@ -223,9 +223,10 @@ export default function DetailBuilder() {
       try { res = JSON.parse(txt); } catch { throw new Error("서버 응답 오류: " + txt.slice(0, 120)); }
       if (!res.ok) throw new Error(res.error || "카피 생성 실패");
       setProductJson(JSON.stringify(res.product, null, 2));
-      // 소구점 맞춤 컷 프롬프트 자동 반영 (usp는 효과 시각화)
+      // 소구점 맞춤 컷 프롬프트 자동 반영 (usp는 효과 시각화) — 컨셉 프리셋이 덮어쓰지 않게 별도 보관
       if (res.product.cutPrompts) {
         const cp = res.product.cutPrompts as Record<string, string>;
+        setCopyCutPrompts(cp);
         setCuts((cs) => cs.map((c) => {
           const key = c.file.replace(/\.\w+$/, "");
           return cp[key] ? { ...c, prompt: cp[key] } : c;
@@ -361,16 +362,21 @@ export default function DetailBuilder() {
     if (res.ok) { setModels(res.items || []); if (selModel === id) setSelModel(""); }
   }
 
+  // 카피에서 뽑은 소구점 맞춤 컷 프롬프트 — 컨셉 프리셋은 이 위에 "톤"만 입힌다
+  const [copyCutPrompts, setCopyCutPrompts] = useState<Record<string, string> | null>(null);
+
   // 컷 컨셉 프리셋 — 한 번에 8개 슬롯의 방향을 정한다 (프롬프트+모델 체크 일괄 적용)
-  const CUT_CONCEPTS: { label: string; desc: string; map: Record<string, { prompt: string; withModel?: boolean }> }[] = [
+  const CUT_CONCEPTS: { label: string; desc: string; tone: string; map: Record<string, { prompt: string; withModel?: boolean }> }[] = [
     {
       label: "제품 스튜디오",
       desc: "기본 — 제품 단독 스튜디오 컷 위주",
+      tone: "clean minimal studio product photography, seamless studio background, soft even premium lighting.",
       map: Object.fromEntries(DEFAULT_CUTS.map((c) => [c.file, { prompt: c.prompt, withModel: false }])),
     },
     {
       label: "모델 실사용",
       desc: "모델이 실제로 쓰는 모습 중심 (모델 선택 필요)",
+      tone: "bright lifestyle commercial setting with the model naturally using the product where a person appears.",
       map: {
         "hook.png": { prompt: "The model in a bright bathroom or vanity mirror scene, holding the product about to use it, intrigued expression, lifestyle commercial photo.", withModel: true },
         "usp1.png": { prompt: "Extreme close-up of the key functional part of the product, pure white background, crisp studio product photo." },
@@ -385,6 +391,7 @@ export default function DetailBuilder() {
     {
       label: "라이프스타일 홈",
       desc: "따뜻한 집 안 무드, 제품 단독",
+      tone: "warm sunlit Korean home interior atmosphere, cozy airy editorial lifestyle mood, soft natural daylight.",
       map: {
         "hook.png": { prompt: "The product in a beautiful sunlit Korean home interior, hero placement on a wooden table, warm morning atmosphere, editorial lifestyle photo." },
         "usp1.png": { prompt: "Extreme close-up of the key functional part of the product on a linen cloth, soft warm daylight, tactile detail shot." },
@@ -399,6 +406,7 @@ export default function DetailBuilder() {
     {
       label: "미니멀 화이트",
       desc: "누끼 느낌 순백 스튜디오 통일",
+      tone: "pure white seamless background, clean minimal studio, soft even lighting, faint natural contact shadow only.",
       map: Object.fromEntries(DEFAULT_CUTS.map((c) => [c.file, {
         prompt: `Pure white seamless background, clean minimal studio product photography, soft even lighting, faint natural contact shadow only. ${c.prompt.replace(/,[^,]*background[^,]*/gi, "")}`,
         withModel: false,
@@ -408,7 +416,12 @@ export default function DetailBuilder() {
   function applyCutConcept(concept: (typeof CUT_CONCEPTS)[number]) {
     setCuts((prev) => prev.map((c) => {
       const m = concept.map[c.file];
-      return m ? { ...c, prompt: m.prompt, withModel: !!m.withModel } : c;
+      if (!m) return c;
+      // 카피에서 뽑은 소구점 프롬프트가 있으면 유지하고 컨셉은 톤(아트디렉션)으로만 추가
+      const usp = copyCutPrompts?.[c.file.replace(/\.\w+$/, "")];
+      return usp
+        ? { ...c, prompt: `${usp} Art direction: ${concept.tone}`, withModel: !!m.withModel }
+        : { ...c, prompt: m.prompt, withModel: !!m.withModel };
     }));
   }
 
@@ -921,6 +934,7 @@ ${h.urls.map((u) => `<img src="${u}" alt="">`).join("\n")}
         if (typeof d.step === "number") setStep(Math.min(2, d.step));
         if (d.selModel) setSelModel(d.selModel);
         if (Array.isArray(d.gifRows)) setGifRows(d.gifRows);
+        if (d.copyCutPrompts) setCopyCutPrompts(d.copyCutPrompts);
       }
     } catch {}
     draftReady.current = true;
@@ -931,14 +945,14 @@ ${h.urls.map((u) => `<img src="${u}" alt="">`).join("\n")}
     const t = setTimeout(() => {
       try {
         localStorage.setItem(DRAFT_KEY, JSON.stringify({
-          slug, trigger, anchors, productJson, lockNote, banNote, aspect, step, selModel, gifRows,
+          slug, trigger, anchors, productJson, lockNote, banNote, aspect, step, selModel, gifRows, copyCutPrompts,
           cuts: cuts.map(({ loading, ...c }) => c),
           at: Date.now(),
         }));
       } catch {}
     }, 1500);
     return () => clearTimeout(t);
-  }, [slug, trigger, anchors, cuts, productJson, lockNote, banNote, aspect, step, selModel, gifRows]);
+  }, [slug, trigger, anchors, cuts, productJson, lockNote, banNote, aspect, step, selModel, gifRows, copyCutPrompts]);
   function clearDraft() {
     if (!confirm("저장된 작업 내용을 지우고 처음부터 시작할까요?")) return;
     localStorage.removeItem(DRAFT_KEY);
