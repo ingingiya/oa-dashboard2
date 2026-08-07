@@ -80,7 +80,9 @@ async function uploadAnchor(anchorUrl: string): Promise<string> {
   return info.subfolder ? `${info.subfolder}/${info.name}` : info.name;
 }
 
-function buildWorkflow(anchorName: string, prompt: string, prefix: string) {
+const ASPECTS = new Set(["1:1", "4:5", "3:4", "9:16", "16:9", "4:3", "2:3", "3:2", "21:9"]);
+
+function buildWorkflow(anchorName: string, prompt: string, prefix: string, aspect: string) {
   return {
     "1": { class_type: "LoadImage", inputs: { image: anchorName } },
     "2": {
@@ -89,7 +91,7 @@ function buildWorkflow(anchorName: string, prompt: string, prefix: string) {
         prompt,
         model: "Nano Banana 2 (Gemini 3.1 Flash Image)",
         seed: Math.floor(Math.random() * 1e9),
-        aspect_ratio: "1:1",
+        aspect_ratio: aspect,
         resolution: "2K",
         response_modalities: "IMAGE",
         thinking_level: "MINIMAL",
@@ -100,13 +102,13 @@ function buildWorkflow(anchorName: string, prompt: string, prefix: string) {
   };
 }
 
-async function generateOne(anchorName: string, prompt: string, prefix: string): Promise<Buffer> {
+async function generateOne(anchorName: string, prompt: string, prefix: string, aspect: string): Promise<Buffer> {
   const submit = await (
     await comfy("/api/prompt", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        prompt: buildWorkflow(anchorName, prompt, prefix),
+        prompt: buildWorkflow(anchorName, prompt, prefix, aspect),
         // API 노드(나노바나나 등)는 이 인증이 없으면 "Please login first" 에러
         extra_data: { api_key_comfy_org: comfyKey() },
       }),
@@ -194,7 +196,8 @@ ${cuts.map((c) => `- ${c.file}: ${c.prompt}`).join("\n")}
 
 export async function POST(req: NextRequest) {
   try {
-    const { productSlug, cuts, anchorUrl, anchorUrls, refPrompt, styleBlock } = await req.json();
+    const { productSlug, cuts, anchorUrl, anchorUrls, refPrompt, styleBlock, aspectRatio } = await req.json();
+    const aspect = ASPECTS.has(aspectRatio) ? aspectRatio : "1:1";
     const anchors: string[] = (
       Array.isArray(anchorUrls) && anchorUrls.length ? anchorUrls : [anchorUrl]
     ).filter(Boolean);
@@ -217,7 +220,7 @@ export async function POST(req: NextRequest) {
         const cutRef = hasPerson(cut.prompt)
           ? ref.replace(/No people, no hands, /i, "") + BEAUTY_BLOCK
           : ref;
-        const buf = await generateOne(anchorName, cutRef + style + cut.prompt + DETAIL_BLOCK, prefix);
+        const buf = await generateOne(anchorName, cutRef + style + cut.prompt + DETAIL_BLOCK, prefix, aspect);
         const filePath = `${productSlug}/${cut.file}`;
         const { error } = await getSupabase().storage
           .from(BUCKET)

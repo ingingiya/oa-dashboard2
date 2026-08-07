@@ -76,6 +76,17 @@ export async function POST(request) {
     return Response.json(publicList(lib));
   }
 
+  if (body?.rename) {
+    const lib = await getLib(sb);
+    const item = lib.items.find((t) => t.id === body.rename);
+    if (!item) return Response.json({ error: '템플릿 없음' }, { status: 404 });
+    const name = String(body.name || '').trim().slice(0, 40);
+    if (!name) return Response.json({ error: '이름 필수' }, { status: 400 });
+    item.name = name;
+    await setVal(sb, LIB_KEY, lib);
+    return Response.json(publicList(lib));
+  }
+
   if (body?.remove) {
     const lib = await getLib(sb);
     lib.items = lib.items.filter((t) => t.id !== body.remove);

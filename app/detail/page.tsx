@@ -261,6 +261,22 @@ export default function DetailBuilder() {
     }
   }
 
+  // ── 위저드 스텝 (카피 → 컨셉 → 컷 → 렌더 페이지 넘김) ──
+  const [step, setStep] = useState(0);
+  function nextStep() {
+    if (step === 0 && !productJson &&
+      !confirm("아직 카피를 만들지 않았어요. 카피 없이 다음으로 갈까요?")) return;
+    if (step === 1 && selConcept < 0 && !preset &&
+      !confirm("생성 컨셉을 선택하지 않았어요. 기본 연출로 진행할까요?")) return;
+    if (step === 2 && !cuts.some((c) => c.url) &&
+      !confirm("생성된 컷이 없어요. 그래도 최종 렌더로 갈까요?")) return;
+    setStep((s) => Math.min(3, s + 1));
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  // ── 컷 이미지 사이즈 (많이 쓰는 비율 프리셋) ──
+  const [aspect, setAspect] = useState("1:1");
+
   // ── 생성 컨셉 프리셋 (AI 추천과 별개: 깔끔 누끼 / 컬러 배경) ──
   const [preset, setPreset] = useState<"" | "nukki" | "color">("");
   const [presetColor, setPresetColor] = useState("#EAF3FF");
@@ -287,6 +303,7 @@ export default function DetailBuilder() {
         productSlug: slug,
         cuts: targets,
         anchorUrls: anchors,
+        aspectRatio: aspect,
         styleBlock: presetStyleBlock() || (selConcept >= 0 ? concepts[selConcept]?.styleBlock : ""),
       }),
     }).then((r) => r.json());
@@ -488,7 +505,7 @@ export default function DetailBuilder() {
         </div>
 
         {tab === "gen" && (<>
-        {/* 진행 스테퍼 — 어디까지 왔는지 한눈에 */}
+        {/* 스텝 내비 — 클릭하면 그 단계 페이지로 이동 */}
         <div style={{ display: "flex", alignItems: "center", gap: 6, margin: "18px 0 4px", flexWrap: "wrap" }}>
           {([
             ["카피 생성", !!productJson, "제품 정보를 넣고 카피를 만들어요"],
@@ -497,13 +514,16 @@ export default function DetailBuilder() {
             ["최종 렌더", sliceUrls.length > 0, "분할 JPG/GIF로 저장"],
           ] as [string, boolean, string][]).map(([label, done, tip], i, arr) => (
             <div key={label} style={{ display: "flex", alignItems: "center", gap: 6 }} title={tip}>
-              <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "6px 12px",
-                borderRadius: 999, fontSize: 12, fontWeight: 800,
-                background: done ? "#E8F8EE" : C.white, color: done ? "#1F9D55" : C.inkMid,
-                border: `1px solid ${done ? "#B7E4C7" : C.border}` }}>
+              <div onClick={() => setStep(i)}
+                style={{ display: "flex", alignItems: "center", gap: 6, padding: "6px 12px",
+                borderRadius: 999, fontSize: 12, fontWeight: 800, cursor: "pointer",
+                background: step === i ? C.rose : done ? "#E8F8EE" : C.white,
+                color: step === i ? "#fff" : done ? "#1F9D55" : C.inkMid,
+                border: `1px solid ${step === i ? C.rose : done ? "#B7E4C7" : C.border}` }}>
                 <span style={{ width: 17, height: 17, borderRadius: "50%", display: "inline-flex",
                   alignItems: "center", justifyContent: "center", fontSize: 11,
-                  background: done ? "#34C759" : C.border, color: "#fff" }}>{done ? "✓" : i + 1}</span>
+                  background: done ? "#34C759" : step === i ? "rgba(255,255,255,.35)" : C.border,
+                  color: "#fff" }}>{done ? "✓" : i + 1}</span>
                 {label}
               </div>
               {i < arr.length - 1 && <span style={{ color: C.border, fontSize: 14 }}>→</span>}
@@ -511,6 +531,7 @@ export default function DetailBuilder() {
           ))}
         </div>
 
+        {step === 0 && (<>
         <div style={card}>
           <div style={cardTitle}>기본 설정</div>
           <div style={cardSub}>제품 폴더명(영어)과 제품 실사를 넣어요 — 실사는 정면·옆·뒷면 등 여러 각도로 넣을수록 컷이 정확해져요 (컷마다 맞는 각도를 AI가 자동 선택)</div>
@@ -623,8 +644,14 @@ export default function DetailBuilder() {
                       style={{ position: "absolute", top: 6, right: 6, width: 18, height: 18, borderRadius: "50%",
                         background: "rgba(0,0,0,.5)", color: "#fff", fontSize: 11, display: "flex",
                         alignItems: "center", justifyContent: "center" }}>✕</span>
-                    <div style={{ padding: "6px 8px", fontSize: 11, fontWeight: 700, color: C.ink,
-                      whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{t.name}</div>
+                    <div title="클릭해서 이름 변경"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        const name = prompt("템플릿 이름", t.name)?.trim();
+                        if (name && name !== t.name) styleAction({ rename: t.id, name }, "이름 변경됨");
+                      }}
+                      style={{ padding: "6px 8px", fontSize: 11, fontWeight: 700, color: C.ink,
+                      whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{t.name} ✎</div>
                   </div>
                 );
               })}
@@ -686,7 +713,9 @@ export default function DetailBuilder() {
               style={{ ...inp, width: "100%", height: 160, marginTop: 8, fontFamily: "monospace", fontSize: 12 }} />
           </details>
         </div>
+        </>)}
 
+        {step === 1 && (
         <div style={card}>
           <div style={cardTitle}>② 생성 컨셉 <span style={{ color: C.inkMid, fontWeight: 400, fontSize: 12 }}>(선택)</span></div>
           <div style={cardSub}>기본 스타일을 고르거나, AI 추천을 받아보세요 — 고르면 모든 컷이 그 방향으로 생성돼요 (안 고르면 기본 연출)</div>
@@ -729,14 +758,26 @@ export default function DetailBuilder() {
             </div>
           )}
         </div>
+        )}
 
+        {step === 2 && (
         <div style={card}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
             <div>
               <div style={cardTitle}>③ 컷 생성 / 재생성</div>
               <div style={cardSub}>사진을 한번에 올리면 AI가 분석해 슬롯에 자동 배치 — 빈 슬롯은 나노바나나 생성으로 채워요</div>
             </div>
-            <div style={{ display: "flex", gap: 8 }}>
+            <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+              <select value={aspect} onChange={(e) => setAspect(e.target.value)}
+                title="컷 이미지 비율"
+                style={{ ...inp, padding: "9px 10px", fontWeight: 700, fontSize: 13, cursor: "pointer" }}>
+                <option value="1:1">1:1 정방형 (기본)</option>
+                <option value="4:5">4:5 세로 (피드형)</option>
+                <option value="3:4">3:4 세로</option>
+                <option value="9:16">9:16 세로 풀</option>
+                <option value="16:9">16:9 가로</option>
+                <option value="4:3">4:3 가로</option>
+              </select>
               <label style={{ ...btn, marginTop: 0, background: C.ink, boxShadow: "none", cursor: "pointer" }}>
                 사진 일괄 업로드
                 <input type="file" accept="image/*" multiple hidden
@@ -757,7 +798,7 @@ export default function DetailBuilder() {
                     setCuts((p) => p.map((x, j) => (j === i ? { ...x, prompt: e.target.value } : x)))
                   }
                   style={{ ...inp, width: "100%", fontSize: 12, marginTop: 6, padding: "6px 8px" }} />
-                <div style={{ marginTop: 8, aspectRatio: "1", background: C.bg, borderRadius: 10,
+                <div style={{ marginTop: 8, aspectRatio: aspect.replace(":", "/"), background: C.bg, borderRadius: 10,
                   display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
                   {c.loading ? <span style={{ fontSize: 12, color: C.rose, fontWeight: 700 }}>생성중…</span> : c.url
                     ? <img src={c.url} style={{ width: "100%" }} />
@@ -775,7 +816,9 @@ export default function DetailBuilder() {
             ))}
           </div>
         </div>
+        )}
 
+        {step === 3 && (
         <div style={card}>
           <div style={cardTitle}>④ 최종 렌더</div>
           <div style={cardSub}>서버에서 860px 상세페이지를 렌더해 섹션 경계 기준 분할 JPG로 업로드 — GIF 조각은 캡처하지 않고 원본 그대로 사이에 끼워요</div>
@@ -807,6 +850,19 @@ export default function DetailBuilder() {
                 </li>
               ))}
             </ul>
+          )}
+        </div>
+        )}
+
+        {/* 위저드 하단 이전/다음 내비 */}
+        <div style={{ display: "flex", justifyContent: "space-between", marginTop: 16 }}>
+          <button onClick={() => { setStep((s) => Math.max(0, s - 1)); window.scrollTo({ top: 0, behavior: "smooth" }); }}
+            disabled={step === 0}
+            style={{ ...btnS, opacity: step === 0 ? 0.4 : 1, padding: "11px 22px" }}>← 이전</button>
+          {step < 3 ? (
+            <button onClick={nextStep} style={{ ...btn, marginTop: 0, padding: "11px 26px" }}>다음 →</button>
+          ) : (
+            <span style={{ fontSize: 12.5, color: C.inkMid, alignSelf: "center" }}>렌더가 끝나면 "최종 렌더 모음" 탭에 저장돼요</span>
           )}
         </div>
         </>)}
