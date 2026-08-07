@@ -96,7 +96,7 @@ const OUTFIT_VARIATIONS = [
   "an oversized crisp white poplin shirt half-tucked into high-waisted wide-leg cream trousers",
   "a sleeveless ivory column knit dress with a clean silhouette, tiny gold hoop earrings",
   "a fitted cream ribbed-knit long-sleeve top with straight-cut ecru trousers",
-  "a white bodysuit under an unstructured oversized greige blazer",
+  "a fitted white top under an unstructured oversized greige blazer",
 ];
 
 // 의상 공통 스타일링 — 뷰티 에디토리얼 무드 강제
@@ -185,6 +185,27 @@ async function generateOne(prompt: string, prefix: string, refNames?: string[]):
   throw new Error("생성 타임아웃");
 }
 
+// Gemini가 이미지 생성을 거부하면("did not generate an image") 세이프티에 걸릴 만한
+// 뷰티 표현을 순화해 1회 재시도
+function softenPrompt(p: string): string {
+  return p
+    .replace(/wet-look/gi, "glossy slicked-back")
+    .replace(/bare-faced/gi, "fresh minimal-makeup")
+    .replace(/bodysuit/gi, "fitted top")
+    .replace(/bare shoulders?/gi, "minimal top")
+    .replace(/dewy glass skin/gi, "healthy luminous skin")
+    .replace(/skin-first/gi, "clean minimal");
+}
+
+async function generateWithRetry(prompt: string, prefix: string, refNames?: string[]): Promise<Buffer> {
+  try {
+    return await generateOne(prompt, prefix, refNames);
+  } catch (e: any) {
+    if (!/did not generate an image/i.test(String(e?.message))) throw e;
+    return await generateOne(softenPrompt(prompt), prefix + "_r", refNames);
+  }
+}
+
 type ModelItem = { id: string; url: string; name: string; at: string; samples?: string[] };
 
 // 모델이 제품을 들고 있는 예시샷 프롬프트 (제품=1번 참조, 모델=2번 참조)
@@ -234,7 +255,7 @@ export async function POST(req: NextRequest) {
       const item = items.find((i) => i.id === id);
       if (!item) throw new Error("모델을 찾을 수 없어요");
       const [prodName, mName] = await Promise.all([uploadImage(productUrl), uploadImage(item.url)]);
-      const buf = await generateOne(SAMPLE_PROMPT, `sample_${id}`, [prodName, mName]);
+      const buf = await generateWithRetry(SAMPLE_PROMPT, `sample_${id}`, [prodName, mName]);
       const path = `models/s_${id}_${Date.now().toString(36)}.png`;
       const { error } = await sb.storage
         .from(BUCKET)
@@ -268,7 +289,7 @@ export async function POST(req: NextRequest) {
         "her outfit. " + wear + OUTFIT_STYLE +
         "Photorealistic, real fashion lookbook quality, no text, no labels, no watermark.";
       const stamp = Date.now().toString(36);
-      const buf = await generateOne(prompt, `reoutfit_${id}`, outfitName ? [sheetName, outfitName] : [sheetName]);
+      const buf = await generateWithRetry(prompt, `reoutfit_${id}`, outfitName ? [sheetName, outfitName] : [sheetName]);
       const path = `models/m_${id}_o_${stamp}.png`;
       const { error } = await sb.storage
         .from(BUCKET)
@@ -312,7 +333,7 @@ export async function POST(req: NextRequest) {
             (userStyle ? "Additional style notes: " + userStyle + ". " : "") +
             wear +
             OUTFIT_STYLE;
-          const buf = await generateOne(prompt, `model_${batch}_${i}`, outfitName ? [outfitName] : undefined);
+          const buf = await generateWithRetry(prompt, `model_${batch}_${i}`, outfitName ? [outfitName] : undefined);
           const path = `models/m_${batch}_${i}.png`;
           const { error } = await sb.storage
             .from(BUCKET)
