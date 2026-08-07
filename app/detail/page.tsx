@@ -34,7 +34,7 @@ const DEFAULT_CUTS = [
 
 export default function DetailBuilder() {
   const [tab, setTab] = useState<"gen" | "phone" | "renders" | "refs" | "reffind" | "hist" | "credits">("gen");
-  const [slug, setSlug] = useState("cleanswingP");
+  const [slug, setSlug] = useState("");
   const [trigger, setTrigger] = useState("cleanswingP");
   // 앵커 실사 여러 장(여러 각도) — 컷마다 어울리는 각도를 AI가 자동 선택
   const [anchors, setAnchors] = useState<string[]>([
@@ -1119,6 +1119,8 @@ ${datas.map((d) => `<img src="${d}" alt="">`).join("\n")}
         if (Array.isArray(d.gifSkip)) setGifSkip(d.gifSkip);
         if (d.copyCutPrompts) setCopyCutPrompts(d.copyCutPrompts);
       }
+      // 슬러그 없으면 브라우저별 고유 슬러그 자동 부여 — 여러 사람이 동시에 써도 저장 폴더가 안 겹침
+      if (!raw || !JSON.parse(raw).slug) setSlug("p" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6));
     } catch {}
     draftReady.current = true;
   }, []);
