@@ -178,7 +178,17 @@ export async function POST(req: NextRequest) {
     }
 
     // 미리보기 모드: 렌더/캡처 없이 채워진 HTML만 반환 (프론트 iframe에서 확인·수정용)
-    if (product.preview) return NextResponse.json({ ok: true, html });
+    // 배치된 GIF/추가컷도 섹션 뒤에 끼워 보여줌 (실제 렌더와 동일한 위치 확인용)
+    if (product.preview) {
+      const pv = (Array.isArray(product.gifs) ? product.gifs : [])
+        .filter((g: any) => g?.url && Number(g.after) > 0)
+        .map((g: any) => ({ after: Number(g.after), url: String(g.url) }));
+      if (pv.length) {
+        const script = `<script>window.addEventListener("DOMContentLoaded",function(){var gs=${JSON.stringify(pv).replace(/</g, "\\u003c")};gs.sort(function(a,b){return b.after-a.after});gs.forEach(function(g){var el=document.body.children[g.after-1];if(el){var img=document.createElement("img");img.src=g.url;img.style.cssText="width:100%;display:block";el.after(img)}})});</script>`;
+        html = html.includes("</body>") ? html.replace("</body>", script + "</body>") : html + script;
+      }
+      return NextResponse.json({ ok: true, html });
+    }
 
     // ---------- 0. 웜 람다 /tmp 찌꺼기 청소 (크로미움 추출본 /tmp/chromium은 보존) ----------
     try {

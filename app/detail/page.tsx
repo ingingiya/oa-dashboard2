@@ -1023,7 +1023,7 @@ ${h.urls.map((u) => `<img src="${u}" alt="">`).join("\n")}
       }
       if (!res?.url) throw new Error("생성 타임아웃 (15분 초과)");
       setGifRows((rs) => [...rs, { after: "", url: res.url }]);
-      setGifBusy("완료 — 아래 GIF 조각 줄에 추가됐어요. 넣을 섹션 번호만 적어주세요");
+      setGifBusy("완료 — 바로 아래 결과물 확인 (클릭=크게), 배치는 스텝③ 드롭다운에서");
     } catch (e: any) {
       setGifBusy("실패: " + e.message);
     }
