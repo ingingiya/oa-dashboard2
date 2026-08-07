@@ -33,6 +33,7 @@ const DEFAULT_CUTS = [
 ];
 
 export default function DetailBuilder() {
+  const [tab, setTab] = useState<"gen" | "hist">("gen");
   const [slug, setSlug] = useState("cleanswingP");
   const [trigger, setTrigger] = useState("cleanswingP");
   const [anchorUrl, setAnchorUrl] = useState(
@@ -158,6 +159,68 @@ export default function DetailBuilder() {
     );
   }
 
+  // ── 사진 일괄 업로드 → AI 자동 배치 ──
+  const [bulkBusy, setBulkBusy] = useState("");
+
+  async function downscale(file: File, max = 1600): Promise<Blob> {
+    const bmp = await createImageBitmap(file);
+    const r = Math.min(1, max / Math.max(bmp.width, bmp.height));
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.round(bmp.width * r);
+    canvas.height = Math.round(bmp.height * r);
+    canvas.getContext("2d")!.drawImage(bmp, 0, 0, canvas.width, canvas.height);
+    return new Promise((res) => canvas.toBlob((b) => res(b!), "image/jpeg", 0.87));
+  }
+
+  async function bulkUpload(files: FileList) {
+    try {
+      setBulkBusy(`업로드 중… (0/${files.length})`);
+      const sign = await fetch("/api/detail/upload-sign", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ slug, files: Array.from(files).map((f) => f.name) }),
+      }).then((r) => r.json());
+      if (!sign.ok) throw new Error(sign.error);
+
+      for (let i = 0; i < files.length; i++) {
+        const blob = await downscale(files[i]);
+        const { error } = await supabase.storage
+          .from("detail-assets")
+          .uploadToSignedUrl(sign.files[i].path, sign.files[i].token, blob, {
+            contentType: "image/jpeg",
+          });
+        if (error) throw new Error(error.message);
+        setBulkBusy(`업로드 중… (${i + 1}/${files.length})`);
+      }
+
+      setBulkBusy("AI 분석 중… (10~30초)");
+      const res = await fetch("/api/detail/analyze", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          productSlug: slug,
+          urls: sign.files.map((f: any) => f.publicUrl),
+        }),
+      }).then((r) => r.json());
+      if (!res.ok) throw new Error(res.error);
+
+      setCuts((p) =>
+        p.map((c) => {
+          const hit = res.cuts.find((r: any) => r.file === c.file);
+          return hit ? { ...c, url: hit.url + "?t=" + Date.now() } : c;
+        })
+      );
+      if (res.anchorUrl) setAnchorUrl(res.anchorUrl);
+      const placed = res.cuts.map((c: any) => c.file.replace(".png", "")).join(", ");
+      setBulkBusy(
+        `배치 완료 — ${placed || "없음"}${res.anchorUrl ? " + 앵커" : ""} (나머지 슬롯은 AI 생성)`
+      );
+      loadHistory();
+    } catch (e: any) {
+      setBulkBusy("실패: " + e.message);
+    }
+  }
+
   // ── 생성 기록 ──
   type HistItem = { id: string; at: string; type: string; slug: string; urls: string[]; deleted?: boolean };
   const [history, setHistory] = useState<HistItem[]>([]);
@@ -219,6 +282,19 @@ export default function DetailBuilder() {
           <h1 style={{ fontSize: 22, fontWeight: 800, color: C.ink, letterSpacing: "-0.02em" }}>상세페이지 생성기</h1>
         </div>
 
+        <div style={{ display: "flex", gap: 8, marginTop: 16 }}>
+          {([["gen", "생성기"], ["hist", "생성 기록"]] as const).map(([k, label]) => (
+            <button key={k} onClick={() => { setTab(k); if (k === "hist") loadHistory(); }}
+              style={{ border: "none", borderRadius: 10, padding: "9px 18px", fontSize: 13,
+                fontWeight: 800, cursor: "pointer", fontFamily: "inherit",
+                background: tab === k ? C.rose : C.white, color: tab === k ? "#fff" : C.inkMid,
+                boxShadow: tab === k ? "0 4px 12px rgba(0,113,227,.25)" : `inset 0 0 0 1px ${C.border}` }}>
+              {label}
+            </button>
+          ))}
+        </div>
+
+        {tab === "gen" && (<>
         <div style={card}>
           <div style={cardTitle}>기본 설정</div>
           <div style={cardSub}>슬러그는 저장 폴더명 · 앵커는 제품 실사 공개 URL(나노바나나가 이 이미지 그대로 그려요)</div>
@@ -250,7 +326,7 @@ export default function DetailBuilder() {
 
         <div style={card}>
           <div style={cardTitle}>① 제품 정보 → 카피 생성</div>
-          <div style={cardSub}>스펙·소구점을 넣으면 Claude가 상세페이지 전체 카피(JSON)를 만들어요</div>
+          <div style={cardSub}>제품 정보를 붙여넣으면 Claude가 USP를 자동 분석해 전체 카피(JSON)를 만들어요 — 소구점은 비워도 돼요</div>
           <div style={{ display: "flex", gap: 12 }}>
             <input value={form.productName}
               onChange={(e) => setForm((f) => ({ ...f, productName: e.target.value }))}
@@ -267,7 +343,7 @@ export default function DetailBuilder() {
             <input key={i} value={p}
               onChange={(e) =>
                 setForm((f) => ({ ...f, points: f.points.map((x, j) => (j === i ? e.target.value : x)) }))}
-              placeholder={`핵심 소구점 ${i + 1}`}
+              placeholder={`핵심 소구점 ${i + 1} (선택 — 비우면 스펙에서 자동 분석)`}
               style={{ ...inp, width: "100%", marginTop: 8 }} />
           ))}
           <button onClick={generateCopy} disabled={copyBusy}
@@ -283,12 +359,20 @@ export default function DetailBuilder() {
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
             <div>
               <div style={cardTitle}>② 컷 생성 / 재생성</div>
-              <div style={cardSub}>AI 생성(LoRA) 또는 실사 업로드(자동 배경제거) — 슬롯별로 섞어 써도 돼요</div>
+              <div style={cardSub}>사진을 한번에 올리면 AI가 분석해 슬롯에 자동 배치 — 빈 슬롯은 나노바나나 생성으로 채워요</div>
             </div>
-            <button onClick={() => generateCuts(cuts.map((_, i) => i))} style={{ ...btn, marginTop: 0 }}>
-              전체 컷 생성
-            </button>
+            <div style={{ display: "flex", gap: 8 }}>
+              <label style={{ ...btn, marginTop: 0, background: C.ink, boxShadow: "none", cursor: "pointer" }}>
+                사진 일괄 업로드
+                <input type="file" accept="image/*" multiple hidden
+                  onChange={(e) => e.target.files?.length && bulkUpload(e.target.files)} />
+              </label>
+              <button onClick={() => generateCuts(cuts.map((_, i) => i))} style={{ ...btn, marginTop: 0 }}>
+                전체 컷 생성
+              </button>
+            </div>
           </div>
+          {bulkBusy && <p style={{ fontSize: 13, color: bulkBusy.startsWith("실패") ? "#D70015" : C.inkMid, marginBottom: 8 }}>{bulkBusy}</p>}
           <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 12, marginTop: 4 }}>
             {cuts.map((c, i) => (
               <div key={c.file} style={{ border: `1px solid ${C.border}`, borderRadius: 14, padding: 10, background: C.white }}>
@@ -336,7 +420,9 @@ export default function DetailBuilder() {
             </ul>
           )}
         </div>
+        </>)}
 
+        {tab === "hist" && (
         <div style={card}>
           <div style={cardTitle}>생성 기록</div>
           <div style={cardSub}>모든 컷/렌더 결과가 남아요 — 삭제해도 기록은 보존되고 파일만 지워져요</div>
@@ -373,6 +459,7 @@ export default function DetailBuilder() {
             </div>
           ))}
         </div>
+        )}
       </div>
     </div>
   );
