@@ -239,6 +239,46 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: true, items });
     }
 
+    // 저장된 모델의 의상만 교체 → 같은 얼굴로 새 시트를 만들어 새 항목으로 추가
+    if (body.reoutfit) {
+      const { id, outfit, outfitUrl } = body.reoutfit;
+      const items = await getList(sb);
+      const item = items.find((i) => i.id === id);
+      if (!item) throw new Error("모델을 찾을 수 없어요");
+      if (!String(outfit || "").trim() && !String(outfitUrl || "").trim())
+        throw new Error("바꿀 의상(텍스트 또는 의상 사진)을 입력하세요");
+      const sheetName = await uploadImage(item.url);
+      const outfitName = String(outfitUrl || "").trim() ? await uploadImage(outfitUrl) : undefined;
+      const wear = outfitName
+        ? "The SECOND reference image shows the new outfit — she is now wearing that EXACT outfit: " +
+          "same garments, same colors, same materials and details, naturally fitted on her body. "
+        : `She is now wearing ${String(outfit).trim()}. `;
+      const prompt =
+        "The FIRST reference image is a multi-view character reference sheet of a woman " +
+        "(full-body front, full-body side profile, close-up face portrait). Recreate the EXACT SAME " +
+        "reference sheet with the IDENTICAL woman — same face, same hairstyle, same features, same " +
+        "three views side by side, same clean light-gray seamless studio background — changing ONLY " +
+        "her outfit. " + wear + OUTFIT_STYLE +
+        "Photorealistic, real fashion lookbook quality, no text, no labels, no watermark.";
+      const stamp = Date.now().toString(36);
+      const buf = await generateOne(prompt, `reoutfit_${id}`, outfitName ? [sheetName, outfitName] : [sheetName]);
+      const path = `models/m_${id}_o_${stamp}.png`;
+      const { error } = await sb.storage
+        .from(BUCKET)
+        .upload(path, buf, { contentType: "image/png", upsert: true });
+      if (error) throw error;
+      const { data } = sb.storage.from(BUCKET).getPublicUrl(path);
+      const made: ModelItem = {
+        id: `${id}_o_${stamp}`,
+        url: data.publicUrl,
+        name: `${item.name} · 새 의상`,
+        at: new Date().toISOString(),
+      };
+      const next = [made, ...items];
+      await setList(sb, next);
+      return NextResponse.json({ ok: true, items: next, newId: made.id });
+    }
+
     if (body.generate) {
       const userStyle = String(body.generate.prompt || "").trim();
       const outfit = String(body.generate.outfit || "").trim();

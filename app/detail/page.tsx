@@ -223,6 +223,14 @@ export default function DetailBuilder() {
       try { res = JSON.parse(txt); } catch { throw new Error("서버 응답 오류: " + txt.slice(0, 120)); }
       if (!res.ok) throw new Error(res.error || "카피 생성 실패");
       setProductJson(JSON.stringify(res.product, null, 2));
+      // 소구점 맞춤 컷 프롬프트 자동 반영 (usp는 효과 시각화)
+      if (res.product.cutPrompts) {
+        const cp = res.product.cutPrompts as Record<string, string>;
+        setCuts((cs) => cs.map((c) => {
+          const key = c.file.replace(/\.\w+$/, "");
+          return cp[key] ? { ...c, prompt: cp[key] } : c;
+        }));
+      }
       // 통붙여넣기에서 추출된 제품명/카테고리 폼에 역반영
       setForm((f) => ({
         ...f,
@@ -323,6 +331,26 @@ export default function DetailBuilder() {
       setModels(res.items || []);
     } catch (e: any) { alert("예시 생성 실패: " + e.message); }
     setSampleBusy(false);
+  }
+
+  // 저장된 모델 의상 갈아입히기 — 같은 얼굴로 새 의상 시트 생성 (새 항목으로 추가)
+  const [reoutfitBusy, setReoutfitBusy] = useState(false);
+  async function reoutfitModel(id: string) {
+    const useUrl = !!modelOutfitUrl;
+    const outfit = useUrl ? "" : prompt("새 의상을 입력하세요 (예: 검정 원피스에 진주 귀걸이)\n※ 의상 사진을 쓰려면 취소 후 위 의상 사진 첨부를 이용", modelOutfit || "");
+    if (!useUrl && !String(outfit || "").trim()) return;
+    if (!(await spend("모델 의상 변경", 1))) return;
+    setReoutfitBusy(true);
+    try {
+      const res = await fetch("/api/detail/model", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ reoutfit: { id, outfit, outfitUrl: modelOutfitUrl } }),
+      }).then((r) => r.json());
+      if (!res.ok) throw new Error(res.error);
+      setModels(res.items || []);
+      if (res.newId) setSelModel(res.newId);
+    } catch (e: any) { alert("의상 변경 실패: " + e.message); }
+    setReoutfitBusy(false);
   }
 
   async function removeModel(id: string) {
@@ -1428,8 +1456,13 @@ ${h.urls.map((u) => `<img src="${u}" alt="">`).join("\n")}
                   <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
                     <span style={{ fontSize: 12.5, fontWeight: 800, color: "#AF52DE" }}>{m.name} — 제품 든 예시</span>
                     <span style={{ fontSize: 11.5, color: C.inkLt }}>이 모델이 제품을 들면 어떻게 나오는지 미리 확인</span>
+                    <button onClick={() => reoutfitModel(m.id)} disabled={reoutfitBusy}
+                      title={modelOutfitUrl ? "첨부한 의상 사진으로 갈아입혀요" : "새 의상 텍스트로 갈아입혀요"}
+                      style={{ ...btnS, flex: "none", marginLeft: "auto", opacity: reoutfitBusy ? 0.6 : 1 }}>
+                      {reoutfitBusy ? "의상 변경 중… (30초~1분)" : "👗 의상 변경"}
+                    </button>
                     <button onClick={makeModelSample} disabled={sampleBusy}
-                      style={{ ...btnS, flex: "none", marginLeft: "auto", opacity: sampleBusy ? 0.6 : 1 }}>
+                      style={{ ...btnS, flex: "none", opacity: sampleBusy ? 0.6 : 1 }}>
                       {sampleBusy ? "생성 중… (30초~1분)" : "예시 생성"}
                     </button>
                   </div>

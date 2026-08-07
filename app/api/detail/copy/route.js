@@ -62,10 +62,21 @@ image 필드는 전부 빈 문자열 "".
   "specs": [ { "label": "제품명", "value": "오아 ${productName}" } ],
   "cert": { "headline": "믿고 쓰는 이유", "items": ["인증/시험 항목"], "image": "" },
   "faq": [ { "q": "질문", "a": "답변" } ],
-  "cta": { "headline": "구매 유도 헤드라인", "image": "" }
+  "cta": { "headline": "구매 유도 헤드라인", "image": "" },
+  "cutPrompts": {
+    "hook": "영어 이미지 프롬프트",
+    "usp1": "...", "usp2": "...", "usp3": "...",
+    "scene1": "...", "scene2": "...", "cert": "...", "packshot": "..."
+  }
 }
 
-specs 배열은 입력 스펙을 label/value로 정리 (5~7행), faq는 구매 망설임 해소 2~3개.`;
+specs 배열은 입력 스펙을 label/value로 정리 (5~7행), faq는 구매 망설임 해소 2~3개.
+
+cutPrompts는 각 섹션의 AI 이미지 생성 프롬프트 (영어, 각 1~2문장):
+- 제품은 반드시 "the product"로 지칭 (실사 참조 이미지가 따로 들어감), 이미지 안에 글자/텍스트 오버레이 금지
+- ★usp1~3이 가장 중요: 위 usp 배열의 소구점 1~3과 각각 1:1 대응 — 그 소구점이 사진만 봐도 즉시 전달되게 "효과를 시각화"할 것. 예: 강력한 바람=휘날리는 리본이나 흐르는 공기 스트림, 미세 진동=역동적 모션 블러와 물방울 튐, 저소음=고요한 새벽 침실 무드, 대용량 배터리=장시간 사용 암시 소품. 단순 제품 클로즈업 금지
+- usp1~3은 나중에 GIF/영상으로 확장되므로 정지컷이어도 모션이 암시되는 장면(바람·스팀·물줄기·입자·빛 등이 흐르는 순간 포착)으로
+- hook은 문제상황이나 극적 무드, scene1~2는 한국 가정 라이프스타일, cert는 신뢰/실험실 무드, packshot은 흰 배경 정면`;
 
   try {
     const client = new Anthropic({ apiKey: key });
@@ -76,7 +87,7 @@ specs 배열은 입력 스펙을 label/value로 정리 (5~7행), faq는 구매 �
     );
     const msg = await client.messages.create({
       model: 'claude-opus-4-6',
-      max_tokens: 2000,
+      max_tokens: 3500,
       messages: [{ role: 'user', content: [...blocks, { type: 'text', text: prompt }] }],
     });
     const text = (msg.content || []).find((b) => b.type === 'text')?.text || '';
