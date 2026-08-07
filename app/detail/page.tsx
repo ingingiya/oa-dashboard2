@@ -919,7 +919,7 @@ ${h.urls.map((u) => `<img src="${u}" alt="">`).join("\n")}
     product.cta.image = u("packshot.png");
     product.slug = slug; // 저장 폴더명 (한글 제품명 대신 기본설정 슬러그 사용)
     product.gifs = gifRows
-      .map((r) => ({ after: Number(r.after) || 0, url: r.url.trim() }))
+      .map((r) => ({ after: Number(r.after) || 0, url: String(r.url || "").trim() }))
       .filter((g) => g.after > 0 && g.url);
     return product;
   }
