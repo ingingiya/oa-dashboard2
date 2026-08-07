@@ -862,7 +862,8 @@ export default function DetailBuilder() {
           {step < 3 ? (
             <button onClick={nextStep} style={{ ...btn, marginTop: 0, padding: "11px 26px" }}>다음 →</button>
           ) : (
-            <span style={{ fontSize: 12.5, color: C.inkMid, alignSelf: "center" }}>렌더가 끝나면 "최종 렌더 모음" 탭에 저장돼요</span>
+            <button onClick={() => { setTab("renders"); loadHistory(); window.scrollTo({ top: 0 }); }}
+              style={{ ...btn, marginTop: 0, padding: "11px 26px" }}>최종 렌더 모음 보기 →</button>
           )}
         </div>
         </>)}
