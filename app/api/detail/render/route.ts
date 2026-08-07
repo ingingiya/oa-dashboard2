@@ -274,9 +274,12 @@ export async function POST(req: NextRequest) {
           const r = await fetch(piece.url);
           if (!r.ok) throw new Error(`GIF 다운로드 실패 (${r.status}): ${piece.url}`);
           buf = new Uint8Array(await r.arrayBuffer());
-          const low = piece.url.toLowerCase();
-          if (low.includes(".mp4")) { ext = "mp4"; contentType = "video/mp4"; }
-          else if (low.includes(".webm")) { ext = "webm"; contentType = "video/webm"; }
+          const low = piece.url.toLowerCase().split("?")[0];
+          if (low.endsWith(".mp4")) { ext = "mp4"; contentType = "video/mp4"; }
+          else if (low.endsWith(".webm")) { ext = "webm"; contentType = "video/webm"; }
+          else if (low.endsWith(".png")) { ext = "png"; contentType = "image/png"; }
+          else if (low.endsWith(".jpg") || low.endsWith(".jpeg")) { ext = "jpg"; contentType = "image/jpeg"; }
+          else if (low.endsWith(".webp")) { ext = "webp"; contentType = "image/webp"; }
           else { ext = "gif"; contentType = "image/gif"; }
         } else {
           // clip이 뷰포트 밖에서 잘리는 문제 회피 — 뷰포트를 조각 크기로 맞추고 스크롤해서 캡처

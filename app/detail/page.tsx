@@ -1609,9 +1609,9 @@ ${h.urls.map((u) => `<img src="${u}" alt="">`).join("\n")}
             const unplaced = gifRows.map((r, gi) => ({ r, gi })).filter(({ r }) => r.url && !(Number(r.after) > 0));
             return (
               <div style={{ border: `1px solid ${C.border}`, borderRadius: 14, padding: 14, marginBottom: 14, background: "#fffdf8" }}>
-                <div style={{ fontSize: 13.5, fontWeight: 800, color: C.ink }}>GIF 배치</div>
+                <div style={{ fontSize: 13.5, fontWeight: 800, color: C.ink }}>GIF·추가 컷 배치</div>
                 <div style={{ fontSize: 12, color: C.inkMid, marginTop: 2 }}>
-                  아래 대기함의 GIF를 원하는 섹션 사이 점선 칸으로 끌어다 놓으세요 — 놓은 위치에 원본 그대로 삽입돼요
+                  GIF와 <b>모델컷·포즈컷 같은 추가 컷</b>은 기본 템플릿 슬롯에 없어서 여기서 배치해야 렌더에 들어가요 — 원하는 섹션 사이 점선 칸으로 끌어다 놓으세요
                 </div>
                 <div onDragOver={(e) => e.preventDefault()} onDrop={dropTo("")}
                   style={{ ...zone, marginTop: 10, borderColor: "#c8c8cc", background: "#fafafa" }}>
@@ -1636,8 +1636,28 @@ ${h.urls.map((u) => `<img src="${u}" alt="">`).join("\n")}
                     </div>
                   ))}
                 </div>
-                <button onClick={() => setGifRows((rs) => [...rs, { after: "", url: prompt("GIF/영상 URL 직접 추가") || "" }])}
-                  style={{ ...btnS, marginTop: 10, flex: "none" }}>+ URL로 직접 추가</button>
+                <div style={{ display: "flex", gap: 8, marginTop: 10, alignItems: "center", flexWrap: "wrap" }}>
+                  {(() => {
+                    const FIXED = new Set(["hook.png", "usp1.png", "usp2.png", "usp3.png", "scene1.png", "scene2.png", "cert.png", "packshot.png"]);
+                    const extras = cuts.filter((c) =>
+                      c.url && !FIXED.has(c.file) && !gifRows.some((r) => r.url === c.url.split("?")[0]));
+                    if (!extras.length) return null;
+                    return (
+                      <select value=""
+                        onChange={(e) => {
+                          const c = extras.find((x) => x.file === e.target.value);
+                          if (c) setGifRows((rs) => [...rs, { after: "", url: c.url.split("?")[0] }]);
+                        }}
+                        title="모델컷·포즈컷 등 기본 8슬롯 밖 컷을 대기함에 추가"
+                        style={{ ...inp, width: 220, cursor: "pointer", fontWeight: 700 }}>
+                        <option value="">+ 생성된 컷 추가 (모델컷 등)</option>
+                        {extras.map((c) => <option key={c.file} value={c.file}>{c.label}</option>)}
+                      </select>
+                    );
+                  })()}
+                  <button onClick={() => setGifRows((rs) => [...rs, { after: "", url: prompt("GIF/영상/이미지 URL 직접 추가") || "" }])}
+                    style={{ ...btnS, flex: "none" }}>+ URL로 직접 추가</button>
+                </div>
               </div>
             );
           })()}
