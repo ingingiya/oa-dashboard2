@@ -261,6 +261,17 @@ export default function DetailBuilder() {
     }
   }
 
+  // ── 생성 컨셉 프리셋 (AI 추천과 별개: 깔끔 누끼 / 컬러 배경) ──
+  const [preset, setPreset] = useState<"" | "nukki" | "color">("");
+  const [presetColor, setPresetColor] = useState("#EAF3FF");
+  const presetStyleBlock = () => {
+    if (preset === "nukki")
+      return "Pure seamless white background (#FFFFFF), clean cutout-style e-commerce packshot, soft even studio lighting, only a faint natural contact shadow directly under the product, no props, no gradient, no environment.";
+    if (preset === "color")
+      return `Solid seamless ${presetColor} studio background filling the entire frame, clean cutout-style product shot, soft even studio lighting, gentle contact shadow under the product, no props, minimal premium e-commerce look.`;
+    return "";
+  };
+
   // ── 컷 생성 (개별/전체 동일 라우트) ──
   async function generateCuts(indices: number[]) {
     if (!anchors.length) return alert("제품 실사(앵커)를 최소 1장 넣어주세요");
@@ -276,7 +287,7 @@ export default function DetailBuilder() {
         productSlug: slug,
         cuts: targets,
         anchorUrls: anchors,
-        styleBlock: selConcept >= 0 ? concepts[selConcept]?.styleBlock : "",
+        styleBlock: presetStyleBlock() || (selConcept >= 0 ? concepts[selConcept]?.styleBlock : ""),
       }),
     }).then((r) => r.json());
 
@@ -481,7 +492,7 @@ export default function DetailBuilder() {
         <div style={{ display: "flex", alignItems: "center", gap: 6, margin: "18px 0 4px", flexWrap: "wrap" }}>
           {([
             ["카피 생성", !!productJson, "제품 정보를 넣고 카피를 만들어요"],
-            ["연출 컨셉", selConcept >= 0, "(선택) 배경·컬러 방향 고르기"],
+            ["생성 컨셉", selConcept >= 0 || !!preset, "(선택) 누끼/컬러/AI 추천 중 고르기"],
             ["컷 생성", cuts.some((c) => c.url), "실사 앵커로 연출컷 생성"],
             ["최종 렌더", sliceUrls.length > 0, "분할 JPG/GIF로 저장"],
           ] as [string, boolean, string][]).map(([label, done, tip], i, arr) => (
@@ -677,15 +688,35 @@ export default function DetailBuilder() {
         </div>
 
         <div style={card}>
-          <div style={cardTitle}>② 연출 컨셉 <span style={{ color: C.inkMid, fontWeight: 400, fontSize: 12 }}>(선택)</span></div>
-          <div style={cardSub}>AI가 제품에 어울리는 배경·컬러 연출 4가지를 제안해요 — 고르면 모든 컷이 그 방향으로 생성돼요 (안 고르면 기본 연출)</div>
+          <div style={cardTitle}>② 생성 컨셉 <span style={{ color: C.inkMid, fontWeight: 400, fontSize: 12 }}>(선택)</span></div>
+          <div style={cardSub}>기본 스타일을 고르거나, AI 추천을 받아보세요 — 고르면 모든 컷이 그 방향으로 생성돼요 (안 고르면 기본 연출)</div>
+          <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", marginBottom: 10 }}>
+            <div onClick={() => { setPreset(preset === "nukki" ? "" : "nukki"); setSelConcept(-1); }}
+              style={{ padding: "9px 16px", borderRadius: 10, cursor: "pointer", fontSize: 13, fontWeight: 800,
+                border: preset === "nukki" ? `2px solid ${C.rose}` : `1px solid ${C.border}`,
+                background: preset === "nukki" ? "#f0f7ff" : "#fff", color: C.ink }}>
+              {preset === "nukki" ? "✓ " : ""}깔끔한 누끼형 <span style={{ fontWeight: 400, color: C.inkMid }}>— 흰 배경 + 은은한 그림자</span>
+            </div>
+            <div onClick={() => { setPreset(preset === "color" ? "" : "color"); setSelConcept(-1); }}
+              style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 16px", borderRadius: 10,
+                cursor: "pointer", fontSize: 13, fontWeight: 800,
+                border: preset === "color" ? `2px solid ${C.rose}` : `1px solid ${C.border}`,
+                background: preset === "color" ? "#f0f7ff" : "#fff", color: C.ink }}>
+              {preset === "color" ? "✓ " : ""}컬러 배경형
+              <input type="color" value={presetColor}
+                onClick={(e) => e.stopPropagation()}
+                onChange={(e) => { setPresetColor(e.target.value); setPreset("color"); setSelConcept(-1); }}
+                style={{ width: 30, height: 26, border: "none", background: "none", cursor: "pointer", padding: 0 }} />
+              <span style={{ fontWeight: 400, color: C.inkMid }}>{presetColor}</span>
+            </div>
+          </div>
           <button onClick={recommendConcepts} disabled={conceptBusy} style={{ ...btnS, opacity: conceptBusy ? 0.6 : 1 }}>
-            {conceptBusy ? "추천 중…" : "컨셉 추천받기"}
+            {conceptBusy ? "추천 중…" : "AI 컨셉 추천받기"}
           </button>
           {concepts.length > 0 && (
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(200px,1fr))", gap: 10, marginTop: 12 }}>
               {concepts.map((c, i) => (
-                <div key={i} onClick={() => setSelConcept(selConcept === i ? -1 : i)}
+                <div key={i} onClick={() => { setSelConcept(selConcept === i ? -1 : i); setPreset(""); }}
                   style={{ padding: "12px 14px", borderRadius: 12, cursor: "pointer",
                     border: selConcept === i ? `2px solid ${C.rose}` : `1px solid ${C.border}`,
                     background: selConcept === i ? "#f0f7ff" : "#fff" }}>
