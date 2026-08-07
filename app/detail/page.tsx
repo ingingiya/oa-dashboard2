@@ -33,7 +33,7 @@ const DEFAULT_CUTS = [
 ];
 
 export default function DetailBuilder() {
-  const [tab, setTab] = useState<"gen" | "hist">("gen");
+  const [tab, setTab] = useState<"gen" | "refs" | "hist">("gen");
   const [slug, setSlug] = useState("cleanswingP");
   const [trigger, setTrigger] = useState("cleanswingP");
   const [anchorUrl, setAnchorUrl] = useState(
@@ -312,7 +312,7 @@ export default function DetailBuilder() {
         </div>
 
         <div style={{ display: "flex", gap: 8, marginTop: 16 }}>
-          {([["gen", "생성기"], ["hist", "생성 기록"]] as const).map(([k, label]) => (
+          {([["gen", "생성기"], ["refs", "모션 레퍼런스"], ["hist", "생성 기록"]] as const).map(([k, label]) => (
             <button key={k} onClick={() => { setTab(k); if (k === "hist") loadHistory(); }}
               style={{ border: "none", borderRadius: 10, padding: "9px 18px", fontSize: 13,
                 fontWeight: 800, cursor: "pointer", fontFamily: "inherit",
@@ -501,6 +501,47 @@ export default function DetailBuilder() {
           )}
         </div>
         </>)}
+
+        {tab === "refs" && (
+          <div style={card}>
+            <div style={cardTitle}>모션 레퍼런스 갤러리 <span style={{ color: C.inkMid, fontWeight: 400, fontSize: 12 }}>와디즈 가전 상세페이지 수집 {motionRefs.length}개</span></div>
+            <div style={cardSub}>GIF는 자동 재생 · 영상은 마우스 올리면 재생 — 컷 연출·수치 표현 참고용</div>
+            <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 12 }}>
+              {([["all", "전체"], ["typo", "타이포"], ["graph", "그래프·수치"], ["real", "실사"]] as const).map(([k, label]) => (
+                <button key={k} onClick={() => setRefCat(k)}
+                  style={{ border: "none", borderRadius: 8, padding: "7px 14px", fontSize: 12.5, fontWeight: 700,
+                    cursor: "pointer", fontFamily: "inherit",
+                    background: refCat === k ? C.ink : "#f0f0f2", color: refCat === k ? "#fff" : C.inkMid }}>
+                  {label} {k === "all" ? motionRefs.length : motionRefs.filter((m) => m.category === k).length}
+                </button>
+              ))}
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(260px,1fr))", gap: 14 }}>
+              {motionRefs.filter((m) => refCat === "all" || m.category === refCat).map((m) => (
+                <div key={m.id} style={{ background: "#f7f7f8", borderRadius: 12, overflow: "hidden",
+                  border: `1px solid ${C.border}` }}>
+                  {m.url.endsWith(".mp4") ? (
+                    <video src={m.url} muted loop playsInline preload="metadata" controls={false}
+                      onMouseOver={(e) => e.currentTarget.play()} onMouseOut={(e) => e.currentTarget.pause()}
+                      onClick={(e) => { const v = e.currentTarget; v.paused ? v.play() : v.pause(); }}
+                      style={{ width: "100%", display: "block", background: "#000", cursor: "pointer" }} />
+                  ) : (
+                    <img src={m.url} loading="lazy" alt={m.label}
+                      style={{ width: "100%", display: "block", background: "#000" }} />
+                  )}
+                  <div style={{ padding: "9px 12px" }}>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: C.ink, lineHeight: 1.35 }}>{m.label}</div>
+                    <div style={{ fontSize: 12, color: C.inkMid, marginTop: 2 }}>{m.product}</div>
+                    <a href={m.source} target="_blank" rel="noreferrer"
+                      style={{ fontSize: 12, color: "#0071E3", textDecoration: "none" }}>
+                      {m.keyword} · 와디즈 원본 ↗
+                    </a>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {tab === "hist" && (
         <div style={card}>
