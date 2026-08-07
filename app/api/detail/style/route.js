@@ -60,6 +60,11 @@ export async function POST(request) {
   {{faqItems}} → 서버가 <div class="faq-item"><div class="q">Q…</div><div class="a">A…</div></div>… 로 치환
   → .specs-table, .faq-item .q/.a 클래스를 CSS로 스타일링하세요.
 - headline 류는 줄바꿈 포함 가능 → white-space:pre-line.
+- **타이포 위계 필수** (레퍼런스가 어떻든 이 최소 기준은 지킬 것 — 모바일에서 읽히는 크기):
+  훅 메인 헤드라인 46~56px/weight 850/letter-spacing -0.03em, 섹션 헤드라인 34~42px/800,
+  서브카피 19~22px/500, 본문 16~17px/400/line-height 1.75, 캡션·라벨 13~14px.
+  같은 섹션 안에서 헤드라인:본문 크기 대비 최소 2.2배. 본문 한 줄 최대 32자 느낌으로.
+- 여백 리듬: 섹션 상하 패딩 80~110px, 헤드라인↔본문 사이 20~28px — 답답하게 붙이지 말 것.
 - 이미지 플레이스홀더는 <img src="{{…}}" style="width:100%;display:block"> 기본, 디자인에 맞게 radius 등 조정.
 - 섹션 순서는 첨부 디자인의 흐름을 따르되 위 데이터가 전부 들어가야 함 (훅→USP 3개→사용씬→스펙→인증→FAQ→CTA 골격 안에서 변형).
 - 각 섹션은 <body> 바로 아래 최상위 요소로 (서버가 섹션 경계에서 이미지를 자름).

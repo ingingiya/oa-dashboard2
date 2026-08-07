@@ -25,9 +25,16 @@ const DEFAULT_REF =
   "Use the product in the reference image as the exact product. " +
   "Keep the product design, proportions, logo placement and materials EXACTLY " +
   "identical to the reference. Do not invent buttons, text or patterns. " +
-  "No people, no hands, no watermark. " +
-  "Ultra-detailed, tack-sharp focus on the product, visible material texture, " +
-  "high-end commercial product photography detail. ";
+  "No people, no hands, no watermark. ";
+
+// 광고급 디테일 블록 (ad_style_library.md 기반, 스틸컷용) — 모든 컷 프롬프트 뒤에 자동 삽입
+const DETAIL_BLOCK =
+  " ★ AD-GRADE DETAIL: shot on a 100mm macro lens at f/2.8 — creamy cinematic depth of field, " +
+  "8K commercial sharpness on the product. Crisp specular highlights tracing the product edges, " +
+  "soft wraparound softbox key light, gentle gradient shadows with clean falloff. " +
+  "Tactile micro-detail: fine premium surface texture readable up close, catalog-perfect styling. " +
+  "Color graded like a high-end Korean CF — pure bright white, zero color cast. " +
+  "The product reads instantly as the hero of the frame, nothing competing for attention.";
 
 // 인물(여성 모델) 컷 시그니처 스타일 — 클린이스윙 캠페인에서 확정된 K-드라마 배우급 블록
 const BEAUTY_BLOCK =
@@ -210,7 +217,7 @@ export async function POST(req: NextRequest) {
         const cutRef = hasPerson(cut.prompt)
           ? ref.replace(/No people, no hands, /i, "") + BEAUTY_BLOCK
           : ref;
-        const buf = await generateOne(anchorName, cutRef + style + cut.prompt, prefix);
+        const buf = await generateOne(anchorName, cutRef + style + cut.prompt + DETAIL_BLOCK, prefix);
         const filePath = `${productSlug}/${cut.file}`;
         const { error } = await getSupabase().storage
           .from(BUCKET)
