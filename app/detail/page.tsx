@@ -33,7 +33,7 @@ const DEFAULT_CUTS = [
 ];
 
 export default function DetailBuilder() {
-  const [tab, setTab] = useState<"gen" | "renders" | "refs" | "hist">("gen");
+  const [tab, setTab] = useState<"gen" | "renders" | "refs" | "reffind" | "hist">("gen");
   const [slug, setSlug] = useState("cleanswingP");
   const [trigger, setTrigger] = useState("cleanswingP");
   // 앵커 실사 여러 장(여러 각도) — 컷마다 어울리는 각도를 AI가 자동 선택
@@ -427,6 +427,51 @@ export default function DetailBuilder() {
       .then((res) => { if (res.ok) setMotionRefs(res.items); }).catch(() => {});
   }, []);
 
+  // ── 레퍼런스 찾기 (HTML 긁기 적합도 검사 + 저장 목록) ──
+  type RefSite = { id: string; url: string; name: string; verdict: string; at: string };
+  const [refSites, setRefSites] = useState<RefSite[]>([]);
+  const [refCheckUrl, setRefCheckUrl] = useState("");
+  const [refCheckBusy, setRefCheckBusy] = useState(false);
+  const [refCheckResult, setRefCheckResult] = useState<{ url: string; verdict: string; reason: string } | null>(null);
+
+  async function loadRefSites() {
+    const res = await fetch("/api/detail/ref-check").then((r) => r.json());
+    if (res.ok) setRefSites(res.items);
+  }
+  async function checkRefUrl() {
+    const url = refCheckUrl.trim();
+    if (!url) return;
+    setRefCheckBusy(true);
+    setRefCheckResult(null);
+    try {
+      const res = await fetch("/api/detail/ref-check", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url }),
+      }).then((r) => r.json());
+      if (!res.ok) throw new Error(res.error);
+      setRefCheckResult({ url, verdict: res.verdict, reason: res.reason });
+    } catch (e: any) {
+      setRefCheckResult({ url, verdict: "fail", reason: e.message });
+    }
+    setRefCheckBusy(false);
+  }
+  async function refSiteAction(body: any) {
+    const res = await fetch("/api/detail/ref-check", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    }).then((r) => r.json());
+    if (res.ok) setRefSites(res.items);
+  }
+  // 이 URL로 템플릿 레퍼런스 분석하러 가기
+  function useRefUrl(url: string) {
+    setStyleUrl(url);
+    setTab("gen");
+    setStep(0);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
   // ── 생성 기록 ──
   type HistItem = { id: string; at: string; type: string; slug: string; urls: string[]; htmlUrl?: string; deleted?: boolean };
   const [history, setHistory] = useState<HistItem[]>([]);
@@ -560,8 +605,8 @@ ${h.urls.map((u) => `<img src="${u}" alt="">`).join("\n")}
         </div>
 
         <div style={{ display: "flex", gap: 8, marginTop: 16 }}>
-          {([["gen", "생성기"], ["renders", "최종 렌더 모음"], ["refs", "모션 레퍼런스"], ["hist", "생성 기록"]] as const).map(([k, label]) => (
-            <button key={k} onClick={() => { setTab(k); if (k === "hist" || k === "renders") loadHistory(); }}
+          {([["gen", "생성기"], ["renders", "최종 렌더 모음"], ["refs", "모션 레퍼런스"], ["reffind", "레퍼런스 찾기"], ["hist", "생성 기록"]] as const).map(([k, label]) => (
+            <button key={k} onClick={() => { setTab(k); if (k === "hist" || k === "renders") loadHistory(); if (k === "reffind") loadRefSites(); }}
               style={{ border: "none", borderRadius: 10, padding: "9px 18px", fontSize: 13,
                 fontWeight: 800, cursor: "pointer", fontFamily: "inherit",
                 background: tab === k ? C.rose : C.white, color: tab === k ? "#fff" : C.inkMid,
@@ -982,6 +1027,64 @@ ${h.urls.map((u) => `<img src="${u}" alt="">`).join("\n")}
               ))}
             </div>
           </div>
+        )}
+
+        {tab === "reffind" && (
+        <div style={card}>
+          <div style={cardTitle}>레퍼런스 찾기 <span style={{ color: C.inkMid, fontWeight: 400, fontSize: 12 }}>HTML 긁기 적합도 검사</span></div>
+          <div style={cardSub}>따라하고 싶은 상세페이지 URL을 넣으면 HTML로 잘 긁히는지 검사해요 — 잘 긁히는 곳은 저장해두고 클릭 한 번으로 템플릿 분석에 넘길 수 있어요</div>
+          <div style={{ fontSize: 12.5, color: C.inkMid, background: "#f7f8fa", borderRadius: 10, padding: "10px 14px", lineHeight: 1.7, marginBottom: 12 }}>
+            💡 잘 긁히는 곳: 카페24·아임웹·고도몰 <b>브랜드 자사몰</b> (본문이 텍스트 HTML) · 와디즈 펀딩 상세<br />
+            잘 안 긁히는 곳: 스마트스토어·쿠팡 (이미지 통짜 — 이 경우도 자동 캡쳐로 디자인 분석은 가능)
+          </div>
+          <div style={{ display: "flex", gap: 8 }}>
+            <input value={refCheckUrl} onChange={(e) => setRefCheckUrl(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && checkRefUrl()}
+              placeholder="https://... 상세페이지 URL" style={{ ...inp, flex: 1 }} />
+            <button onClick={checkRefUrl} disabled={refCheckBusy}
+              style={{ ...btn, marginTop: 0, opacity: refCheckBusy ? 0.6 : 1 }}>
+              {refCheckBusy ? "검사 중…" : "적합도 검사"}
+            </button>
+          </div>
+          {refCheckResult && (
+            <div style={{ marginTop: 12, padding: "12px 14px", borderRadius: 10, background: "#fff",
+              border: `1px solid ${C.border}` }}>
+              <span style={{ fontSize: 11, fontWeight: 800, color: "#fff", borderRadius: 6, padding: "3px 8px",
+                background: refCheckResult.verdict === "html" ? "#34C759" : refCheckResult.verdict === "image" ? "#FF9500" : "#D70015" }}>
+                {refCheckResult.verdict === "html" ? "HTML 잘 긁힘" : refCheckResult.verdict === "image" ? "이미지 통짜" : "긁기 어려움"}
+              </span>
+              <p style={{ fontSize: 13, color: C.inkMid, marginTop: 8, lineHeight: 1.5 }}>{refCheckResult.reason}</p>
+              <div style={{ display: "flex", gap: 6, marginTop: 10 }}>
+                {refCheckResult.verdict !== "fail" && (
+                  <button onClick={() => refSiteAction({ save: { url: refCheckResult.url, verdict: refCheckResult.verdict } })}
+                    style={btnS}>저장</button>
+                )}
+                <button onClick={() => useRefUrl(refCheckResult.url)}
+                  style={{ ...btnS, background: C.rose, color: "#fff" }}>이 URL로 템플릿 분석하러 가기 →</button>
+              </div>
+            </div>
+          )}
+          {refSites.length > 0 && (
+            <div style={{ marginTop: 16 }}>
+              <div style={{ fontSize: 13, fontWeight: 800, color: C.ink, marginBottom: 6 }}>저장된 레퍼런스</div>
+              {refSites.map((s) => (
+                <div key={s.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "9px 0",
+                  borderTop: `1px solid ${C.border}` }}>
+                  <span style={{ fontSize: 10, fontWeight: 800, color: "#fff", borderRadius: 5, padding: "2px 6px", flex: "none",
+                    background: s.verdict === "html" ? "#34C759" : "#FF9500" }}>
+                    {s.verdict === "html" ? "HTML" : "이미지"}
+                  </span>
+                  <span style={{ fontSize: 13, fontWeight: 700, color: C.ink, flex: "none" }}>{s.name}</span>
+                  <a href={s.url} target="_blank" style={{ fontSize: 12, color: C.inkLt, textDecoration: "none",
+                    whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", flex: 1 }}>{s.url}</a>
+                  <button onClick={() => useRefUrl(s.url)} style={{ ...btnS, flex: "none" }}>템플릿 분석 →</button>
+                  <span onClick={() => confirm("목록에서 삭제할까요?") && refSiteAction({ remove: s.id })}
+                    style={{ cursor: "pointer", color: "#D70015", fontSize: 13, fontWeight: 800, flex: "none" }}>✕</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
         )}
 
         {tab === "renders" && (
