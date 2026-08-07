@@ -348,7 +348,16 @@ export default function DetailBuilder() {
           <div style={cardTitle}>기본 설정</div>
           <div style={cardSub}>슬러그는 저장 폴더명 · 앵커는 제품 실사 공개 URL(나노바나나가 이 이미지 그대로 그려요)</div>
           <div style={{ display: "flex", gap: 12 }}>
-            <input value={slug} onChange={(e) => setSlug(e.target.value)}
+            <input value={slug}
+              onChange={(e) => {
+                const v = e.target.value.trim();
+                setSlug(v);
+                // 슬러그 바꾸면 앵커 URL도 자동 추적 (표준 anchor.jpg 패턴일 때만 — 커스텀 URL은 안 건드림)
+                if (v) setAnchorUrl((a) =>
+                  /detail-assets\/[^/]+\/anchor\.(jpg|png)$/.test(a)
+                    ? a.replace(/detail-assets\/[^/]+\//, `detail-assets/${v}/`)
+                    : a);
+              }}
               placeholder="제품 슬러그" style={{ ...inp, flex: 1 }} />
             <input value={trigger} onChange={(e) => setTrigger(e.target.value)}
               placeholder="제품명(프롬프트 접두어)" style={{ ...inp, flex: 1 }} />
