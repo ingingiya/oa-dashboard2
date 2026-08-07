@@ -42,11 +42,13 @@ export default function DetailBuilder() {
   ]);
   const [anchorInput, setAnchorInput] = useState("");
   const [cuts, setCuts] = useState(
-    DEFAULT_CUTS.map((c) => ({ ...c, url: "", loading: false, withModel: false, aspect: "" }))
+    DEFAULT_CUTS.map((c) => ({ ...c, url: "", loading: false, withModel: false, aspect: "", fixNote: "" }))
   );
   const [productJson, setProductJson] = useState("");
   // 제품 고정사항 (컬러/불변 부위) — 모든 컷 프롬프트에 강제로 붙는다
   const [lockNote, setLockNote] = useState("");
+  // 금지사항 — 절대 나오면 안 되는 것 (모든 컷 공통)
+  const [banNote, setBanNote] = useState("");
   const [sliceUrls, setSliceUrls] = useState<string[]>([]);
   const [busy, setBusy] = useState("");
 
@@ -280,11 +282,12 @@ export default function DetailBuilder() {
   const [aspect, setAspect] = useState("1:1");
 
   // ── 모델(인물) 라이브러리 — 후보 생성 → 한 명 선택하면 "모델" 체크된 컷에 동일 인물로 등장 ──
-  type ModelItem = { id: string; url: string; name: string; at: string };
+  type ModelItem = { id: string; url: string; name: string; at: string; samples?: string[] };
   const [models, setModels] = useState<ModelItem[]>([]);
   const [selModel, setSelModel] = useState("");
   const [modelPrompt, setModelPrompt] = useState("");
   const [modelOutfit, setModelOutfit] = useState("");
+  const [modelOutfitUrl, setModelOutfitUrl] = useState(""); // 의상 사진 (갈아입히기)
   const [modelBusy, setModelBusy] = useState("");
   const [zoomUrl, setZoomUrl] = useState(""); // 이미지 확대 보기 (라이트박스)
   useEffect(() => {
@@ -297,12 +300,29 @@ export default function DetailBuilder() {
     try {
       const res = await fetch("/api/detail/model", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ generate: { prompt: modelPrompt, outfit: modelOutfit, count: 4 } }),
+        body: JSON.stringify({ generate: { prompt: modelPrompt, outfit: modelOutfit, outfitUrl: modelOutfitUrl, count: 4 } }),
       }).then((r) => r.json());
       if (!res.ok) throw new Error(res.error);
       setModels(res.items || []);
       setModelBusy("완료 — 마음에 드는 모델을 클릭해 선택하세요");
     } catch (e: any) { setModelBusy("실패: " + e.message); }
+  }
+
+  // 선택 모델이 제품을 들고 있는 예시샷 생성
+  const [sampleBusy, setSampleBusy] = useState(false);
+  async function makeModelSample() {
+    if (!selModel) return;
+    if (!anchors.length) return alert("스텝1에서 제품 실사 앵커를 먼저 등록해주세요");
+    setSampleBusy(true);
+    try {
+      const res = await fetch("/api/detail/model", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sample: { id: selModel, productUrl: anchors[0] } }),
+      }).then((r) => r.json());
+      if (!res.ok) throw new Error(res.error);
+      setModels(res.items || []);
+    } catch (e: any) { alert("예시 생성 실패: " + e.message); }
+    setSampleBusy(false);
   }
 
   async function removeModel(id: string) {
@@ -329,7 +349,7 @@ export default function DetailBuilder() {
     setCuts((prev) => [
       ...prev,
       { file: `model_pose_${id}.png`, label: `모델 ${p.label}`, withModel: true, aspect: "",
-        prompt: p.prompt, url: "", loading: false },
+        prompt: p.prompt, url: "", loading: false, fixNote: "" },
     ]);
   }
 
@@ -346,7 +366,7 @@ export default function DetailBuilder() {
     setCuts((p) => [
       ...p,
       ...MODEL_CUTS.filter((m) => !p.some((c) => c.file === m.file))
-        .map((m) => ({ ...m, url: "", loading: false })),
+        .map((m) => ({ ...m, url: "", loading: false, fixNote: "" })),
     ]);
   }
 
@@ -369,6 +389,7 @@ export default function DetailBuilder() {
       prompt: `${trigger}, ${cuts[i].prompt}`,
       withModel: !!cuts[i].withModel,
       aspect: cuts[i].aspect || "",
+      fixNote: cuts[i].fixNote || "",
     }));
     const modelUrl = models.find((m) => m.id === selModel)?.url || "";
     if (targets.some((t) => t.withModel) && !modelUrl)
@@ -395,6 +416,7 @@ export default function DetailBuilder() {
         aspectRatio: aspect,
         modelUrl,
         lockNote,
+        banNote,
         styleBlock: [presetStyleBlock() || (selConcept >= 0 ? concepts[selConcept]?.styleBlock : ""), tplMood]
           .filter(Boolean).join(" "),
       }),
@@ -888,6 +910,9 @@ ${h.urls.map((u) => `<img src="${u}" alt="">`).join("\n")}
           <input value={lockNote} onChange={(e) => setLockNote(e.target.value)}
             placeholder="제품 고정사항 — 절대 바뀌면 안 되는 것 (예: 바디는 무광 화이트, 버튼 2개, 로고는 상단 중앙, 케이블 없음)"
             style={{ ...inp, width: "100%", marginTop: 8 }} />
+          <input value={banNote} onChange={(e) => setBanNote(e.target.value)}
+            placeholder="금지사항 — 절대 나오면 안 되는 것 (예: 케이블, 다른 색상 버전, 영어 문구, 스탠드)"
+            style={{ ...inp, width: "100%", marginTop: 8 }} />
         </div>
 
         <div style={card}>
@@ -1109,8 +1134,36 @@ ${h.urls.map((u) => `<img src="${u}" alt="">`).join("\n")}
                 placeholder="모델 스타일 (선택 — 예: 20대 여성, 단발 · 비우면 4명 다른 스타일)"
                 style={{ ...inp, flex: 1, minWidth: 200 }} />
               <input value={modelOutfit} onChange={(e) => setModelOutfit(e.target.value)}
-                placeholder="의상 (선택 — 예: 흰 셔츠에 베이지 슬랙스 · 비우면 깔끔한 기본 의상)"
-                style={{ ...inp, flex: 1, minWidth: 200 }} />
+                placeholder={modelOutfitUrl ? "의상 사진이 우선 적용돼요" : "의상 (선택 — 예: 흰 셔츠에 베이지 슬랙스 · 비우면 깔끔한 기본 의상)"}
+                disabled={!!modelOutfitUrl}
+                style={{ ...inp, flex: 1, minWidth: 200, opacity: modelOutfitUrl ? 0.5 : 1 }} />
+              {modelOutfitUrl ? (
+                <span style={{ position: "relative", flex: "none" }}>
+                  <img src={modelOutfitUrl} onClick={() => setZoomUrl(modelOutfitUrl)}
+                    style={{ width: 38, height: 38, objectFit: "cover", borderRadius: 8,
+                      border: `1px solid ${C.border}`, cursor: "zoom-in", display: "block" }} />
+                  <span onClick={() => setModelOutfitUrl("")}
+                    style={{ position: "absolute", top: -6, right: -6, width: 16, height: 16, lineHeight: "15px",
+                      textAlign: "center", fontSize: 10, fontWeight: 800, color: "#fff", background: "#D70015",
+                      borderRadius: "50%", cursor: "pointer" }}>✕</span>
+                </span>
+              ) : (
+                <label style={{ ...btnS, flex: "none", cursor: "pointer" }} title="의상 사진을 올리면 그 옷을 입혀요">
+                  의상 사진
+                  <input type="file" accept="image/*" style={{ display: "none" }}
+                    onChange={async (e) => {
+                      const f = e.target.files?.[0];
+                      if (!f) return;
+                      setModelBusy("의상 사진 업로드 중…");
+                      const fd = new FormData();
+                      fd.append("file", f);
+                      const res = await fetch("/api/detail/copy-upload", { method: "POST", body: fd }).then((r) => r.json());
+                      if (res.ok) { setModelOutfitUrl(res.url); setModelBusy("의상 사진 준비 완료 — 이 옷을 입혀서 생성해요"); }
+                      else setModelBusy("실패: " + res.error);
+                      e.target.value = "";
+                    }} />
+                </label>
+              )}
               <button onClick={generateModels} disabled={modelBusy.includes("생성 중")}
                 style={{ ...btnS, flex: "none", opacity: modelBusy.includes("생성 중") ? 0.6 : 1 }}>
                 {modelBusy.includes("생성 중") ? "생성 중…" : "모델 후보 4명 생성"}
@@ -1154,6 +1207,30 @@ ${h.urls.map((u) => `<img src="${u}" alt="">`).join("\n")}
                 ))}
               </div>
             )}
+            {selModel && (() => {
+              const m = models.find((x) => x.id === selModel);
+              if (!m) return null;
+              return (
+                <div style={{ marginTop: 10, padding: 10, borderRadius: 10, background: "#fff", border: `1px solid ${C.border}` }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                    <span style={{ fontSize: 12.5, fontWeight: 800, color: "#AF52DE" }}>{m.name} — 제품 든 예시</span>
+                    <span style={{ fontSize: 11.5, color: C.inkLt }}>이 모델이 제품을 들면 어떻게 나오는지 미리 확인</span>
+                    <button onClick={makeModelSample} disabled={sampleBusy}
+                      style={{ ...btnS, flex: "none", marginLeft: "auto", opacity: sampleBusy ? 0.6 : 1 }}>
+                      {sampleBusy ? "생성 중… (30초~1분)" : "예시 생성"}
+                    </button>
+                  </div>
+                  {(m.samples || []).length > 0 && (
+                    <div style={{ display: "flex", gap: 8, marginTop: 8, overflowX: "auto" }}>
+                      {(m.samples || []).map((u) => (
+                        <img key={u} src={u} onClick={() => setZoomUrl(u)} title="클릭하면 크게 보기"
+                          style={{ height: 140, borderRadius: 8, border: `1px solid ${C.border}`, cursor: "zoom-in" }} />
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
           </div>
 
           <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 12, marginTop: 8 }}>
@@ -1181,8 +1258,14 @@ ${h.urls.map((u) => `<img src="${u}" alt="">`).join("\n")}
                         style={{ width: "100%", cursor: "zoom-in" }} />
                     : <span style={{ fontSize: 12, color: C.inkLt }}>미생성</span>}
                 </div>
+                <input value={c.fixNote || ""} placeholder="수정사항 — 잘못 나온 부분 (재생성 시 반영)"
+                  onChange={(e) => setCuts((p) => p.map((x, j) => (j === i ? { ...x, fixNote: e.target.value } : x)))}
+                  style={{ ...inp, width: "100%", marginTop: 8, padding: "6px 9px", fontSize: 12,
+                    borderColor: c.fixNote ? "#FF9500" : C.border }} />
                 <div style={{ display: "flex", gap: 6, marginTop: 8 }}>
-                  <button onClick={() => generateCuts([i])} style={{ ...btnS }}>재생성</button>
+                  <button onClick={() => generateCuts([i])} style={{ ...btnS }}>
+                    {c.fixNote ? "수정 재생성" : "재생성"}
+                  </button>
                   <label style={{ ...btnS, cursor: "pointer" }}>
                     실사
                     <input type="file" accept="image/*" hidden

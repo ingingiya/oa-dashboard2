@@ -218,7 +218,7 @@ ${cuts.map((c) => `- ${c.file}: ${c.prompt}`).join("\n")}
 
 export async function POST(req: NextRequest) {
   try {
-    const { productSlug, cuts, anchorUrl, anchorUrls, refPrompt, styleBlock, aspectRatio, modelUrl, lockNote } = await req.json();
+    const { productSlug, cuts, anchorUrl, anchorUrls, refPrompt, styleBlock, aspectRatio, modelUrl, lockNote, banNote } = await req.json();
     const aspect = ASPECTS.has(aspectRatio) ? aspectRatio : "1:1";
     const anchors: string[] = (
       Array.isArray(anchorUrls) && anchorUrls.length ? anchorUrls : [anchorUrl]
@@ -228,7 +228,11 @@ export async function POST(req: NextRequest) {
     const lock = lockNote
       ? `IMMUTABLE PRODUCT DETAILS — the following must stay EXACTLY as in the reference, never change them: ${String(lockNote).trim()}. `
       : "";
-    const ref = (refPrompt || DEFAULT_REF) + lock;
+    // 금지사항 — 절대 나오면 안 되는 것들 (전 컷 공통)
+    const ban = banNote
+      ? `STRICTLY FORBIDDEN — the following must NEVER appear in the image, reject them completely: ${String(banNote).trim()}. `
+      : "";
+    const ref = (refPrompt || DEFAULT_REF) + lock + ban;
     const style = styleBlock ? String(styleBlock).trim() + " " : "";
 
     const needModel = !!modelUrl && cuts.some((c: any) => c.withModel);
@@ -241,19 +245,23 @@ export async function POST(req: NextRequest) {
 
     // Gemini API 노드는 병렬 제출 가능
     await Promise.all(
-      cuts.map(async (cut: { file: string; prompt: string; withModel?: boolean; aspect?: string }) => {
+      cuts.map(async (cut: { file: string; prompt: string; withModel?: boolean; aspect?: string; fixNote?: string }) => {
         const prefix = "gen_" + cut.file.replace(/\.\w+$/, "");
         const anchorName = anchorNames[pickMap[cut.file] ?? 0];
         const useModel = !!(modelName && cut.withModel);
         const cutAspect = cut.aspect && ASPECTS.has(cut.aspect) ? cut.aspect : aspect;
         // 모델컷: 제품+모델 2장 참조 / 인물 컷: "No people" 해제 + 시그니처 미모 블록 삽입
         const cutRef = useModel
-          ? MODEL_REF + lock + BEAUTY_BLOCK
+          ? MODEL_REF + lock + ban + BEAUTY_BLOCK
           : hasPerson(cut.prompt)
           ? ref.replace(/No people, no hands, /i, "") + BEAUTY_BLOCK
           : ref;
+        // 컷별 수정사항 — 직전 결과에서 잘못 나온 부분을 강제 교정
+        const fix = cut.fixNote
+          ? ` CORRECTION (the previous attempt was wrong — you MUST fix this): ${String(cut.fixNote).trim()}.`
+          : "";
         const buf = await generateOne(
-          anchorName, cutRef + style + cut.prompt + DETAIL_BLOCK, prefix, cutAspect,
+          anchorName, cutRef + style + cut.prompt + fix + DETAIL_BLOCK, prefix, cutAspect,
           useModel ? modelName : undefined
         );
         const filePath = `${productSlug}/${cut.file}`;

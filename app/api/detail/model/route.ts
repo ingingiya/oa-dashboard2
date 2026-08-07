@@ -75,8 +75,18 @@ const OUTFIT_STYLE =
   "well-fitted, perfectly tucked and arranged by a stylist, no stains, no clutter, " +
   "no odd layering, simple minimal design with no busy patterns or logos. ";
 
-function buildWorkflow(prompt: string, prefix: string) {
-  return {
+// 의상 사진을 Comfy에 업로드 → 참조 이미지로 사용
+async function uploadImage(url: string): Promise<string> {
+  const img = await fetch(url);
+  if (!img.ok) throw new Error(`의상 이미지 다운로드 실패 ${img.status}`);
+  const form = new FormData();
+  form.append("image", await img.blob(), url.split("/").pop()?.split("?")[0] || "outfit.png");
+  const info = await (await comfy("/api/upload/image", { method: "POST", body: form })).json();
+  return info.subfolder ? `${info.subfolder}/${info.name}` : info.name;
+}
+
+function buildWorkflow(prompt: string, prefix: string, refNames?: string[]) {
+  const wf: any = {
     "1": {
       class_type: "GeminiNanoBanana2",
       inputs: {
@@ -91,15 +101,26 @@ function buildWorkflow(prompt: string, prefix: string) {
     },
     "2": { class_type: "SaveImage", inputs: { images: ["1", 0], filename_prefix: prefix } },
   };
+  // 참조 이미지: 1장이면 직결, 2장이면 ImageBatch로 묶음 (image1이 무왜곡 기준)
+  if (refNames?.length === 1) {
+    wf["3"] = { class_type: "LoadImage", inputs: { image: refNames[0] } };
+    wf["1"].inputs.images = ["3", 0];
+  } else if (refNames && refNames.length >= 2) {
+    wf["3"] = { class_type: "LoadImage", inputs: { image: refNames[0] } };
+    wf["4"] = { class_type: "LoadImage", inputs: { image: refNames[1] } };
+    wf["5"] = { class_type: "ImageBatch", inputs: { image1: ["3", 0], image2: ["4", 0] } };
+    wf["1"].inputs.images = ["5", 0];
+  }
+  return wf;
 }
 
-async function generateOne(prompt: string, prefix: string): Promise<Buffer> {
+async function generateOne(prompt: string, prefix: string, refNames?: string[]): Promise<Buffer> {
   const submit = await (
     await comfy("/api/prompt", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        prompt: buildWorkflow(prompt, prefix),
+        prompt: buildWorkflow(prompt, prefix, refNames),
         extra_data: { api_key_comfy_org: comfyKey() },
       }),
     })
@@ -131,7 +152,19 @@ async function generateOne(prompt: string, prefix: string): Promise<Buffer> {
   throw new Error("생성 타임아웃");
 }
 
-type ModelItem = { id: string; url: string; name: string; at: string };
+type ModelItem = { id: string; url: string; name: string; at: string; samples?: string[] };
+
+// 모델이 제품을 들고 있는 예시샷 프롬프트 (제품=1번 참조, 모델=2번 참조)
+const SAMPLE_PROMPT =
+  "Two reference images are provided. The FIRST is the product — keep its design, proportions, " +
+  "logo placement and materials EXACTLY identical, do not invent buttons or text. " +
+  "The SECOND is the model — the EXACT SAME woman (same face, same hairstyle, same outfit) " +
+  "holding the product at chest height with both visible, looking at the camera with a soft smile, " +
+  "her face clearly visible, waist-up shot, clean bright studio background, " +
+  "premium K-beauty commercial quality. " +
+  "PHOTOREALISM RULES: she must look like a REAL person photographed on a real set, NOT AI-generated — " +
+  "realistic natural skin texture with visible pores, NOT airbrushed plastic, NOT AI-perfect symmetry, " +
+  "shot on an 85mm lens at f/2.8, natural editorial color grade, subtle fine film grain.";
 
 async function getList(sb: ReturnType<typeof getSupabase>): Promise<ModelItem[]> {
   const { data } = await sb.from("settings").select("value").eq("key", KEY).maybeSingle();
@@ -156,22 +189,49 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: true, items });
     }
 
+    // 선택 모델이 제품을 들고 있는 예시샷 생성 → item.samples에 저장
+    if (body.sample) {
+      const { id, productUrl } = body.sample;
+      if (!productUrl) throw new Error("제품 앵커 이미지가 필요합니다 (스텝1에서 실사 앵커 등록)");
+      const items = await getList(sb);
+      const item = items.find((i) => i.id === id);
+      if (!item) throw new Error("모델을 찾을 수 없어요");
+      const [prodName, mName] = await Promise.all([uploadImage(productUrl), uploadImage(item.url)]);
+      const buf = await generateOne(SAMPLE_PROMPT, `sample_${id}`, [prodName, mName]);
+      const path = `models/s_${id}_${Date.now().toString(36)}.png`;
+      const { error } = await sb.storage
+        .from(BUCKET)
+        .upload(path, buf, { contentType: "image/png", upsert: true });
+      if (error) throw error;
+      const { data } = sb.storage.from(BUCKET).getPublicUrl(path);
+      item.samples = [data.publicUrl, ...(item.samples || [])].slice(0, 6);
+      await setList(sb, items);
+      return NextResponse.json({ ok: true, items });
+    }
+
     if (body.generate) {
       const userStyle = String(body.generate.prompt || "").trim();
       const outfit = String(body.generate.outfit || "").trim();
+      const outfitUrl = String(body.generate.outfitUrl || "").trim();
       const count = Math.min(6, Math.max(1, Number(body.generate.count) || 4));
       const batch = Date.now().toString(36);
       const made: ModelItem[] = [];
 
+      // 의상 사진이 있으면 Comfy에 한 번만 업로드해 전 후보가 공유
+      const outfitName = outfitUrl ? await uploadImage(outfitUrl) : undefined;
+
       await Promise.all(
         Array.from({ length: count }, async (_, i) => {
-          const wear = `She is wearing ${outfit || OUTFIT_VARIATIONS[i % OUTFIT_VARIATIONS.length]}. `;
+          const wear = outfitName
+            ? "She is wearing the EXACT outfit shown in the reference image — same garments, " +
+              "same colors, same materials and details, naturally fitted on her body. "
+            : `She is wearing ${outfit || OUTFIT_VARIATIONS[i % OUTFIT_VARIATIONS.length]}. `;
           const prompt =
             MODEL_BASE +
             (userStyle ? userStyle + ". " : HAIR_VARIATIONS[i % HAIR_VARIATIONS.length] + " ") +
             wear +
             OUTFIT_STYLE;
-          const buf = await generateOne(prompt, `model_${batch}_${i}`);
+          const buf = await generateOne(prompt, `model_${batch}_${i}`, outfitName ? [outfitName] : undefined);
           const path = `models/m_${batch}_${i}.png`;
           const { error } = await sb.storage
             .from(BUCKET)
