@@ -5,7 +5,7 @@
 // 실사 업로드 슬롯은 브라우저에서 배경제거(@imgly/background-removal) 후 Supabase 업로드
 // 설치: npm i @imgly/background-removal @supabase/supabase-js
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { createClient } from "@supabase/supabase-js";
 
 const supabase = createClient(
@@ -782,6 +782,51 @@ ${h.urls.map((u) => `<img src="${u}" alt="">`).join("\n")}
   const [gifCutFile, setGifCutFile] = useState("");
   const [gifPrompt, setGifPrompt] = useState("");
   const [gifDur, setGifDur] = useState(5);
+
+  // ── 작업 자동저장 (localStorage) — 새로고침해도 복원 ──
+  const DRAFT_KEY = "oa_detail_draft_v1";
+  const draftReady = useRef(false);
+  useEffect(() => {
+    // 마운트 시 1회 복원
+    try {
+      const raw = localStorage.getItem(DRAFT_KEY);
+      if (raw) {
+        const d = JSON.parse(raw);
+        if (d.slug) setSlug(d.slug);
+        if (d.trigger) setTrigger(d.trigger);
+        if (Array.isArray(d.anchors) && d.anchors.length) setAnchors(d.anchors);
+        if (Array.isArray(d.cuts) && d.cuts.length)
+          setCuts(d.cuts.map((c: any) => ({ ...c, loading: false })));
+        if (d.productJson) setProductJson(d.productJson);
+        if (d.lockNote) setLockNote(d.lockNote);
+        if (d.banNote) setBanNote(d.banNote);
+        if (d.aspect) setAspect(d.aspect);
+        if (typeof d.step === "number") setStep(d.step);
+        if (d.selModel) setSelModel(d.selModel);
+        if (Array.isArray(d.gifRows)) setGifRows(d.gifRows);
+      }
+    } catch {}
+    draftReady.current = true;
+  }, []);
+  useEffect(() => {
+    // 복원 완료 후부터 변경 시마다 저장 (1.5초 디바운스)
+    if (!draftReady.current) return;
+    const t = setTimeout(() => {
+      try {
+        localStorage.setItem(DRAFT_KEY, JSON.stringify({
+          slug, trigger, anchors, productJson, lockNote, banNote, aspect, step, selModel, gifRows,
+          cuts: cuts.map(({ loading, ...c }) => c),
+          at: Date.now(),
+        }));
+      } catch {}
+    }, 1500);
+    return () => clearTimeout(t);
+  }, [slug, trigger, anchors, cuts, productJson, lockNote, banNote, aspect, step, selModel, gifRows]);
+  function clearDraft() {
+    if (!confirm("저장된 작업 내용을 지우고 처음부터 시작할까요?")) return;
+    localStorage.removeItem(DRAFT_KEY);
+    location.reload();
+  }
   const [gifBusy, setGifBusy] = useState("");
   async function generateGif() {
     const cut = cuts.find((c) => c.file === gifCutFile && c.url);
@@ -877,6 +922,12 @@ ${h.urls.map((u) => `<img src="${u}" alt="">`).join("\n")}
               {label}
             </button>
           ))}
+          <button onClick={clearDraft} title="자동저장된 작업을 지우고 초기화"
+            style={{ marginLeft: "auto", border: `1px solid ${C.border}`, borderRadius: 10, padding: "9px 14px",
+              fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit",
+              background: C.white, color: C.inkLt }}>
+            초기화
+          </button>
         </div>
 
         {tab === "gen" && (<>
