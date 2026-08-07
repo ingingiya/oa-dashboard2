@@ -83,15 +83,42 @@ export default function DetailBuilder() {
     tagline: "현명한 당신, 오아하시네요",
   });
   const [copyBusy, setCopyBusy] = useState(false);
+  // 첨부 자료 (제품정보 캡쳐/PDF) — 카피 생성 시 비전으로 분석
+  const [copyFiles, setCopyFiles] = useState<{ name: string; media_type: string; data: string }[]>([]);
+
+  async function addCopyFiles(list: FileList | File[]) {
+    const out: { name: string; media_type: string; data: string }[] = [];
+    for (const file of Array.from(list)) {
+      if (file.type === "application/pdf") {
+        const data = await new Promise<string>((res) => {
+          const r = new FileReader();
+          r.onload = () => res(String(r.result).split(",")[1]);
+          r.readAsDataURL(file);
+        });
+        out.push({ name: file.name, media_type: "application/pdf", data });
+      } else if (file.type.startsWith("image/")) {
+        // 캡쳐가 커도 되게 1600px로 축소해서 전송
+        const img = await createImageBitmap(file);
+        const scale = Math.min(1, 1600 / Math.max(img.width, img.height));
+        const cv = document.createElement("canvas");
+        cv.width = Math.round(img.width * scale);
+        cv.height = Math.round(img.height * scale);
+        cv.getContext("2d")!.drawImage(img, 0, 0, cv.width, cv.height);
+        out.push({ name: file.name, media_type: "image/jpeg", data: cv.toDataURL("image/jpeg", 0.85).split(",")[1] });
+      }
+    }
+    setCopyFiles((p) => [...p, ...out].slice(0, 5));
+  }
 
   async function generateCopy() {
-    if (!form.productName && !form.raw) return alert("제품 정보를 붙여넣거나 제품명을 입력하세요");
+    if (!form.productName && !form.raw && !copyFiles.length)
+      return alert("제품 정보를 붙여넣거나 캡쳐/파일을 첨부하세요");
     setCopyBusy(true);
     try {
       const res = await fetch("/api/detail/copy", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
+        body: JSON.stringify({ ...form, files: copyFiles.map(({ name, ...f }) => f) }),
       }).then((r) => r.json());
       if (!res.ok) throw new Error(res.error || "카피 생성 실패");
       setProductJson(JSON.stringify(res.product, null, 2));
@@ -353,6 +380,21 @@ export default function DetailBuilder() {
             onChange={(e) => setForm((f) => ({ ...f, raw: e.target.value }))}
             placeholder={"제품 정보 통째로 붙여넣기 (소개서/스펙표/기획안 텍스트 아무거나)\n여기만 채우고 바로 카피 생성 눌러도 돼요"}
             style={{ ...inp, width: "100%", height: 120, marginBottom: 10, resize: "vertical" as const }} />
+          <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", marginBottom: 10 }}>
+            <label style={{ ...btnS, cursor: "pointer" }}>
+              + 캡쳐/PDF 첨부 (자동 분석)
+              <input type="file" accept="image/*,.pdf" multiple hidden
+                onChange={(e) => { if (e.target.files?.length) addCopyFiles(e.target.files); e.target.value = ""; }} />
+            </label>
+            {copyFiles.map((f, i) => (
+              <span key={i} style={{ fontSize: 12, fontWeight: 700, color: C.inkMid, background: "#eceef0",
+                borderRadius: 8, padding: "5px 10px" }}>
+                {f.name}
+                <span onClick={() => setCopyFiles((p) => p.filter((_, j) => j !== i))}
+                  style={{ marginLeft: 6, cursor: "pointer", color: "#D70015" }}>✕</span>
+              </span>
+            ))}
+          </div>
           <div style={{ display: "flex", gap: 12 }}>
             <input value={form.productName}
               onChange={(e) => setForm((f) => ({ ...f, productName: e.target.value }))}

@@ -13,7 +13,13 @@ export async function POST(request) {
   try { body = await request.json(); } catch { return Response.json({ error: '잘못된 요청' }, { status: 400 }); }
   const raw = String(body?.raw || '').slice(0, 8000);
   const productName = String(body?.productName || '').slice(0, 100);
-  if (!productName && !raw) return Response.json({ error: 'productName 또는 raw 필수' }, { status: 400 });
+  // 첨부 자료 (캡쳐 이미지/PDF, base64) — 비전으로 제품 정보 추출
+  const OK_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'application/pdf'];
+  const files = (Array.isArray(body?.files) ? body.files : [])
+    .filter((f) => f?.data && OK_TYPES.includes(f?.media_type))
+    .slice(0, 5);
+  if (!productName && !raw && !files.length)
+    return Response.json({ error: 'productName·raw·files 중 하나 필수' }, { status: 400 });
   const category = String(body?.category || '').slice(0, 100);
   const specs = String(body?.specs || '').slice(0, 2000);
   const points = (Array.isArray(body?.points) ? body.points : []).map((p) => String(p).slice(0, 200)).filter(Boolean);
@@ -27,7 +33,8 @@ export async function POST(request) {
 - 태그라인 "${tagline}" 결 유지
 
 ## 제품 정보
-${raw ? `### 붙여넣은 원본 자료 (여기서 제품명·카테고리·스펙·소구점을 직접 추출하세요)
+${files.length ? `### 첨부 자료 ${files.length}건 (캡쳐/PDF — 여기서 제품명·카테고리·스펙·소구점을 직접 추출하세요)
+` : ''}${raw ? `### 붙여넣은 원본 자료 (여기서 제품명·카테고리·스펙·소구점을 직접 추출하세요)
 ${raw}
 ` : ''}- 제품명: ${productName || '(미입력 — 원본 자료에서 추출)'}
 - 카테고리: ${category || '(미입력 — 원본 자료에서 추출)'}
@@ -62,12 +69,17 @@ specs 배열은 입력 스펙을 label/value로 정리 (5~7행), faq는 구매 �
 
   try {
     const client = new Anthropic({ apiKey: key });
+    const blocks = files.map((f) =>
+      f.media_type === 'application/pdf'
+        ? { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: f.data } }
+        : { type: 'image', source: { type: 'base64', media_type: f.media_type, data: f.data } }
+    );
     const msg = await client.messages.create({
       model: 'claude-opus-4-6',
       max_tokens: 2000,
-      messages: [{ role: 'user', content: prompt }],
+      messages: [{ role: 'user', content: [...blocks, { type: 'text', text: prompt }] }],
     });
-    const text = msg.content?.[0]?.text || '';
+    const text = (msg.content || []).find((b) => b.type === 'text')?.text || '';
     const jsonStr = text.replace(/^```json?\s*|```\s*$/g, '').trim();
     const product = JSON.parse(jsonStr);
     return Response.json({ ok: true, product });
