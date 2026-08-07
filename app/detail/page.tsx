@@ -533,7 +533,8 @@ ${h.urls.map((u) => `<img src="${u}" alt="">`).join("\n")}
   // 피그마로 복사: 조각을 세로로 이어붙인 PNG 한 장을 클립보드에 → 피그마 캔버스에 Cmd+V
   async function copyToFigma(h: HistItem) {
     setDlBusy("figma_" + h.id);
-    try {
+    // 조각들을 세로로 이어붙인 PNG blob 생성
+    const buildPng = async (): Promise<Blob> => {
       const imgs = await Promise.all(
         h.urls.map((u) => new Promise<HTMLImageElement>((res, rej) => {
           const img = new Image();
@@ -553,12 +554,22 @@ ${h.urls.map((u) => `<img src="${u}" alt="">`).join("\n")}
       ctx.fillRect(0, 0, canvas.width, canvas.height);
       let y = 0;
       imgs.forEach((m, i) => { ctx.drawImage(m, 0, y, width, heights[i]); y += heights[i]; });
-      const blob: Blob = await new Promise((res, rej) =>
+      return new Promise((res, rej) =>
         canvas.toBlob((b) => (b ? res(b) : rej(new Error("PNG 변환 실패"))), "image/png"));
-      await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]);
+    };
+    const pngPromise = buildPng();
+    try {
+      // 클릭 직후(사용자 제스처 유효할 때) 클립보드에 Promise를 넘겨야 사파리/크롬에서 안 막힘
+      await navigator.clipboard.write([new ClipboardItem({ "image/png": pngPromise })]);
       alert("복사 완료 — 피그마 캔버스에서 Cmd+V 붙여넣기 하세요 (GIF 조각은 첫 프레임으로 들어가요)");
-    } catch (e: any) {
-      alert("복사 실패: " + e.message);
+    } catch {
+      // 클립보드가 막히면 PNG 파일 다운로드로 폴백
+      try {
+        saveBlob(await pngPromise, `${h.slug}_full.png`);
+        alert("클립보드 복사가 막혀서 PNG 파일로 다운로드했어요 — 피그마 캔버스에 드래그하면 됩니다");
+      } catch (e2: any) {
+        alert("복사 실패: " + e2.message);
+      }
     }
     setDlBusy("");
   }
