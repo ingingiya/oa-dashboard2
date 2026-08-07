@@ -42,8 +42,9 @@ const MODEL_BASE =
   "light-gray seamless studio background: (1) full-body FRONT view standing head-to-toe " +
   "including shoes with a soft friendly smile, (2) full-body SIDE PROFILE view, " +
   "(3) large close-up FACE portrait. Identical face, identical hairstyle, identical outfit " +
-  "in all three views. Soft wraparound beauty light, premium K-beauty commercial fashion " +
-  "lookbook quality, no text, no labels, no watermark. " +
+  "in all three views. Soft wraparound beauty light, shot like a high-end 2026 Seoul brand " +
+  "campaign lookbook — premium, modern and effortlessly chic, never dated or dowdy. " +
+  "No text, no labels, no watermark. " +
   "PHOTOREALISM RULES: she must look like a REAL person photographed on a real set, NOT AI-generated — " +
   "realistic natural skin texture with visible pores and fine facial micro-details, NOT airbrushed plastic, " +
   "NOT AI-perfect symmetry, a few natural flyaway hairs, real fabric weave and natural wrinkles in clothing, " +
@@ -75,31 +76,41 @@ const FACE_ARCHETYPES = [
       "smiling, energetic bright expression, youthful playful charm. " },
 ];
 
-// 후보마다 다른 헤어 (여러 명 중 고르는 용도) — 의상은 별도 지정 가능
+// 후보마다 다른 헤어 (여러 명 중 고르는 용도) — 살롱 스타일링된 트렌디 헤어
 const HAIR_VARIATIONS = [
-  "Long natural black hair.",
-  "Chin-length bob hair.",
-  "Long soft-wave brown hair.",
-  "Neat low ponytail.",
-  "Shoulder-length dark hair with see-through bangs.",
-  "Half-up long hair.",
+  "Long jet-black hair in a sleek glossy salon blowout with soft face-framing layers.",
+  "A chic French-girl chin-length bob with an effortless tousled finish.",
+  "Long ash-brown hair in loose glam waves, styled like a beauty campaign shoot.",
+  "A polished sleek low bun with clean face-framing strands, model-off-duty elegance.",
+  "Airy shoulder-length dark hair with trendy curtain bangs and a soft C-curl finish.",
+  "Long hair in a soft layered hush cut with natural volume, fresh out of a Cheongdam salon.",
 ];
 
-// 깔끔한 기본 의상 로테이션 (의상 미지정 시)
+// 트렌디한 기본 의상 로테이션 (의상 미지정 시) — 조용한 럭셔리 무드
 const OUTFIT_VARIATIONS = [
-  "a crisp white blouse and tailored beige slacks",
-  "a light-blue oxford shirt and white wide-leg pants",
-  "an ivory fine-knit one-piece dress",
-  "a plain white t-shirt and clean light-beige chinos",
-  "a gray tailored blazer over a white top with slim black slacks",
-  "a pastel-pink cardigan and an A-line white skirt",
+  "a quiet-luxury look: an oversized crisp white poplin shirt half-tucked into high-waisted " +
+    "wide-leg cream trousers, minimal gold earrings",
+  "a sophisticated monochrome look: a sleeveless ivory column knit dress with a clean silhouette, " +
+    "thin delicate necklace",
+  "an elevated casual look: a boxy cropped soft-gray sweatshirt over a white tank with tailored " +
+    "black straight-leg pants",
+  "a modern minimal look: a fitted charcoal halter knit top with low-rise wide beige slacks, " +
+    "sleek silver jewelry",
+  "an off-duty model look: an unstructured oversized greige blazer over a white bodysuit with " +
+    "straight-cut ecru trousers",
+  "a soft feminine look: a fitted cream ribbed-knit long-sleeve top with a fluid ankle-length " +
+    "champagne satin skirt",
 ];
 
-// 의상 공통 스타일링 — 깔끔·정돈 강제
+// 의상 공통 스타일링 — 하이엔드 화보 무드 강제
 const OUTFIT_STYLE =
-  "The outfit is CLEAN and NEATLY styled like a fashion lookbook: freshly pressed, " +
-  "well-fitted, perfectly tucked and arranged by a stylist, no stains, no clutter, " +
-  "no odd layering, simple minimal design with no busy patterns or logos. ";
+  "STYLING RULES: the entire look is styled by a top Seoul fashion editor — current " +
+  "quiet-luxury minimal aesthetic like a Vogue Korea editorial or a premium Musinsa/COS " +
+  "campaign, modern flattering silhouettes, an elegant neutral palette (ivory, cream, " +
+  "greige, black), luxurious fabric textures, freshly pressed and perfectly fitted. " +
+  "Makeup is natural-glam K-beauty: dewy glass skin, soft coral-nude lips, subtle eye makeup. " +
+  "ABSOLUTELY AVOID anything dated or dowdy: no frumpy office wear, no boxy ill-fitting " +
+  "suits, no cheap shiny fabrics, no busy patterns, no logos, no clutter. ";
 
 // 의상 사진을 Comfy에 업로드 → 참조 이미지로 사용
 async function uploadImage(url: string): Promise<string> {
