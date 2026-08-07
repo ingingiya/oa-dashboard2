@@ -50,6 +50,7 @@ const MODEL_BASE =
   "chic, never dated or dowdy. No text, no labels, no watermark. " +
   "PHOTOREALISM RULES: she must look like a REAL person photographed on a real set, NOT AI-generated — " +
   "realistic natural skin texture with visible pores and fine facial micro-details, NOT airbrushed plastic, " +
+  "a few tiny natural freckles or moles are welcome, natural fine smile lines around the eyes when smiling, " +
   "NOT AI-perfect symmetry, a few natural flyaway hairs, real fabric weave and natural wrinkles in clothing, " +
   "natural catch-lights in the eyes. Shot on an 85mm lens at f/2.8 like a real fashion lookbook photo, " +
   "natural editorial color grade, subtle fine film grain. ";

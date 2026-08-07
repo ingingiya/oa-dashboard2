@@ -404,6 +404,21 @@ export default function DetailBuilder() {
       },
     },
     {
+      label: "청량 부양",
+      desc: "공중 부양·분사·물 연출 — 청량 뷰티 무드 (레퍼런스 학습)",
+      tone: "monochrome pastel gradient backdrop matching the product color, bright high-key light with backlight catching mist and water droplets, fresh K-beauty campaign energy.",
+      map: {
+        "hook.png": { prompt: "The product floating diagonally mid-air against a monochrome gradient backdrop matching its color, a real fine mist or air stream bursting from it caught by backlight, sparkling micro droplets, bright high-key studio light." },
+        "usp1.png": { prompt: "Extreme close-up of the key functional part of the product with visible motion energy (air stream, mist or light particles), pastel gradient background, backlit sparkle." },
+        "usp2.png": { prompt: "The product standing on a shallow rippling water surface, soft reflections and water droplets on the body, airy pastel-blue gradient light, fresh hydration mood." },
+        "usp3.png": { prompt: "Close-up of the product's control/display detail, clean pastel gradient background, premium beauty-tech product photo." },
+        "scene1.png": { prompt: "She holds the product lightly at cheek level so her face and the product share the frame, beauty-campaign pose, pastel seamless background matching the product color, white outfit, soft even light.", withModel: true },
+        "scene2.png": { prompt: "Her long hair flying in a wind-swept dynamic moment while she holds the product beside her face, monochrome pastel backdrop, energetic beauty-campaign feel.", withModel: true },
+        "cert.png": { prompt: "The product on a clean cool blue gradient background, clinical laboratory mood, subtle floating light particles, trust concept." },
+        "packshot.png": { prompt: "Clean front-view packshot: the product on a pure white background, even studio lighting, e-commerce product photo." },
+      },
+    },
+    {
       label: "미니멀 화이트",
       desc: "누끼 느낌 순백 스튜디오 통일",
       tone: "pure white seamless background, clean minimal studio, soft even lighting, faint natural contact shadow only.",
@@ -441,13 +456,21 @@ export default function DetailBuilder() {
     { label: "걸으며", prompt: "The model walking in a bright modern interior while holding the product, natural mid-stride motion, full-body lifestyle shot." },
     { label: "로우앵글", prompt: "Low-angle full-body shot of the model standing confidently holding the product, dynamic premium editorial framing, clean background." },
     { label: "테이블", prompt: "The model seated at a clean wooden table, the product placed in front of her as she interacts with it, top-lit cafe-like atmosphere, waist-up shot." },
+    { label: "제품 얼굴 옆", prompt: "She holds the product lightly at cheek level so her face and the product share the frame, beauty-campaign pose, pastel seamless background, clean glossy nails, soft even light." },
+    { label: "헤어 모션", prompt: "Her long hair flying in a wind-swept dynamic moment while she holds the product beside her face, monochrome pastel backdrop, energetic beauty-campaign feel." },
+    { label: "😖 비포(부정)", key: "before", prompt: "BEFORE shot: the model visibly troubled by the everyday problem this product solves — frustrated candid expression, dull flat lighting, muted desaturated tones, relatable real-life problem moment, product NOT in frame." },
+    { label: "✨ 애프터(긍정)", key: "after", prompt: "AFTER shot: the model glowing with the happy result this product delivers — radiant satisfied expression, bright airy high-key light, fresh vivid tones, holding or having just used the product." },
   ];
-  function addPoseCut(p: { label: string; prompt: string }) {
+  function addPoseCut(p: { label: string; prompt: string; key?: string }) {
     const id = Date.now().toString(36).slice(-4);
+    // 비포/애프터는 카피에서 뽑은 제품 맞춤 프롬프트(cutPrompts.before/after)가 있으면 우선 사용
+    let cp = copyCutPrompts;
+    if (!cp) { try { cp = JSON.parse(productJson)?.cutPrompts || null; } catch {} }
+    const prompt = (p.key && cp?.[p.key]) ? cp[p.key] : p.prompt;
     setCuts((prev) => [
       ...prev,
       { file: `model_pose_${id}.png`, label: `모델 ${p.label}`, withModel: true, aspect: "",
-        prompt: p.prompt, url: "", loading: false, fixNote: "", sel: false },
+        prompt, url: "", loading: false, fixNote: "", sel: false },
     ]);
   }
 
