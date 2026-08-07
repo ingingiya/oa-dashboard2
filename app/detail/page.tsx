@@ -1393,6 +1393,45 @@ ${h.urls.map((u) => `<img src="${u}" alt="">`).join("\n")}
               </div>
             ))}
           </div>
+
+          {/* GIF 생성 (시댄스2) — 컷에 모션을 입혀 GIF로 (배치는 스텝4 미리보기에서) */}
+          <div style={{ border: `1px solid ${C.border}`, borderRadius: 14, padding: 14, marginTop: 14, background: "#fffdf8" }}>
+            <div style={{ fontSize: 13.5, fontWeight: 800, color: C.ink }}>GIF 생성 (시댄스 2)</div>
+            <div style={{ fontSize: 12, color: C.inkMid, marginTop: 2 }}>
+              생성된 컷을 골라 모션을 입히면 GIF로 변환돼요 — 어디에 넣을지는 다음 단계 미리보기에서 끌어다 배치
+            </div>
+            <div style={{ display: "flex", gap: 8, marginTop: 10, flexWrap: "wrap" }}>
+              <select value={gifCutFile} onChange={(e) => setGifCutFile(e.target.value)}
+                style={{ ...inp, width: 170, cursor: "pointer" }}>
+                <option value="">컷 선택</option>
+                {cuts.filter((c) => c.url).map((c) => (
+                  <option key={c.file} value={c.file}>{c.label}</option>
+                ))}
+              </select>
+              <input value={gifPrompt} onChange={(e) => setGifPrompt(e.target.value)}
+                placeholder="모션 프롬프트 (비우면: 은은한 카메라 푸시인 + 빛 스윕)"
+                style={{ ...inp, flex: 1, minWidth: 220 }} />
+              <select value={gifDur} onChange={(e) => setGifDur(Number(e.target.value))}
+                style={{ ...inp, width: 80, cursor: "pointer" }}>
+                {[4, 5, 6, 8].map((d) => <option key={d} value={d}>{d}초</option>)}
+              </select>
+              <button onClick={generateGif} disabled={gifBusy.includes("생성 중")}
+                style={{ ...btnS, flex: "none", opacity: gifBusy.includes("생성 중") ? 0.6 : 1 }}>
+                {gifBusy.includes("생성 중") ? "생성 중…" : "GIF 생성"}
+              </button>
+            </div>
+            {gifBusy && (
+              <p style={{ fontSize: 12.5, color: gifBusy.startsWith("실패") ? "#D70015" : C.inkMid, margin: "8px 0 0" }}>{gifBusy}</p>
+            )}
+            {gifRows.filter((r) => r.url).length > 0 && (
+              <div style={{ display: "flex", gap: 8, marginTop: 10, overflowX: "auto" }}>
+                {gifRows.filter((r) => r.url).map((r, i) => (
+                  <img key={i} src={r.url} onClick={() => setZoomUrl(r.url)} title="클릭하면 크게 보기"
+                    style={{ height: 110, borderRadius: 8, border: `1px solid ${C.border}`, cursor: "zoom-in" }} />
+                ))}
+              </div>
+            )}
+          </div>
         </div>
         )}
 
@@ -1422,51 +1461,69 @@ ${h.urls.map((u) => `<img src="${u}" alt="">`).join("\n")}
             )}
           </div>
 
-          {/* GIF 생성 (시댄스2) */}
-          <div style={{ border: `1px solid ${C.border}`, borderRadius: 14, padding: 14, marginBottom: 14, background: "#fffdf8" }}>
-            <div style={{ fontSize: 13.5, fontWeight: 800, color: C.ink }}>GIF 생성 (시댄스 2)</div>
-            <div style={{ fontSize: 12, color: C.inkMid, marginTop: 2 }}>
-              생성된 컷을 골라 모션을 입히면 GIF로 변환해 아래 조각 줄에 자동 추가돼요
-            </div>
-            <div style={{ display: "flex", gap: 8, marginTop: 10, flexWrap: "wrap" }}>
-              <select value={gifCutFile} onChange={(e) => setGifCutFile(e.target.value)}
-                style={{ ...inp, width: 170, cursor: "pointer" }}>
-                <option value="">컷 선택</option>
-                {cuts.filter((c) => c.url).map((c) => (
-                  <option key={c.file} value={c.file}>{c.label}</option>
-                ))}
-              </select>
-              <input value={gifPrompt} onChange={(e) => setGifPrompt(e.target.value)}
-                placeholder="모션 프롬프트 (비우면: 은은한 카메라 푸시인 + 빛 스윕)"
-                style={{ ...inp, flex: 1, minWidth: 220 }} />
-              <select value={gifDur} onChange={(e) => setGifDur(Number(e.target.value))}
-                style={{ ...inp, width: 80, cursor: "pointer" }}>
-                {[4, 5, 6, 8].map((d) => <option key={d} value={d}>{d}초</option>)}
-              </select>
-              <button onClick={generateGif} disabled={gifBusy.includes("생성 중")}
-                style={{ ...btnS, flex: "none", opacity: gifBusy.includes("생성 중") ? 0.6 : 1 }}>
-                {gifBusy.includes("생성 중") ? "생성 중…" : "GIF 생성"}
-              </button>
-            </div>
-            {gifBusy && (
-              <p style={{ fontSize: 12.5, color: gifBusy.startsWith("실패") ? "#D70015" : C.inkMid, margin: "8px 0 0" }}>{gifBusy}</p>
-            )}
-          </div>
-
-          {gifRows.map((r, i) => (
-            <div key={i} style={{ display: "flex", gap: 8, marginBottom: 8 }}>
-              <input value={r.after} placeholder="섹션#"
-                onChange={(e) => setGifRows((rs) => rs.map((x, j) => j === i ? { ...x, after: e.target.value } : x))}
-                style={{ ...inp, width: 70 }} />
-              <input value={r.url} placeholder="GIF/영상 URL (모션 레퍼런스에서 URL 복사)"
-                onChange={(e) => setGifRows((rs) => rs.map((x, j) => j === i ? { ...x, url: e.target.value } : x))}
-                style={{ ...inp, flex: 1 }} />
-              <button onClick={() => setGifRows((rs) => rs.filter((_, j) => j !== i))} style={btnS}>삭제</button>
-            </div>
-          ))}
-          <button onClick={() => setGifRows((rs) => [...rs, { after: "", url: "" }])}
-            style={{ ...btnS, marginBottom: 4 }}>+ GIF 조각 (섹션 N 뒤에 삽입)</button>
-          <br />
+          {/* GIF 배치 — 섹션 사이에 끌어다 놓기 */}
+          {previewHtml && (() => {
+            let secs: string[] = [];
+            try {
+              const doc = new DOMParser().parseFromString(previewHtml, "text/html");
+              secs = Array.from(doc.body.children).map((el, i) => {
+                const t = (el.textContent || "").trim().replace(/\s+/g, " ").slice(0, 26);
+                return t || `섹션 ${i + 1}`;
+              });
+            } catch {}
+            if (!secs.length) return null;
+            const chip = (r: { after: string; url: string }, gi: number) => (
+              <span key={gi} draggable
+                onDragStart={(e) => e.dataTransfer.setData("text/plain", String(gi))}
+                style={{ display: "inline-flex", alignItems: "center", gap: 4, cursor: "grab",
+                  border: "1px solid #FF9500", borderRadius: 8, padding: 3, background: "#fff" }}>
+                <img src={r.url} style={{ height: 44, borderRadius: 5, pointerEvents: "none" }} />
+                <span onClick={() => setGifRows((rs) => rs.filter((_, j) => j !== gi))}
+                  style={{ fontSize: 11, fontWeight: 800, color: "#D70015", cursor: "pointer", padding: "0 4px" }}>✕</span>
+              </span>
+            );
+            const dropTo = (after: string) => (e: React.DragEvent) => {
+              e.preventDefault();
+              const gi = Number(e.dataTransfer.getData("text/plain"));
+              if (!Number.isNaN(gi)) setGifRows((rs) => rs.map((x, j) => (j === gi ? { ...x, after } : x)));
+            };
+            const zone = { border: "2px dashed #FFD08A", borderRadius: 8, minHeight: 54, padding: 4,
+              display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" as const, background: "#fffdf8" };
+            const unplaced = gifRows.map((r, gi) => ({ r, gi })).filter(({ r }) => r.url && !(Number(r.after) > 0));
+            return (
+              <div style={{ border: `1px solid ${C.border}`, borderRadius: 14, padding: 14, marginBottom: 14, background: "#fffdf8" }}>
+                <div style={{ fontSize: 13.5, fontWeight: 800, color: C.ink }}>GIF 배치</div>
+                <div style={{ fontSize: 12, color: C.inkMid, marginTop: 2 }}>
+                  아래 대기함의 GIF를 원하는 섹션 사이 점선 칸으로 끌어다 놓으세요 — 놓은 위치에 원본 그대로 삽입돼요
+                </div>
+                <div onDragOver={(e) => e.preventDefault()} onDrop={dropTo("")}
+                  style={{ ...zone, marginTop: 10, borderColor: "#c8c8cc", background: "#fafafa" }}>
+                  <span style={{ fontSize: 11.5, color: C.inkLt, fontWeight: 700, marginRight: 4 }}>대기함</span>
+                  {unplaced.length ? unplaced.map(({ r, gi }) => chip(r, gi))
+                    : <span style={{ fontSize: 11.5, color: C.inkLt }}>비어있음 — 스텝③에서 GIF를 생성하면 여기 나타나요</span>}
+                </div>
+                <div style={{ marginTop: 10, display: "flex", flexDirection: "column", gap: 6 }}>
+                  {secs.map((label, si) => (
+                    <div key={si}>
+                      <div style={{ border: `1px solid ${C.border}`, borderRadius: 8, padding: "7px 10px",
+                        background: "#fff", fontSize: 12, color: C.inkMid }}>
+                        <b style={{ color: C.ink }}>섹션 {si + 1}</b> · {label}…
+                      </div>
+                      <div onDragOver={(e) => e.preventDefault()} onDrop={dropTo(String(si + 1))}
+                        style={{ ...zone, marginTop: 6, minHeight: 34 }}>
+                        {gifRows.map((r, gi) => (Number(r.after) === si + 1 && r.url ? chip(r, gi) : null))}
+                        {!gifRows.some((r) => Number(r.after) === si + 1 && r.url) && (
+                          <span style={{ fontSize: 11, color: "#d9b06a" }}>여기에 놓으면 섹션 {si + 1} 뒤에 들어가요</span>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <button onClick={() => setGifRows((rs) => [...rs, { after: "", url: prompt("GIF/영상 URL 직접 추가") || "" }])}
+                  style={{ ...btnS, marginTop: 10, flex: "none" }}>+ URL로 직접 추가</button>
+              </div>
+            );
+          })()}
           <button onClick={renderPage} style={btn}>
             상세페이지 렌더 → 분할 JPG
           </button>
