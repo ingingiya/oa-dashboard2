@@ -666,6 +666,7 @@ export default function DetailBuilder() {
   const [motionRefs, setMotionRefs] = useState<MotionRef[]>([]);
   // GIF 조각: 섹션 N 뒤에 원본 GIF/영상을 캡처 없이 그대로 끼워넣기 (디자이너 저장 방식)
   const [gifRows, setGifRows] = useState<{ after: string; url: string }[]>([]);
+  const [gifSkip, setGifSkip] = useState<string[]>([]); // 배치에서 제외한 컷 URL — 자동배치/미배치 목록에 다시 안 뜸
   const [refCat, setRefCat] = useState<"all" | "typo" | "graph" | "real">("all");
   useEffect(() => {
     fetch("/api/detail/motion-refs").then((r) => r.json())
@@ -946,7 +947,8 @@ ${h.urls.map((u) => `<img src="${u}" alt="">`).join("\n")}
           .map((el, i) => (el.textContent || "").trim().replace(/\s+/g, " ").slice(0, 60) || `섹션 ${i + 1}`);
         const FIXED = new Set(["hook.png", "usp1.png", "usp2.png", "usp3.png", "scene1.png", "scene2.png", "cert.png", "packshot.png"]);
         const extras = cuts.filter((c) =>
-          c.url && !FIXED.has(c.file) && !gifRows.some((r) => r.url === c.url.split("?")[0]));
+          c.url && !FIXED.has(c.file) && !gifRows.some((r) => r.url === c.url.split("?")[0]) &&
+          !gifSkip.includes(c.url.split("?")[0]));
         const unGifs = gifRows.map((r, gi) => ({ r, gi })).filter(({ r }) => r.url && !(Number(r.after) > 0));
         const items = [
           ...unGifs.map(({ r, gi }) => ({ id: "g" + gi, label: (cuts.find((c) => c.url.split("?")[0] === r.url)?.label || "GIF 모션") })),
@@ -1013,6 +1015,7 @@ ${h.urls.map((u) => `<img src="${u}" alt="">`).join("\n")}
         if (typeof d.step === "number") setStep(Math.min(2, d.step));
         if (d.selModel) setSelModel(d.selModel);
         if (Array.isArray(d.gifRows)) setGifRows(d.gifRows);
+        if (Array.isArray(d.gifSkip)) setGifSkip(d.gifSkip);
         if (d.copyCutPrompts) setCopyCutPrompts(d.copyCutPrompts);
       }
     } catch {}
@@ -1024,14 +1027,14 @@ ${h.urls.map((u) => `<img src="${u}" alt="">`).join("\n")}
     const t = setTimeout(() => {
       try {
         localStorage.setItem(DRAFT_KEY, JSON.stringify({
-          slug, trigger, anchors, productJson, lockNote, banNote, aspect, step, selModel, gifRows, copyCutPrompts,
+          slug, trigger, anchors, productJson, lockNote, banNote, aspect, step, selModel, gifRows, gifSkip, copyCutPrompts,
           cuts: cuts.map(({ loading, ...c }) => c),
           at: Date.now(),
         }));
       } catch {}
     }, 1500);
     return () => clearTimeout(t);
-  }, [slug, trigger, anchors, cuts, productJson, lockNote, banNote, aspect, step, selModel, gifRows, copyCutPrompts]);
+  }, [slug, trigger, anchors, cuts, productJson, lockNote, banNote, aspect, step, selModel, gifRows, gifSkip, copyCutPrompts]);
   function clearDraft() {
     if (!confirm("저장된 작업 내용을 지우고 처음부터 시작할까요?")) return;
     localStorage.removeItem(DRAFT_KEY);
@@ -1758,7 +1761,8 @@ ${h.urls.map((u) => `<img src="${u}" alt="">`).join("\n")}
             const FIXED = new Set(["hook.png", "usp1.png", "usp2.png", "usp3.png", "scene1.png", "scene2.png", "cert.png", "packshot.png"]);
             // 아직 배치 목록에 없는 추가 컷 (모델/포즈) — 자동으로 아래 목록에 노출
             const extras = cuts.filter((c) =>
-              c.url && !FIXED.has(c.file) && !gifRows.some((r) => r.url === c.url.split("?")[0]));
+              c.url && !FIXED.has(c.file) && !gifRows.some((r) => r.url === c.url.split("?")[0]) &&
+              !gifSkip.includes(c.url.split("?")[0]));
             const posSelect = (value: string, onChange: (v: string) => void) => (
               <select value={value} onChange={(e) => onChange(e.target.value)}
                 style={{ ...inp, flex: 1, minWidth: 180, cursor: "pointer", fontSize: 12 }}>
@@ -1786,7 +1790,7 @@ ${h.urls.map((u) => `<img src="${u}" alt="">`).join("\n")}
                       </span>
                       {posSelect(Number(r.after) > 0 ? String(r.after) : "",
                         (v) => setGifRows((rs) => rs.map((x, j) => (j === gi ? { ...x, after: v } : x))))}
-                      <span onClick={() => setGifRows((rs) => rs.filter((_, j) => j !== gi))}
+                      <span onClick={() => { setGifRows((rs) => rs.filter((_, j) => j !== gi)); setGifSkip((s) => Array.from(new Set([...s, r.url]))); }}
                         style={{ fontSize: 12, fontWeight: 800, color: "#D70015", cursor: "pointer", padding: "0 6px" }}>✕</span>
                     </div>
                   ) : null)}
@@ -1797,6 +1801,8 @@ ${h.urls.map((u) => `<img src="${u}" alt="">`).join("\n")}
                       <span style={{ fontSize: 12, fontWeight: 700, color: C.ink, flex: "none" }}>{c.label}</span>
                       {posSelect("", (v) => setGifRows((rs) => [...rs, { after: v, url: c.url.split("?")[0] }]))}
                       <span style={{ fontSize: 11, color: C.inkLt, flex: "none" }}>미배치</span>
+                      <span onClick={() => setGifSkip((s) => Array.from(new Set([...s, c.url.split("?")[0]])))}
+                        style={{ fontSize: 12, fontWeight: 800, color: "#D70015", cursor: "pointer", padding: "0 6px" }}>✕</span>
                     </div>
                   ))}
                   {!gifRows.some((r) => r.url) && !extras.length && (
@@ -1808,8 +1814,12 @@ ${h.urls.map((u) => `<img src="${u}" alt="">`).join("\n")}
                 <div style={{ display: "flex", gap: 8, marginTop: 10, alignItems: "center", flexWrap: "wrap" }}>
                   <button onClick={() => setGifRows((rs) => [...rs, { after: "", url: prompt("GIF/영상/이미지 URL 직접 추가") || "" }])}
                     style={{ ...btnS, flex: "none" }}>+ URL로 직접 추가</button>
-                  <button onClick={() => { if (confirm("배치 목록에 남은 GIF/추가컷 데이터를 전부 비울까요? (스토리지 파일은 유지)")) setGifRows([]); }}
-                    style={{ ...btnS, flex: "none", color: "#D70015" }}>목록 비우기</button>
+                  <button onClick={() => {
+                    if (!confirm("배치 목록에 남은 GIF/추가컷 데이터를 전부 비울까요? (스토리지 파일은 유지, 자동배치에도 다시 안 올라옴)")) return;
+                    const urls = [...gifRows.map((r) => r.url), ...extras.map((c) => c.url.split("?")[0])].filter(Boolean);
+                    setGifSkip((s) => Array.from(new Set([...s, ...urls])));
+                    setGifRows([]);
+                  }} style={{ ...btnS, flex: "none", color: "#D70015" }}>목록 비우기</button>
                 </div>
               </div>
             );
