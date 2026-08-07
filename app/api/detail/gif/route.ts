@@ -57,9 +57,9 @@ export async function POST(req: NextRequest) {
       "2": {
         class_type: "ByteDance2FirstLastFrameNode",
         inputs: {
-          model: "Seedance 2.0", // 최고 품질 (Fast는 720p 한계)
+          model: "Seedance 2.0 Fast", // 720p면 GIF 용도 충분 — Fast가 훨씬 빠름
           "model.prompt": motion,
-          "model.resolution": "1080p",
+          "model.resolution": "720p",
           "model.ratio": "adaptive",
           "model.duration": dur,
           "model.generate_audio": false,
