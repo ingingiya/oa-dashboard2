@@ -78,11 +78,22 @@ export default function DetailBuilder() {
   // ── 템플릿 레퍼런스 (따라하고 싶은 상세페이지 캡쳐 → AI가 디자인 모사 HTML 템플릿 생성) ──
   const [styleFiles, setStyleFiles] = useState<{ url: string; media_type: string }[]>([]);
   const [styleBusy, setStyleBusy] = useState("");
-  const [styleActive, setStyleActive] = useState(false);
+  type StyleTpl = { id: string; name: string; thumb: string | null; createdAt: string };
+  const [styleLib, setStyleLib] = useState<{ items: StyleTpl[]; activeId: string | null }>({ items: [], activeId: null });
+  const styleActive = !!styleLib.activeId;
   useEffect(() => {
     fetch("/api/detail/style").then((r) => r.json())
-      .then((res) => setStyleActive(!!res.active)).catch(() => {});
+      .then((res) => res.ok && setStyleLib({ items: res.items || [], activeId: res.activeId || null }))
+      .catch(() => {});
   }, []);
+
+  async function styleAction(bodyObj: object, doneMsg: string) {
+    const res = await fetch("/api/detail/style", {
+      method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(bodyObj),
+    }).then((r) => r.json());
+    if (res.ok) { setStyleLib({ items: res.items || [], activeId: res.activeId || null }); setStyleBusy(doneMsg); }
+    else setStyleBusy("실패: " + res.error);
+  }
 
   async function addStyleFiles(list: FileList | File[]) {
     setStyleBusy("업로드 중…");
@@ -128,23 +139,15 @@ export default function DetailBuilder() {
         body: JSON.stringify({ images: styleFiles }),
       }).then((r) => r.json());
       if (!res.ok) throw new Error(res.error);
-      setStyleActive(true);
-      setStyleBusy("적용 완료 — 이제 최종 렌더가 이 스타일로 나와요");
+      setStyleLib({ items: res.items || [], activeId: res.activeId || null });
+      setStyleFiles([]);
+      setStyleBusy("저장 + 적용 완료 — 이제 최종 렌더가 이 스타일로 나와요");
     } catch (e: any) {
       setStyleBusy("실패: " + e.message);
     }
   }
 
-  async function resetStyle() {
-    await fetch("/api/detail/style", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ reset: true }),
-    });
-    setStyleActive(false);
-    setStyleFiles([]);
-    setStyleBusy("해제됨 — 기본 템플릿으로 렌더돼요");
-  }
+  const resetStyle = () => styleAction({ reset: true }, "해제됨 — 기본 템플릿으로 렌더돼요");
 
   // ── 카피 생성 폼 ──
   const [form, setForm] = useState({
@@ -557,7 +560,7 @@ export default function DetailBuilder() {
             {styleActive && <span style={{ marginLeft: 8, fontSize: 11, fontWeight: 800, color: "#fff",
               background: "#34C759", borderRadius: 6, padding: "3px 8px" }}>적용 중</span>}
           </div>
-          <div style={cardSub}>따라하고 싶은 상세페이지 캡쳐를 넣으면 AI가 디자인(컬러·타이포·섹션 구조)을 분석해 렌더 템플릿으로 만들어요 — 피그마 동기화 템플릿이 있으면 그게 우선</div>
+          <div style={cardSub}>따라하고 싶은 상세페이지 캡쳐를 넣으면 AI가 디자인(컬러·타이포·섹션 구조)을 분석해 렌더 템플릿으로 만들어요 — 만든 템플릿은 아래에 저장돼서 클릭 한 번으로 골라 쓸 수 있어요</div>
           <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
             <label style={{ ...btnS, cursor: "pointer" }}>
               + 캡쳐 첨부 (통짜여도 OK)
@@ -571,6 +574,34 @@ export default function DetailBuilder() {
               style={{ ...btnS, background: C.rose, color: "#fff" }}>디자인 분석 → 템플릿 적용</button>
             {styleActive && <button onClick={resetStyle} style={btnS}>해제</button>}
           </div>
+          {styleLib.items.length > 0 && (
+            <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 12 }}>
+              {styleLib.items.map((t) => {
+                const on = t.id === styleLib.activeId;
+                return (
+                  <div key={t.id} style={{ width: 128, borderRadius: 12, overflow: "hidden", cursor: "pointer",
+                    border: `2px solid ${on ? "#34C759" : C.border}`, background: C.white, position: "relative" }}
+                    onClick={() => styleAction(on ? { reset: true } : { activate: t.id },
+                      on ? "해제됨 — 기본 템플릿으로 렌더돼요" : `"${t.name}" 적용 — 최종 렌더가 이 스타일로 나와요`)}>
+                    {t.thumb ? (
+                      <img src={t.thumb} alt={t.name} style={{ width: "100%", height: 110, objectFit: "cover", objectPosition: "top", display: "block" }} />
+                    ) : (
+                      <div style={{ width: "100%", height: 110, display: "flex", alignItems: "center", justifyContent: "center",
+                        background: "#eceef0", fontSize: 12, color: C.inkMid }}>미리보기 없음</div>
+                    )}
+                    {on && <span style={{ position: "absolute", top: 6, left: 6, fontSize: 10, fontWeight: 800,
+                      background: "#34C759", color: "#fff", borderRadius: 6, padding: "2px 7px" }}>적용 중</span>}
+                    <span onClick={(e) => { e.stopPropagation(); if (confirm(`"${t.name}" 템플릿을 삭제할까요?`)) styleAction({ remove: t.id }, "삭제됨"); }}
+                      style={{ position: "absolute", top: 6, right: 6, width: 18, height: 18, borderRadius: "50%",
+                        background: "rgba(0,0,0,.5)", color: "#fff", fontSize: 11, display: "flex",
+                        alignItems: "center", justifyContent: "center" }}>✕</span>
+                    <div style={{ padding: "6px 8px", fontSize: 11, fontWeight: 700, color: C.ink,
+                      whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{t.name}</div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
           {styleBusy && <p style={{ marginTop: 8, fontSize: 13, color: styleBusy.startsWith("실패") || styleBusy.startsWith("업로드 실패") ? "#D70015" : C.inkMid }}>{styleBusy}</p>}
         </div>
 

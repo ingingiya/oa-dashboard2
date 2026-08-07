@@ -5,11 +5,12 @@ import Anthropic from '@anthropic-ai/sdk';
 import { createClient } from '@supabase/supabase-js';
 
 // 템플릿 레퍼런스 분석: 따라하고 싶은 상세페이지 캡쳐 → 디자인을 모사한 HTML 템플릿 생성/저장
-// POST { images: [{ url, media_type }] } → settings 키 oa_detail_html_template_v1 저장
-// POST { reset: true } → 템플릿 해제
-// GET → 현재 템플릿 유무
+// 라이브러리: 만든 템플릿은 전부 저장, 썸네일로 미리보고 골라서 활성화 (렌더는 활성 키만 읽음)
+// POST { images, name? } → 생성 + 라이브러리 저장 + 활성화
+// POST { activate: id } / { remove: id } / { reset: true } / GET → 목록+활성 id
 
-const KEY = 'oa_detail_html_template_v1';
+const KEY = 'oa_detail_html_template_v1';       // 활성 템플릿 (render가 읽는 키 — 구조 유지)
+const LIB_KEY = 'oa_detail_html_templates_v1';  // 라이브러리 { items: [{id,name,html,thumb,createdAt}], activeId }
 
 const getSupabase = () =>
   createClient(
@@ -17,18 +18,73 @@ const getSupabase = () =>
     process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
   );
 
+const getVal = async (sb, key) =>
+  (await sb.from('settings').select('value').eq('key', key).maybeSingle()).data?.value || null;
+const setVal = (sb, key, value) =>
+  sb.from('settings').upsert({ key, value }, { onConflict: 'key' });
+
+// 라이브러리 로드 (+구버전 단일 템플릿 자동 이관)
+async function getLib(sb) {
+  let lib = await getVal(sb, LIB_KEY);
+  if (!lib) {
+    const old = await getVal(sb, KEY);
+    lib = { items: [], activeId: null };
+    if (old?.html) {
+      const id = 'legacy';
+      lib.items.push({ id, name: '기존 템플릿', html: old.html, thumb: null, createdAt: old.updatedAt || new Date().toISOString() });
+      lib.activeId = id;
+    }
+    await setVal(sb, LIB_KEY, lib);
+  }
+  return lib;
+}
+
+const publicList = (lib) => ({
+  ok: true,
+  active: !!lib.activeId,
+  activeId: lib.activeId,
+  items: lib.items.map(({ id, name, thumb, createdAt }) => ({ id, name, thumb, createdAt })),
+});
+
 export async function GET() {
-  const { data } = await getSupabase().from('settings').select('value').eq('key', KEY).maybeSingle();
-  return Response.json({ ok: true, active: !!data?.value?.html, updatedAt: data?.value?.updatedAt || null });
+  const lib = await getLib(getSupabase());
+  return Response.json(publicList(lib));
 }
 
 export async function POST(request) {
   let body;
   try { body = await request.json(); } catch { return Response.json({ error: '잘못된 요청' }, { status: 400 }); }
 
+  const sb = getSupabase();
+
   if (body?.reset) {
-    await getSupabase().from('settings').delete().eq('key', KEY);
-    return Response.json({ ok: true, active: false });
+    const lib = await getLib(sb);
+    lib.activeId = null;
+    await Promise.all([setVal(sb, LIB_KEY, lib), sb.from('settings').delete().eq('key', KEY)]);
+    return Response.json(publicList(lib));
+  }
+
+  if (body?.activate) {
+    const lib = await getLib(sb);
+    const item = lib.items.find((t) => t.id === body.activate);
+    if (!item) return Response.json({ error: '템플릿 없음' }, { status: 404 });
+    lib.activeId = item.id;
+    await Promise.all([
+      setVal(sb, LIB_KEY, lib),
+      setVal(sb, KEY, { html: item.html, updatedAt: new Date().toISOString() }),
+    ]);
+    return Response.json(publicList(lib));
+  }
+
+  if (body?.remove) {
+    const lib = await getLib(sb);
+    lib.items = lib.items.filter((t) => t.id !== body.remove);
+    if (lib.activeId === body.remove) {
+      lib.activeId = null;
+      await sb.from('settings').delete().eq('key', KEY);
+    }
+    await setVal(sb, LIB_KEY, lib);
+    return Response.json(publicList(lib));
   }
 
   const apiKey = process.env.ANTHROPIC_API_KEY;
@@ -74,7 +130,13 @@ export async function POST(request) {
 
   try {
     const client = new Anthropic({ apiKey });
-    const blocks = images.map((f) => ({ type: 'image', source: { type: 'url', url: f.url } }));
+    // Anthropic URL 다운로드 간헐 실패 → 서버가 직접 받아 base64로 전달
+    const blocks = await Promise.all(images.map(async (f) => {
+      const res = await fetch(f.url);
+      if (!res.ok) throw new Error(`캡쳐 다운로드 실패 ${res.status}`);
+      const data = Buffer.from(await res.arrayBuffer()).toString('base64');
+      return { type: 'image', source: { type: 'base64', media_type: f.media_type, data } };
+    }));
     // 긴 HTML 생성이라 스트리밍으로 수집 (논스트리밍은 타임아웃)
     const stream = client.messages.stream({
       model: 'claude-sonnet-4-6',
@@ -86,11 +148,24 @@ export async function POST(request) {
     const html = text.replace(/^```html?\s*|```\s*$/g, '').trim();
     if (!html.toLowerCase().startsWith('<!doctype')) throw new Error('HTML 생성 실패: ' + html.slice(0, 80));
 
-    const { error } = await getSupabase()
-      .from('settings')
-      .upsert({ key: KEY, value: { html, updatedAt: new Date().toISOString() } }, { onConflict: 'key' });
-    if (error) throw error;
-    return Response.json({ ok: true, active: true, bytes: html.length });
+    // 라이브러리에 저장 + 활성화 (썸네일 = 첫 캡쳐 조각)
+    const lib = await getLib(sb);
+    const d = new Date();
+    const item = {
+      id: d.getTime().toString(36),
+      name: String(body?.name || '').slice(0, 40) || `템플릿 ${d.getMonth() + 1}/${d.getDate()} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`,
+      html,
+      thumb: images[0]?.url || null,
+      createdAt: d.toISOString(),
+    };
+    lib.items.push(item);
+    lib.activeId = item.id;
+    const [{ error }, { error: e2 }] = await Promise.all([
+      setVal(sb, LIB_KEY, lib),
+      setVal(sb, KEY, { html, updatedAt: item.createdAt }),
+    ]);
+    if (error || e2) throw error || e2;
+    return Response.json({ ...publicList(lib), bytes: html.length });
   } catch (e) {
     console.error('detail/style 실패:', e);
     return Response.json({ ok: false, error: e.message }, { status: 500 });
