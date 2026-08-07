@@ -1808,6 +1808,8 @@ ${h.urls.map((u) => `<img src="${u}" alt="">`).join("\n")}
                 <div style={{ display: "flex", gap: 8, marginTop: 10, alignItems: "center", flexWrap: "wrap" }}>
                   <button onClick={() => setGifRows((rs) => [...rs, { after: "", url: prompt("GIF/영상/이미지 URL 직접 추가") || "" }])}
                     style={{ ...btnS, flex: "none" }}>+ URL로 직접 추가</button>
+                  <button onClick={() => { if (confirm("배치 목록에 남은 GIF/추가컷 데이터를 전부 비울까요? (스토리지 파일은 유지)")) setGifRows([]); }}
+                    style={{ ...btnS, flex: "none", color: "#D70015" }}>목록 비우기</button>
                 </div>
               </div>
             );
