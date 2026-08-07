@@ -776,13 +776,20 @@ export default function DetailBuilder() {
   const [loginForm, setLoginForm] = useState({ name: "", pin: "" });
   const [adminForm, setAdminForm] = useState({ pin: "", teamName: "", teamPin: "", grantId: "", amount: "" });
   const [creditMsg, setCreditMsg] = useState("");
+  // 게스트 모드 — 외부 공유용: 생성기/폰카변환/모션레퍼런스만 노출, 내부 기록·크레딧 현황·대시보드 링크 숨김
+  const [guestMode, setGuestMode] = useState(false);
+
   useEffect(() => {
     try { const t = localStorage.getItem("oa_detail_team_v1"); if (t) setTeam(JSON.parse(t)); } catch {}
     loadCredits();
     // 게스트 자동로그인 링크: /detail?guest=이름:PIN — 클릭만 하면 로그인 완료
     try {
+      if (sessionStorage.getItem("oa_detail_guest_v1")) setGuestMode(true);
       const g = new URLSearchParams(window.location.search).get("guest");
       if (g && g.includes(":")) {
+        // 게스트 모드: 내부 기록/렌더/크레딧 현황 탭 숨김
+        sessionStorage.setItem("oa_detail_guest_v1", "1");
+        setGuestMode(true);
         const idx = g.indexOf(":");
         creditPost({ login: { name: g.slice(0, idx), pin: g.slice(idx + 1) } }).then((r) => {
           if (r.ok) {
@@ -821,11 +828,11 @@ export default function DetailBuilder() {
   async function spend(action: string, cost: number): Promise<boolean> {
     if (!team) {
       alert("팀 로그인이 필요해요 — 크레딧 탭에서 로그인해주세요");
-      setTab("credits"); loadCredits();
+      if (!guestMode) { setTab("credits"); loadCredits(); }
       return false;
     }
     const r = await creditPost({ spend: { id: team.id, action, cost } });
-    if (!r.ok) { alert(r.error); setTab("credits"); loadCredits(); return false; }
+    if (!r.ok) { alert(r.error); if (!guestMode) { setTab("credits"); } loadCredits(); return false; }
     setCreditTeams((ts) => ts.map((t) => (t.id === team.id ? { ...t, used: t.used + cost, balance: r.balance } : t)));
     return true;
   }
@@ -1211,13 +1218,17 @@ ${datas.map((d) => `<img src="${d}" alt="">`).join("\n")}
       <div style={{ maxWidth: 960, margin: "0 auto", padding: "28px 20px 60px" }}>
 
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          {!guestMode && (
           <a href="/" style={{ fontSize: 13, fontWeight: 700, color: C.inkMid, textDecoration: "none",
             background: C.white, border: `1px solid ${C.border}`, borderRadius: 10, padding: "7px 14px" }}>← 대시보드</a>
+          )}
           <h1 style={{ fontSize: 22, fontWeight: 800, color: C.ink, letterSpacing: "-0.02em" }}>상세페이지 생성기</h1>
         </div>
 
         <div style={{ display: "flex", gap: 8, marginTop: 16 }}>
-          {([["gen", "생성기"], ["phone", "폰카 변환"], ["renders", "최종 렌더 모음"], ["refs", "모션 레퍼런스"], ["reffind", "레퍼런스 찾기"], ["hist", "생성 기록"], ["credits", "크레딧"]] as const).map(([k, label]) => (
+          {([["gen", "생성기"], ["phone", "폰카 변환"], ["renders", "최종 렌더 모음"], ["refs", "모션 레퍼런스"], ["reffind", "레퍼런스 찾기"], ["hist", "생성 기록"], ["credits", "크레딧"]] as const)
+            .filter(([k]) => !guestMode || k === "gen" || k === "phone" || k === "refs")
+            .map(([k, label]) => (
             <button key={k} onClick={() => { setTab(k); if (k === "hist" || k === "renders") loadHistory(); if (k === "reffind") loadRefSites(); if (k === "credits") loadCredits(); }}
               style={{ border: "none", borderRadius: 10, padding: "9px 18px", fontSize: 13,
                 fontWeight: 800, cursor: "pointer", fontFamily: "inherit",
@@ -1226,8 +1237,8 @@ ${datas.map((d) => `<img src="${d}" alt="">`).join("\n")}
               {label}
             </button>
           ))}
-          <button onClick={() => { setTab("credits"); loadCredits(); }}
-            title={team ? "크레딧 탭으로" : "팀 로그인하러 가기"}
+          <button onClick={() => { if (guestMode) return; setTab("credits"); loadCredits(); }}
+            title={guestMode ? "내 잔액" : team ? "크레딧 탭으로" : "팀 로그인하러 가기"}
             style={{ marginLeft: "auto", border: `1px solid ${team ? "#B7E4C7" : C.border}`, borderRadius: 10,
               padding: "9px 14px", fontSize: 12, fontWeight: 800, cursor: "pointer", fontFamily: "inherit",
               background: team ? "#E8F8EE" : C.white, color: team ? "#1F9D55" : "#D70015" }}>
@@ -1925,10 +1936,10 @@ ${datas.map((d) => `<img src="${d}" alt="">`).join("\n")}
             style={{ ...btnS, opacity: step === 0 ? 0.4 : 1, padding: "11px 22px" }}>← 이전</button>
           {step < 2 ? (
             <button onClick={nextStep} style={{ ...btn, marginTop: 0, padding: "11px 26px" }}>다음 →</button>
-          ) : (
+          ) : !guestMode ? (
             <button onClick={() => { setTab("renders"); loadHistory(); window.scrollTo({ top: 0 }); }}
               style={{ ...btn, marginTop: 0, padding: "11px 26px" }}>최종 렌더 모음 보기 →</button>
-          )}
+          ) : null}
         </div>
         </>)}
 
