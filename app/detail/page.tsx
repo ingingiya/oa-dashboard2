@@ -1694,72 +1694,57 @@ ${h.urls.map((u) => `<img src="${u}" alt="">`).join("\n")}
               });
             } catch {}
             if (!secs.length) return null;
-            const chip = (r: { after: string; url: string }, gi: number) => (
-              <span key={gi} draggable
-                onDragStart={(e) => e.dataTransfer.setData("text/plain", String(gi))}
-                style={{ display: "inline-flex", alignItems: "center", gap: 4, cursor: "grab",
-                  border: "1px solid #FF9500", borderRadius: 8, padding: 3, background: "#fff" }}>
-                <img src={r.url} style={{ height: 44, borderRadius: 5, pointerEvents: "none" }} />
-                <span onClick={() => setGifRows((rs) => rs.filter((_, j) => j !== gi))}
-                  style={{ fontSize: 11, fontWeight: 800, color: "#D70015", cursor: "pointer", padding: "0 4px" }}>✕</span>
-              </span>
+            const FIXED = new Set(["hook.png", "usp1.png", "usp2.png", "usp3.png", "scene1.png", "scene2.png", "cert.png", "packshot.png"]);
+            // 아직 배치 목록에 없는 추가 컷 (모델/포즈) — 자동으로 아래 목록에 노출
+            const extras = cuts.filter((c) =>
+              c.url && !FIXED.has(c.file) && !gifRows.some((r) => r.url === c.url.split("?")[0]));
+            const posSelect = (value: string, onChange: (v: string) => void) => (
+              <select value={value} onChange={(e) => onChange(e.target.value)}
+                style={{ ...inp, flex: 1, minWidth: 180, cursor: "pointer", fontSize: 12 }}>
+                <option value="">넣지 않음 (대기)</option>
+                {secs.map((label, si) => (
+                  <option key={si} value={String(si + 1)}>섹션 {si + 1} 뒤 — {label}…</option>
+                ))}
+              </select>
             );
-            const dropTo = (after: string) => (e: React.DragEvent) => {
-              e.preventDefault();
-              const gi = Number(e.dataTransfer.getData("text/plain"));
-              if (!Number.isNaN(gi)) setGifRows((rs) => rs.map((x, j) => (j === gi ? { ...x, after } : x)));
-            };
-            const zone = { border: "2px dashed #FFD08A", borderRadius: 8, minHeight: 54, padding: 4,
-              display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" as const, background: "#fffdf8" };
-            const unplaced = gifRows.map((r, gi) => ({ r, gi })).filter(({ r }) => r.url && !(Number(r.after) > 0));
+            const rowS = { display: "flex", alignItems: "center", gap: 8, border: `1px solid ${C.border}`,
+              borderRadius: 10, padding: 6, background: "#fff" } as const;
             return (
               <div style={{ border: `1px solid ${C.border}`, borderRadius: 14, padding: 14, marginBottom: 14, background: "#fffdf8" }}>
                 <div style={{ fontSize: 13.5, fontWeight: 800, color: C.ink }}>GIF·추가 컷 배치</div>
                 <div style={{ fontSize: 12, color: C.inkMid, marginTop: 2 }}>
-                  GIF와 <b>모델컷·포즈컷 같은 추가 컷</b>은 기본 템플릿 슬롯에 없어서 여기서 배치해야 렌더에 들어가요 — 원하는 섹션 사이 점선 칸으로 끌어다 놓으세요
-                </div>
-                <div onDragOver={(e) => e.preventDefault()} onDrop={dropTo("")}
-                  style={{ ...zone, marginTop: 10, borderColor: "#c8c8cc", background: "#fafafa" }}>
-                  <span style={{ fontSize: 11.5, color: C.inkLt, fontWeight: 700, marginRight: 4 }}>대기함</span>
-                  {unplaced.length ? unplaced.map(({ r, gi }) => chip(r, gi))
-                    : <span style={{ fontSize: 11.5, color: C.inkLt }}>비어있음 — 스텝②에서 GIF를 생성하면 여기 나타나요</span>}
+                  GIF와 모델컷·포즈컷은 옆 드롭다운에서 <b>어느 섹션 뒤에 넣을지 고르면 끝</b> — 안 고르면 렌더에 안 들어가요
                 </div>
                 <div style={{ marginTop: 10, display: "flex", flexDirection: "column", gap: 6 }}>
-                  {secs.map((label, si) => (
-                    <div key={si}>
-                      <div style={{ border: `1px solid ${C.border}`, borderRadius: 8, padding: "7px 10px",
-                        background: "#fff", fontSize: 12, color: C.inkMid }}>
-                        <b style={{ color: C.ink }}>섹션 {si + 1}</b> · {label}…
-                      </div>
-                      <div onDragOver={(e) => e.preventDefault()} onDrop={dropTo(String(si + 1))}
-                        style={{ ...zone, marginTop: 6, minHeight: 34 }}>
-                        {gifRows.map((r, gi) => (Number(r.after) === si + 1 && r.url ? chip(r, gi) : null))}
-                        {!gifRows.some((r) => Number(r.after) === si + 1 && r.url) && (
-                          <span style={{ fontSize: 11, color: "#d9b06a" }}>여기에 놓으면 섹션 {si + 1} 뒤에 들어가요</span>
-                        )}
-                      </div>
+                  {gifRows.map((r, gi) => r.url ? (
+                    <div key={gi} style={rowS}>
+                      <img src={r.url} onClick={() => setZoomUrl(r.url)}
+                        style={{ height: 44, borderRadius: 6, cursor: "zoom-in" }} />
+                      <span style={{ fontSize: 12, fontWeight: 700, color: C.ink, flex: "none" }}>
+                        {cuts.find((c) => c.url.split("?")[0] === r.url)?.label || "GIF"}
+                      </span>
+                      {posSelect(Number(r.after) > 0 ? String(r.after) : "",
+                        (v) => setGifRows((rs) => rs.map((x, j) => (j === gi ? { ...x, after: v } : x))))}
+                      <span onClick={() => setGifRows((rs) => rs.filter((_, j) => j !== gi))}
+                        style={{ fontSize: 12, fontWeight: 800, color: "#D70015", cursor: "pointer", padding: "0 6px" }}>✕</span>
+                    </div>
+                  ) : null)}
+                  {extras.map((c) => (
+                    <div key={c.file} style={{ ...rowS, borderStyle: "dashed" }}>
+                      <img src={c.url} onClick={() => setZoomUrl(c.url)}
+                        style={{ height: 44, borderRadius: 6, cursor: "zoom-in" }} />
+                      <span style={{ fontSize: 12, fontWeight: 700, color: C.ink, flex: "none" }}>{c.label}</span>
+                      {posSelect("", (v) => setGifRows((rs) => [...rs, { after: v, url: c.url.split("?")[0] }]))}
+                      <span style={{ fontSize: 11, color: C.inkLt, flex: "none" }}>미배치</span>
                     </div>
                   ))}
+                  {!gifRows.some((r) => r.url) && !extras.length && (
+                    <span style={{ fontSize: 11.5, color: C.inkLt }}>
+                      배치할 게 없어요 — 스텝②에서 GIF를 만들거나 모델/포즈 컷을 생성하면 여기 나타나요
+                    </span>
+                  )}
                 </div>
                 <div style={{ display: "flex", gap: 8, marginTop: 10, alignItems: "center", flexWrap: "wrap" }}>
-                  {(() => {
-                    const FIXED = new Set(["hook.png", "usp1.png", "usp2.png", "usp3.png", "scene1.png", "scene2.png", "cert.png", "packshot.png"]);
-                    const extras = cuts.filter((c) =>
-                      c.url && !FIXED.has(c.file) && !gifRows.some((r) => r.url === c.url.split("?")[0]));
-                    if (!extras.length) return null;
-                    return (
-                      <select value=""
-                        onChange={(e) => {
-                          const c = extras.find((x) => x.file === e.target.value);
-                          if (c) setGifRows((rs) => [...rs, { after: "", url: c.url.split("?")[0] }]);
-                        }}
-                        title="모델컷·포즈컷 등 기본 8슬롯 밖 컷을 대기함에 추가"
-                        style={{ ...inp, width: 220, cursor: "pointer", fontWeight: 700 }}>
-                        <option value="">+ 생성된 컷 추가 (모델컷 등)</option>
-                        {extras.map((c) => <option key={c.file} value={c.file}>{c.label}</option>)}
-                      </select>
-                    );
-                  })()}
                   <button onClick={() => setGifRows((rs) => [...rs, { after: "", url: prompt("GIF/영상/이미지 URL 직접 추가") || "" }])}
                     style={{ ...btnS, flex: "none" }}>+ URL로 직접 추가</button>
                 </div>
