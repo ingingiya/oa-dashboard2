@@ -33,7 +33,7 @@ const DEFAULT_CUTS = [
 ];
 
 export default function DetailBuilder() {
-  const [tab, setTab] = useState<"gen" | "renders" | "refs" | "reffind" | "hist" | "credits">("gen");
+  const [tab, setTab] = useState<"gen" | "phone" | "renders" | "refs" | "reffind" | "hist" | "credits">("gen");
   const [slug, setSlug] = useState("cleanswingP");
   const [trigger, setTrigger] = useState("cleanswingP");
   // 앵커 실사 여러 장(여러 각도) — 컷마다 어울리는 각도를 AI가 자동 선택
@@ -673,6 +673,45 @@ export default function DetailBuilder() {
       .then((res) => { if (res.ok) setMotionRefs(res.items); }).catch(() => {});
   }, []);
 
+  // ── 폰카 변환 (폰카 제품사진 → 스튜디오 앵커 3앵글) ──
+  const [phonePhoto, setPhonePhoto] = useState("");
+  const [phoneBusy, setPhoneBusy] = useState("");
+  const [phoneResults, setPhoneResults] = useState<{ angle: string; label: string; url: string }[]>([]);
+
+  async function uploadPhonePhoto(file: File) {
+    try {
+      setPhoneBusy("사진 업로드 중…");
+      const blob = await downscale(file, 2000);
+      const sign = await fetch("/api/detail/upload-sign", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ slug, files: [file.name || "phone.jpg"] }),
+      }).then((r) => r.json());
+      if (!sign.ok) throw new Error(sign.error);
+      const { error } = await supabase.storage.from("detail-assets")
+        .uploadToSignedUrl(sign.files[0].path, sign.files[0].token, blob, { contentType: "image/jpeg" });
+      if (error) throw new Error(error.message);
+      setPhonePhoto(sign.files[0].publicUrl);
+      setPhoneResults([]);
+    } catch (e: any) { alert("업로드 실패: " + e.message); }
+    setPhoneBusy("");
+  }
+
+  async function convertPhone() {
+    if (!phonePhoto) return alert("폰카 사진을 먼저 올려주세요");
+    if (!(await spend("폰카변환", 3))) return;
+    setPhoneBusy("스튜디오 앵커 생성 중… (1~3분, 정면/사선/디테일 3장)");
+    try {
+      const res = await fetch("/api/detail/studio", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ imageUrl: phonePhoto, slug, lockNote }),
+      }).then((r) => r.json());
+      if (!res.ok) throw new Error(res.error);
+      setPhoneResults(res.results);
+      notify(`📱 폰카 변환 완료 — ${slug} 스튜디오 앵커 ${res.results.length}장`);
+    } catch (e: any) { alert("변환 실패: " + e.message); }
+    setPhoneBusy("");
+  }
+
   // ── 레퍼런스 찾기 (HTML 긁기 적합도 검사 + 저장 목록) ──
   type RefSite = { id: string; url: string; name: string; verdict: string; at: string };
   const [refSites, setRefSites] = useState<RefSite[]>([]);
@@ -1165,7 +1204,7 @@ ${datas.map((d) => `<img src="${d}" alt="">`).join("\n")}
         </div>
 
         <div style={{ display: "flex", gap: 8, marginTop: 16 }}>
-          {([["gen", "생성기"], ["renders", "최종 렌더 모음"], ["refs", "모션 레퍼런스"], ["reffind", "레퍼런스 찾기"], ["hist", "생성 기록"], ["credits", "크레딧"]] as const).map(([k, label]) => (
+          {([["gen", "생성기"], ["phone", "폰카 변환"], ["renders", "최종 렌더 모음"], ["refs", "모션 레퍼런스"], ["reffind", "레퍼런스 찾기"], ["hist", "생성 기록"], ["credits", "크레딧"]] as const).map(([k, label]) => (
             <button key={k} onClick={() => { setTab(k); if (k === "hist" || k === "renders") loadHistory(); if (k === "reffind") loadRefSites(); if (k === "credits") loadCredits(); }}
               style={{ border: "none", borderRadius: 10, padding: "9px 18px", fontSize: 13,
                 fontWeight: 800, cursor: "pointer", fontFamily: "inherit",
@@ -1984,6 +2023,55 @@ ${datas.map((d) => `<img src="${d}" alt="">`).join("\n")}
               ))}
             </div>
           )}
+        </div>
+        )}
+
+        {tab === "phone" && (
+        <div style={card}>
+          <div style={cardTitle}>폰카 변환 <span style={{ color: C.inkMid, fontWeight: 400, fontSize: 12 }}>폰으로 찍은 제품사진 → 스튜디오 앵커</span></div>
+          <div style={cardSub}>배경 지저분해도 OK — 제품 형태·로고·색은 그대로 유지하고 조명/배경/왜곡만 프로 스튜디오급으로 바꿔서 정면·사선·디테일 3장을 만들어요. 결과를 앵커로 등록하면 생성기에서 바로 사용 (3크레딧)</div>
+          <div style={{ display: "flex", gap: 16, alignItems: "flex-start", flexWrap: "wrap" }}>
+            <div>
+              <label style={{ ...btnS, cursor: "pointer", display: "inline-block" }}>
+                📱 폰카 사진 올리기
+                <input type="file" accept="image/*" hidden
+                  onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadPhonePhoto(f); e.target.value = ""; }} />
+              </label>
+              {phonePhoto && (
+                <div style={{ marginTop: 10 }}>
+                  <img src={phonePhoto} onClick={() => setZoomUrl(phonePhoto)}
+                    style={{ width: 180, borderRadius: 12, border: `1px solid ${C.border}`, cursor: "zoom-in", display: "block" }} />
+                  <button onClick={convertPhone} disabled={!!phoneBusy}
+                    style={{ ...btn, marginTop: 10, opacity: phoneBusy ? 0.6 : 1 }}>
+                    ✨ 스튜디오 앵커로 변환 (3장 · 3크레딧)
+                  </button>
+                </div>
+              )}
+              {phoneBusy && <div style={{ marginTop: 8, fontSize: 12.5, color: C.inkMid }}>{phoneBusy}</div>}
+            </div>
+            {phoneResults.length > 0 && (
+              <div style={{ flex: 1, minWidth: 320 }}>
+                <div style={{ fontSize: 13, fontWeight: 800, color: C.ink, marginBottom: 8 }}>변환 결과</div>
+                <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+                  {phoneResults.map((r) => (
+                    <div key={r.angle} style={{ width: 160 }}>
+                      <img src={r.url} onClick={() => setZoomUrl(r.url)}
+                        style={{ width: "100%", borderRadius: 12, border: `1px solid ${C.border}`, cursor: "zoom-in", display: "block" }} />
+                      <div style={{ fontSize: 12, fontWeight: 700, color: C.inkMid, margin: "6px 0 4px" }}>{r.label}</div>
+                      <button onClick={() => setAnchors((p) => (p.includes(r.url) ? p : [...p, r.url]))}
+                        disabled={anchors.includes(r.url)} style={{ ...btnS, width: "100%" }}>
+                        {anchors.includes(r.url) ? "앵커 등록됨 ✓" : "앵커로 등록"}
+                      </button>
+                    </div>
+                  ))}
+                </div>
+                <button onClick={() => {
+                  setAnchors((p) => Array.from(new Set([...p, ...phoneResults.map((r) => r.url)])));
+                  setTab("gen"); window.scrollTo({ top: 0 });
+                }} style={{ ...btn, marginTop: 12 }}>전체 앵커로 등록 → 생성기로 이동</button>
+              </div>
+            )}
+          </div>
         </div>
         )}
 
