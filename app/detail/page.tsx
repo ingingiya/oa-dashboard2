@@ -233,22 +233,10 @@ export default function DetailBuilder() {
     url: string; product: string; keyword: string; source: string };
   const [motionRefs, setMotionRefs] = useState<MotionRef[]>([]);
   const [refCat, setRefCat] = useState<"all" | "typo" | "graph" | "real">("all");
-  const [refOnlyMatch, setRefOnlyMatch] = useState(false);
   useEffect(() => {
     fetch("/api/detail/motion-refs").then((r) => r.json())
       .then((res) => { if (res.ok) setMotionRefs(res.items); }).catch(() => {});
   }, []);
-  const refQuery = `${form.productName} ${form.category} ${trigger}`.toLowerCase();
-  const isRelevant = (m: MotionRef) => {
-    if (!refQuery.trim()) return false;
-    const kw = m.keyword.toLowerCase();
-    return refQuery.includes(kw) || kw.split("").length >= 2 &&
-      refQuery.split(/\s+/).some((w) => w.length >= 2 && (kw.includes(w) || w.includes(kw)));
-  };
-  const visibleRefs = motionRefs
-    .filter((m) => refCat === "all" || m.category === refCat)
-    .filter((m) => !refOnlyMatch || isRelevant(m))
-    .sort((a, b) => Number(isRelevant(b)) - Number(isRelevant(a)));
 
   // ── 생성 기록 ──
   type HistItem = { id: string; at: string; type: string; slug: string; urls: string[]; deleted?: boolean };
@@ -387,53 +375,6 @@ export default function DetailBuilder() {
             placeholder="카피 생성 결과 JSON (직접 수정 가능 / 붙여넣기도 가능)"
             style={{ ...inp, width: "100%", height: 160, marginTop: 12, fontFamily: "monospace", fontSize: 12 }} />
         </div>
-
-        {motionRefs.length > 0 && (
-          <div style={card}>
-            <div style={cardTitle}>모션 레퍼런스 <span style={{ color: C.inkMid, fontWeight: 400, fontSize: 12 }}>와디즈 가전 상세페이지 수집 {motionRefs.length}개</span></div>
-            <div style={cardSub}>제품명·카테고리를 입력하면 관련 카테고리가 앞으로 정렬돼요 — GIF 컷 연출 참고용</div>
-            <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 10 }}>
-              {([["all", "전체"], ["typo", "타이포"], ["graph", "그래프·수치"], ["real", "실사"]] as const).map(([k, label]) => (
-                <button key={k} onClick={() => setRefCat(k)}
-                  style={{ border: "none", borderRadius: 8, padding: "6px 12px", fontSize: 12, fontWeight: 700,
-                    cursor: "pointer", fontFamily: "inherit",
-                    background: refCat === k ? C.ink : "#f0f0f2", color: refCat === k ? "#fff" : C.inkMid }}>
-                  {label}
-                </button>
-              ))}
-              <button onClick={() => setRefOnlyMatch((v) => !v)}
-                style={{ border: "none", borderRadius: 8, padding: "6px 12px", fontSize: 12, fontWeight: 700,
-                  cursor: "pointer", fontFamily: "inherit",
-                  background: refOnlyMatch ? C.rose : "#f0f0f2", color: refOnlyMatch ? "#fff" : C.inkMid }}>
-                관련 제품만
-              </button>
-            </div>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(160px,1fr))", gap: 10,
-              maxHeight: 420, overflowY: "auto" }}>
-              {visibleRefs.map((m) => (
-                <div key={m.id} style={{ background: "#f7f7f8", borderRadius: 10, overflow: "hidden",
-                  border: `1px solid ${isRelevant(m) ? C.rose : C.border}` }}>
-                  {m.url.endsWith(".mp4") ? (
-                    <video src={m.url} muted loop playsInline preload="metadata"
-                      onMouseOver={(e) => e.currentTarget.play()} onMouseOut={(e) => e.currentTarget.pause()}
-                      style={{ width: "100%", height: 110, objectFit: "cover", display: "block", background: "#000" }} />
-                  ) : (
-                    <img src={m.url} loading="lazy" alt={m.label}
-                      style={{ width: "100%", height: 110, objectFit: "cover", display: "block", background: "#000" }} />
-                  )}
-                  <div style={{ padding: "6px 8px" }}>
-                    <div style={{ fontSize: 11.5, fontWeight: 700, color: C.ink, lineHeight: 1.3 }}>{m.label}</div>
-                    <a href={m.source} target="_blank" rel="noreferrer"
-                      style={{ fontSize: 11, color: "#0071E3", textDecoration: "none" }}>
-                      {m.keyword} · 원본 ↗
-                    </a>
-                  </div>
-                </div>
-              ))}
-            </div>
-            {visibleRefs.length === 0 && <p style={{ fontSize: 13, color: C.inkMid }}>조건에 맞는 레퍼런스가 없어요</p>}
-          </div>
-        )}
 
         <div style={card}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
