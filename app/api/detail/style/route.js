@@ -169,6 +169,7 @@ ${refSource ? `\n## 레퍼런스 페이지 실제 소스 (컬러 hex·폰트·px
   레퍼런스에 움직임(GIF/영상 프레임)이 들어간 구간이 보이면 그 위치의 섹션을 반드시 독립 섹션으로 분리
   (서버가 섹션 사이에 GIF 조각을 끼우는 구조라, 경계가 있어야 모션을 넣을 수 있음).
 - 각 섹션은 <body> 바로 아래 최상위 요소로 (서버가 섹션 경계에서 이미지를 자름).
+- **레이아웃은 전부 flexbox 기반** (피그마 Auto Layout 변환용): 세로 나열은 display:flex;flex-direction:column;gap, 좌우 분할·칩 나열은 flex-direction:row;gap. position:absolute/float/음수 마진 금지 (장식 오버레이가 꼭 필요한 경우만 예외). 간격은 margin 대신 부모의 gap/padding으로.
 
 ## 출력
 <!DOCTYPE html>로 시작하는 완성 HTML만 출력. 설명·마크다운 코드블록 금지.`;
