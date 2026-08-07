@@ -13,10 +13,10 @@ export async function POST(request) {
   try { body = await request.json(); } catch { return Response.json({ error: '잘못된 요청' }, { status: 400 }); }
   const raw = String(body?.raw || '').slice(0, 8000);
   const productName = String(body?.productName || '').slice(0, 100);
-  // 첨부 자료 (캡쳐 이미지/PDF, base64) — 비전으로 제품 정보 추출
+  // 첨부 자료 (캡쳐 이미지/PDF, Storage 공개 URL) — 비전으로 제품 정보 추출
   const OK_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'application/pdf'];
   const files = (Array.isArray(body?.files) ? body.files : [])
-    .filter((f) => f?.data && OK_TYPES.includes(f?.media_type))
+    .filter((f) => f?.url && OK_TYPES.includes(f?.media_type))
     .slice(0, 5);
   if (!productName && !raw && !files.length)
     return Response.json({ error: 'productName·raw·files 중 하나 필수' }, { status: 400 });
@@ -71,8 +71,8 @@ specs 배열은 입력 스펙을 label/value로 정리 (5~7행), faq는 구매 �
     const client = new Anthropic({ apiKey: key });
     const blocks = files.map((f) =>
       f.media_type === 'application/pdf'
-        ? { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: f.data } }
-        : { type: 'image', source: { type: 'base64', media_type: f.media_type, data: f.data } }
+        ? { type: 'document', source: { type: 'url', url: f.url } }
+        : { type: 'image', source: { type: 'url', url: f.url } }
     );
     const msg = await client.messages.create({
       model: 'claude-opus-4-6',

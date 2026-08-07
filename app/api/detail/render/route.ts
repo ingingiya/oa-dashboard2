@@ -257,11 +257,10 @@ export async function POST(req: NextRequest) {
           else if (low.includes(".webm")) { ext = "webm"; contentType = "video/webm"; }
           else { ext = "gif"; contentType = "image/gif"; }
         } else {
-          buf = await page.screenshot({
-            clip: { x: 0, y: piece.top, width: PAGE_WIDTH, height: piece.height },
-            type: "jpeg",
-            quality: 88,
-          });
+          // clip이 뷰포트 밖에서 잘리는 문제 회피 — 뷰포트를 조각 크기로 맞추고 스크롤해서 캡처
+          await page.setViewportSize({ width: PAGE_WIDTH, height: piece.height });
+          await page.evaluate((y) => window.scrollTo(0, y), piece.top);
+          buf = await page.screenshot({ type: "jpeg", quality: 88 });
         }
 
         const filePath = `${slug}/detail_${num}.${ext}`;

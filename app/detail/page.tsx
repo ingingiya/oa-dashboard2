@@ -83,29 +83,33 @@ export default function DetailBuilder() {
     tagline: "현명한 당신, 오아하시네요",
   });
   const [copyBusy, setCopyBusy] = useState(false);
-  // 첨부 자료 (제품정보 캡쳐/PDF) — 카피 생성 시 비전으로 분석
-  const [copyFiles, setCopyFiles] = useState<{ name: string; media_type: string; data: string }[]>([]);
+  // 첨부 자료 (제품정보 캡쳐/PDF) — Storage에 올리고 URL만 API로 전달 (Vercel 4.5MB 요청 한도 회피)
+  const [copyFiles, setCopyFiles] = useState<{ name: string; media_type: string; url: string }[]>([]);
 
   async function addCopyFiles(list: FileList | File[]) {
-    const out: { name: string; media_type: string; data: string }[] = [];
+    const out: { name: string; media_type: string; url: string }[] = [];
     for (const file of Array.from(list)) {
+      let blob: Blob | null = null, mt = "", ext = "";
       if (file.type === "application/pdf") {
-        const data = await new Promise<string>((res) => {
-          const r = new FileReader();
-          r.onload = () => res(String(r.result).split(",")[1]);
-          r.readAsDataURL(file);
-        });
-        out.push({ name: file.name, media_type: "application/pdf", data });
+        blob = file; mt = "application/pdf"; ext = "pdf";
       } else if (file.type.startsWith("image/")) {
-        // 캡쳐가 커도 되게 1600px로 축소해서 전송
+        // 캡쳐가 커도 되게 1600px로 축소
         const img = await createImageBitmap(file);
         const scale = Math.min(1, 1600 / Math.max(img.width, img.height));
         const cv = document.createElement("canvas");
         cv.width = Math.round(img.width * scale);
         cv.height = Math.round(img.height * scale);
         cv.getContext("2d")!.drawImage(img, 0, 0, cv.width, cv.height);
-        out.push({ name: file.name, media_type: "image/jpeg", data: cv.toDataURL("image/jpeg", 0.85).split(",")[1] });
+        blob = await new Promise<Blob | null>((res) => cv.toBlob(res, "image/jpeg", 0.85));
+        mt = "image/jpeg"; ext = "jpg";
       }
+      if (!blob) continue;
+      const path = `copy-src/${Date.now()}_${Math.random().toString(36).slice(2, 6)}.${ext}`;
+      const { error } = await supabase.storage.from("detail-assets")
+        .upload(path, blob, { contentType: mt, upsert: true });
+      if (error) { alert("첨부 업로드 실패: " + error.message); continue; }
+      const { data } = supabase.storage.from("detail-assets").getPublicUrl(path);
+      out.push({ name: file.name, media_type: mt, url: data.publicUrl });
     }
     setCopyFiles((p) => [...p, ...out].slice(0, 5));
   }
@@ -115,11 +119,14 @@ export default function DetailBuilder() {
       return alert("제품 정보를 붙여넣거나 캡쳐/파일을 첨부하세요");
     setCopyBusy(true);
     try {
-      const res = await fetch("/api/detail/copy", {
+      const resp = await fetch("/api/detail/copy", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ...form, files: copyFiles.map(({ name, ...f }) => f) }),
-      }).then((r) => r.json());
+      });
+      const txt = await resp.text();
+      let res: any;
+      try { res = JSON.parse(txt); } catch { throw new Error("서버 응답 오류: " + txt.slice(0, 120)); }
       if (!res.ok) throw new Error(res.error || "카피 생성 실패");
       setProductJson(JSON.stringify(res.product, null, 2));
       // 통붙여넣기에서 추출된 제품명/카테고리 폼에 역반영
