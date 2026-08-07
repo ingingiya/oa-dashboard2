@@ -129,6 +129,7 @@ export default function DetailBuilder() {
     }
   }
 
+  const [styleUrl, setStyleUrl] = useState("");
   async function applyStyle() {
     if (!styleFiles.length) return alert("따라할 상세페이지 캡쳐를 먼저 첨부하세요");
     setStyleBusy("디자인 분석 중… (2~4분, 최고 성능 모델)");
@@ -136,7 +137,7 @@ export default function DetailBuilder() {
       const res = await fetch("/api/detail/style", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ images: styleFiles }),
+        body: JSON.stringify({ images: styleFiles, refUrl: styleUrl.trim() }),
       }).then((r) => r.json());
       if (!res.ok) throw new Error(res.error);
       setStyleLib({ items: res.items || [], activeId: res.activeId || null });
@@ -574,6 +575,9 @@ export default function DetailBuilder() {
               style={{ ...btnS, background: C.rose, color: "#fff" }}>디자인 분석 → 템플릿 적용</button>
             {styleActive && <button onClick={resetStyle} style={btnS}>해제</button>}
           </div>
+          <input value={styleUrl} onChange={(e) => setStyleUrl(e.target.value)}
+            placeholder="레퍼런스 페이지 URL (선택 — 넣으면 실제 HTML/CSS까지 긁어서 컬러·폰트 정확도 ↑)"
+            style={{ ...inp, width: "100%", marginTop: 10 }} />
           {styleLib.items.length > 0 && (
             <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 12 }}>
               {styleLib.items.map((t) => {

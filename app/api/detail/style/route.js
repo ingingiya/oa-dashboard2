@@ -96,8 +96,33 @@ export async function POST(request) {
     .slice(0, 8);
   if (!images.length) return Response.json({ error: '이미지 필수' }, { status: 400 });
 
+  // 레퍼런스 페이지 URL이 있으면 실제 HTML/CSS 소스도 긁어서 분석에 포함 (컬러·폰트·간격 정확도 ↑)
+  let refSource = '';
+  const refUrl = String(body?.refUrl || '').trim();
+  if (/^https?:\/\//.test(refUrl)) {
+    try {
+      const res = await fetch(refUrl, {
+        headers: { 'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 Chrome/126 Safari/537.36' },
+        signal: AbortSignal.timeout(15000),
+      });
+      if (res.ok) {
+        let src = (await res.text())
+          .replace(/<script[\s\S]*?<\/script>/gi, '')
+          .replace(/<!--[\s\S]*?-->/g, '')
+          .replace(/\s{2,}/g, ' ');
+        // 쇼핑몰 통짜 페이지는 헤더/네비가 길어 상세 본문 구간을 중심으로 슬라이스 (카페24 등)
+        const anchor = src.search(/prd_?Detail|ec-data-src|se2_inputarea|상세정보/i);
+        if (anchor > 10000) src = src.slice(0, 4000) + '\n<!-- …중략… -->\n' + src.slice(anchor - 2000);
+        refSource = src.slice(0, 60000);
+      }
+    } catch (e) {
+      console.error('레퍼런스 HTML 수집 실패(캡쳐만으로 진행):', e.message);
+    }
+  }
+
   const prompt = `당신은 한국 이커머스 상세페이지 전문 웹퍼블리셔입니다.
 첨부된 상세페이지 디자인 캡쳐를 분석해, 그 디자인 시스템(컬러 팔레트·타이포 위계·섹션 구조·뱃지/하이라이트 같은 장식 장치·여백 리듬)을 최대한 따라한 HTML 템플릿 한 개를 만드세요.
+${refSource ? `\n## 레퍼런스 페이지 실제 소스 (컬러 hex·폰트·px 간격은 눈대중 말고 여기서 정확히 추출)\n\`\`\`html\n${refSource}\n\`\`\`\n` : ''}
 
 ## 규칙
 - 폭 860px 고정, 순수 HTML+인라인 <style> 한 파일. 외부 리소스는 폰트만 허용:
