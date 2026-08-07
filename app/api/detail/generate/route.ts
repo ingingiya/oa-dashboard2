@@ -60,8 +60,17 @@ const MODEL_REF =
   "consistent from ANY camera angle) " +
   "must appear in this shot, naturally interacting with the product, wearing the SAME outfit " +
   "as in her reference photo — clean, neatly pressed and well-fitted. " +
-  "Her FACE MUST BE CLEARLY VISIBLE — front or three-quarter view toward the camera, " +
-  "never a back view, never cropped above the chin, never hidden by hair, hands or the product. No watermark. ";
+  "Her FACE MUST BE CLEARLY VISIBLE — never a back view, never cropped above the chin, " +
+  "never hidden by hair, hands or the product. " +
+  "PRODUCT HANDLING RULES (critical): she must hold and use the product EXACTLY the way a real " +
+  "customer uses it in daily life — natural relaxed grip with correct hand anatomy, the product in " +
+  "its correct upright orientation and correct real-world scale relative to her hands, fingers " +
+  "wrapped where they would actually go on the grip. She is candidly ABSORBED IN USING the product — " +
+  "her gaze and body naturally follow the action (looking at the product, a mirror, or softly " +
+  "off-frame as the scene demands), like a candid premium lifestyle ad photo. Do NOT make her stare " +
+  "stiffly straight into the camera while presenting the product like a home-shopping host, unless " +
+  "the shot description explicitly asks for a camera-facing pose. No floating product, no bent or " +
+  "broken wrist angles, no product awkwardly glued flat to her palm. No watermark. ";
 
 // 빌드 타임엔 env가 없을 수 있어 lazy 초기화
 const getSupabase = () =>

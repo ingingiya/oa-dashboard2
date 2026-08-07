@@ -185,9 +185,13 @@ const SAMPLE_PROMPT =
   "Two reference images are provided. The FIRST is the product — keep its design, proportions, " +
   "logo placement and materials EXACTLY identical, do not invent buttons or text. " +
   "The SECOND is the model — the EXACT SAME woman (same face, same hairstyle, same outfit) " +
-  "holding the product at chest height with both visible, looking at the camera with a soft smile, " +
-  "her face clearly visible, waist-up shot, clean bright studio background, " +
-  "premium K-beauty commercial quality. " +
+  "USING the product naturally the way a real customer uses it in daily life — natural relaxed " +
+  "grip with correct hand anatomy, the product in its correct orientation and real-world scale, " +
+  "fingers wrapped where they would actually go on the grip. Candid lifestyle-ad moment: her gaze " +
+  "softly on the product or just off-frame with a relaxed smile, NOT stiffly staring into the " +
+  "camera like a home-shopping host. Her face clearly visible, waist-up shot, clean bright studio " +
+  "background, premium K-beauty commercial quality. " +
+  "No floating product, no bent wrist angles, no product glued flat to her palm. " +
   "PHOTOREALISM RULES: she must look like a REAL person photographed on a real set, NOT AI-generated — " +
   "realistic natural skin texture with visible pores, NOT airbrushed plastic, NOT AI-perfect symmetry, " +
   "shot on an 85mm lens at f/2.8, natural editorial color grade, subtle fine film grain.";
