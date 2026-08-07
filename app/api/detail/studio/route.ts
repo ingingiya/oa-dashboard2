@@ -44,7 +44,7 @@ async function uploadToComfy(url: string): Promise<string> {
 
 // 폰카 → 스튜디오 변환 공통 지시문: 제품은 그대로, 촬영 환경만 프로급으로
 const STUDIO_REF =
-  "The reference image is a casual smartphone photo of a product. " +
+  "The reference images are casual smartphone photos of the SAME product (possibly from different angles — use ALL of them to understand the product's full 3D shape and details). " +
   "Recreate the EXACT SAME product as a professional studio anchor photo. " +
   "CRITICAL — product fidelity: keep the design, proportions, logo placement, printed text, " +
   "buttons, materials and colors EXACTLY identical to the reference. Do not invent, remove or " +
@@ -62,33 +62,41 @@ const ANGLES: { key: string; label: string; prompt: string }[] = [
   { key: "detail", label: "디테일", prompt: "CLOSE-UP macro detail shot of the product's most important functional part, filling the frame, texture clearly readable." },
 ];
 
-function buildWorkflow(imageName: string, prompt: string, prefix: string) {
-  return {
-    "1": { class_type: "LoadImage", inputs: { image: imageName } },
-    "2": {
-      class_type: "GeminiNanoBanana2",
-      inputs: {
-        prompt,
-        model: "Nano Banana 2 (Gemini 3.1 Flash Image)",
-        seed: Math.floor(Math.random() * 1e9),
-        aspect_ratio: "1:1",
-        resolution: "2K",
-        response_modalities: "IMAGE",
-        thinking_level: "MINIMAL",
-        images: ["1", 0],
-      },
+function buildWorkflow(imageNames: string[], prompt: string, prefix: string) {
+  const wf: any = {};
+  // 사진 여러 장 → ImageBatch 체인으로 묶어 나노바나나에 전부 참조로 전달
+  imageNames.forEach((name, i) => {
+    wf[`img${i}`] = { class_type: "LoadImage", inputs: { image: name } };
+  });
+  let src: [string, number] = ["img0", 0];
+  for (let i = 1; i < imageNames.length; i++) {
+    wf[`batch${i}`] = { class_type: "ImageBatch", inputs: { image1: src, image2: [`img${i}`, 0] } };
+    src = [`batch${i}`, 0];
+  }
+  wf["gen"] = {
+    class_type: "GeminiNanoBanana2",
+    inputs: {
+      prompt,
+      model: "Nano Banana 2 (Gemini 3.1 Flash Image)",
+      seed: Math.floor(Math.random() * 1e9),
+      aspect_ratio: "1:1",
+      resolution: "2K",
+      response_modalities: "IMAGE",
+      thinking_level: "MINIMAL",
+      images: src,
     },
-    "3": { class_type: "SaveImage", inputs: { images: ["2", 0], filename_prefix: prefix } },
   };
+  wf["save"] = { class_type: "SaveImage", inputs: { images: ["gen", 0], filename_prefix: prefix } };
+  return wf;
 }
 
-async function generateOne(imageName: string, prompt: string, prefix: string): Promise<Buffer> {
+async function generateOne(imageNames: string[], prompt: string, prefix: string): Promise<Buffer> {
   const submit = await (
     await comfy("/api/prompt", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        prompt: buildWorkflow(imageName, prompt, prefix),
+        prompt: buildWorkflow(imageNames, prompt, prefix),
         extra_data: { api_key_comfy_org: comfyKey() },
       }),
     })
@@ -119,20 +127,23 @@ async function generateOne(imageName: string, prompt: string, prefix: string): P
 
 export async function POST(req: NextRequest) {
   try {
-    const { imageUrl, slug, lockNote } = await req.json();
-    if (!imageUrl) throw new Error("imageUrl 필요");
+    const { imageUrl, imageUrls, slug, lockNote } = await req.json();
+    const urls: string[] = (Array.isArray(imageUrls) && imageUrls.length ? imageUrls : [imageUrl])
+      .filter(Boolean)
+      .slice(0, 6);
+    if (!urls.length) throw new Error("imageUrl 필요");
     const safeSlug = String(slug || "detail").replace(/[^A-Za-z0-9._-]/g, "") || "detail";
     const lock = lockNote
       ? `IMMUTABLE PRODUCT DETAILS — must stay EXACTLY as in the reference: ${String(lockNote).trim()}. `
       : "";
 
-    const imageName = await uploadToComfy(imageUrl);
+    const imageNames = await Promise.all(urls.map(uploadToComfy));
     const ts = Date.now().toString(36);
     const sb = getSupabase();
 
     const results = await Promise.all(
       ANGLES.map(async (a) => {
-        const buf = await generateOne(imageName, STUDIO_REF + lock + a.prompt, "studio_" + a.key);
+        const buf = await generateOne(imageNames, STUDIO_REF + lock + a.prompt, "studio_" + a.key);
         const path = `${safeSlug}/anchors/${ts}_${a.key}.png`;
         const { error } = await sb.storage.from(BUCKET).upload(path, buf, { contentType: "image/png", upsert: true });
         if (error) throw error;

@@ -674,36 +674,55 @@ export default function DetailBuilder() {
   }, []);
 
   // ── 폰카 변환 (폰카 제품사진 → 스튜디오 앵커 3앵글) ──
-  const [phonePhoto, setPhonePhoto] = useState("");
+  const [phonePhotos, setPhonePhotos] = useState<string[]>([]);
   const [phoneBusy, setPhoneBusy] = useState("");
   const [phoneResults, setPhoneResults] = useState<{ angle: string; label: string; url: string }[]>([]);
 
-  async function uploadPhonePhoto(file: File) {
+  // 아이폰 HEIC/HEIF → JPEG (heic2any CDN — 번들 제외)
+  async function heicToJpeg(file: File): Promise<Blob> {
+    if (!/hei[cf]/i.test(file.type) && !/\.hei[cf]$/i.test(file.name)) return file;
+    if (!(window as any).heic2any) {
+      await new Promise((res, rej) => {
+        const s = document.createElement("script");
+        s.src = "https://cdn.jsdelivr.net/npm/heic2any@0.0.4/dist/heic2any.min.js";
+        s.onload = res; s.onerror = () => rej(new Error("HEIC 변환기 로드 실패"));
+        document.head.appendChild(s);
+      });
+    }
+    const out = await (window as any).heic2any({ blob: file, toType: "image/jpeg", quality: 0.9 });
+    return Array.isArray(out) ? out[0] : out;
+  }
+
+  async function uploadPhonePhotos(files: FileList) {
     try {
-      setPhoneBusy("사진 업로드 중…");
-      const blob = await downscale(file, 2000);
+      const list = Array.from(files).slice(0, 6);
       const sign = await fetch("/api/detail/upload-sign", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ slug, files: [file.name || "phone.jpg"] }),
+        body: JSON.stringify({ slug, files: list.map((f) => (f.name || "phone.jpg").replace(/\.hei[cf]$/i, ".jpg")) }),
       }).then((r) => r.json());
       if (!sign.ok) throw new Error(sign.error);
-      const { error } = await supabase.storage.from("detail-assets")
-        .uploadToSignedUrl(sign.files[0].path, sign.files[0].token, blob, { contentType: "image/jpeg" });
-      if (error) throw new Error(error.message);
-      setPhonePhoto(sign.files[0].publicUrl);
+      for (let i = 0; i < list.length; i++) {
+        setPhoneBusy(`사진 업로드 중… (${i + 1}/${list.length})`);
+        const jpg = await heicToJpeg(list[i]);
+        const blob = await downscale(jpg as File, 2000);
+        const { error } = await supabase.storage.from("detail-assets")
+          .uploadToSignedUrl(sign.files[i].path, sign.files[i].token, blob, { contentType: "image/jpeg" });
+        if (error) throw new Error(error.message);
+        setPhonePhotos((p) => [...p, sign.files[i].publicUrl].slice(0, 6));
+      }
       setPhoneResults([]);
     } catch (e: any) { alert("업로드 실패: " + e.message); }
     setPhoneBusy("");
   }
 
   async function convertPhone() {
-    if (!phonePhoto) return alert("폰카 사진을 먼저 올려주세요");
+    if (!phonePhotos.length) return alert("폰카 사진을 먼저 올려주세요");
     if (!(await spend("폰카변환", 3))) return;
-    setPhoneBusy("스튜디오 앵커 생성 중… (1~3분, 정면/사선/디테일 3장)");
+    setPhoneBusy(`스튜디오 앵커 생성 중… (1~3분, 사진 ${phonePhotos.length}장 참조 → 정면/사선/디테일 3장)`);
     try {
       const res = await fetch("/api/detail/studio", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ imageUrl: phonePhoto, slug, lockNote }),
+        body: JSON.stringify({ imageUrls: phonePhotos, slug, lockNote }),
       }).then((r) => r.json());
       if (!res.ok) throw new Error(res.error);
       setPhoneResults(res.results);
@@ -1916,6 +1935,7 @@ ${datas.map((d) => `<img src="${d}" alt="">`).join("\n")}
           </button>
           {busy && <p style={{ marginTop: 8, fontSize: 13, color: C.inkLt }}>{busy}</p>}
           {sliceUrls.length > 0 && (
+            <>
             <ul style={{ marginTop: 12, listStyle: "none", padding: 0 }}>
               {sliceUrls.map((u, i) => (
                 <li key={u} style={{ padding: "6px 0", borderBottom: `1px solid ${C.border}` }}>
@@ -1925,6 +1945,19 @@ ${datas.map((d) => `<img src="${d}" alt="">`).join("\n")}
                 </li>
               ))}
             </ul>
+            {/* 이번 렌더 바로 다운로드 — 게스트도 자기 결과물은 가져갈 수 있게 */}
+            <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
+              <button onClick={() => downloadAll({ id: "cur", slug, urls: sliceUrls } as any)}
+                disabled={dlBusy === "cur"} style={{ ...btnS, opacity: dlBusy === "cur" ? 0.6 : 1 }}>
+                {dlBusy === "cur" ? "다운로드 중…" : "이미지 전체 다운로드"}
+              </button>
+              <button onClick={() => downloadHtml({ id: "cur", slug, urls: sliceUrls } as any)}
+                disabled={dlBusy === "html_cur"}
+                style={{ ...btnS, background: C.rose, color: "#fff", opacity: dlBusy === "html_cur" ? 0.6 : 1 }}>
+                {dlBusy === "html_cur" ? "만드는 중…" : "HTML 다운로드"}
+              </button>
+            </div>
+            </>
           )}
         </div>
         )}
@@ -2053,18 +2086,29 @@ ${datas.map((d) => `<img src="${d}" alt="">`).join("\n")}
         {tab === "phone" && (
         <div style={card}>
           <div style={cardTitle}>폰카 변환 <span style={{ color: C.inkMid, fontWeight: 400, fontSize: 12 }}>폰으로 찍은 제품사진 → 스튜디오 앵커</span></div>
-          <div style={cardSub}>배경 지저분해도 OK — 제품 형태·로고·색은 그대로 유지하고 조명/배경/왜곡만 프로 스튜디오급으로 바꿔서 정면·사선·디테일 3장을 만들어요. 결과를 앵커로 등록하면 생성기에서 바로 사용 (3크레딧)</div>
+          <div style={cardSub}>배경 지저분해도 OK — 제품 형태·로고·색은 그대로 유지하고 조명/배경/왜곡만 프로 스튜디오급으로 바꿔서 정면·사선·디테일 3장을 만들어요. 아이폰 HEIC도 그대로 OK, 같은 제품을 여러 각도로 찍어 한번에 올릴수록 정확해져요 (최대 6장 · 3크레딧)</div>
           <div style={{ display: "flex", gap: 16, alignItems: "flex-start", flexWrap: "wrap" }}>
-            <div>
+            <div style={{ maxWidth: 400 }}>
               <label style={{ ...btnS, cursor: "pointer", display: "inline-block" }}>
-                📱 폰카 사진 올리기
-                <input type="file" accept="image/*" hidden
-                  onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadPhonePhoto(f); e.target.value = ""; }} />
+                📱 폰카 사진 올리기 (여러 장 OK)
+                <input type="file" accept="image/*,.heic,.heif" multiple hidden
+                  onChange={(e) => { if (e.target.files?.length) uploadPhonePhotos(e.target.files); e.target.value = ""; }} />
               </label>
-              {phonePhoto && (
+              {phonePhotos.length > 0 && (
                 <div style={{ marginTop: 10 }}>
-                  <img src={phonePhoto} onClick={() => setZoomUrl(phonePhoto)}
-                    style={{ width: 180, borderRadius: 12, border: `1px solid ${C.border}`, cursor: "zoom-in", display: "block" }} />
+                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                    {phonePhotos.map((u, i) => (
+                      <div key={u} style={{ position: "relative" }}>
+                        <img src={u} onClick={() => setZoomUrl(u)}
+                          style={{ width: 90, height: 90, objectFit: "cover", borderRadius: 10,
+                            border: `1px solid ${C.border}`, cursor: "zoom-in", display: "block" }} />
+                        <span onClick={() => setPhonePhotos((p) => p.filter((_, j) => j !== i))}
+                          style={{ position: "absolute", top: -6, right: -6, width: 18, height: 18, lineHeight: "17px",
+                            textAlign: "center", fontSize: 11, fontWeight: 800, color: "#fff", background: "#D70015",
+                            borderRadius: "50%", cursor: "pointer" }}>✕</span>
+                      </div>
+                    ))}
+                  </div>
                   <button onClick={convertPhone} disabled={!!phoneBusy}
                     style={{ ...btn, marginTop: 10, opacity: phoneBusy ? 0.6 : 1 }}>
                     ✨ 스튜디오 앵커로 변환 (3장 · 3크레딧)
