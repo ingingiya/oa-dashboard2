@@ -232,6 +232,8 @@ export default function DetailBuilder() {
   type MotionRef = { id: string; category: "typo" | "graph" | "real"; label: string;
     url: string; product: string; keyword: string; source: string };
   const [motionRefs, setMotionRefs] = useState<MotionRef[]>([]);
+  // GIF 조각: 섹션 N 뒤에 원본 GIF/영상을 캡처 없이 그대로 끼워넣기 (디자이너 저장 방식)
+  const [gifRows, setGifRows] = useState<{ after: string; url: string }[]>([]);
   const [refCat, setRefCat] = useState<"all" | "typo" | "graph" | "real">("all");
   useEffect(() => {
     fetch("/api/detail/motion-refs").then((r) => r.json())
@@ -275,6 +277,9 @@ export default function DetailBuilder() {
     product.scene.images = [u("scene1.png"), u("scene2.png")];
     product.cert.image = u("cert.png");
     product.cta.image = u("packshot.png");
+    product.gifs = gifRows
+      .map((r) => ({ after: Number(r.after) || 0, url: r.url.trim() }))
+      .filter((g) => g.after > 0 && g.url);
 
     const res = await fetch("/api/detail/render", {
       method: "POST",
@@ -424,7 +429,21 @@ export default function DetailBuilder() {
 
         <div style={card}>
           <div style={cardTitle}>③ 최종 렌더</div>
-          <div style={cardSub}>서버에서 860px 상세페이지를 렌더해 세로 분할 JPG로 업로드해요</div>
+          <div style={cardSub}>서버에서 860px 상세페이지를 렌더해 섹션 경계 기준 분할 JPG로 업로드 — GIF 조각은 캡처하지 않고 원본 그대로 사이에 끼워요</div>
+          {gifRows.map((r, i) => (
+            <div key={i} style={{ display: "flex", gap: 8, marginBottom: 8 }}>
+              <input value={r.after} placeholder="섹션#"
+                onChange={(e) => setGifRows((rs) => rs.map((x, j) => j === i ? { ...x, after: e.target.value } : x))}
+                style={{ ...inp, width: 70 }} />
+              <input value={r.url} placeholder="GIF/영상 URL (모션 레퍼런스에서 URL 복사)"
+                onChange={(e) => setGifRows((rs) => rs.map((x, j) => j === i ? { ...x, url: e.target.value } : x))}
+                style={{ ...inp, flex: 1 }} />
+              <button onClick={() => setGifRows((rs) => rs.filter((_, j) => j !== i))} style={btnS}>삭제</button>
+            </div>
+          ))}
+          <button onClick={() => setGifRows((rs) => [...rs, { after: "", url: "" }])}
+            style={{ ...btnS, marginBottom: 4 }}>+ GIF 조각 (섹션 N 뒤에 삽입)</button>
+          <br />
           <button onClick={renderPage} style={btn}>
             상세페이지 렌더 → 분할 JPG
           </button>
@@ -434,7 +453,7 @@ export default function DetailBuilder() {
               {sliceUrls.map((u, i) => (
                 <li key={u} style={{ padding: "6px 0", borderBottom: `1px solid ${C.border}` }}>
                   <a href={u} target="_blank" style={{ fontSize: 13, fontWeight: 700, color: C.rose, textDecoration: "none" }}>
-                    detail_{String(i + 1).padStart(2, "0")}.jpg
+                    {u.split("/").pop()}
                   </a>
                 </li>
               ))}
@@ -473,10 +492,18 @@ export default function DetailBuilder() {
                   <div style={{ padding: "9px 12px" }}>
                     <div style={{ fontSize: 13, fontWeight: 700, color: C.ink, lineHeight: 1.35 }}>{m.label}</div>
                     <div style={{ fontSize: 12, color: C.inkMid, marginTop: 2 }}>{m.product}</div>
-                    <a href={m.source} target="_blank" rel="noreferrer"
-                      style={{ fontSize: 12, color: "#0071E3", textDecoration: "none" }}>
-                      {m.keyword} · 와디즈 원본 ↗
-                    </a>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      <a href={m.source} target="_blank" rel="noreferrer"
+                        style={{ fontSize: 12, color: "#0071E3", textDecoration: "none" }}>
+                        {m.keyword} · 와디즈 원본 ↗
+                      </a>
+                      <button onClick={(e) => { navigator.clipboard.writeText(m.url);
+                          const b = e.currentTarget; b.textContent = "복사됨"; setTimeout(() => { b.textContent = "URL 복사"; }, 1200); }}
+                        style={{ border: "none", borderRadius: 6, padding: "3px 8px", fontSize: 11, fontWeight: 700,
+                          cursor: "pointer", fontFamily: "inherit", background: "#eceef0", color: C.inkMid }}>
+                        URL 복사
+                      </button>
+                    </div>
                   </div>
                 </div>
               ))}

@@ -190,21 +190,78 @@ export async function POST(req: NextRequest) {
       const totalHeight: number = await page.evaluate(
         () => document.body.scrollHeight
       );
-      count = Math.ceil(totalHeight / SLICE_HEIGHT);
+      // 최상위 섹션들의 하단 경계 (디자이너 방식: 섹션 경계에서 자름)
+      const bottoms: number[] = await page.evaluate(() =>
+        Array.from(document.body.children).map((el) => {
+          const e = el as HTMLElement;
+          return e.offsetTop + e.offsetHeight;
+        })
+      );
 
-      for (let i = 0; i < count; i++) {
-        const top = i * SLICE_HEIGHT;
-        const h = Math.min(SLICE_HEIGHT, totalHeight - top);
-        const buf = await page.screenshot({
-          clip: { x: 0, y: top, width: PAGE_WIDTH, height: h },
-          type: "jpeg",
-          quality: 88,
-        });
+      // GIF 조각: product.gifs = [{ after: 섹션번호(1-base), url }] — 캡처하지 않고 원본 그대로 끼움
+      const gifReqs: { after: number; url: string }[] = Array.isArray(product.gifs)
+        ? product.gifs.filter((g: any) => g?.url && Number(g.after) > 0)
+        : [];
+      const gifAfter = new Map<number, string[]>();
+      for (const g of gifReqs) {
+        const arr = gifAfter.get(Number(g.after)) || [];
+        arr.push(String(g.url));
+        gifAfter.set(Number(g.after), arr);
+      }
 
-        const filePath = `${slug}/detail_${String(i + 1).padStart(2, "0")}.jpg`;
+      // 조각 계획: 섹션 경계를 우선 컷 지점으로, SLICE_HEIGHT 초과 시에만 강제 분할
+      type Piece = { kind: "jpg"; top: number; height: number } | { kind: "gif"; url: string };
+      const pieces: Piece[] = [];
+      let start = 0;
+      let prev = 0;
+      const flush = (end: number) => {
+        let s = start;
+        while (end - s > 0) {
+          const h = Math.min(SLICE_HEIGHT, end - s);
+          pieces.push({ kind: "jpg", top: s, height: h });
+          s += h;
+        }
+        start = end;
+      };
+      bottoms.forEach((b, idx) => {
+        if (b - start > SLICE_HEIGHT && prev > start) flush(prev);
+        prev = b;
+        const gs = gifAfter.get(idx + 1);
+        if (gs) {
+          flush(Math.min(b, totalHeight));
+          for (const u of gs) pieces.push({ kind: "gif", url: u });
+        }
+      });
+      flush(totalHeight);
+
+      count = pieces.length;
+      for (let i = 0; i < pieces.length; i++) {
+        const piece = pieces[i];
+        const num = String(i + 1).padStart(2, "0");
+        let buf: Buffer | Uint8Array;
+        let ext = "jpg";
+        let contentType = "image/jpeg";
+
+        if (piece.kind === "gif") {
+          const r = await fetch(piece.url);
+          if (!r.ok) throw new Error(`GIF 다운로드 실패 (${r.status}): ${piece.url}`);
+          buf = new Uint8Array(await r.arrayBuffer());
+          const low = piece.url.toLowerCase();
+          if (low.includes(".mp4")) { ext = "mp4"; contentType = "video/mp4"; }
+          else if (low.includes(".webm")) { ext = "webm"; contentType = "video/webm"; }
+          else { ext = "gif"; contentType = "image/gif"; }
+        } else {
+          buf = await page.screenshot({
+            clip: { x: 0, y: piece.top, width: PAGE_WIDTH, height: piece.height },
+            type: "jpeg",
+            quality: 88,
+          });
+        }
+
+        const filePath = `${slug}/detail_${num}.${ext}`;
         const { error } = await getSupabase().storage
           .from(BUCKET)
-          .upload(filePath, buf, { contentType: "image/jpeg", upsert: true });
+          .upload(filePath, buf, { contentType, upsert: true });
         if (error) throw error;
 
         const { data } = getSupabase().storage.from(BUCKET).getPublicUrl(filePath);
