@@ -42,9 +42,12 @@ const MODEL_BASE =
   "light-gray seamless studio background: (1) full-body FRONT view standing head-to-toe " +
   "including shoes with a soft friendly smile, (2) full-body SIDE PROFILE view, " +
   "(3) large close-up FACE portrait. Identical face, identical hairstyle, identical outfit " +
-  "in all three views. Soft wraparound beauty light, shot like a high-end 2026 Seoul brand " +
-  "campaign lookbook — premium, modern and effortlessly chic, never dated or dowdy. " +
-  "No text, no labels, no watermark. " +
+  "in all three views. K-BEAUTY EDITORIAL STYLE (like an ELLE Korea beauty campaign): " +
+  "dewy glass skin with natural highlights on the cheekbones and nose bridge, bare-faced " +
+  "natural makeup — feathered natural brows, glossy coral-nude lips, no heavy eye makeup — " +
+  "bright cool-white seamless studio background, soft even high-key beauty light, calm serene " +
+  "expression, neutral low-saturation editorial grade — premium, modern and effortlessly " +
+  "chic, never dated or dowdy. No text, no labels, no watermark. " +
   "PHOTOREALISM RULES: she must look like a REAL person photographed on a real set, NOT AI-generated — " +
   "realistic natural skin texture with visible pores and fine facial micro-details, NOT airbrushed plastic, " +
   "NOT AI-perfect symmetry, a few natural flyaway hairs, real fabric weave and natural wrinkles in clothing, " +
@@ -76,39 +79,32 @@ const FACE_ARCHETYPES = [
       "smiling, energetic bright expression, youthful playful charm. " },
 ];
 
-// 후보마다 다른 헤어 (여러 명 중 고르는 용도) — 살롱 스타일링된 트렌디 헤어
+// 후보마다 다른 헤어 (여러 명 중 고르는 용도) — 뷰티 에디토리얼 클린 헤어 (refs/모델 기준)
 const HAIR_VARIATIONS = [
-  "Long jet-black hair in a sleek glossy salon blowout with soft face-framing layers.",
-  "A chic French-girl chin-length bob with an effortless tousled finish.",
-  "Long ash-brown hair in loose glam waves, styled like a beauty campaign shoot.",
-  "A polished sleek low bun with clean face-framing strands, model-off-duty elegance.",
-  "Airy shoulder-length dark hair with trendy curtain bangs and a soft C-curl finish.",
-  "Long hair in a soft layered hush cut with natural volume, fresh out of a Cheongdam salon.",
+  "Dark hair slicked straight back in a glossy wet-look, a few loose baby hairs falling naturally around her face.",
+  "A clean sleek low bun with fine natural strands escaping at the hairline, beauty-editorial polish.",
+  "Long jet-black hair in a sleek glossy center-part blowout tucked behind her ears.",
+  "Dark hair pulled into an effortless high bun, soft baby hairs at the temples.",
+  "A chic slicked-back chin-length bob with a glossy finish.",
+  "Long dark hair in a low loose braid over one shoulder, clean face-revealing hairline.",
 ];
 
-// 트렌디한 기본 의상 로테이션 (의상 미지정 시) — 조용한 럭셔리 무드
+// 기본 의상 로테이션 (의상 미지정 시) — 뷰티 에디토리얼 미니멀 (refs/모델 기준)
 const OUTFIT_VARIATIONS = [
-  "a quiet-luxury look: an oversized crisp white poplin shirt half-tucked into high-waisted " +
-    "wide-leg cream trousers, minimal gold earrings",
-  "a sophisticated monochrome look: a sleeveless ivory column knit dress with a clean silhouette, " +
-    "thin delicate necklace",
-  "an elevated casual look: a boxy cropped soft-gray sweatshirt over a white tank with tailored " +
-    "black straight-leg pants",
-  "a modern minimal look: a fitted charcoal halter knit top with low-rise wide beige slacks, " +
-    "sleek silver jewelry",
-  "an off-duty model look: an unstructured oversized greige blazer over a white bodysuit with " +
-    "straight-cut ecru trousers",
-  "a soft feminine look: a fitted cream ribbed-knit long-sleeve top with a fluid ankle-length " +
-    "champagne satin skirt",
+  "a minimal soft white crew-neck t-shirt with tiny gold hoop earrings",
+  "a clean white ribbed tank top with a thin delicate gold necklace",
+  "an oversized crisp white poplin shirt half-tucked into high-waisted wide-leg cream trousers",
+  "a sleeveless ivory column knit dress with a clean silhouette, tiny gold hoop earrings",
+  "a fitted cream ribbed-knit long-sleeve top with straight-cut ecru trousers",
+  "a white bodysuit under an unstructured oversized greige blazer",
 ];
 
-// 의상 공통 스타일링 — 하이엔드 화보 무드 강제
+// 의상 공통 스타일링 — 뷰티 에디토리얼 무드 강제
 const OUTFIT_STYLE =
-  "STYLING RULES: the entire look is styled by a top Seoul fashion editor — current " +
-  "quiet-luxury minimal aesthetic like a Vogue Korea editorial or a premium Musinsa/COS " +
-  "campaign, modern flattering silhouettes, an elegant neutral palette (ivory, cream, " +
-  "greige, black), luxurious fabric textures, freshly pressed and perfectly fitted. " +
-  "Makeup is natural-glam K-beauty: dewy glass skin, soft coral-nude lips, subtle eye makeup. " +
+  "STYLING RULES: the entire look is styled like a premium K-beauty editorial campaign — " +
+  "minimal, skin-first, an elegant neutral palette (white, ivory, cream, greige), " +
+  "modern flattering silhouettes, luxurious clean fabric textures, freshly pressed and " +
+  "perfectly fitted, jewelry limited to tiny gold accents. " +
   "ABSOLUTELY AVOID anything dated or dowdy: no frumpy office wear, no boxy ill-fitting " +
   "suits, no cheap shiny fabrics, no busy patterns, no logos, no clutter. ";
 

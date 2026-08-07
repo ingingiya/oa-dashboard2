@@ -8,3 +8,9 @@ node_modules
 .env*
 
 scripts/gfa/.gfa_profile/
+
+# 스타일 레퍼런스 이미지 (STYLE.md만 커밋)
+refs/**/*.jpg
+refs/**/*.jpeg
+refs/**/*.png
+refs/**/*.webp
