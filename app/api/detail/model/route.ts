@@ -37,8 +37,7 @@ async function comfy(path: string, init: RequestInit = {}) {
 // 시그니처 K-드라마 배우급 미모 블록 + 멀티뷰 캐릭터 시트 (어느 각도 컷에서도 동일 인물 유지용)
 const MODEL_BASE =
   "CHARACTER REFERENCE SHEET of ONE beautiful Korean woman in her mid-20s with the " +
-  "polished look of a K-drama actress — luminous clear glowing skin, large bright " +
-  "expressive eyes, elegant symmetrical features, full natural lips, a soft V-line jaw. " +
+  "polished visual of a top-tier K-drama actress — luminous clear glowing skin. " +
   "The sheet shows the EXACT SAME woman in THREE views side by side on one clean " +
   "light-gray seamless studio background: (1) full-body FRONT view standing head-to-toe " +
   "including shoes with a soft friendly smile, (2) full-body SIDE PROFILE view, " +
@@ -50,6 +49,31 @@ const MODEL_BASE =
   "NOT AI-perfect symmetry, a few natural flyaway hairs, real fabric weave and natural wrinkles in clothing, " +
   "natural catch-lights in the eyes. Shot on an 85mm lens at f/2.8 like a real fashion lookbook photo, " +
   "natural editorial color grade, subtle fine film grain. ";
+
+// 후보마다 다른 얼굴상 — 전부 같은 얼굴로 수렴하는 것 방지 (강아지상=김유정삘, 고양이상=한소희삘 등)
+const FACE_ARCHETYPES = [
+  { label: "청순 강아지상",
+    desc: "Her face type: adorable puppy-like visual — softly rounded youthful face, big warm round " +
+      "brown eyes with charming aegyo-sal under them, small cute nose, bright innocent smile, " +
+      "sweet girl-next-door first-love charm like a young K-drama rom-com lead actress. " },
+  { label: "시크 고양이상",
+    desc: "Her face type: chic cat-like visual — sleek almond feline eyes slightly upturned at the outer " +
+      "corners, high elegant cheekbones, slim straight nose, porcelain pale skin, calm alluring gaze, " +
+      "an effortlessly cool and slightly mysterious aura like a high-fashion K-drama femme-fatale lead. " },
+  { label: "맑은 첫사랑상",
+    desc: "Her face type: clear innocent first-love visual — gentle soft drooping eyes, natural fresh " +
+      "bare-skin beauty, delicate slender features, a shy warm smile, the pure calm mood of a " +
+      "coming-of-age film heroine. " },
+  { label: "도시 세련상",
+    desc: "Her face type: modern sophisticated city visual — defined jawline, deep double-lidded eyes, " +
+      "confident direct gaze, full lips, polished editorial beauty like a luxury brand campaign model. " },
+  { label: "우아 배우상",
+    desc: "Her face type: elegant classic actress visual — graceful refined symmetrical features, " +
+      "serene composed smile, timeless red-carpet beauty of an award-winning actress. " },
+  { label: "상큼 발랄상",
+    desc: "Her face type: fresh vibrant idol-like visual — sparkling lively eyes, subtle dimples when " +
+      "smiling, energetic bright expression, youthful playful charm. " },
+];
 
 // 후보마다 다른 헤어 (여러 명 중 고르는 용도) — 의상은 별도 지정 가능
 const HAIR_VARIATIONS = [
@@ -228,9 +252,13 @@ export async function POST(req: NextRequest) {
             ? "She is wearing the EXACT outfit shown in the reference image — same garments, " +
               "same colors, same materials and details, naturally fitted on her body. "
             : `She is wearing ${outfit || OUTFIT_VARIATIONS[i % OUTFIT_VARIATIONS.length]}. `;
+          // 얼굴상+헤어는 항상 후보별 로테이션 — 사용자 스타일은 대체가 아니라 추가 (전원 같은 얼굴 방지)
+          const face = FACE_ARCHETYPES[i % FACE_ARCHETYPES.length];
           const prompt =
             MODEL_BASE +
-            (userStyle ? userStyle + ". " : HAIR_VARIATIONS[i % HAIR_VARIATIONS.length] + " ") +
+            face.desc +
+            HAIR_VARIATIONS[i % HAIR_VARIATIONS.length] + " " +
+            (userStyle ? "Additional style notes: " + userStyle + ". " : "") +
             wear +
             OUTFIT_STYLE;
           const buf = await generateOne(prompt, `model_${batch}_${i}`, outfitName ? [outfitName] : undefined);
@@ -243,7 +271,7 @@ export async function POST(req: NextRequest) {
           made.push({
             id: `${batch}_${i}`,
             url: data.publicUrl,
-            name: `모델 ${batch.slice(-3)}-${i + 1}`,
+            name: `${FACE_ARCHETYPES[i % FACE_ARCHETYPES.length].label} ${batch.slice(-2)}-${i + 1}`,
             at: new Date().toISOString(),
           });
         })
