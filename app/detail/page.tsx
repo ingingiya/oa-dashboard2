@@ -42,7 +42,7 @@ export default function DetailBuilder() {
   ]);
   const [anchorInput, setAnchorInput] = useState("");
   const [cuts, setCuts] = useState(
-    DEFAULT_CUTS.map((c) => ({ ...c, url: "", loading: false, withModel: false, aspect: "", fixNote: "", sel: false }))
+    DEFAULT_CUTS.map((c) => ({ ...c, url: "", loading: false, withModel: false, aspect: "", fixNote: "", sel: false, history: [] as string[] }))
   );
   const [productJson, setProductJson] = useState("");
   // 제품 고정사항 (컬러/불변 부위) — 모든 컷 프롬프트에 강제로 붙는다
@@ -470,7 +470,7 @@ export default function DetailBuilder() {
     setCuts((prev) => [
       ...prev,
       { file: `model_pose_${id}.png`, label: `모델 ${p.label}`, withModel: true, aspect: "",
-        prompt, url: "", loading: false, fixNote: "", sel: false },
+        prompt, url: "", loading: false, fixNote: "", sel: false, history: [] as string[] },
     ]);
   }
 
@@ -487,7 +487,7 @@ export default function DetailBuilder() {
     setCuts((p) => [
       ...p,
       ...MODEL_CUTS.filter((m) => !p.some((c) => c.file === m.file))
-        .map((m) => ({ ...m, url: "", loading: false, fixNote: "", sel: false })),
+        .map((m) => ({ ...m, url: "", loading: false, fixNote: "", sel: false, history: [] as string[] })),
     ]);
   }
 
@@ -548,7 +548,8 @@ export default function DetailBuilder() {
       p.map((c) => {
         const hit = res.results?.find((r: any) => r.file === c.file);
         return hit
-          ? { ...c, url: hit.url + "?t=" + Date.now(), loading: false }
+          ? { ...c, url: hit.url + "?t=" + Date.now(), loading: false,
+              history: [c.url, ...(c.history || [])].filter(Boolean).slice(0, 12) }
           : { ...c, loading: false };
       })
     );
@@ -586,7 +587,10 @@ export default function DetailBuilder() {
     const { data } = supabase.storage.from("detail-assets").getPublicUrl(path);
     setCuts((p) =>
       p.map((c, i) =>
-        i === idx ? { ...c, url: data.publicUrl + "?t=" + Date.now(), loading: false } : c
+        i === idx
+          ? { ...c, url: data.publicUrl + "?t=" + Date.now(), loading: false,
+              history: [c.url, ...(c.history || [])].filter(Boolean).slice(0, 12) }
+          : c
       )
     );
   }
@@ -639,7 +643,10 @@ export default function DetailBuilder() {
       setCuts((p) =>
         p.map((c) => {
           const hit = res.cuts.find((r: any) => r.file === c.file);
-          return hit ? { ...c, url: hit.url + "?t=" + Date.now() } : c;
+          return hit
+            ? { ...c, url: hit.url + "?t=" + Date.now(),
+                history: [c.url, ...(c.history || [])].filter(Boolean).slice(0, 12) }
+            : c;
         })
       );
       if (res.anchorUrl) setAnchors((p) => (p.includes(res.anchorUrl) ? p : [...p, res.anchorUrl]));
@@ -955,7 +962,7 @@ ${h.urls.map((u) => `<img src="${u}" alt="">`).join("\n")}
         if (d.trigger) setTrigger(d.trigger);
         if (Array.isArray(d.anchors) && d.anchors.length) setAnchors(d.anchors);
         if (Array.isArray(d.cuts) && d.cuts.length)
-          setCuts(d.cuts.map((c: any) => ({ ...c, loading: false })));
+          setCuts(d.cuts.map((c: any) => ({ ...c, loading: false, history: c.history || [] })));
         if (d.productJson) setProductJson(d.productJson);
         if (d.lockNote) setLockNote(d.lockNote);
         if (d.banNote) setBanNote(d.banNote);
@@ -1569,6 +1576,28 @@ ${h.urls.map((u) => `<img src="${u}" alt="">`).join("\n")}
                         style={{ width: "100%", cursor: "zoom-in" }} />
                     : <span style={{ fontSize: 12, color: C.inkLt }}>미생성</span>}
                 </div>
+                {(c.history?.length ?? 0) > 0 && (
+                  <div style={{ marginTop: 6 }}>
+                    <div style={{ fontSize: 10.5, color: C.inkLt, fontWeight: 700, marginBottom: 3 }}>
+                      이전 버전 {c.history.length}개 — 클릭하면 이 버전으로 교체
+                    </div>
+                    <div style={{ display: "flex", gap: 4, overflowX: "auto" }}>
+                      {c.history.map((h) => (
+                        <img key={h} src={h} title="클릭: 이 버전을 상세페이지에 사용 (현재 이미지는 히스토리로 이동)"
+                          onClick={() =>
+                            setCuts((p) => p.map((x, j) =>
+                              j === i
+                                ? { ...x, url: h,
+                                    history: [x.url, ...x.history.filter((v) => v !== h)].filter(Boolean).slice(0, 12) }
+                                : x
+                            ))
+                          }
+                          style={{ width: 42, height: 42, objectFit: "cover", borderRadius: 6,
+                            cursor: "pointer", border: `1px solid ${C.border}`, flex: "none" }} />
+                      ))}
+                    </div>
+                  </div>
+                )}
                 <input value={c.fixNote || ""} placeholder="수정사항 — 잘못 나온 부분 (재생성 시 반영)"
                   onChange={(e) => setCuts((p) => p.map((x, j) => (j === i ? { ...x, fixNote: e.target.value } : x)))}
                   style={{ ...inp, width: "100%", marginTop: 8, padding: "6px 9px", fontSize: 12,

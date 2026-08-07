@@ -276,7 +276,8 @@ export async function POST(req: NextRequest) {
           anchorName, cutRef + style + cut.prompt + fix + DETAIL_BLOCK, prefix, cutAspect,
           useModel ? modelName : undefined
         );
-        const filePath = `${productSlug}/${cut.file}`;
+        // 버전별 파일로 저장 (덮어쓰기 방지) — 이전 생성본 URL이 계속 살아있어 히스토리에서 재선택 가능
+        const filePath = `${productSlug}/${Date.now().toString(36)}_${cut.file}`;
         const { error } = await getSupabase().storage
           .from(BUCKET)
           .upload(filePath, buf, { contentType: "image/png", upsert: true });
