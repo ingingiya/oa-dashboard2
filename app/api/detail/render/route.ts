@@ -3,14 +3,15 @@
 // POST body: product JSON (이미지 URL은 Supabase Storage 등 공개 URL이어야 함)
 // 반환: 분할된 JPG의 Supabase Storage 공개 URL 배열
 //
-// 설치: npm i playwright-core @sparticuz/chromium sharp
+// 설치: npm i playwright-core @sparticuz/chromium
 // vercel.json 또는 아래 maxDuration으로 실행시간 확보 (Pro 플랜 기준)
 
 import { NextRequest, NextResponse } from "next/server";
 import chromium from "@sparticuz/chromium";
 import { chromium as playwright } from "playwright-core";
-import sharp from "sharp";
 import { createClient } from "@supabase/supabase-js";
+import { readdirSync } from "fs";
+import { rm } from "fs/promises";
 import { appendHistory } from "../../../../lib/detailHistory";
 
 export const maxDuration = 120; // Pro 플랜: 최대 300까지 가능
@@ -152,24 +153,23 @@ export async function POST(req: NextRequest) {
       html = buildHtml(product);
     }
 
-    // ---------- 1. 서버리스 크로미움으로 캡처 ----------
+    // ---------- 0. 웜 람다 /tmp 찌꺼기 청소 (크로미움 추출본 /tmp/chromium은 보존) ----------
+    try {
+      for (const d of readdirSync("/tmp")) {
+        if (/^(\.org\.chromium|core|playwright|puppeteer|\.com\.google)/.test(d)) {
+          rm("/tmp/" + d, { recursive: true, force: true }).catch(() => {});
+        }
+      }
+    } catch {}
+
+    // ---------- 1. 조각 캡처: fullPage 통짜 대신 clip 스크린샷 → 바로 JPG 업로드 ----------
+    // (통짜 PNG 한 방이 메모리/tmp를 고갈시켜 웜 람다에서 행 걸리던 문제 픽스)
     const browser = await playwright.launch({
       args: chromium.args,
       executablePath: await chromium.executablePath(),
       headless: true,
     });
-    const page = await browser.newPage({
-      viewport: { width: PAGE_WIDTH, height: 1000 },
-      deviceScaleFactor: 1, // 서버리스 메모리 절약 — 화질 더 필요하면 1.5
-    });
-    await page.setContent(html, { waitUntil: "networkidle" });
-    await page.waitForTimeout(800); // 배경 PNG + 컷 이미지 로딩 여유
-    const fullPng = await page.screenshot({ fullPage: true });
-    await browser.close();
 
-    // ---------- 2. sharp로 세로 분할 ----------
-    const meta = await sharp(fullPng).metadata();
-    const count = Math.ceil(meta.height! / SLICE_HEIGHT);
     // Storage 키는 한글 불가 — ASCII만 남기고 비면 detail로 폴백
     const safeName =
       String(product.productName || "")
@@ -177,23 +177,41 @@ export async function POST(req: NextRequest) {
         .slice(0, 40) || "detail";
     const slug = `${safeName}-${Date.now()}`;
     const urls: string[] = [];
+    let count = 0;
 
-    for (let i = 0; i < count; i++) {
-      const top = i * SLICE_HEIGHT;
-      const h = Math.min(SLICE_HEIGHT, meta.height! - top);
-      const buf = await sharp(fullPng)
-        .extract({ left: 0, top, width: meta.width!, height: h })
-        .jpeg({ quality: 88 })
-        .toBuffer();
+    try {
+      const page = await browser.newPage({
+        viewport: { width: PAGE_WIDTH, height: 1000 },
+        deviceScaleFactor: 1, // 서버리스 메모리 절약 — 화질 더 필요하면 1.5
+      });
+      await page.setContent(html, { waitUntil: "networkidle" });
+      await page.waitForTimeout(800); // 배경 PNG + 컷 이미지 로딩 여유
 
-      const filePath = `${slug}/detail_${String(i + 1).padStart(2, "0")}.jpg`;
-      const { error } = await getSupabase().storage
-        .from(BUCKET)
-        .upload(filePath, buf, { contentType: "image/jpeg", upsert: true });
-      if (error) throw error;
+      const totalHeight: number = await page.evaluate(
+        () => document.body.scrollHeight
+      );
+      count = Math.ceil(totalHeight / SLICE_HEIGHT);
 
-      const { data } = getSupabase().storage.from(BUCKET).getPublicUrl(filePath);
-      urls.push(data.publicUrl);
+      for (let i = 0; i < count; i++) {
+        const top = i * SLICE_HEIGHT;
+        const h = Math.min(SLICE_HEIGHT, totalHeight - top);
+        const buf = await page.screenshot({
+          clip: { x: 0, y: top, width: PAGE_WIDTH, height: h },
+          type: "jpeg",
+          quality: 88,
+        });
+
+        const filePath = `${slug}/detail_${String(i + 1).padStart(2, "0")}.jpg`;
+        const { error } = await getSupabase().storage
+          .from(BUCKET)
+          .upload(filePath, buf, { contentType: "image/jpeg", upsert: true });
+        if (error) throw error;
+
+        const { data } = getSupabase().storage.from(BUCKET).getPublicUrl(filePath);
+        urls.push(data.publicUrl);
+      }
+    } finally {
+      await browser.close().catch(() => {});
     }
 
     await appendHistory(getSupabase(), { type: "render", slug, urls });
