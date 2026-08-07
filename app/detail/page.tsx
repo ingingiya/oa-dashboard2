@@ -104,12 +104,12 @@ export default function DetailBuilder() {
         mt = "image/jpeg"; ext = "jpg";
       }
       if (!blob) continue;
-      const path = `copy-src/${Date.now()}_${Math.random().toString(36).slice(2, 6)}.${ext}`;
-      const { error } = await supabase.storage.from("detail-assets")
-        .upload(path, blob, { contentType: mt, upsert: true });
-      if (error) { alert("첨부 업로드 실패: " + error.message); continue; }
-      const { data } = supabase.storage.from("detail-assets").getPublicUrl(path);
-      out.push({ name: file.name, media_type: mt, url: data.publicUrl });
+      // 서버 경유 업로드 (클라이언트 anon 키는 Storage RLS에 막힘)
+      const fd = new FormData();
+      fd.append("file", new File([blob], file.name, { type: mt }));
+      const res = await fetch("/api/detail/copy-upload", { method: "POST", body: fd }).then((r) => r.json());
+      if (!res.ok) { alert("첨부 업로드 실패: " + res.error); continue; }
+      out.push({ name: file.name, media_type: mt, url: res.url });
     }
     setCopyFiles((p) => [...p, ...out].slice(0, 5));
   }
