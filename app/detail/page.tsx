@@ -795,20 +795,17 @@ export default function DetailBuilder() {
   const [loginForm, setLoginForm] = useState({ name: "", pin: "" });
   const [adminForm, setAdminForm] = useState({ pin: "", teamName: "", teamPin: "", grantId: "", amount: "" });
   const [creditMsg, setCreditMsg] = useState("");
-  // 게스트 모드 — 외부 공유용: 생성기/폰카변환/모션레퍼런스만 노출, 내부 기록·크레딧 현황·대시보드 링크 숨김
+  // 게스트 모드 — /share 경로에서만 활성 (외부 공유용: 생성기/폰카변환/모션레퍼런스만 노출). /detail 팀 화면은 항상 풀버전
   const [guestMode, setGuestMode] = useState(false);
 
   useEffect(() => {
     try { const t = localStorage.getItem("oa_detail_team_v1"); if (t) setTeam(JSON.parse(t)); } catch {}
     loadCredits();
-    // 게스트 자동로그인 링크: /detail?guest=이름:PIN — 클릭만 하면 로그인 완료
+    // 게스트 자동로그인 링크: /share?guest=이름:PIN — 클릭만 하면 로그인 완료
     try {
-      if (sessionStorage.getItem("oa_detail_guest_v1") || document.cookie.includes("oa_detail_guest=1")) setGuestMode(true);
+      if (window.location.pathname.startsWith("/share")) setGuestMode(true);
       const g = new URLSearchParams(window.location.search).get("guest");
       if (g && g.includes(":")) {
-        // 게스트 모드: 내부 기록/렌더/크레딧 현황 탭 숨김
-        sessionStorage.setItem("oa_detail_guest_v1", "1");
-        setGuestMode(true);
         const idx = g.indexOf(":");
         creditPost({ login: { name: g.slice(0, idx), pin: g.slice(idx + 1) } }).then((r) => {
           if (r.ok) {
