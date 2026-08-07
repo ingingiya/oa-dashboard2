@@ -11,8 +11,9 @@ export async function POST(request) {
 
   let body;
   try { body = await request.json(); } catch { return Response.json({ error: '잘못된 요청' }, { status: 400 }); }
+  const raw = String(body?.raw || '').slice(0, 8000);
   const productName = String(body?.productName || '').slice(0, 100);
-  if (!productName) return Response.json({ error: 'productName 필수' }, { status: 400 });
+  if (!productName && !raw) return Response.json({ error: 'productName 또는 raw 필수' }, { status: 400 });
   const category = String(body?.category || '').slice(0, 100);
   const specs = String(body?.specs || '').slice(0, 2000);
   const points = (Array.isArray(body?.points) ? body.points : []).map((p) => String(p).slice(0, 200)).filter(Boolean);
@@ -26,10 +27,12 @@ export async function POST(request) {
 - 태그라인 "${tagline}" 결 유지
 
 ## 제품 정보
-- 제품명: ${productName}
-- 카테고리: ${category || '(미입력)'}
+${raw ? `### 붙여넣은 원본 자료 (여기서 제품명·카테고리·스펙·소구점을 직접 추출하세요)
+${raw}
+` : ''}- 제품명: ${productName || '(미입력 — 원본 자료에서 추출)'}
+- 카테고리: ${category || '(미입력 — 원본 자료에서 추출)'}
 - 스펙:
-${specs || '(미입력)'}
+${specs || (raw ? '(원본 자료에서 추출)' : '(미입력)')}
 - 핵심 소구점:
 ${points.length ? points.map((p, i) => `${i + 1}. ${p}`).join('\n') : '(미입력 — 스펙에서 유추)'}
 
@@ -39,8 +42,8 @@ ${points.length ? points.map((p, i) => `${i + 1}. ${p}`).join('\n') : '(미입�
 image 필드는 전부 빈 문자열 "".
 
 {
-  "productName": "${productName}",
-  "category": "${category}",
+  "productName": "${productName || '(원본 자료에서 추출한 제품명)'}",
+  "category": "${category || '(원본 자료에서 추출한 카테고리)'}",
   "tagline": "${tagline}",
   "hook": { "headline": "문제제기 헤드라인 (2줄, \\n 구분)", "sub": "한 줄 보조", "image": "" },
   "usp": [

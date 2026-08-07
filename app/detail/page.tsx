@@ -75,6 +75,7 @@ export default function DetailBuilder() {
 
   // ── 카피 생성 폼 ──
   const [form, setForm] = useState({
+    raw: "",
     productName: "",
     category: "",
     specs: "",
@@ -84,7 +85,7 @@ export default function DetailBuilder() {
   const [copyBusy, setCopyBusy] = useState(false);
 
   async function generateCopy() {
-    if (!form.productName) return alert("제품명을 입력하세요");
+    if (!form.productName && !form.raw) return alert("제품 정보를 붙여넣거나 제품명을 입력하세요");
     setCopyBusy(true);
     try {
       const res = await fetch("/api/detail/copy", {
@@ -94,6 +95,12 @@ export default function DetailBuilder() {
       }).then((r) => r.json());
       if (!res.ok) throw new Error(res.error || "카피 생성 실패");
       setProductJson(JSON.stringify(res.product, null, 2));
+      // 통붙여넣기에서 추출된 제품명/카테고리 폼에 역반영
+      setForm((f) => ({
+        ...f,
+        productName: f.productName || res.product.productName || "",
+        category: f.category || res.product.category || "",
+      }));
     } catch (e: any) {
       alert(e.message);
     } finally {
@@ -326,7 +333,11 @@ export default function DetailBuilder() {
 
         <div style={card}>
           <div style={cardTitle}>① 제품 정보 → 카피 생성</div>
-          <div style={cardSub}>제품 정보를 붙여넣으면 Claude가 USP를 자동 분석해 전체 카피(JSON)를 만들어요 — 소구점은 비워도 돼요</div>
+          <div style={cardSub}>제품 소개서·스펙표 아무거나 통째로 붙여넣으면 제품명·카테고리·스펙·USP 전부 자동 추출 — 아래 칸들은 비워도 돼요</div>
+          <textarea value={form.raw}
+            onChange={(e) => setForm((f) => ({ ...f, raw: e.target.value }))}
+            placeholder={"제품 정보 통째로 붙여넣기 (소개서/스펙표/기획안 텍스트 아무거나)\n여기만 채우고 바로 카피 생성 눌러도 돼요"}
+            style={{ ...inp, width: "100%", height: 120, marginBottom: 10, resize: "vertical" as const }} />
           <div style={{ display: "flex", gap: 12 }}>
             <input value={form.productName}
               onChange={(e) => setForm((f) => ({ ...f, productName: e.target.value }))}
