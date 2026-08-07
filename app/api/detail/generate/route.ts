@@ -27,6 +27,16 @@ const DEFAULT_REF =
   "identical to the reference. Do not invent buttons, text or patterns. " +
   "No people, no hands, no watermark. ";
 
+// 인물(여성 모델) 컷 시그니처 스타일 — 클린이스윙 캠페인에서 확정된 K-드라마 배우급 블록
+const BEAUTY_BLOCK =
+  "The woman is a BEAUTIFUL KOREAN WOMAN in her mid-20s with the polished look of a " +
+  "K-drama actress — luminous clear glowing skin, large bright expressive eyes, elegant " +
+  "symmetrical features, full natural lips, a soft V-line jaw — soft beauty light, " +
+  "premium K-beauty commercial quality. ";
+
+const hasPerson = (p: string) =>
+  /woman|female|model|person|lady|girl|hand|인물|여성|모델|사람|손/i.test(p);
+
 // 빌드 타임엔 env가 없을 수 있어 lazy 초기화
 const getSupabase = () =>
   createClient(
@@ -194,7 +204,11 @@ export async function POST(req: NextRequest) {
       cuts.map(async (cut: { file: string; prompt: string }) => {
         const prefix = "gen_" + cut.file.replace(/\.\w+$/, "");
         const anchorName = anchorNames[pickMap[cut.file] ?? 0];
-        const buf = await generateOne(anchorName, ref + style + cut.prompt, prefix);
+        // 인물 컷: "No people" 해제 + 시그니처 미모 블록 삽입
+        const cutRef = hasPerson(cut.prompt)
+          ? ref.replace(/No people, no hands, /i, "") + BEAUTY_BLOCK
+          : ref;
+        const buf = await generateOne(anchorName, cutRef + style + cut.prompt, prefix);
         const filePath = `${productSlug}/${cut.file}`;
         const { error } = await getSupabase().storage
           .from(BUCKET)
