@@ -699,7 +699,7 @@ export default function DetailBuilder() {
     setCreditTeams((ts) => ts.map((t) => (t.id === team.id ? { ...t, used: t.used + cost, balance: r.balance } : t)));
     return true;
   }
-  const myBalance = creditTeams.find((t) => t.id === team?.id)?.balance;
+  const myBalance = team?.id === "__admin__" ? "∞" : creditTeams.find((t) => t.id === team?.id)?.balance;
 
   // 완료 텔레그램 알림 (실패해도 무시)
   const notify = (text: string) =>
@@ -1917,7 +1917,7 @@ ${h.urls.map((u) => `<img src="${u}" alt="">`).join("\n")}
                 {creditTeams.length ? (
                   <select value={loginForm.name} onChange={(e) => setLoginForm((f) => ({ ...f, name: e.target.value }))}
                     style={{ ...inp, width: 160, cursor: "pointer" }}>
-                    <option value="">팀 선택</option>
+                    <option value="">팀 선택 (관리자는 PIN만)</option>
                     {creditTeams.map((t) => <option key={t.id} value={t.name}>{t.name}</option>)}
                   </select>
                 ) : (

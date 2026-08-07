@@ -8,7 +8,8 @@ import { createClient } from "@supabase/supabase-js";
 export const dynamic = "force-dynamic";
 
 const KEY = "oa_detail_credits_v1";
-const DEFAULT_ADMIN_PIN = "7777";
+const DEFAULT_ADMIN_PIN = "8807";
+const ADMIN_ID = "__admin__";
 
 type Team = { id: string; name: string; pin: string; granted: number; used: number };
 type Ledger = { at: string; teamId: string; team: string; action: string; cost: number };
@@ -56,6 +57,9 @@ export async function POST(req: NextRequest) {
 
     if (body.login) {
       const { name, pin } = body.login;
+      // 관리자 PIN이면 무한 크레딧 관리자로 로그인
+      if (String(pin) === s.adminPin)
+        return NextResponse.json({ ok: true, team: { id: ADMIN_ID, name: "관리자", balance: "∞" } });
       const t = s.teams.find((x) => x.name === name || x.id === name);
       if (!t || t.pin !== String(pin)) throw new Error("팀 이름 또는 PIN이 틀렸어요");
       return NextResponse.json({ ok: true, team: { id: t.id, name: t.name, balance: t.granted - t.used } });
@@ -92,6 +96,12 @@ export async function POST(req: NextRequest) {
 
     if (body.spend) {
       const { id, action, cost } = body.spend;
+      if (id === ADMIN_ID) {
+        // 관리자는 무한 — 차감 없이 원장에만 기록
+        s.ledger.unshift({ at: new Date().toISOString(), teamId: ADMIN_ID, team: "관리자", action: String(action || "사용"), cost: 0 });
+        await save(sb, s);
+        return NextResponse.json({ ok: true, balance: "∞" });
+      }
       const t = s.teams.find((x) => x.id === id);
       if (!t) throw new Error("팀 로그인이 풀렸어요 — 크레딧 탭에서 다시 로그인해주세요");
       const c = Math.max(1, Math.round(Number(cost) || 1));
