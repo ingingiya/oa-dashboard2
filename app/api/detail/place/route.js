@@ -39,7 +39,8 @@ ${items.map((it) => `- id "${it.id}": ${it.label}`).join('\n')}
       messages: [{ role: 'user', content: prompt }],
     });
     const text = (msg.content || []).find((b) => b.type === 'text')?.text || '';
-    const parsed = JSON.parse(text.replace(/^```json?\s*|```\s*$/g, '').trim());
+    const cleaned = text.replace(/^```json?\s*|```\s*$/g, '').trim();
+    const parsed = JSON.parse((cleaned.match(/\{[\s\S]*\}/) || [cleaned])[0]);
     const placements = (parsed.placements || [])
       .map((p) => ({ id: String(p.id), after: Number(p.after) || 0 }))
       .filter((p) => p.after >= 1 && p.after <= sections.length);

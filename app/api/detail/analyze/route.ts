@@ -60,9 +60,9 @@ export async function POST(req: NextRequest) {
       messages: [{ role: "user", content }],
     });
     const text = msg.content.find((b) => b.type === "text")?.text || "";
-    const parsed: { index: number; slot: string }[] = JSON.parse(
-      text.replace(/^```json?\s*|```\s*$/g, "").trim()
-    );
+    const cleaned = text.replace(/^```json?\s*|```\s*$/g, "").trim();
+    const arrMatch = cleaned.match(/\[[\s\S]*\]/);
+    const parsed: { index: number; slot: string }[] = JSON.parse(arrMatch ? arrMatch[0] : cleaned);
 
     // 슬롯별 파일로 복사 업로드
     const sb = getSupabase();

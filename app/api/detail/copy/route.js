@@ -101,8 +101,10 @@ cutPrompts는 각 섹션의 AI 이미지 생성 프롬프트 (영어, 각 1~2문
       messages: [{ role: 'user', content: [...blocks, { type: 'text', text: prompt }] }],
     });
     const text = (msg.content || []).find((b) => b.type === 'text')?.text || '';
+    // 모델이 JSON 앞뒤로 설명 문장을 붙이는 경우 대비 — 첫 { 부터 마지막 } 까지만 추출
     const jsonStr = text.replace(/^```json?\s*|```\s*$/g, '').trim();
-    const product = JSON.parse(jsonStr);
+    const m = jsonStr.match(/\{[\s\S]*\}/);
+    const product = JSON.parse(m ? m[0] : jsonStr);
     return Response.json({ ok: true, product });
   } catch (e) {
     console.error('detail/copy 실패:', e);

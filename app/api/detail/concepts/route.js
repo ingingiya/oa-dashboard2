@@ -56,7 +56,8 @@ ${raw ? `참고 정보:\n${raw}` : ''}
       messages: [{ role: 'user', content }],
     });
     const text = (msg.content || []).find((b) => b.type === 'text')?.text || '';
-    const parsed = JSON.parse(text.replace(/^```json?\s*|```\s*$/g, '').trim());
+    const cleaned = text.replace(/^```json?\s*|```\s*$/g, '').trim();
+    const parsed = JSON.parse((cleaned.match(/\{[\s\S]*\}/) || [cleaned])[0]);
     return Response.json({ ok: true, concepts: parsed.concepts || [] });
   } catch (e) {
     console.error('detail/concepts 실패:', e);

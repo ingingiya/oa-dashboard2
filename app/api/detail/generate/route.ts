@@ -215,7 +215,8 @@ ${cuts.map((c) => `- ${c.file}: ${c.prompt}`).join("\n")}
       }],
     });
     const text = (msg.content.find((b: any) => b.type === "text") as any)?.text || "{}";
-    const map = JSON.parse(text.replace(/^```json?\s*|```\s*$/g, "").trim());
+    const cleanedMap = text.replace(/^```json?\s*|```\s*$/g, "").trim();
+    const map = JSON.parse((cleanedMap.match(/\{[\s\S]*\}/) || [cleanedMap])[0]);
     const out: Record<string, number> = {};
     for (const [f, n] of Object.entries(map)) {
       const idx = Number(n) - 1;
