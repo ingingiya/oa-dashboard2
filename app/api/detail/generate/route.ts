@@ -55,7 +55,9 @@ const hasPerson = (p: string) =>
 const MODEL_REF =
   "Two reference images are provided. The FIRST is the product — keep its design, " +
   "proportions, logo placement and materials EXACTLY identical, do not invent buttons or text. " +
-  "The SECOND is the model — the EXACT SAME woman (same face, same hairstyle, same features) " +
+  "The SECOND is a multi-view character reference sheet of the model — the EXACT SAME woman " +
+  "(same face, same hairstyle, same features; use the sheet's views to keep her identity " +
+  "consistent from ANY camera angle) " +
   "must appear in this shot, naturally interacting with the product, wearing the SAME outfit " +
   "as in her reference photo — clean, neatly pressed and well-fitted. " +
   "Her FACE MUST BE CLEARLY VISIBLE — front or three-quarter view toward the camera, " +
@@ -107,9 +109,10 @@ function buildWorkflow(anchorName: string, prompt: string, prefix: string, aspec
         model: "Nano Banana 2 (Gemini 3.1 Flash Image)",
         seed: Math.floor(Math.random() * 1e9),
         aspect_ratio: aspect,
-        resolution: "4K", // 최고 품질 (네이티브 Gemini 업스케일러)
+        // 2K = 페이지 폭(1720px 렌더)보다 이미 큼 — 4K+HIGH는 컷당 2~4배 느려져 전체생성 300s 타임아웃 유발 (08-08 사고)
+        resolution: "2K",
         response_modalities: "IMAGE",
-        thinking_level: "HIGH", // 프롬프트 해석 품질 ↑ (인물/구도 이상함 픽스)
+        thinking_level: "MINIMAL",
         images: ["1", 0],
       },
     },

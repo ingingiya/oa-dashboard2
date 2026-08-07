@@ -1186,12 +1186,12 @@ ${h.urls.map((u) => `<img src="${u}" alt="">`).join("\n")}
               <p style={{ fontSize: 12.5, color: modelBusy.startsWith("실패") ? "#D70015" : C.inkMid, margin: "8px 0 0" }}>{modelBusy}</p>
             )}
             {models.length > 0 && (
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(105px,1fr))", gap: 8, marginTop: 10 }}>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(170px,1fr))", gap: 8, marginTop: 10 }}>
                 {models.map((m) => (
                   <div key={m.id} onClick={() => setSelModel(selModel === m.id ? "" : m.id)}
                     style={{ position: "relative", borderRadius: 10, overflow: "hidden", cursor: "pointer", background: "#fff",
                       border: selModel === m.id ? "3px solid #AF52DE" : `1px solid ${C.border}` }}>
-                    <img src={m.url} style={{ width: "100%", aspectRatio: "2/3", objectFit: "cover", display: "block" }} />
+                    <img src={m.url} style={{ width: "100%", aspectRatio: "3/2", objectFit: "cover", display: "block" }} />
                     {selModel === m.id && (
                       <span style={{ position: "absolute", top: 4, left: 4, background: "#AF52DE", color: "#fff",
                         fontSize: 10.5, fontWeight: 800, borderRadius: 6, padding: "2px 6px" }}>✓ 선택됨</span>

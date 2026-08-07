@@ -34,15 +34,17 @@ async function comfy(path: string, init: RequestInit = {}) {
   return res;
 }
 
-// 시그니처 K-드라마 배우급 미모 블록 + 전신샷 조건
+// 시그니처 K-드라마 배우급 미모 블록 + 멀티뷰 캐릭터 시트 (어느 각도 컷에서도 동일 인물 유지용)
 const MODEL_BASE =
-  "Full-body studio photograph of a BEAUTIFUL KOREAN WOMAN in her mid-20s with the " +
+  "CHARACTER REFERENCE SHEET of ONE beautiful Korean woman in her mid-20s with the " +
   "polished look of a K-drama actress — luminous clear glowing skin, large bright " +
   "expressive eyes, elegant symmetrical features, full natural lips, a soft V-line jaw. " +
-  "Standing naturally facing the camera, visible head-to-toe including shoes, relaxed " +
-  "posture, soft friendly smile. Clean light-gray seamless studio background, soft " +
-  "wraparound beauty light, premium K-beauty commercial fashion lookbook quality, " +
-  "no text, no watermark. " +
+  "The sheet shows the EXACT SAME woman in THREE views side by side on one clean " +
+  "light-gray seamless studio background: (1) full-body FRONT view standing head-to-toe " +
+  "including shoes with a soft friendly smile, (2) full-body SIDE PROFILE view, " +
+  "(3) large close-up FACE portrait. Identical face, identical hairstyle, identical outfit " +
+  "in all three views. Soft wraparound beauty light, premium K-beauty commercial fashion " +
+  "lookbook quality, no text, no labels, no watermark. " +
   "PHOTOREALISM RULES: she must look like a REAL person photographed on a real set, NOT AI-generated — " +
   "realistic natural skin texture with visible pores and fine facial micro-details, NOT airbrushed plastic, " +
   "NOT AI-perfect symmetry, a few natural flyaway hairs, real fabric weave and natural wrinkles in clothing, " +
@@ -93,10 +95,10 @@ function buildWorkflow(prompt: string, prefix: string, refNames?: string[]) {
         prompt,
         model: "Nano Banana 2 (Gemini 3.1 Flash Image)",
         seed: Math.floor(Math.random() * 1e9),
-        aspect_ratio: "2:3",
-        resolution: "4K", // 최고 품질
+        aspect_ratio: "3:2", // 멀티뷰 시트라 가로형
+        resolution: "2K", // 4K+HIGH는 너무 느림 (타임아웃 유발) — 2K로 충분
         response_modalities: "IMAGE",
-        thinking_level: "HIGH", // 인물 어색함 픽스 — 프롬프트 해석 품질 ↑
+        thinking_level: "MINIMAL",
       },
     },
     "2": { class_type: "SaveImage", inputs: { images: ["1", 0], filename_prefix: prefix } },
