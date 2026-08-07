@@ -414,11 +414,17 @@ export default function DetailBuilder() {
     },
   ];
   function applyCutConcept(concept: (typeof CUT_CONCEPTS)[number]) {
+    // state에 없으면 카피 JSON(productJson)에 저장된 cutPrompts에서 복구 (이전 세션 카피 대응)
+    let cp = copyCutPrompts;
+    if (!cp) {
+      try { cp = JSON.parse(productJson)?.cutPrompts || null; } catch {}
+      if (cp) setCopyCutPrompts(cp);
+    }
     setCuts((prev) => prev.map((c) => {
       const m = concept.map[c.file];
       if (!m) return c;
       // 카피에서 뽑은 소구점 프롬프트가 있으면 유지하고 컨셉은 톤(아트디렉션)으로만 추가
-      const usp = copyCutPrompts?.[c.file.replace(/\.\w+$/, "")];
+      const usp = cp?.[c.file.replace(/\.\w+$/, "")];
       return usp
         ? { ...c, prompt: `${usp} Art direction: ${concept.tone}`, withModel: !!m.withModel }
         : { ...c, prompt: m.prompt, withModel: !!m.withModel };
