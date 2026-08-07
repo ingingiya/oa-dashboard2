@@ -451,6 +451,40 @@ export default function DetailBuilder() {
     setHistBusy("");
   }
 
+  // ── 렌더 결과 다운로드 (개별 전체 / 합친 HTML) ──
+  const [dlBusy, setDlBusy] = useState("");
+  function saveBlob(blob: Blob, filename: string) {
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(a.href);
+  }
+  async function downloadAll(h: HistItem) {
+    setDlBusy(h.id);
+    try {
+      for (let i = 0; i < h.urls.length; i++) {
+        const blob = await fetch(h.urls[i]).then((r) => r.blob());
+        const name = h.urls[i].split("/").pop()?.split("?")[0] || `${h.slug}_${i + 1}.jpg`;
+        saveBlob(blob, `${h.slug}_${String(i + 1).padStart(2, "0")}_${name}`);
+        await new Promise((r) => setTimeout(r, 300)); // 브라우저 연속 다운로드 차단 방지
+      }
+    } catch (e: any) {
+      alert("다운로드 실패: " + e.message);
+    }
+    setDlBusy("");
+  }
+  function downloadHtml(h: HistItem) {
+    const html = `<!doctype html>
+<html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>${h.slug} 상세페이지</title>
+<style>body{margin:0;background:#fff}img{display:block;width:100%;max-width:860px;margin:0 auto}</style>
+</head><body>
+${h.urls.map((u) => `<img src="${u}" alt="">`).join("\n")}
+</body></html>`;
+    saveBlob(new Blob([html], { type: "text/html" }), `${h.slug}_detail.html`);
+  }
+
   // ── 최종 렌더 ──
   async function renderPage() {
     setBusy("렌더링 중… (30초~1분)");
@@ -931,6 +965,16 @@ export default function DetailBuilder() {
                 <span style={{ fontSize: 12, color: C.inkLt }}>
                   {new Date(h.at).toLocaleString("ko-KR", { timeZone: "Asia/Seoul" })} · 조각 {h.urls.length}장
                 </span>
+                <div style={{ display: "flex", gap: 6, marginLeft: "auto" }}>
+                  <button onClick={() => downloadAll(h)} disabled={dlBusy === h.id}
+                    style={{ ...btnS, flex: "none", opacity: dlBusy === h.id ? 0.6 : 1 }}>
+                    {dlBusy === h.id ? "다운로드 중…" : "전체 다운로드"}
+                  </button>
+                  <button onClick={() => downloadHtml(h)}
+                    style={{ ...btnS, flex: "none", background: C.rose, color: "#fff" }}>
+                    HTML 다운로드
+                  </button>
+                </div>
               </div>
               <div style={{ display: "flex", gap: 8, overflowX: "auto", paddingBottom: 4 }}>
                 {h.urls.map((u, i) => (
