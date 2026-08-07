@@ -460,6 +460,29 @@ export default function DetailBuilder() {
         </div>
 
         {tab === "gen" && (<>
+        {/* 진행 스테퍼 — 어디까지 왔는지 한눈에 */}
+        <div style={{ display: "flex", alignItems: "center", gap: 6, margin: "18px 0 4px", flexWrap: "wrap" }}>
+          {([
+            ["카피 생성", !!productJson, "제품 정보를 넣고 카피를 만들어요"],
+            ["연출 컨셉", selConcept >= 0, "(선택) 배경·컬러 방향 고르기"],
+            ["컷 생성", cuts.some((c) => c.url), "실사 앵커로 연출컷 생성"],
+            ["최종 렌더", sliceUrls.length > 0, "분할 JPG/GIF로 저장"],
+          ] as [string, boolean, string][]).map(([label, done, tip], i, arr) => (
+            <div key={label} style={{ display: "flex", alignItems: "center", gap: 6 }} title={tip}>
+              <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "6px 12px",
+                borderRadius: 999, fontSize: 12, fontWeight: 800,
+                background: done ? "#E8F8EE" : C.white, color: done ? "#1F9D55" : C.inkMid,
+                border: `1px solid ${done ? "#B7E4C7" : C.border}` }}>
+                <span style={{ width: 17, height: 17, borderRadius: "50%", display: "inline-flex",
+                  alignItems: "center", justifyContent: "center", fontSize: 11,
+                  background: done ? "#34C759" : C.border, color: "#fff" }}>{done ? "✓" : i + 1}</span>
+                {label}
+              </div>
+              {i < arr.length - 1 && <span style={{ color: C.border, fontSize: 14 }}>→</span>}
+            </div>
+          ))}
+        </div>
+
         <div style={card}>
           <div style={cardTitle}>기본 설정</div>
           <div style={cardSub}>제품 폴더명(영어)과 제품 실사를 넣어요 — 실사는 정면·옆·뒷면 등 여러 각도로 넣을수록 컷이 정확해져요 (컷마다 맞는 각도를 AI가 자동 선택)</div>

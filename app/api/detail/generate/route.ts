@@ -25,7 +25,9 @@ const DEFAULT_REF =
   "Use the product in the reference image as the exact product. " +
   "Keep the product design, proportions, logo placement and materials EXACTLY " +
   "identical to the reference. Do not invent buttons, text or patterns. " +
-  "No people, no hands, no watermark. ";
+  "No people, no hands, no watermark. " +
+  "Ultra-detailed, tack-sharp focus on the product, visible material texture, " +
+  "high-end commercial product photography detail. ";
 
 // 인물(여성 모델) 컷 시그니처 스타일 — 클린이스윙 캠페인에서 확정된 K-드라마 배우급 블록
 const BEAUTY_BLOCK =
@@ -81,7 +83,7 @@ function buildWorkflow(anchorName: string, prompt: string, prefix: string) {
         model: "Nano Banana 2 (Gemini 3.1 Flash Image)",
         seed: Math.floor(Math.random() * 1e9),
         aspect_ratio: "1:1",
-        resolution: "1K",
+        resolution: "2K",
         response_modalities: "IMAGE",
         thinking_level: "MINIMAL",
         images: ["1", 0],

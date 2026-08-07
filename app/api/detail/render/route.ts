@@ -239,11 +239,10 @@ export async function POST(req: NextRequest) {
         gifAfter.set(Number(g.after), arr);
       }
 
-      // 조각 계획: 섹션 경계를 우선 컷 지점으로, SLICE_HEIGHT 초과 시에만 강제 분할
+      // 조각 계획: 디자이너 방식 — 섹션 경계마다 전부 자름 (섹션 1개 = 조각 1개, SLICE_HEIGHT 초과 섹션만 추가 분할)
       type Piece = { kind: "jpg"; top: number; height: number } | { kind: "gif"; url: string };
       const pieces: Piece[] = [];
       let start = 0;
-      let prev = 0;
       const flush = (end: number) => {
         let s = start;
         while (end - s > 0) {
@@ -254,13 +253,9 @@ export async function POST(req: NextRequest) {
         start = end;
       };
       bottoms.forEach((b, idx) => {
-        if (b - start > SLICE_HEIGHT && prev > start) flush(prev);
-        prev = b;
+        flush(Math.min(b, totalHeight));
         const gs = gifAfter.get(idx + 1);
-        if (gs) {
-          flush(Math.min(b, totalHeight));
-          for (const u of gs) pieces.push({ kind: "gif", url: u });
-        }
+        if (gs) for (const u of gs) pieces.push({ kind: "gif", url: u });
       });
       flush(totalHeight);
 
