@@ -45,6 +45,8 @@ export default function DetailBuilder() {
     DEFAULT_CUTS.map((c) => ({ ...c, url: "", loading: false, withModel: false, aspect: "" }))
   );
   const [productJson, setProductJson] = useState("");
+  // 제품 고정사항 (컬러/불변 부위) — 모든 컷 프롬프트에 강제로 붙는다
+  const [lockNote, setLockNote] = useState("");
   const [sliceUrls, setSliceUrls] = useState<string[]>([]);
   const [busy, setBusy] = useState("");
 
@@ -350,6 +352,17 @@ export default function DetailBuilder() {
     if (targets.some((t) => t.withModel) && !modelUrl)
       return alert('"모델" 체크된 컷이 있어요 — 상단 모델 섹션에서 모델을 먼저 생성/선택해주세요');
     setCuts((p) => p.map((c, i) => (indices.includes(i) ? { ...c, loading: true } : c)));
+    // 활성 템플릿의 디자인 무드를 추출해 컷 톤을 맞춘다 (서버 캐시라 두 번째부턴 즉시)
+    let tplMood = "";
+    if (styleLib.activeId) {
+      try {
+        const r = await fetch("/api/detail/style", {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ mood: styleLib.activeId }),
+        }).then((r) => r.json());
+        tplMood = r.imageStyle ? `Match the detail-page design mood: ${r.imageStyle}` : "";
+      } catch {}
+    }
     const res = await fetch("/api/detail/generate", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -359,7 +372,9 @@ export default function DetailBuilder() {
         anchorUrls: anchors,
         aspectRatio: aspect,
         modelUrl,
-        styleBlock: presetStyleBlock() || (selConcept >= 0 ? concepts[selConcept]?.styleBlock : ""),
+        lockNote,
+        styleBlock: [presetStyleBlock() || (selConcept >= 0 ? concepts[selConcept]?.styleBlock : ""), tplMood]
+          .filter(Boolean).join(" "),
       }),
     }).then((r) => r.json());
 
@@ -630,8 +645,7 @@ ${h.urls.map((u) => `<img src="${u}" alt="">`).join("\n")}
   }
 
   // ── 최종 렌더 ──
-  async function renderPage() {
-    setBusy("렌더링 중… (30초~1분)");
+  function buildProduct() {
     const product = JSON.parse(productJson);
     // 컷 URL을 product JSON에 주입
     const u = (f: string) => cuts.find((c) => c.file === f)?.url || "";
@@ -646,6 +660,55 @@ ${h.urls.map((u) => `<img src="${u}" alt="">`).join("\n")}
     product.gifs = gifRows
       .map((r) => ({ after: Number(r.after) || 0, url: r.url.trim() }))
       .filter((g) => g.after > 0 && g.url);
+    return product;
+  }
+
+  // 미리보기 — 렌더 없이 채워진 HTML을 iframe으로 (카피 수정 → 새로고침으로 즉시 확인)
+  const [previewHtml, setPreviewHtml] = useState("");
+  const [previewBusy, setPreviewBusy] = useState(false);
+  async function loadPreview() {
+    if (!productJson) return alert("카피를 먼저 만들어주세요 (1단계)");
+    setPreviewBusy(true);
+    try {
+      const res = await fetch("/api/detail/render", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...buildProduct(), preview: true }),
+      }).then((r) => r.json());
+      if (!res.ok) throw new Error(res.error);
+      setPreviewHtml(res.html);
+    } catch (e: any) {
+      alert("미리보기 실패: " + e.message);
+    }
+    setPreviewBusy(false);
+  }
+
+  // GIF 생성 — 컷 이미지를 시댄스2로 모션 영상 → GIF 변환 (Comfy Cloud)
+  const [gifCutFile, setGifCutFile] = useState("");
+  const [gifPrompt, setGifPrompt] = useState("");
+  const [gifDur, setGifDur] = useState(5);
+  const [gifBusy, setGifBusy] = useState("");
+  async function generateGif() {
+    const cut = cuts.find((c) => c.file === gifCutFile && c.url);
+    if (!cut) return alert("생성된 컷을 먼저 선택해주세요");
+    setGifBusy("시댄스2 모션 생성 중… (1~3분)");
+    try {
+      const res = await fetch("/api/detail/gif", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ imageUrl: cut.url.split("?")[0], prompt: gifPrompt, slug, file: cut.file, duration: gifDur }),
+      }).then((r) => r.json());
+      if (!res.ok) throw new Error(res.error);
+      setGifRows((rs) => [...rs, { after: "", url: res.url }]);
+      setGifBusy("완료 — 아래 GIF 조각 줄에 추가됐어요. 넣을 섹션 번호만 적어주세요");
+    } catch (e: any) {
+      setGifBusy("실패: " + e.message);
+    }
+  }
+
+  async function renderPage() {
+    setBusy("렌더링 중… (30초~1분)");
+    const product = buildProduct();
 
     const res = await fetch("/api/detail/render", {
       method: "POST",
@@ -656,6 +719,45 @@ ${h.urls.map((u) => `<img src="${u}" alt="">`).join("\n")}
     setBusy(res.ok ? "" : "실패: " + res.error);
     loadHistory();
   }
+
+  // ── 카피 직접 수정 칸 (①카피/④미리보기 공용) — productJson을 파싱해 필드별 입력으로 노출 ──
+  const copyEditor = !productJson ? null : (() => {
+    let p: any;
+    try { p = JSON.parse(productJson); } catch { return null; }
+    const set = (fn: (o: any) => void) => {
+      const o = JSON.parse(productJson); fn(o); setProductJson(JSON.stringify(o, null, 2));
+    };
+    const F = (label: string, value: string, on: (v: string) => void, area = false) => (
+      <div key={label}>
+        <div style={{ fontSize: 11, fontWeight: 700, color: C.inkLt, marginBottom: 3 }}>{label}</div>
+        {area ? (
+          <textarea value={value || ""} onChange={(e) => on(e.target.value)}
+            style={{ ...inp, width: "100%", height: 52, fontSize: 12.5, resize: "vertical" }} />
+        ) : (
+          <input value={value || ""} onChange={(e) => on(e.target.value)}
+            style={{ ...inp, width: "100%", fontSize: 12.5 }} />
+        )}
+      </div>
+    );
+    return (
+      <div style={{ marginTop: 10, border: `1px solid ${C.border}`, borderRadius: 12, padding: 14,
+        display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, background: "#fbfbfd" }}>
+        {F("제품명", p.productName, (v) => set((o) => { o.productName = v; }))}
+        {F("태그라인", p.tagline, (v) => set((o) => { o.tagline = v; }))}
+        {F("훅 헤드라인", p.hook?.headline, (v) => set((o) => { (o.hook ||= {}).headline = v; }), true)}
+        {F("훅 서브카피", p.hook?.sub, (v) => set((o) => { (o.hook ||= {}).sub = v; }), true)}
+        {(p.usp || []).slice(0, 3).map((u2: any, i2: number) => (
+          <div key={"usp" + i2} style={{ display: "grid", gap: 8 }}>
+            {F(`USP${i2 + 1} 헤드라인`, u2?.headline, (v) => set((o) => { o.usp[i2].headline = v; }))}
+            {F(`USP${i2 + 1} 설명`, u2?.desc, (v) => set((o) => { o.usp[i2].desc = v; }), true)}
+          </div>
+        ))}
+        {F("사용씬 헤드라인", p.scene?.headline, (v) => set((o) => { (o.scene ||= {}).headline = v; }))}
+        {F("인증 헤드라인", p.cert?.headline, (v) => set((o) => { (o.cert ||= {}).headline = v; }))}
+        {F("CTA 헤드라인", p.cta?.headline, (v) => set((o) => { (o.cta ||= {}).headline = v; }))}
+      </div>
+    );
+  })();
 
   return (
     <div style={{ background: C.bg, minHeight: "100vh",
@@ -761,6 +863,9 @@ ${h.urls.map((u) => `<img src="${u}" alt="">`).join("\n")}
             <button onClick={() => { if (anchorInput.trim()) { setAnchors((p) => [...p, anchorInput.trim()]); setAnchorInput(""); } }}
               style={btnS}>추가</button>
           </div>
+          <input value={lockNote} onChange={(e) => setLockNote(e.target.value)}
+            placeholder="제품 고정사항 — 절대 바뀌면 안 되는 것 (예: 바디는 무광 화이트, 버튼 2개, 로고는 상단 중앙, 케이블 없음)"
+            style={{ ...inp, width: "100%", marginTop: 8 }} />
         </div>
 
         <div style={card}>
@@ -884,44 +989,7 @@ ${h.urls.map((u) => `<img src="${u}" alt="">`).join("\n")}
             {copyBusy ? "카피 생성 중… (10~20초)" : "카피 생성 (Claude)"}
           </button>
           {productJson && <p style={{ marginTop: 10, fontSize: 13, color: "#34C759", fontWeight: 700 }}>✓ 카피 준비 완료 — 아래 칸에서 문구를 바로 고칠 수 있어요 (최종 렌더에 그대로 반영)</p>}
-          {/* 카피 직접 수정 칸 — productJson을 파싱해 필드별 입력으로 노출 */}
-          {productJson && (() => {
-            let p: any;
-            try { p = JSON.parse(productJson); } catch { return null; }
-            const set = (fn: (o: any) => void) => {
-              const o = JSON.parse(productJson); fn(o); setProductJson(JSON.stringify(o, null, 2));
-            };
-            const F = (label: string, value: string, on: (v: string) => void, area = false) => (
-              <div key={label}>
-                <div style={{ fontSize: 11, fontWeight: 700, color: C.inkLt, marginBottom: 3 }}>{label}</div>
-                {area ? (
-                  <textarea value={value || ""} onChange={(e) => on(e.target.value)}
-                    style={{ ...inp, width: "100%", height: 52, fontSize: 12.5, resize: "vertical" }} />
-                ) : (
-                  <input value={value || ""} onChange={(e) => on(e.target.value)}
-                    style={{ ...inp, width: "100%", fontSize: 12.5 }} />
-                )}
-              </div>
-            );
-            return (
-              <div style={{ marginTop: 10, border: `1px solid ${C.border}`, borderRadius: 12, padding: 14,
-                display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, background: "#fbfbfd" }}>
-                {F("제품명", p.productName, (v) => set((o) => { o.productName = v; }))}
-                {F("태그라인", p.tagline, (v) => set((o) => { o.tagline = v; }))}
-                {F("훅 헤드라인", p.hook?.headline, (v) => set((o) => { (o.hook ||= {}).headline = v; }), true)}
-                {F("훅 서브카피", p.hook?.sub, (v) => set((o) => { (o.hook ||= {}).sub = v; }), true)}
-                {(p.usp || []).slice(0, 3).map((u2: any, i2: number) => (
-                  <div key={"usp" + i2} style={{ display: "grid", gap: 8 }}>
-                    {F(`USP${i2 + 1} 헤드라인`, u2?.headline, (v) => set((o) => { o.usp[i2].headline = v; }))}
-                    {F(`USP${i2 + 1} 설명`, u2?.desc, (v) => set((o) => { o.usp[i2].desc = v; }), true)}
-                  </div>
-                ))}
-                {F("사용씬 헤드라인", p.scene?.headline, (v) => set((o) => { (o.scene ||= {}).headline = v; }))}
-                {F("인증 헤드라인", p.cert?.headline, (v) => set((o) => { (o.cert ||= {}).headline = v; }))}
-                {F("CTA 헤드라인", p.cta?.headline, (v) => set((o) => { (o.cta ||= {}).headline = v; }))}
-              </div>
-            );
-          })()}
+          {copyEditor}
           <details style={{ marginTop: 8 }}>
             <summary style={{ fontSize: 12.5, color: C.inkMid, cursor: "pointer" }}>고급: 카피 JSON 직접 보기/수정</summary>
             <textarea value={productJson} onChange={(e) => setProductJson(e.target.value)}
@@ -1093,6 +1161,59 @@ ${h.urls.map((u) => `<img src="${u}" alt="">`).join("\n")}
         <div style={card}>
           <div style={cardTitle}>④ 최종 렌더</div>
           <div style={cardSub}>서버에서 860px 상세페이지를 렌더해 섹션 경계 기준 분할 JPG로 업로드 — GIF 조각은 캡처하지 않고 원본 그대로 사이에 끼워요</div>
+
+          {/* 미리보기 + 카피 수정 */}
+          <div style={{ border: `1px solid ${C.border}`, borderRadius: 14, padding: 14, marginBottom: 14, background: "#fbfdff" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+              <span style={{ fontSize: 13.5, fontWeight: 800, color: C.ink }}>미리보기</span>
+              <span style={{ fontSize: 12, color: C.inkMid }}>완성본을 먼저 보고 → 아래 칸에서 문구 고치고 → 새로고침으로 확인 후 렌더하세요</span>
+              <button onClick={loadPreview} disabled={previewBusy}
+                style={{ ...btnS, flex: "none", marginLeft: "auto", opacity: previewBusy ? 0.6 : 1 }}>
+                {previewBusy ? "불러오는 중…" : previewHtml ? "미리보기 새로고침" : "미리보기 보기"}
+              </button>
+            </div>
+            {previewHtml && (
+              <>
+                <div style={{ marginTop: 10, border: `1px solid ${C.border}`, borderRadius: 10, overflow: "hidden", background: "#fff" }}>
+                  <iframe srcDoc={previewHtml} title="미리보기"
+                    style={{ width: "100%", height: 640, border: "none", display: "block" }} />
+                </div>
+                {copyEditor}
+              </>
+            )}
+          </div>
+
+          {/* GIF 생성 (시댄스2) */}
+          <div style={{ border: `1px solid ${C.border}`, borderRadius: 14, padding: 14, marginBottom: 14, background: "#fffdf8" }}>
+            <div style={{ fontSize: 13.5, fontWeight: 800, color: C.ink }}>GIF 생성 (시댄스 2)</div>
+            <div style={{ fontSize: 12, color: C.inkMid, marginTop: 2 }}>
+              생성된 컷을 골라 모션을 입히면 GIF로 변환해 아래 조각 줄에 자동 추가돼요
+            </div>
+            <div style={{ display: "flex", gap: 8, marginTop: 10, flexWrap: "wrap" }}>
+              <select value={gifCutFile} onChange={(e) => setGifCutFile(e.target.value)}
+                style={{ ...inp, width: 170, cursor: "pointer" }}>
+                <option value="">컷 선택</option>
+                {cuts.filter((c) => c.url).map((c) => (
+                  <option key={c.file} value={c.file}>{c.label}</option>
+                ))}
+              </select>
+              <input value={gifPrompt} onChange={(e) => setGifPrompt(e.target.value)}
+                placeholder="모션 프롬프트 (비우면: 은은한 카메라 푸시인 + 빛 스윕)"
+                style={{ ...inp, flex: 1, minWidth: 220 }} />
+              <select value={gifDur} onChange={(e) => setGifDur(Number(e.target.value))}
+                style={{ ...inp, width: 80, cursor: "pointer" }}>
+                {[4, 5, 6, 8].map((d) => <option key={d} value={d}>{d}초</option>)}
+              </select>
+              <button onClick={generateGif} disabled={gifBusy.includes("생성 중")}
+                style={{ ...btnS, flex: "none", opacity: gifBusy.includes("생성 중") ? 0.6 : 1 }}>
+                {gifBusy.includes("생성 중") ? "생성 중…" : "GIF 생성"}
+              </button>
+            </div>
+            {gifBusy && (
+              <p style={{ fontSize: 12.5, color: gifBusy.startsWith("실패") ? "#D70015" : C.inkMid, margin: "8px 0 0" }}>{gifBusy}</p>
+            )}
+          </div>
+
           {gifRows.map((r, i) => (
             <div key={i} style={{ display: "flex", gap: 8, marginBottom: 8 }}>
               <input value={r.after} placeholder="섹션#"

@@ -51,7 +51,9 @@ const MODEL_REF =
   "Two reference images are provided. The FIRST is the product — keep its design, " +
   "proportions, logo placement and materials EXACTLY identical, do not invent buttons or text. " +
   "The SECOND is the model — the EXACT SAME woman (same face, same hairstyle, same features) " +
-  "must appear in this shot, naturally interacting with the product. No watermark. ";
+  "must appear in this shot, naturally interacting with the product. " +
+  "Her FACE MUST BE CLEARLY VISIBLE — front or three-quarter view toward the camera, " +
+  "never a back view, never cropped above the chin, never hidden by hair, hands or the product. No watermark. ";
 
 // 빌드 타임엔 env가 없을 수 있어 lazy 초기화
 const getSupabase = () =>
@@ -210,13 +212,17 @@ ${cuts.map((c) => `- ${c.file}: ${c.prompt}`).join("\n")}
 
 export async function POST(req: NextRequest) {
   try {
-    const { productSlug, cuts, anchorUrl, anchorUrls, refPrompt, styleBlock, aspectRatio, modelUrl } = await req.json();
+    const { productSlug, cuts, anchorUrl, anchorUrls, refPrompt, styleBlock, aspectRatio, modelUrl, lockNote } = await req.json();
     const aspect = ASPECTS.has(aspectRatio) ? aspectRatio : "1:1";
     const anchors: string[] = (
       Array.isArray(anchorUrls) && anchorUrls.length ? anchorUrls : [anchorUrl]
     ).filter(Boolean);
     if (!anchors.length) throw new Error("앵커 실사 이미지 URL이 필요합니다");
-    const ref = refPrompt || DEFAULT_REF;
+    // 제품 고정사항 (컬러/불변 부위) — 모든 컷 프롬프트에 강제
+    const lock = lockNote
+      ? `IMMUTABLE PRODUCT DETAILS — the following must stay EXACTLY as in the reference, never change them: ${String(lockNote).trim()}. `
+      : "";
+    const ref = (refPrompt || DEFAULT_REF) + lock;
     const style = styleBlock ? String(styleBlock).trim() + " " : "";
 
     const needModel = !!modelUrl && cuts.some((c: any) => c.withModel);
@@ -236,7 +242,7 @@ export async function POST(req: NextRequest) {
         const cutAspect = cut.aspect && ASPECTS.has(cut.aspect) ? cut.aspect : aspect;
         // 모델컷: 제품+모델 2장 참조 / 인물 컷: "No people" 해제 + 시그니처 미모 블록 삽입
         const cutRef = useModel
-          ? MODEL_REF + BEAUTY_BLOCK
+          ? MODEL_REF + lock + BEAUTY_BLOCK
           : hasPerson(cut.prompt)
           ? ref.replace(/No people, no hands, /i, "") + BEAUTY_BLOCK
           : ref;

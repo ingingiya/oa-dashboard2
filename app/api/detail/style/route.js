@@ -64,6 +64,31 @@ export async function POST(request) {
     return Response.json(publicList(lib));
   }
 
+  // 템플릿 무드 추출 — 컷 생성이 템플릿 디자인 톤을 따라가도록 사진 연출 무드 한 문단 반환 (캐시)
+  if (body?.mood) {
+    const lib = await getLib(sb);
+    const item = lib.items.find((t) => t.id === body.mood);
+    if (!item) return Response.json({ error: '템플릿 없음' }, { status: 404 });
+    if (!item.imageStyle) {
+      const apiKey = process.env.ANTHROPIC_API_KEY;
+      if (!apiKey) return Response.json({ error: 'ANTHROPIC_API_KEY 없음' }, { status: 500 });
+      const client = new Anthropic({ apiKey });
+      const msg = await client.messages.create({
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 250,
+        messages: [{
+          role: 'user',
+          content:
+            '아래는 상세페이지 HTML 템플릿입니다. 이 페이지에 들어갈 "제품 사진"이 페이지 디자인과 한 몸처럼 어울리도록, 사진 연출 무드를 영어 2~3문장으로 요약하세요. 배경 컬러(hex 그대로), 조명 톤, 전체 분위기(모던/따뜻/클리니컬 등) 위주. 문장만 출력.\n\n' +
+            String(item.html).slice(0, 25000),
+        }],
+      });
+      item.imageStyle = (msg.content.find((b) => b.type === 'text')?.text || '').trim().slice(0, 600);
+      await setVal(sb, LIB_KEY, lib);
+    }
+    return Response.json({ ok: true, imageStyle: item.imageStyle || '' });
+  }
+
   if (body?.activate) {
     const lib = await getLib(sb);
     const item = lib.items.find((t) => t.id === body.activate);

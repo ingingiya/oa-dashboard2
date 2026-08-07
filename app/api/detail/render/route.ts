@@ -21,7 +21,7 @@ const PAGE_WIDTH = 860;
 // 서버리스 크로미움엔 한글 폰트가 없음 — 웹폰트 필수
 const FONT_CSS =
   "https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css";
-const SLICE_HEIGHT = 6000;
+const SLICE_HEIGHT = 3000; // 2배율 캡처라 절반으로 (픽셀량 동일 유지 — 서버리스 OOM 방지)
 const BUCKET = "detail-pages";
 
 // 빌드 타임엔 env가 없을 수 있어 lazy 초기화
@@ -177,6 +177,9 @@ export async function POST(req: NextRequest) {
       html = buildHtml(product);
     }
 
+    // 미리보기 모드: 렌더/캡처 없이 채워진 HTML만 반환 (프론트 iframe에서 확인·수정용)
+    if (product.preview) return NextResponse.json({ ok: true, html });
+
     // ---------- 0. 웜 람다 /tmp 찌꺼기 청소 (크로미움 추출본 /tmp/chromium은 보존) ----------
     try {
       for (const d of readdirSync("/tmp")) {
@@ -206,7 +209,7 @@ export async function POST(req: NextRequest) {
     try {
       const page = await browser.newPage({
         viewport: { width: PAGE_WIDTH, height: 1000 },
-        deviceScaleFactor: 1, // 서버리스 메모리 절약 — 화질 더 필요하면 1.5
+        deviceScaleFactor: 2, // 2배율 캡처(1720px) — 레티나/확대에서도 선명. SLICE_HEIGHT 축소로 메모리 상쇄
       });
       await page.setContent(html, { waitUntil: "networkidle" });
       await page.waitForTimeout(800); // 배경 PNG + 컷 이미지 로딩 여유
@@ -279,7 +282,7 @@ export async function POST(req: NextRequest) {
           // clip이 뷰포트 밖에서 잘리는 문제 회피 — 뷰포트를 조각 크기로 맞추고 스크롤해서 캡처
           await page.setViewportSize({ width: PAGE_WIDTH, height: piece.height });
           await page.evaluate((y) => window.scrollTo(0, y), piece.top);
-          buf = await page.screenshot({ type: "jpeg", quality: 88 });
+          buf = await page.screenshot({ type: "jpeg", quality: 90 });
         }
 
         const filePath = `${slug}/detail_${num}.${ext}`;
