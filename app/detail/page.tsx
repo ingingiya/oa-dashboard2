@@ -1,7 +1,7 @@
 "use client";
 // app/detail/page.tsx
 // 상세페이지 생성기 — 원스톱 UI
-// 흐름: ① 제품 정보 입력 → ② 컷 생성(Comfy Cloud 나노바나나2 + 실사 앵커) + 미리보기/재생성 → ③ 상세페이지 렌더 → 분할 JPG 링크
+// 흐름: ① 제품 정보 → 카피 생성 → ② 연출 컨셉 추천/선택 → ③ 컷 생성(Comfy Cloud 나노바나나2 + 멀티 앵커 자동 매칭) → ④ 최종 렌더(섹션 분할 JPG + GIF 조각)
 // 실사 업로드 슬롯은 브라우저에서 배경제거(@imgly/background-removal) 후 Supabase 업로드
 // 설치: npm i @imgly/background-removal @supabase/supabase-js
 
@@ -36,9 +36,11 @@ export default function DetailBuilder() {
   const [tab, setTab] = useState<"gen" | "refs" | "hist">("gen");
   const [slug, setSlug] = useState("cleanswingP");
   const [trigger, setTrigger] = useState("cleanswingP");
-  const [anchorUrl, setAnchorUrl] = useState(
-    "https://lugqeflqusqsyotdiaxg.supabase.co/storage/v1/object/public/detail-assets/cleanswingP/anchor.jpg"
-  );
+  // 앵커 실사 여러 장(여러 각도) — 컷마다 어울리는 각도를 AI가 자동 선택
+  const [anchors, setAnchors] = useState<string[]>([
+    "https://lugqeflqusqsyotdiaxg.supabase.co/storage/v1/object/public/detail-assets/cleanswingP/anchor.jpg",
+  ]);
+  const [anchorInput, setAnchorInput] = useState("");
   const [cuts, setCuts] = useState(
     DEFAULT_CUTS.map((c) => ({ ...c, url: "", loading: false }))
   );
@@ -213,8 +215,38 @@ export default function DetailBuilder() {
     }
   }
 
+  // ── 연출 컨셉 추천 ──
+  type Concept = { title: string; desc: string; styleBlock: string };
+  const [concepts, setConcepts] = useState<Concept[]>([]);
+  const [selConcept, setSelConcept] = useState(-1);
+  const [conceptBusy, setConceptBusy] = useState(false);
+
+  async function recommendConcepts() {
+    setConceptBusy(true);
+    try {
+      const res = await fetch("/api/detail/concepts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          productName: form.productName || trigger,
+          category: form.category,
+          raw: form.raw,
+          anchorUrl: anchors[0] || "",
+        }),
+      }).then((r) => r.json());
+      if (!res.ok) throw new Error(res.error);
+      setConcepts(res.concepts);
+      setSelConcept(-1);
+    } catch (e: any) {
+      alert("컨셉 추천 실패: " + e.message);
+    } finally {
+      setConceptBusy(false);
+    }
+  }
+
   // ── 컷 생성 (개별/전체 동일 라우트) ──
   async function generateCuts(indices: number[]) {
+    if (!anchors.length) return alert("제품 실사(앵커)를 최소 1장 넣어주세요");
     setCuts((p) => p.map((c, i) => (indices.includes(i) ? { ...c, loading: true } : c)));
     const targets = indices.map((i) => ({
       file: cuts[i].file,
@@ -223,7 +255,12 @@ export default function DetailBuilder() {
     const res = await fetch("/api/detail/generate", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ productSlug: slug, cuts: targets, anchorUrl }),
+      body: JSON.stringify({
+        productSlug: slug,
+        cuts: targets,
+        anchorUrls: anchors,
+        styleBlock: selConcept >= 0 ? concepts[selConcept]?.styleBlock : "",
+      }),
     }).then((r) => r.json());
 
     setCuts((p) =>
@@ -322,7 +359,7 @@ export default function DetailBuilder() {
           return hit ? { ...c, url: hit.url + "?t=" + Date.now() } : c;
         })
       );
-      if (res.anchorUrl) setAnchorUrl(res.anchorUrl);
+      if (res.anchorUrl) setAnchors((p) => (p.includes(res.anchorUrl) ? p : [...p, res.anchorUrl]));
       const placed = res.cuts.map((c: any) => c.file.replace(".png", "")).join(", ");
       setBulkBusy(
         `배치 완료 — ${placed || "없음"}${res.anchorUrl ? " + 앵커" : ""} (나머지 슬롯은 AI 생성)`
@@ -425,24 +462,55 @@ export default function DetailBuilder() {
         {tab === "gen" && (<>
         <div style={card}>
           <div style={cardTitle}>기본 설정</div>
-          <div style={cardSub}>슬러그는 저장 폴더명 · 앵커는 제품 실사 공개 URL(나노바나나가 이 이미지 그대로 그려요)</div>
+          <div style={cardSub}>제품 폴더명(영어)과 제품 실사를 넣어요 — 실사는 정면·옆·뒷면 등 여러 각도로 넣을수록 컷이 정확해져요 (컷마다 맞는 각도를 AI가 자동 선택)</div>
           <div style={{ display: "flex", gap: 12 }}>
             <input value={slug}
               onChange={(e) => {
                 const v = e.target.value.trim();
                 setSlug(v);
-                // 슬러그 바꾸면 앵커 URL도 자동 추적 (표준 anchor.jpg 패턴일 때만 — 커스텀 URL은 안 건드림)
-                if (v) setAnchorUrl((a) =>
-                  /detail-assets\/[^/]+\/anchor\.(jpg|png)$/.test(a)
+                // 슬러그 바꾸면 표준 패턴 앵커 URL도 자동 추적 (커스텀 URL은 안 건드림)
+                if (v) setAnchors((arr) => arr.map((a) =>
+                  /detail-assets\/[^/]+\/anchor[\w-]*\.(jpg|png)$/.test(a)
                     ? a.replace(/detail-assets\/[^/]+\//, `detail-assets/${v}/`)
-                    : a);
+                    : a));
               }}
-              placeholder="제품 슬러그" style={{ ...inp, flex: 1 }} />
+              placeholder="제품 폴더명 (영어, 예: airstraight)" style={{ ...inp, flex: 1 }} />
             <input value={trigger} onChange={(e) => setTrigger(e.target.value)}
               placeholder="제품명(프롬프트 접두어)" style={{ ...inp, flex: 1 }} />
           </div>
-          <input value={anchorUrl} onChange={(e) => setAnchorUrl(e.target.value)}
-            placeholder="앵커 실사 이미지 URL (필수)" style={{ ...inp, width: "100%", marginTop: 8 }} />
+          <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", marginTop: 10 }}>
+            {anchors.map((a, i) => (
+              <div key={i} style={{ position: "relative" }}>
+                <img src={a} style={{ width: 64, height: 64, objectFit: "cover", borderRadius: 10,
+                  border: `1px solid ${C.border}`, background: "#fff" }} />
+                <span onClick={() => setAnchors((p) => p.filter((_, j) => j !== i))}
+                  style={{ position: "absolute", top: -6, right: -6, width: 18, height: 18, lineHeight: "17px",
+                    textAlign: "center", fontSize: 11, fontWeight: 800, color: "#fff", background: "#D70015",
+                    borderRadius: "50%", cursor: "pointer" }}>✕</span>
+              </div>
+            ))}
+            <label style={{ ...btnS, cursor: "pointer" }}>
+              + 실사 사진 추가
+              <input type="file" accept="image/*" multiple hidden
+                onChange={async (e) => {
+                  if (!e.target.files?.length) return;
+                  for (const file of Array.from(e.target.files)) {
+                    const fd = new FormData();
+                    fd.append("file", file);
+                    const res = await fetch("/api/detail/copy-upload", { method: "POST", body: fd }).then((r) => r.json());
+                    if (res.ok) setAnchors((p) => [...p, res.url]);
+                    else alert("업로드 실패: " + res.error);
+                  }
+                  e.target.value = "";
+                }} />
+            </label>
+          </div>
+          <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+            <input value={anchorInput} onChange={(e) => setAnchorInput(e.target.value)}
+              placeholder="또는 실사 이미지 URL 붙여넣기" style={{ ...inp, flex: 1 }} />
+            <button onClick={() => { if (anchorInput.trim()) { setAnchors((p) => [...p, anchorInput.trim()]); setAnchorInput(""); } }}
+              style={btnS}>추가</button>
+          </div>
         </div>
 
         <div style={card}>
@@ -528,15 +596,42 @@ export default function DetailBuilder() {
             style={{ ...btn, opacity: copyBusy ? 0.6 : 1 }}>
             {copyBusy ? "카피 생성 중… (10~20초)" : "카피 생성 (Claude)"}
           </button>
-          <textarea value={productJson} onChange={(e) => setProductJson(e.target.value)}
-            placeholder="카피 생성 결과 JSON (직접 수정 가능 / 붙여넣기도 가능)"
-            style={{ ...inp, width: "100%", height: 160, marginTop: 12, fontFamily: "monospace", fontSize: 12 }} />
+          {productJson && <p style={{ marginTop: 10, fontSize: 13, color: "#34C759", fontWeight: 700 }}>✓ 카피 준비 완료 — 아래에서 컷을 만들고 최종 렌더를 누르면 돼요</p>}
+          <details style={{ marginTop: 8 }}>
+            <summary style={{ fontSize: 12.5, color: C.inkMid, cursor: "pointer" }}>고급: 카피 JSON 직접 보기/수정</summary>
+            <textarea value={productJson} onChange={(e) => setProductJson(e.target.value)}
+              placeholder="카피 생성 결과 JSON (직접 수정 가능 / 붙여넣기도 가능)"
+              style={{ ...inp, width: "100%", height: 160, marginTop: 8, fontFamily: "monospace", fontSize: 12 }} />
+          </details>
+        </div>
+
+        <div style={card}>
+          <div style={cardTitle}>② 연출 컨셉 <span style={{ color: C.inkMid, fontWeight: 400, fontSize: 12 }}>(선택)</span></div>
+          <div style={cardSub}>AI가 제품에 어울리는 배경·컬러 연출 4가지를 제안해요 — 고르면 모든 컷이 그 방향으로 생성돼요 (안 고르면 기본 연출)</div>
+          <button onClick={recommendConcepts} disabled={conceptBusy} style={{ ...btnS, opacity: conceptBusy ? 0.6 : 1 }}>
+            {conceptBusy ? "추천 중…" : "컨셉 추천받기"}
+          </button>
+          {concepts.length > 0 && (
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(200px,1fr))", gap: 10, marginTop: 12 }}>
+              {concepts.map((c, i) => (
+                <div key={i} onClick={() => setSelConcept(selConcept === i ? -1 : i)}
+                  style={{ padding: "12px 14px", borderRadius: 12, cursor: "pointer",
+                    border: selConcept === i ? `2px solid ${C.rose}` : `1px solid ${C.border}`,
+                    background: selConcept === i ? "#f0f7ff" : "#fff" }}>
+                  <div style={{ fontSize: 14, fontWeight: 800, color: C.ink }}>
+                    {selConcept === i ? "✓ " : ""}{c.title}
+                  </div>
+                  <div style={{ fontSize: 12.5, color: C.inkMid, marginTop: 4, lineHeight: 1.4 }}>{c.desc}</div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         <div style={card}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
             <div>
-              <div style={cardTitle}>② 컷 생성 / 재생성</div>
+              <div style={cardTitle}>③ 컷 생성 / 재생성</div>
               <div style={cardSub}>사진을 한번에 올리면 AI가 분석해 슬롯에 자동 배치 — 빈 슬롯은 나노바나나 생성으로 채워요</div>
             </div>
             <div style={{ display: "flex", gap: 8 }}>
@@ -580,7 +675,7 @@ export default function DetailBuilder() {
         </div>
 
         <div style={card}>
-          <div style={cardTitle}>③ 최종 렌더</div>
+          <div style={cardTitle}>④ 최종 렌더</div>
           <div style={cardSub}>서버에서 860px 상세페이지를 렌더해 섹션 경계 기준 분할 JPG로 업로드 — GIF 조각은 캡처하지 않고 원본 그대로 사이에 끼워요</div>
           {gifRows.map((r, i) => (
             <div key={i} style={{ display: "flex", gap: 8, marginBottom: 8 }}>

@@ -12,6 +12,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import Anthropic from "@anthropic-ai/sdk";
 import { appendHistory } from "../../../../lib/detailHistory";
 
 export const maxDuration = 300;
@@ -119,20 +120,69 @@ async function generateOne(anchorName: string, prompt: string, prefix: string): 
   throw new Error("생성 타임아웃");
 }
 
+// 멀티 앵커: 컷마다 어울리는 각도의 앵커를 AI가 선택 (실패 시 첫 번째 폴백)
+async function pickAnchors(
+  anchorUrls: string[],
+  cuts: { file: string; prompt: string }[]
+): Promise<Record<string, number>> {
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (anchorUrls.length < 2 || !apiKey) return {};
+  try {
+    const client = new Anthropic({ apiKey });
+    const blocks: any[] = anchorUrls.flatMap((u, i) => [
+      { type: "text", text: `[앵커 ${i + 1}]` },
+      { type: "image", source: { type: "url", url: u } },
+    ]);
+    const msg = await client.messages.create({
+      model: "claude-haiku-4-5-20251001",
+      max_tokens: 500,
+      messages: [{
+        role: "user",
+        content: [...blocks, {
+          type: "text",
+          text: `위 앵커 이미지들은 같은 제품을 다른 각도/구도로 찍은 실사입니다.
+아래 각 컷 프롬프트가 요구하는 카메라 각도·보이는 면에 가장 잘 맞는 앵커 번호를 고르세요.
+${cuts.map((c) => `- ${c.file}: ${c.prompt}`).join("\n")}
+순수 JSON만 출력: {"파일명": 앵커번호(1-base), ...}`,
+        }],
+      }],
+    });
+    const text = (msg.content.find((b: any) => b.type === "text") as any)?.text || "{}";
+    const map = JSON.parse(text.replace(/^```json?\s*|```\s*$/g, "").trim());
+    const out: Record<string, number> = {};
+    for (const [f, n] of Object.entries(map)) {
+      const idx = Number(n) - 1;
+      if (idx >= 0 && idx < anchorUrls.length) out[f] = idx;
+    }
+    return out;
+  } catch (e) {
+    console.error("앵커 매칭 실패(첫 앵커 폴백):", e);
+    return {};
+  }
+}
+
 export async function POST(req: NextRequest) {
   try {
-    const { productSlug, cuts, anchorUrl, refPrompt } = await req.json();
-    if (!anchorUrl) throw new Error("anchorUrl(실사 앵커 이미지 URL)이 필요합니다");
+    const { productSlug, cuts, anchorUrl, anchorUrls, refPrompt, styleBlock } = await req.json();
+    const anchors: string[] = (
+      Array.isArray(anchorUrls) && anchorUrls.length ? anchorUrls : [anchorUrl]
+    ).filter(Boolean);
+    if (!anchors.length) throw new Error("앵커 실사 이미지 URL이 필요합니다");
     const ref = refPrompt || DEFAULT_REF;
+    const style = styleBlock ? String(styleBlock).trim() + " " : "";
 
-    const anchorName = await uploadAnchor(anchorUrl);
+    const [anchorNames, pickMap] = await Promise.all([
+      Promise.all(anchors.map(uploadAnchor)),
+      pickAnchors(anchors, cuts),
+    ]);
     const results: { file: string; url: string }[] = [];
 
     // Gemini API 노드는 병렬 제출 가능
     await Promise.all(
       cuts.map(async (cut: { file: string; prompt: string }) => {
         const prefix = "gen_" + cut.file.replace(/\.\w+$/, "");
-        const buf = await generateOne(anchorName, ref + cut.prompt, prefix);
+        const anchorName = anchorNames[pickMap[cut.file] ?? 0];
+        const buf = await generateOne(anchorName, ref + style + cut.prompt, prefix);
         const filePath = `${productSlug}/${cut.file}`;
         const { error } = await getSupabase().storage
           .from(BUCKET)
