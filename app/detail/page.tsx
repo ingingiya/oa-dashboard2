@@ -1,7 +1,7 @@
 "use client";
 // app/detail/page.tsx
 // 상세페이지 생성기 — 원스톱 UI
-// 흐름: ① 제품 정보 → 카피 생성 → ② 연출 컨셉 추천/선택 → ③ 컷 생성(Comfy Cloud 나노바나나2 + 멀티 앵커 자동 매칭) → ④ 최종 렌더(섹션 분할 JPG + GIF 조각)
+// 흐름(3스텝): ① 제품 정보 → 카피 생성 → ② 컷 생성(생성 컨셉(톤) 선택 + Comfy Cloud 나노바나나2 + 멀티 앵커 자동 매칭) → ③ 최종 렌더(섹션 분할 JPG + GIF 조각)
 // 실사 업로드 슬롯은 브라우저에서 배경제거(@imgly/background-removal) 후 Supabase 업로드
 // 설치: npm i @imgly/background-removal @supabase/supabase-js
 
@@ -270,11 +270,9 @@ export default function DetailBuilder() {
   function nextStep() {
     if (step === 0 && !productJson &&
       !confirm("아직 카피를 만들지 않았어요. 카피 없이 다음으로 갈까요?")) return;
-    if (step === 1 && selConcept < 0 && !preset &&
-      !confirm("생성 컨셉을 선택하지 않았어요. 기본 연출로 진행할까요?")) return;
-    if (step === 2 && !cuts.some((c) => c.url) &&
+    if (step === 1 && !cuts.some((c) => c.url) &&
       !confirm("생성된 컷이 없어요. 그래도 최종 렌더로 갈까요?")) return;
-    setStep((s) => Math.min(3, s + 1));
+    setStep((s) => Math.min(2, s + 1));
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
@@ -801,7 +799,7 @@ ${h.urls.map((u) => `<img src="${u}" alt="">`).join("\n")}
         if (d.lockNote) setLockNote(d.lockNote);
         if (d.banNote) setBanNote(d.banNote);
         if (d.aspect) setAspect(d.aspect);
-        if (typeof d.step === "number") setStep(d.step);
+        if (typeof d.step === "number") setStep(Math.min(2, d.step));
         if (d.selModel) setSelModel(d.selModel);
         if (Array.isArray(d.gifRows)) setGifRows(d.gifRows);
       }
@@ -860,7 +858,7 @@ ${h.urls.map((u) => `<img src="${u}" alt="">`).join("\n")}
     loadHistory();
   }
 
-  // ── 카피 직접 수정 칸 (①카피/④미리보기 공용) — productJson을 파싱해 필드별 입력으로 노출 ──
+  // ── 카피 직접 수정 칸 (①카피/③미리보기 공용) — productJson을 파싱해 필드별 입력으로 노출 ──
   const copyEditor = !productJson ? null : (() => {
     let p: any;
     try { p = JSON.parse(productJson); } catch { return null; }
@@ -935,8 +933,7 @@ ${h.urls.map((u) => `<img src="${u}" alt="">`).join("\n")}
         <div style={{ display: "flex", alignItems: "center", gap: 6, margin: "18px 0 4px", flexWrap: "wrap" }}>
           {([
             ["카피 생성", !!productJson, "제품 정보를 넣고 카피를 만들어요"],
-            ["생성 컨셉", selConcept >= 0 || !!preset, "(선택) 누끼/컬러/AI 추천 중 고르기"],
-            ["컷 생성", cuts.some((c) => c.url), "실사 앵커로 연출컷 생성"],
+            ["컷 생성", cuts.some((c) => c.url), "생성 컨셉(톤) 고르고 연출컷 생성"],
             ["최종 렌더", sliceUrls.length > 0, "분할 JPG/GIF로 저장"],
           ] as [string, boolean, string][]).map(([label, done, tip], i, arr) => (
             <div key={label} style={{ display: "flex", alignItems: "center", gap: 6 }} title={tip}>
@@ -1150,7 +1147,7 @@ ${h.urls.map((u) => `<img src="${u}" alt="">`).join("\n")}
 
         {step === 1 && (
         <div style={card}>
-          <div style={cardTitle}>② 생성 컨셉 <span style={{ color: C.inkMid, fontWeight: 400, fontSize: 12 }}>(선택)</span></div>
+          <div style={cardTitle}>생성 컨셉 (톤) <span style={{ color: C.inkMid, fontWeight: 400, fontSize: 12 }}>(선택)</span></div>
           <div style={cardSub}>기본 스타일을 고르거나, AI 추천을 받아보세요 — 고르면 모든 컷이 그 방향으로 생성돼요 (안 고르면 기본 연출)</div>
           <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", marginBottom: 10 }}>
             <div onClick={() => { setPreset(preset === "nukki" ? "" : "nukki"); setSelConcept(-1); }}
@@ -1193,11 +1190,11 @@ ${h.urls.map((u) => `<img src="${u}" alt="">`).join("\n")}
         </div>
         )}
 
-        {step === 2 && (
+        {step === 1 && (
         <div style={card}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
             <div>
-              <div style={cardTitle}>③ 컷 생성 / 재생성</div>
+              <div style={cardTitle}>② 컷 생성 / 재생성</div>
               <div style={cardSub}>사진을 한번에 올리면 AI가 분석해 슬롯에 자동 배치 — 빈 슬롯은 나노바나나 생성으로 채워요</div>
             </div>
             <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
@@ -1394,7 +1391,7 @@ ${h.urls.map((u) => `<img src="${u}" alt="">`).join("\n")}
             ))}
           </div>
 
-          {/* GIF 생성 (시댄스2) — 컷에 모션을 입혀 GIF로 (배치는 스텝4 미리보기에서) */}
+          {/* GIF 생성 (시댄스2) — 컷에 모션을 입혀 GIF로 (배치는 스텝③ 미리보기에서) */}
           <div style={{ border: `1px solid ${C.border}`, borderRadius: 14, padding: 14, marginTop: 14, background: "#fffdf8" }}>
             <div style={{ fontSize: 13.5, fontWeight: 800, color: C.ink }}>GIF 생성 (시댄스 2)</div>
             <div style={{ fontSize: 12, color: C.inkMid, marginTop: 2 }}>
@@ -1435,9 +1432,9 @@ ${h.urls.map((u) => `<img src="${u}" alt="">`).join("\n")}
         </div>
         )}
 
-        {step === 3 && (
+        {step === 2 && (
         <div style={card}>
-          <div style={cardTitle}>④ 최종 렌더</div>
+          <div style={cardTitle}>③ 최종 렌더</div>
           <div style={cardSub}>서버에서 860px 상세페이지를 렌더해 섹션 경계 기준 분할 JPG로 업로드 — GIF 조각은 캡처하지 않고 원본 그대로 사이에 끼워요</div>
 
           {/* 미리보기 + 카피 수정 */}
@@ -1500,7 +1497,7 @@ ${h.urls.map((u) => `<img src="${u}" alt="">`).join("\n")}
                   style={{ ...zone, marginTop: 10, borderColor: "#c8c8cc", background: "#fafafa" }}>
                   <span style={{ fontSize: 11.5, color: C.inkLt, fontWeight: 700, marginRight: 4 }}>대기함</span>
                   {unplaced.length ? unplaced.map(({ r, gi }) => chip(r, gi))
-                    : <span style={{ fontSize: 11.5, color: C.inkLt }}>비어있음 — 스텝③에서 GIF를 생성하면 여기 나타나요</span>}
+                    : <span style={{ fontSize: 11.5, color: C.inkLt }}>비어있음 — 스텝②에서 GIF를 생성하면 여기 나타나요</span>}
                 </div>
                 <div style={{ marginTop: 10, display: "flex", flexDirection: "column", gap: 6 }}>
                   {secs.map((label, si) => (
@@ -1547,7 +1544,7 @@ ${h.urls.map((u) => `<img src="${u}" alt="">`).join("\n")}
           <button onClick={() => { setStep((s) => Math.max(0, s - 1)); window.scrollTo({ top: 0, behavior: "smooth" }); }}
             disabled={step === 0}
             style={{ ...btnS, opacity: step === 0 ? 0.4 : 1, padding: "11px 22px" }}>← 이전</button>
-          {step < 3 ? (
+          {step < 2 ? (
             <button onClick={nextStep} style={{ ...btn, marginTop: 0, padding: "11px 26px" }}>다음 →</button>
           ) : (
             <button onClick={() => { setTab("renders"); loadHistory(); window.scrollTo({ top: 0 }); }}
