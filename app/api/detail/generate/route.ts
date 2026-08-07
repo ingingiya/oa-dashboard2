@@ -129,9 +129,21 @@ async function pickAnchors(
   if (anchorUrls.length < 2 || !apiKey) return {};
   try {
     const client = new Anthropic({ apiKey });
-    const blocks: any[] = anchorUrls.flatMap((u, i) => [
+    // Anthropic URL 다운로드 간헐 실패 → 서버가 직접 받아 base64로 전달
+    const imgs = await Promise.all(
+      anchorUrls.map(async (u) => {
+        const res = await fetch(u);
+        if (!res.ok) throw new Error(`앵커 다운로드 실패 ${res.status}: ${u}`);
+        const mt = (res.headers.get("content-type") || "image/jpeg").split(";")[0];
+        return {
+          type: "image",
+          source: { type: "base64", media_type: mt, data: Buffer.from(await res.arrayBuffer()).toString("base64") },
+        };
+      })
+    );
+    const blocks: any[] = imgs.flatMap((img, i) => [
       { type: "text", text: `[앵커 ${i + 1}]` },
-      { type: "image", source: { type: "url", url: u } },
+      img,
     ]);
     const msg = await client.messages.create({
       model: "claude-haiku-4-5-20251001",

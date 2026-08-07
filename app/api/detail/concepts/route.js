@@ -34,7 +34,21 @@ ${raw ? `참고 정보:\n${raw}` : ''}
   try {
     const client = new Anthropic({ apiKey: key });
     const content = [];
-    if (anchorUrl) content.push({ type: 'image', source: { type: 'url', url: anchorUrl } });
+    // Anthropic의 URL 다운로드가 간헐 실패 → 서버가 직접 받아 base64로 전달, 실패 시 이미지 없이 진행
+    if (anchorUrl) {
+      try {
+        const res = await fetch(anchorUrl);
+        if (res.ok) {
+          const mt = (res.headers.get('content-type') || 'image/jpeg').split(';')[0];
+          if (['image/jpeg', 'image/png', 'image/webp', 'image/gif'].includes(mt)) {
+            const b64 = Buffer.from(await res.arrayBuffer()).toString('base64');
+            content.push({ type: 'image', source: { type: 'base64', media_type: mt, data: b64 } });
+          }
+        }
+      } catch (err) {
+        console.error('concepts 앵커 다운로드 실패(이미지 없이 진행):', err.message);
+      }
+    }
     content.push({ type: 'text', text: prompt });
     const msg = await client.messages.create({
       model: 'claude-sonnet-4-6',
