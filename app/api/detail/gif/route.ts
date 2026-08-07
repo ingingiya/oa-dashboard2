@@ -44,7 +44,37 @@ async function uploadImage(url: string): Promise<string> {
 
 export async function POST(req: NextRequest) {
   try {
-    const { imageUrl, prompt, slug, file, duration } = await req.json();
+    const { imageUrl, prompt, slug, file, duration, jobId } = await req.json();
+
+    // ── 폴링 모드: 클라이언트가 jobId로 상태 확인 (서버 함수 시간 제한 회피) ──
+    if (jobId) {
+      const st = await (await comfy(`/api/job/${jobId}/status`)).json();
+      const status = st.status ?? st;
+      if (status === "failed" || status === "cancelled" || status === "error")
+        throw new Error(`생성 실패(${status}): ${JSON.stringify(st).slice(0, 400)}`);
+      if (status !== "completed" && status !== "success")
+        return NextResponse.json({ ok: true, pending: true });
+      const job = await (await comfy(`/api/jobs/${jobId}`)).json();
+      let buf: Buffer | null = null;
+      for (const out of Object.values<any>(job.outputs || {})) {
+        for (const item of [...(out.gifs || []), ...(out.images || [])]) {
+          const q = `filename=${encodeURIComponent(item.filename)}&subfolder=${encodeURIComponent(item.subfolder || "")}&type=output`;
+          buf = Buffer.from(await (await comfy(`/api/view?${q}`)).arrayBuffer());
+          break;
+        }
+        if (buf) break;
+      }
+      if (!buf) throw new Error("GIF 출력 없음");
+      const name = String(file || "motion").replace(/\.\w+$/, "") + "_" + Date.now().toString(36) + ".gif";
+      const path = `${String(slug || "detail")}/gifs/${name}`;
+      const { error } = await getSupabase().storage
+        .from(BUCKET)
+        .upload(path, buf, { contentType: "image/gif", upsert: true });
+      if (error) throw error;
+      const { data } = getSupabase().storage.from(BUCKET).getPublicUrl(path);
+      return NextResponse.json({ ok: true, url: data.publicUrl });
+    }
+
     if (!imageUrl) throw new Error("imageUrl 필요");
     const dur = Math.min(15, Math.max(4, Number(duration) || 5));
     const motion =
@@ -86,38 +116,8 @@ export async function POST(req: NextRequest) {
     const pid = submit.prompt_id;
     if (!pid) throw new Error("Comfy 제출 실패: " + JSON.stringify(submit));
 
-    const deadline = Date.now() + 260_000;
-    let buf: Buffer | null = null;
-    while (Date.now() < deadline) {
-      await new Promise((r) => setTimeout(r, 5000));
-      const st = await (await comfy(`/api/job/${pid}/status`)).json();
-      const status = st.status ?? st;
-      if (status === "completed" || status === "success") {
-        const job = await (await comfy(`/api/jobs/${pid}`)).json();
-        for (const out of Object.values<any>(job.outputs || {})) {
-          for (const item of [...(out.gifs || []), ...(out.images || [])]) {
-            const q = `filename=${encodeURIComponent(item.filename)}&subfolder=${encodeURIComponent(item.subfolder || "")}&type=output`;
-            buf = Buffer.from(await (await comfy(`/api/view?${q}`)).arrayBuffer());
-            break;
-          }
-          if (buf) break;
-        }
-        if (!buf) throw new Error("GIF 출력 없음");
-        break;
-      }
-      if (status === "failed" || status === "cancelled" || status === "error")
-        throw new Error(`생성 실패(${status}): ${JSON.stringify(st).slice(0, 400)}`);
-    }
-    if (!buf) throw new Error("생성 타임아웃 (시댄스 혼잡 — 다시 시도해주세요)");
-
-    const name = String(file || "motion").replace(/\.\w+$/, "") + "_" + Date.now().toString(36) + ".gif";
-    const path = `${String(slug || "detail")}/gifs/${name}`;
-    const { error } = await getSupabase().storage
-      .from(BUCKET)
-      .upload(path, buf, { contentType: "image/gif", upsert: true });
-    if (error) throw error;
-    const { data } = getSupabase().storage.from(BUCKET).getPublicUrl(path);
-    return NextResponse.json({ ok: true, url: data.publicUrl });
+    // 제출만 하고 즉시 반환 — 완료 대기는 클라이언트가 jobId 폴링 (시댄스 혼잡 시 260s 초과해도 안전)
+    return NextResponse.json({ ok: true, jobId: pid });
   } catch (e: any) {
     console.error(e);
     return NextResponse.json({ ok: false, error: e.message }, { status: 500 });

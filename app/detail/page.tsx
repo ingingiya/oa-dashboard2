@@ -1001,12 +1001,27 @@ ${h.urls.map((u) => `<img src="${u}" alt="">`).join("\n")}
     if (!(await spend(`GIF 생성 (${cut.label})`, 3))) return;
     setGifBusy("시댄스2 모션 생성 중… (1~3분)");
     try {
-      const res = await fetch("/api/detail/gif", {
+      const sub = await fetch("/api/detail/gif", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ imageUrl: cut.url.split("?")[0], prompt: gifPrompt, slug, file: cut.file, duration: gifDur }),
       }).then((r) => r.json());
-      if (!res.ok) throw new Error(res.error);
+      if (!sub.ok || !sub.jobId) throw new Error(sub.error || "제출 실패");
+      // 클라이언트 폴링 — 서버 함수 시간 제한 없이 시댄스 혼잡도 끝까지 대기 (최대 15분)
+      const until = Date.now() + 15 * 60_000;
+      let res: any = null;
+      while (Date.now() < until) {
+        await new Promise((r) => setTimeout(r, 8000));
+        setGifBusy(`시댄스2 모션 생성 중… (${Math.round((Date.now() - (until - 15 * 60_000)) / 1000)}초 경과)`);
+        res = await fetch("/api/detail/gif", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ jobId: sub.jobId, slug, file: cut.file }),
+        }).then((r) => r.json());
+        if (!res.ok) throw new Error(res.error);
+        if (!res.pending) break;
+      }
+      if (!res?.url) throw new Error("생성 타임아웃 (15분 초과)");
       setGifRows((rs) => [...rs, { after: "", url: res.url }]);
       setGifBusy("완료 — 아래 GIF 조각 줄에 추가됐어요. 넣을 섹션 번호만 적어주세요");
     } catch (e: any) {
