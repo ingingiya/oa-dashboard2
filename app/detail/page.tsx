@@ -37,7 +37,8 @@ const DEFAULT_CUTS = [
 function thumb(u: string, w = 700) {
   if (!u || !u.includes("/storage/v1/object/public/") || /\.gif(\?|$)/i.test(u)) return u;
   const [base, q] = u.split("?");
-  return base.replace("/object/public/", "/render/image/public/") + `?width=${w}&quality=75` + (q ? "&" + q : "");
+  // resize=contain 필수 — width만 주면 Supabase가 비율 무시하고 세로로 잘라버림
+  return base.replace("/object/public/", "/render/image/public/") + `?width=${w}&resize=contain&quality=75` + (q ? "&" + q : "");
 }
 
 export default function DetailBuilder() {
