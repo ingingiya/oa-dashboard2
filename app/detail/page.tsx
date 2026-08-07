@@ -851,15 +851,33 @@ export default function DetailBuilder() {
     }
     setDlBusy("");
   }
-  function downloadHtml(h: HistItem) {
-    const html = `<!doctype html>
+  async function downloadHtml(h: HistItem) {
+    // 이미지를 base64로 내장 — 스토리지/인터넷 없이도 파일 하나로 열림
+    setDlBusy("html_" + h.id);
+    try {
+      const datas = await Promise.all(h.urls.map(async (u) => {
+        const r = await fetch(u);
+        if (!r.ok) throw new Error("이미지를 찾을 수 없어요: " + (u.split("/").pop() || u));
+        const blob = await r.blob();
+        return await new Promise<string>((res, rej) => {
+          const fr = new FileReader();
+          fr.onload = () => res(String(fr.result));
+          fr.onerror = () => rej(new Error("이미지 변환 실패"));
+          fr.readAsDataURL(blob);
+        });
+      }));
+      const html = `<!doctype html>
 <html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>${h.slug} 상세페이지</title>
 <style>body{margin:0;background:#fff}img{display:block;width:100%;max-width:860px;margin:0 auto}</style>
 </head><body>
-${h.urls.map((u) => `<img src="${u}" alt="">`).join("\n")}
+${datas.map((d) => `<img src="${d}" alt="">`).join("\n")}
 </body></html>`;
-    saveBlob(new Blob([html], { type: "text/html" }), `${h.slug}_detail.html`);
+      saveBlob(new Blob([html], { type: "text/html" }), `${h.slug}_detail.html`);
+    } catch (e: any) {
+      alert("HTML 다운로드 실패: " + e.message);
+    }
+    setDlBusy("");
   }
 
   // 피그마로 복사: 조각을 세로로 이어붙인 PNG 한 장을 클립보드에 → 피그마 캔버스에 Cmd+V
@@ -2003,9 +2021,9 @@ ${h.urls.map((u) => `<img src="${u}" alt="">`).join("\n")}
                     style={{ ...btnS, flex: "none", opacity: dlBusy === h.id ? 0.6 : 1 }}>
                     {dlBusy === h.id ? "다운로드 중…" : "전체 다운로드"}
                   </button>
-                  <button onClick={() => downloadHtml(h)}
-                    style={{ ...btnS, flex: "none", background: C.rose, color: "#fff" }}>
-                    HTML 다운로드
+                  <button onClick={() => downloadHtml(h)} disabled={dlBusy === "html_" + h.id}
+                    style={{ ...btnS, flex: "none", background: C.rose, color: "#fff", opacity: dlBusy === "html_" + h.id ? 0.6 : 1 }}>
+                    {dlBusy === "html_" + h.id ? "만드는 중…" : "HTML 다운로드"}
                   </button>
                 </div>
               </div>
