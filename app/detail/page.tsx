@@ -938,6 +938,49 @@ ${h.urls.map((u) => `<img src="${u}" alt="">`).join("\n")}
       }).then((r) => r.json());
       if (!res.ok) throw new Error(res.error);
       setPreviewHtml(res.html);
+      // ── 자동 배치: 미배치 GIF/추가컷을 AI가 섹션 내용에 맞게 알아서 배정 ──
+      try {
+        const doc = new DOMParser().parseFromString(res.html, "text/html");
+        const secs = Array.from(doc.body.children)
+          .filter((el) => el.tagName !== "SCRIPT")
+          .map((el, i) => (el.textContent || "").trim().replace(/\s+/g, " ").slice(0, 60) || `섹션 ${i + 1}`);
+        const FIXED = new Set(["hook.png", "usp1.png", "usp2.png", "usp3.png", "scene1.png", "scene2.png", "cert.png", "packshot.png"]);
+        const extras = cuts.filter((c) =>
+          c.url && !FIXED.has(c.file) && !gifRows.some((r) => r.url === c.url.split("?")[0]));
+        const unGifs = gifRows.map((r, gi) => ({ r, gi })).filter(({ r }) => r.url && !(Number(r.after) > 0));
+        const items = [
+          ...unGifs.map(({ r, gi }) => ({ id: "g" + gi, label: (cuts.find((c) => c.url.split("?")[0] === r.url)?.label || "GIF 모션") })),
+          ...extras.map((c) => ({ id: "c" + c.file, label: c.label })),
+        ];
+        if (items.length && secs.length) {
+          const pl = await fetch("/api/detail/place", {
+            method: "POST", headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ sections: secs, items }),
+          }).then((r) => r.json());
+          if (pl.ok && pl.placements?.length) {
+            const map = new Map<string, number>(pl.placements.map((p: any) => [String(p.id), Number(p.after)]));
+            const rows = gifRows.map((r, gi) => {
+              const a = map.get("g" + gi);
+              return a ? { ...r, after: String(a) } : r;
+            });
+            for (const c of extras) {
+              const a = map.get("c" + c.file);
+              if (a) rows.push({ after: String(a), url: c.url.split("?")[0] });
+            }
+            setGifRows(rows);
+            // 새 배치를 반영한 미리보기로 갱신
+            const prod = buildProduct();
+            prod.gifs = rows
+              .map((r) => ({ after: Number(r.after) || 0, url: String(r.url || "").trim() }))
+              .filter((g) => g.after > 0 && g.url);
+            const res2 = await fetch("/api/detail/render", {
+              method: "POST", headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ ...prod, preview: true }),
+            }).then((r) => r.json());
+            if (res2.ok) setPreviewHtml(res2.html);
+          }
+        }
+      } catch {}
     } catch (e: any) {
       alert("미리보기 실패: " + e.message);
     }
@@ -1660,12 +1703,15 @@ ${h.urls.map((u) => `<img src="${u}" alt="">`).join("\n")}
             {gifBusy && (
               <p style={{ fontSize: 12.5, color: gifBusy.startsWith("실패") ? "#D70015" : C.inkMid, margin: "8px 0 0" }}>{gifBusy}</p>
             )}
-            {gifRows.filter((r) => r.url).length > 0 && (
-              <div style={{ display: "flex", gap: 8, marginTop: 10, overflowX: "auto" }}>
-                {gifRows.filter((r) => r.url).map((r, i) => (
-                  <img key={i} src={r.url} onClick={() => setZoomUrl(r.url)} title="클릭하면 크게 보기"
-                    style={{ height: 110, borderRadius: 8, border: `1px solid ${C.border}`, cursor: "zoom-in" }} />
-                ))}
+            {gifRows.filter((r) => r.url && /\.gif(\?|$)/i.test(r.url)).length > 0 && (
+              <div style={{ marginTop: 10 }}>
+                <div style={{ fontSize: 11.5, color: C.inkLt, fontWeight: 700, marginBottom: 4 }}>생성된 GIF — 클릭하면 크게</div>
+                <div style={{ display: "flex", gap: 8, overflowX: "auto" }}>
+                  {gifRows.filter((r) => r.url && /\.gif(\?|$)/i.test(r.url)).map((r, i) => (
+                    <img key={i} src={r.url} onClick={() => setZoomUrl(r.url)} title="클릭하면 크게 보기"
+                      style={{ height: 110, borderRadius: 8, border: `1px solid ${C.border}`, cursor: "zoom-in" }} />
+                  ))}
+                </div>
               </div>
             )}
           </div>
