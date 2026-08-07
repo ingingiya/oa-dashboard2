@@ -106,9 +106,9 @@ function buildWorkflow(anchorName: string, prompt: string, prefix: string, aspec
         model: "Nano Banana 2 (Gemini 3.1 Flash Image)",
         seed: Math.floor(Math.random() * 1e9),
         aspect_ratio: aspect,
-        resolution: "2K",
+        resolution: "4K", // 최고 품질 (네이티브 Gemini 업스케일러)
         response_modalities: "IMAGE",
-        thinking_level: "MINIMAL",
+        thinking_level: "HIGH", // 프롬프트 해석 품질 ↑ (인물/구도 이상함 픽스)
         images: ["1", 0],
       },
     },

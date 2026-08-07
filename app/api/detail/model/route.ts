@@ -68,9 +68,9 @@ function buildWorkflow(prompt: string, prefix: string) {
         model: "Nano Banana 2 (Gemini 3.1 Flash Image)",
         seed: Math.floor(Math.random() * 1e9),
         aspect_ratio: "2:3",
-        resolution: "2K",
+        resolution: "4K", // 최고 품질
         response_modalities: "IMAGE",
-        thinking_level: "MINIMAL",
+        thinking_level: "HIGH", // 인물 어색함 픽스 — 프롬프트 해석 품질 ↑
       },
     },
     "2": { class_type: "SaveImage", inputs: { images: ["1", 0], filename_prefix: prefix } },
