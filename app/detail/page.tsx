@@ -784,7 +784,7 @@ export default function DetailBuilder() {
     loadCredits();
     // 게스트 자동로그인 링크: /detail?guest=이름:PIN — 클릭만 하면 로그인 완료
     try {
-      if (sessionStorage.getItem("oa_detail_guest_v1")) setGuestMode(true);
+      if (sessionStorage.getItem("oa_detail_guest_v1") || document.cookie.includes("oa_detail_guest=1")) setGuestMode(true);
       const g = new URLSearchParams(window.location.search).get("guest");
       if (g && g.includes(":")) {
         // 게스트 모드: 내부 기록/렌더/크레딧 현황 탭 숨김
