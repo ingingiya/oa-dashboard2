@@ -779,6 +779,19 @@ export default function DetailBuilder() {
   useEffect(() => {
     try { const t = localStorage.getItem("oa_detail_team_v1"); if (t) setTeam(JSON.parse(t)); } catch {}
     loadCredits();
+    // 게스트 자동로그인 링크: /detail?guest=이름:PIN — 클릭만 하면 로그인 완료
+    try {
+      const g = new URLSearchParams(window.location.search).get("guest");
+      if (g && g.includes(":")) {
+        const idx = g.indexOf(":");
+        creditPost({ login: { name: g.slice(0, idx), pin: g.slice(idx + 1) } }).then((r) => {
+          if (r.ok) {
+            setTeam({ id: r.team.id, name: r.team.name });
+            localStorage.setItem("oa_detail_team_v1", JSON.stringify({ id: r.team.id, name: r.team.name }));
+          }
+        });
+      }
+    } catch {}
   }, []);
   async function loadCredits() {
     try {
