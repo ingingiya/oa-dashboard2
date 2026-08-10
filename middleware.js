@@ -24,28 +24,6 @@ export async function middleware(request) {
     return NextResponse.next()
   }
 
-  // 게스트 전용 공유 페이지: /share?guest=이름:PIN — PIN 검증 후 쿠키 발급 (구글 로그인 불필요, /share만)
-  if (pathname.startsWith('/share')) {
-    if (request.cookies.get('oa_detail_guest')?.value === '1') return NextResponse.next()
-    const g = request.nextUrl.searchParams.get('guest')
-    if (g && g.includes(':')) {
-      const idx = g.indexOf(':')
-      try {
-        const r = await fetch(new URL('/api/detail/credits', request.url), {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ login: { name: g.slice(0, idx), pin: g.slice(idx + 1) } }),
-        }).then((x) => x.json())
-        if (r.ok) {
-          const res = NextResponse.next({ request })
-          res.cookies.set('oa_detail_guest', '1', { maxAge: 60 * 60 * 24 * 7, path: '/share' })
-          return res
-        }
-      } catch {}
-    }
-    return NextResponse.redirect(new URL('/login', request.url))
-  }
-
   let response = NextResponse.next({ request })
 
   const supabase = createServerClient(

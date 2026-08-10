@@ -3,11 +3,13 @@ const nextConfig = {
   experimental: {
     // 서버 렌더 라우트(playwright/sharp)는 번들링 대신 node_modules 직접 사용
     serverComponentsExternalPackages: ['playwright-core', '@sparticuz/chromium', 'sharp'],
-    // chromium 압축 바이너리(bin/*.br)가 트레이싱에서 빠져 서버리스에 미포함되는 문제 방지
-    outputFileTracingIncludes: {
-      '/api/detail/render': ['./node_modules/@sparticuz/chromium/bin/**'],
-      '/api/detail/style-capture': ['./node_modules/@sparticuz/chromium/bin/**'],
-    },
+  },
+  async redirects() {
+    // 상세페이지 생성기는 별도 프로젝트로 분리됨 (oa-detail-gen)
+    return [
+      { source: '/detail', destination: 'https://oa-detail-gen.vercel.app/detail', permanent: false },
+      { source: '/share', destination: 'https://oa-detail-gen.vercel.app/share', permanent: false },
+    ]
   },
 }
 module.exports = nextConfig
