@@ -9180,7 +9180,6 @@ export default function OaDashboard(){
     {id:"guide",     icon:"menu_book",      label:"가이드"},
     {id:"inf_archive",icon:"photo_library", label:"아카이브"},
     {id:"launch",    icon:"rocket_launch",  label:"런칭"},
-    {id:"detailgen", icon:"design_services",label:"상세 생성기", href:"/detail"},
     {id:"schedule",  icon:"calendar_month", label:"스케줄"},
     {id:"creative",  icon:"palette",        label:"소재"},
     {id:"insight",   icon:"edit_note",      label:"팀 노트"},

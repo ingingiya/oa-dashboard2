@@ -427,4 +427,4 @@ Error: ENOENT: no such file or directory, open '"/Users/kirby/.naverworks/privat
 
 Node.js v24.14.0
   매출 조회 중... 7652행 (D-180~)스마트스토어 동기화 실패: 토큰 실패: {"code":"GW.IP_NOT_ALLOWED","message":"호출이 허용되지 않은 IP입니다.","timestamp":"2026-08-10T09:25:05.427+09:00","traceId":"AZ_RHT_sfiOPVLwShhvVrA^1785919782151^29765996"}
-  매출 조회 중... 15312행 (D-150~)  매출 조회 중... 23256행 (D-120~)
+  매출 조회 중... 15312행 (D-150~)  매출 조회 중... 23256행 (D-120~)  매출 조회 중... 31126행 (D-90~)  매출 조회 중... 38895행 (D-60~)
