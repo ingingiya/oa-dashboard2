@@ -36,6 +36,30 @@ editorial hand-near-face gestures, calm serene expression, neutral low-saturatio
 - **의상 변주**: 원숄더 니트 톱 + 가는 골드 체인/링 (291583)
 - **극단 클로즈업**: 입·치아·뺨 중심 매크로급 뷰티 클로즈업 컷 (치아 미백·립 제품용)
 
+## 3차 레퍼런스 추가 (2026-08-10, 이미지 12장 — 라카/에스티로더/quip/아디다스 등)
+제품을 "든" 모델컷 중심 — 기존 뷰티 클로즈업에서 **제품+모델 캠페인 컷**으로 확장:
+- **파스텔 원컬러 세트 (라카식)**: 배경·의상·소품을 제품 컬러와 같은 파스텔 한 색으로
+  통일 (핑크/스카이블루/라벤더). 모델 메이크업 포인트(립 컬러)까지 톤 매칭
+- **제품 프레젠팅 포즈**: 턱을 손등/제품에 살짝 기대거나, 제품을 카메라 쪽으로
+  내밀며 팔에 기대는 포즈 (LA PLATEAU) — 제품이 얼굴과 같은 초점 평면
+- **소품 위트**: 짐볼·음료·백 등 컬러 매칭 대형 소품 하나로 씬에 유머와 스케일감
+- **실루엣 역광 손샷 (에스티로더)**: 어두운 배경 + 림라이트, 손과 제품만 극적으로
+  분리 — 럭셔리 무드 연출용
+- **욕실 라이프스타일 손샷 (quip)**: 실제 세면대·타일 배경에서 손만 등장해 제품 사용
+  — 진정성 있는 사용 맥락 컷
+- **다이나믹 스포츠 모션 (아디다스)**: 점프/러닝 순간 포착 + 모션 블러 살짝 —
+  활동성 USP 제품(가전·헬스)용
+
+### 영어 프롬프트 블록 (PASTEL_CAMPAIGN)
+```
+Pastel monochrome campaign set: backdrop, outfit and one oversized prop all matched to the
+product's pastel color, model's lip color echoing the same tone, she rests her chin lightly
+near the product or presents it toward the camera leaning on her arm, product and face on
+the same focal plane, playful minimal art direction like a K-beauty color cosmetics campaign.
+```
+
 ## 반영 기록
 - 2026-08-08: model/route.ts — MODEL_BASE 무드/헤어/의상/메이크업을 위 블록 기준으로 교체
 - 2026-08-08: 2차 6장 — 표정(치아 스마일·윙크)/주근깨 리얼 스킨/풀뱅·웻헤어 변주 반영
+- 2026-08-10: 3차 12장 — 파스텔 원컬러 세트·제품 프레젠팅·실루엣 역광·욕실 손샷 반영
+  (page.tsx MODEL_POSES "파스텔 세트"·"제품 내밀기" + PRODUCT_CUTS "역광 실루엣 손")

@@ -36,6 +36,42 @@ color, white outfit, clean glossy nails, soft even light.
 product beside her face, monochrome pastel backdrop, energetic beauty-campaign feel.
 ```
 
+## 2차 레퍼런스 추가 (2026-08-10, 이미지 7장 — 전동칫솔/가전 인포그래픽 연출)
+usmile/GLEEM/smak/메디큐브 등 — **기능 증명형 인포그래픽 컷** 공식:
+- **스트로보 잔상 (usmile)**: 제품 헤드의 움직임을 다중 노출 잔상으로 겹쳐
+  진동/스윙 속도를 시각화 — 어두운 배경 + 컬러 라이트
+- **브러시모·부품 매크로**: 칫솔모/노즐 끝을 화면 가득 매크로, 모 한 가닥까지 선명,
+  미세모 밀도·소재 품질 증명
+- **투명 내부 렌더 (GLEEM)**: 제품 바디를 반투명 처리해 내부 모터·구조가 비쳐 보이는
+  X-ray 스타일 — 기술력 소구
+- **탑뷰 정렬 매크로 (smak)**: 제품/헤드 여러 개를 탑뷰로 정갈하게 정렬, 컬러 배리에이션
+  한눈에
+- **다크 프리미엄 (냉수펌프)**: 짙은 단색 배경 + 로우키 조명, 금속·플라스틱의 스펙큘러
+  하이라이트로 고급감
+- **3D 성분 인포그래픽 (메디큐브)**: 성분 입자를 3D 글래스 오브제로 확대 렌더 +
+  돋보기 프레임/라벨 — 과학적 신뢰 소구, 블루 그라데이션
+
+### 영어 프롬프트 블록 (추가)
+```
+[STROBE_MOTION] multiple-exposure strobe trail of the product's moving head showing its
+vibration sweep, dark backdrop with colored rim light, high-speed photography look.
+
+[XRAY_INNER] the product body rendered semi-transparent revealing the inner motor and
+mechanism glowing softly, technical premium visualization.
+
+[MACRO_BRISTLE] extreme macro of the functional tip (bristles/nozzle) filling the frame,
+every filament sharp, material quality clearly readable.
+
+[DARK_PREMIUM] the product on a deep monochrome backdrop, low-key lighting with crisp
+specular highlights tracing its edges, luxurious tech mood.
+
+[SCI_PARTICLE] the key ingredient/technology visualized as enlarged glossy 3D glass
+particles with a magnifier frame and small labels, blue gradient backdrop, scientific
+credibility infographic.
+```
+
 ## 반영 기록
 - 2026-08-08: page.tsx MODEL_POSES에 "제품 얼굴 옆"·"헤어 모션" 포즈 추가,
   CUT_CONCEPTS에 부양·물 연출 톤 반영 예정
+- 2026-08-10: 2차 7장 — 스트로보 잔상/X-ray 내부/브러시 매크로/다크 프리미엄/3D 성분
+  → page.tsx CUT_CONCEPTS "테크 증명" + PRODUCT_CUTS 스트로보/투명 내부/다크 프리미엄 반영
