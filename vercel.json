@@ -38,6 +38,10 @@
     {
       "path": "/api/meta-schedule?action=cron&secret=${ERP_SYNC_SECRET}",
       "schedule": "0 0 * * *"
+    },
+    {
+      "path": "/api/daily-report",
+      "schedule": "30 8 * * *"
     }
   ]
 }
