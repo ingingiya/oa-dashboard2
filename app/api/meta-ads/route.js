@@ -113,8 +113,9 @@ export async function GET(request) {
     ? `&time_range={"since":"${since}","until":"${until}"}`
     : `&date_preset=${datePreset}`;
 
-  // 캠페인 이름 필터 (env 또는 기본값)
-  const campaignFilter = (process.env.META_CAMPAIGN_FILTER || "뷰티").toLowerCase();
+  // 캠페인 이름 필터 (env 쉼표 구분 또는 기본값 — 부스터팀 구강/여름가전 포함)
+  const campaignFilters = (process.env.META_CAMPAIGN_FILTER || "뷰티,부스터").toLowerCase().split(",").map(s => s.trim()).filter(Boolean);
+  const matchesCampaign = (n) => campaignFilters.some(f => (n || "").toLowerCase().includes(f));
 
   // Ads Manager 기본값과 동일한 귀속 기간 + 통합 귀속 설정
   const attrWindows = "action_attribution_windows=%5B%221d_view%22%2C%227d_click%22%5D";
@@ -132,7 +133,7 @@ export async function GET(request) {
       return Response.json({ error: data.error.message }, { status: 400 });
 
     const filtered = (data.data || [])
-      .filter(r => (r.campaign_name || "").toLowerCase().includes(campaignFilter))
+      .filter(r => matchesCampaign(r.campaign_name))
       .map(normalize);
 
     allRows = allRows.concat(filtered);
@@ -145,7 +146,7 @@ export async function GET(request) {
     const debugRes = await fetch(debugUrl);
     const debugData = await debugRes.json();
     const convRows = (debugData.data || []).filter(r =>
-      (r.campaign_name||"").toLowerCase().includes(campaignFilter) &&
+      matchesCampaign(r.campaign_name) &&
       (r.objective||"") !== "LINK_CLICKS"
     ).slice(0, 2);
     // 전환 캠페인에서 나온 action_type 전체 목록

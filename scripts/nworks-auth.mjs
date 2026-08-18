@@ -9,7 +9,7 @@ const envPath = resolve(dirname(fileURLToPath(import.meta.url)), '../.env.local'
 const env = {};
 for (const line of readFileSync(envPath, 'utf8').split('\n')) {
   const m = line.match(/^([A-Z_]+)=(.*)$/);
-  if (m) env[m[1]] = m[2];
+  if (m) env[m[1]] = m[2].replace(/^"|"$/g, '');
 }
 
 const CID = env.NAVER_WORKS_CLIENT_ID;
