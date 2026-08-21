@@ -29,6 +29,29 @@ def load_env():
     return env
 
 
+def fetch_pages(ctx, start, end, label=""):
+    items_all = []
+    page = 1
+    while True:
+        url = (f"https://ads.naver.com/apis/report/gfa/v1/adAccounts/{ACCOUNT}"
+               f"/stats/reportPerformance?startDate={start}&endDate={end}"
+               f"&reportAdUnit=CREATIVE&reportFilterListString=%5B%5D"
+               f"&pageNumber={page}&pageSize=100")
+        r = ctx.request.get(url, headers={"Referer": "https://ads.naver.com/manage/ad-accounts/1742505/da/report/performance"})
+        if r.status != 200:
+            detail = r.text()[:300]
+            ctx.close()
+            sys.exit(f"API 오류 HTTP {r.status} — 세션 만료 가능, gfa_login.py 재실행 필요\n{detail}")
+        d = r.json()
+        items_all.extend(d.get("reportPerformanceDetailResponseList") or [])
+        total = d.get("totalPage") or 1
+        print(f"  {label}page {page}/{total} — 누적 {len(items_all)}행")
+        if page >= total:
+            break
+        page += 1
+    return items_all
+
+
 def fetch_report(days):
     start = (date.today() - timedelta(days=days)).isoformat()
     end = (date.today() - timedelta(days=1)).isoformat()
@@ -42,38 +65,29 @@ def fetch_report(days):
         if "NID_AUT" not in cookies:
             ctx.close()
             sys.exit("네이버 로그인 세션 없음/만료 — 먼저 실행: python3 scripts/gfa/gfa_login.py")
-        page = 1
-        while True:
-            url = (f"https://ads.naver.com/apis/report/gfa/v1/adAccounts/{ACCOUNT}"
-                   f"/stats/reportPerformance?startDate={start}&endDate={end}"
-                   f"&reportAdUnit=CREATIVE&reportFilterListString=%5B%5D"
-                   f"&pageNumber={page}&pageSize=100")
-            r = ctx.request.get(url, headers={"Referer": "https://ads.naver.com/manage/ad-accounts/1742505/da/report/performance"})
-            if r.status != 200:
-                detail = r.text()[:300]
-                ctx.close()
-                sys.exit(f"API 오류 HTTP {r.status} — 세션 만료 가능, gfa_login.py 재실행 필요\n{detail}")
-            d = r.json()
-            items = d.get("reportPerformanceDetailResponseList") or []
-            for it in items:
-                rows.append({
-                    "name":  it.get("creativeName") or "",
-                    "group": it.get("adSetName") or "",
-                    "camp":  it.get("campaignName") or "",
-                    "cost":  it.get("sales") or 0,
-                    "imp":   it.get("impCount") or 0,
-                    "clk":   it.get("clickCount") or 0,
-                    "conv":  it.get("convCount") or 0,
-                    "buy":   it.get("purchaseConvCount") or 0,
-                    "rev":   it.get("purchaseConvSales") or 0,
-                    "start": it.get("scheduleString") or "",  # "2026.08.08. ~ 진행 중"
-                })
-            total = d.get("totalPage") or 1
-            print(f"  page {page}/{total} — 누적 {len(rows)}행")
-            if page >= total:
-                break
-            page += 1
+        for it in fetch_pages(ctx, start, end):
+            rows.append({
+                "name":  it.get("creativeName") or "",
+                "group": it.get("adSetName") or "",
+                "camp":  it.get("campaignName") or "",
+                "cost":  it.get("sales") or 0,
+                "imp":   it.get("impCount") or 0,
+                "clk":   it.get("clickCount") or 0,
+                "conv":  it.get("convCount") or 0,
+                "buy":   it.get("purchaseConvCount") or 0,
+                "rev":   it.get("purchaseConvSales") or 0,
+                "start": it.get("scheduleString") or "",  # "2026.08.08. ~ 진행 중"
+            })
+        # 활성 판정: 어제~오늘 노출이 있는 소재만 송출 중 (소재/그룹/캠페인 어느 레벨에서 꺼져도 노출 0)
+        recent = fetch_pages(ctx, (date.today() - timedelta(days=1)).isoformat(),
+                             date.today().isoformat(), label="활성 ")
         ctx.close()
+    active = {(it.get("campaignName"), it.get("adSetName"), it.get("creativeName"))
+              for it in recent if (it.get("impCount") or 0) > 0}
+    for r in rows:
+        r["on"] = (r["camp"], r["group"], r["name"]) in active
+    n_off = sum(1 for r in rows if r["name"] and r["camp"] and not r["on"])
+    print(f"활성 판정 — 송출 중 {len(active)}개 · 꺼짐 {n_off}개")
     return [r for r in rows if r["name"] and r["camp"]], start, end
 
 

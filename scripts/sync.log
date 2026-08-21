@@ -427,4 +427,413 @@ Error: ENOENT: no such file or directory, open '"/Users/kirby/.naverworks/privat
 
 Node.js v24.14.0
   매출 조회 중... 7652행 (D-180~)스마트스토어 동기화 실패: 토큰 실패: {"code":"GW.IP_NOT_ALLOWED","message":"호출이 허용되지 않은 IP입니다.","timestamp":"2026-08-10T09:25:05.427+09:00","traceId":"AZ_RHT_sfiOPVLwShhvVrA^1785919782151^29765996"}
-  매출 조회 중... 15312행 (D-150~)  매출 조회 중... 23256행 (D-120~)  매출 조회 중... 31126행 (D-90~)  매출 조회 중... 38895행 (D-60~)
+  매출 조회 중... 15312행 (D-150~)  매출 조회 중... 23256행 (D-120~)  매출 조회 중... 31126행 (D-90~)  매출 조회 중... 38895행 (D-60~)  매출 조회 중... 46844행 (D-30~)
+  → 품목 383개 · 일별 46844행 (180일)
+  조회 중... 200행  조회 중... 320행
+  → 작년 동기 데이터 320개 품목
+  네이버 광고 조회 중... 0행 (D-180~)  네이버 광고 조회 중... 0행 (D-150~)  네이버 광고 조회 중... 0행 (D-120~)  네이버 광고 조회 중... 8316행 (D-90~)  네이버 광고 조회 중... 31657행 (D-60~)  네이버 광고 조회 중... 40256행 (D-30~)
+  → 네이버 광고그룹 819개 중 490개 제품 매칭
+  조회 중... 7행
+  → payload 1485KB
+✅ 동기화 완료
+node:fs:440
+    return binding.readFileUtf8(path, stringToFlags(options.flag));
+                   ^
+
+Error: ENOENT: no such file or directory, open '"/Users/kirby/.naverworks/private.key"'
+    at readFileSync (node:fs:440:20)
+    at file:///Users/kirby/oa-dashboard2/scripts/nworks-auth.mjs:18:13
+    at ModuleJob.run (node:internal/modules/esm/module_job:430:25)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:661:26)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5) {
+  errno: -2,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: '"/Users/kirby/.naverworks/private.key"'
+}
+
+Node.js v24.14.0
+[2026. 8. 11. AM 7:01:34] 이미용 동기화 시작 (MCP 경유, 최근 30일)
+MySQL(MCP) 조회 중...
+❌ 오류: fetch failed
+[2026. 8. 11. AM 9:05:00] 랭킹 실판매 동기화 시작
+  조회 중... 10행
+  → 10행 조회
+✅ 동기화 완료
+node:fs:440
+    return binding.readFileUtf8(path, stringToFlags(options.flag));
+                   ^
+
+Error: ENOENT: no such file or directory, open '"/Users/kirby/.naverworks/private.key"'
+    at readFileSync (node:fs:440:20)
+    at file:///Users/kirby/oa-dashboard2/scripts/nworks-auth.mjs:18:13
+    at ModuleJob.run (node:internal/modules/esm/module_job:430:25)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:661:26)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5) {
+  errno: -2,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: '"/Users/kirby/.naverworks/private.key"'
+}
+
+Node.js v24.14.0
+[2026. 8. 12. AM 9:15:00] 우선순위 동기화 시작
+  매출 조회 중... 7627행 (D-180~)  매출 조회 중... 15299행 (D-150~)  매출 조회 중... 23280행 (D-120~)  매출 조회 중... 31123행 (D-90~)  매출 조회 중... 38870행 (D-60~)  매출 조회 중... 46956행 (D-30~)
+  → 품목 383개 · 일별 46956행 (180일)
+  조회 중... 200행  조회 중... 319행
+  → 작년 동기 데이터 319개 품목
+  네이버 광고 조회 중... 0행 (D-180~)  네이버 광고 조회 중... 0행 (D-150~)  네이버 광고 조회 중... 0행 (D-120~)  네이버 광고 조회 중... 9873행 (D-90~)  네이버 광고 조회 중... 33214행 (D-60~)  네이버 광고 조회 중... 40256행 (D-30~)
+  → 네이버 광고그룹 819개 중 490개 제품 매칭
+  조회 중... 14행
+  → payload 1488KB
+✅ 동기화 완료
+node:fs:440
+    return binding.readFileUtf8(path, stringToFlags(options.flag));
+                   ^
+
+Error: ENOENT: no such file or directory, open '"/Users/kirby/.naverworks/private.key"'
+    at readFileSync (node:fs:440:20)
+    at file:///Users/kirby/oa-dashboard2/scripts/nworks-auth.mjs:18:13
+    at ModuleJob.run (node:internal/modules/esm/module_job:430:25)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:661:26)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5) {
+  errno: -2,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: '"/Users/kirby/.naverworks/private.key"'
+}
+
+Node.js v24.14.0
+쿠팡 파일 없음
+지그재그 파일 없음
+경고: 쿠팡: 파일 없음; 지그재그: 파일 없음
+텔레그램 알림 실패: <urlopen error [Errno 8] nodename nor servname provided, or not known>
+업서트 대상: 0행 (2026-07-09 ~ 2026-08-13)
+[2026. 8. 13. AM 9:05:00] 랭킹 실판매 동기화 시작
+❌ 오류: fetch failed
+[2026. 8. 13. AM 9:10:00] 전제품 검색순위 동기화 시작
+  조회 중... 3331행 (D-90~)  조회 중... 6559행 (D-83~)  조회 중... 9382행 (D-76~)  조회 중... 12821행 (D-69~)[2026. 8. 13. AM 9:15:00] 우선순위 동기화 시작
+  조회 중... 16245행 (D-62~)  조회 중... 19584행 (D-55~)  조회 중... 22990행 (D-48~)node:fs:440
+    return binding.readFileUtf8(path, stringToFlags(options.flag));
+                   ^
+
+Error: ENOENT: no such file or directory, open '"/Users/kirby/.naverworks/private.key"'
+    at readFileSync (node:fs:440:20)
+    at file:///Users/kirby/oa-dashboard2/scripts/nworks-auth.mjs:18:13
+    at ModuleJob.run (node:internal/modules/esm/module_job:430:25)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:661:26)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5) {
+  errno: -2,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: '"/Users/kirby/.naverworks/private.key"'
+}
+
+Node.js v24.14.0
+  조회 중... 26391행 (D-41~)  매출 조회 중... 7622행 (D-180~)  조회 중... 29680행 (D-34~)스마트스토어 동기화 실패: 토큰 실패: {"code":"GW.IP_NOT_ALLOWED","message":"호출이 허용되지 않은 IP입니다.","timestamp":"2026-08-13T09:25:01.146+09:00","traceId":"AZ_RHT_sfiOPVLwShhvVrA^1785919782151^50444489"}
+  조회 중... 33133행 (D-27~)  조회 중... 36588행 (D-20~)  조회 중... 37085행 (D-13~)  조회 중... 37085행 (D-6~)
+  → 키워드 529개 · 37085행 (90일)
+  조회 중... 0행  → payload 659KB
+✅ 동기화 완료
+  매출 조회 중... 15311행 (D-150~)  매출 조회 중... 23307행 (D-120~)  매출 조회 중... 31110행 (D-90~)  매출 조회 중... 38880행 (D-60~)  매출 조회 중... 46911행 (D-30~)
+  → 품목 382개 · 일별 46911행 (180일)
+  조회 중... 200행  조회 중... 320행
+  → 작년 동기 데이터 320개 품목
+  네이버 광고 조회 중... 0행 (D-180~)  네이버 광고 조회 중... 0행 (D-150~)  네이버 광고 조회 중... 0행 (D-120~)  네이버 광고 조회 중... 10649행 (D-90~)  네이버 광고 조회 중... 33993행 (D-60~)  네이버 광고 조회 중... 40256행 (D-30~)
+  → 네이버 광고그룹 819개 중 490개 제품 매칭
+  조회 중... 14행
+  → payload 1487KB
+✅ 동기화 완료
+node:fs:440
+    return binding.readFileUtf8(path, stringToFlags(options.flag));
+                   ^
+
+Error: ENOENT: no such file or directory, open '"/Users/kirby/.naverworks/private.key"'
+    at readFileSync (node:fs:440:20)
+    at file:///Users/kirby/oa-dashboard2/scripts/nworks-auth.mjs:18:13
+    at ModuleJob.run (node:internal/modules/esm/module_job:430:25)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:661:26)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5) {
+  errno: -2,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: '"/Users/kirby/.naverworks/private.key"'
+}
+
+Node.js v24.14.0
+node:fs:440
+    return binding.readFileUtf8(path, stringToFlags(options.flag));
+                   ^
+
+Error: ENOENT: no such file or directory, open '"/Users/kirby/.naverworks/private.key"'
+    at readFileSync (node:fs:440:20)
+    at file:///Users/kirby/oa-dashboard2/scripts/nworks-auth.mjs:18:13
+    at ModuleJob.run (node:internal/modules/esm/module_job:430:25)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:661:26)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5) {
+  errno: -2,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: '"/Users/kirby/.naverworks/private.key"'
+}
+
+Node.js v24.14.0
+node:fs:440
+    return binding.readFileUtf8(path, stringToFlags(options.flag));
+                   ^
+
+Error: ENOENT: no such file or directory, open '"/Users/kirby/.naverworks/private.key"'
+    at readFileSync (node:fs:440:20)
+    at file:///Users/kirby/oa-dashboard2/scripts/nworks-auth.mjs:18:13
+    at ModuleJob.run (node:internal/modules/esm/module_job:430:25)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:661:26)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5) {
+  errno: -2,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: '"/Users/kirby/.naverworks/private.key"'
+}
+
+Node.js v24.14.0
+[2026. 8. 15. AM 7:00:01] 이미용 동기화 시작 (MCP 경유, 최근 30일)
+MySQL(MCP) 조회 중...
+  조회 중... 200건  조회 중... 400건  조회 중... 600건  조회 중... 800건  조회 중... 1000건  조회 중... 1200건  조회 중... 1400건  조회 중... 1600건  조회 중... 1800건  조회 중... 2000건  조회 중... 2200건  조회 중... 2400건  조회 중... 2600건  조회 중... 2800건  조회 중... 3000건  조회 중... 3200건  조회 중... 3400건  조회 중... 3600건  조회 중... 3800건  조회 중... 4000건  조회 중... 4200건  조회 중... 4400건  조회 중... 4600건  조회 중... 4800건  조회 중... 5000건  조회 중... 5200건  조회 중... 5400건  조회 중... 5600건  조회 중... 5800건  조회 중... 6000건  조회 중... 6200건  조회 중... 6400건  조회 중... 6600건  조회 중... 6800건  조회 중... 7000건  조회 중... 7200건  조회 중... 7400건  조회 중... 7600건  조회 중... 7800건  조회 중... 8000건  조회 중... 8200건  조회 중... 8400건  조회 중... 8600건  조회 중... 8800건  조회 중... 9000건  조회 중... 9200건  조회 중... 9400건  조회 중... 9600건  조회 중... 9800건  조회 중... 10000건  조회 중... 10200건  조회 중... 10400건  조회 중... 10600건  조회 중... 10800건  조회 중... 11000건  조회 중... 11200건  조회 중... 11400건  조회 중... 11600건  조회 중... 11800건  조회 중... 12000건  조회 중... 12200건  조회 중... 12400건  조회 중... 12600건  조회 중... 12800건  조회 중... 13000건  조회 중... 13200건  조회 중... 13400건  조회 중... 13600건  조회 중... 13800건  조회 중... 14000건  조회 중... 14200건  조회 중... 14400건  조회 중... 14600건  조회 중... 14800건  조회 중... 15000건  조회 중... 15200건  조회 중... 15400건  조회 중... 15600건  조회 중... 15800건  조회 중... 16000건  조회 중... 16157건
+  → 16157건 조회됨
+Supabase 업로드 중...
+  ↑ 500/16157건 완료
+  ↑ 1000/16157건 완료
+  ↑ 1500/16157건 완료
+  ↑ 2000/16157건 완료
+  ↑ 2500/16157건 완료
+  ↑ 3000/16157건 완료
+  ↑ 3500/16157건 완료
+  ↑ 4000/16157건 완료
+  ↑ 4500/16157건 완료
+  ↑ 5000/16157건 완료
+  ↑ 5500/16157건 완료
+  ↑ 6000/16157건 완료
+  ↑ 6500/16157건 완료
+  ↑ 7000/16157건 완료
+  ↑ 7500/16157건 완료
+  ↑ 8000/16157건 완료
+  ↑ 8500/16157건 완료
+  ↑ 9000/16157건 완료
+  ↑ 9500/16157건 완료
+  ↑ 10000/16157건 완료
+  ↑ 10500/16157건 완료
+  ↑ 11000/16157건 완료
+  ↑ 11500/16157건 완료
+  ↑ 12000/16157건 완료
+  ↑ 12500/16157건 완료
+  ↑ 13000/16157건 완료
+  ↑ 13500/16157건 완료
+  ↑ 14000/16157건 완료
+  ↑ 14500/16157건 완료
+  ↑ 15000/16157건 완료
+  ↑ 15500/16157건 완료
+  ↑ 16000/16157건 완료
+  ↑ 16157/16157건 완료
+✅ 동기화 완료!
+쿠팡 파일 없음
+지그재그 파일 없음
+경고: 쿠팡: 파일 없음; 지그재그: 파일 없음
+업서트 대상: 0행 (2026-07-11 ~ 2026-08-15)
+쿠팡 파일 없음
+지그재그 파일 없음
+경고: 쿠팡: 파일 없음; 지그재그: 파일 없음
+업서트 대상: 0행 (2026-07-12 ~ 2026-08-16)
+쿠팡 파일 없음
+지그재그 파일 없음
+경고: 쿠팡: 파일 없음; 지그재그: 파일 없음
+업서트 대상: 0행 (2026-07-14 ~ 2026-08-18)
+node:fs:440
+    return binding.readFileUtf8(path, stringToFlags(options.flag));
+                   ^
+
+Error: ENOENT: no such file or directory, open '"/Users/kirby/.naverworks/private.key"'
+    at readFileSync (node:fs:440:20)
+    at file:///Users/kirby/oa-dashboard2/scripts/nworks-auth.mjs:18:13
+    at ModuleJob.run (node:internal/modules/esm/module_job:430:25)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:661:26)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5) {
+  errno: -2,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: '"/Users/kirby/.naverworks/private.key"'
+}
+
+Node.js v24.14.0
+──── 미리보기 ────
+📊 부스터즈 광고 리포트 (8/17 월)
+총 광고비 131.6만원
+
+── 메타 전환 ──
+62.1만원  (평소 +18%)
+클릭 1,433 · 랜딩 59% · CPC 433원
+
+── 메타 트래픽 ──
+18.4만원  (평소 +21%)
+클릭 1,615 · 랜딩 84% · CPC 114원
+
+── GFA ──
+51만원  (평소 -1%)
+클릭 1,248 · 구매 13건 · 구매당 3.9만원 · ROAS 130%
+
+── GFA 캠페인 TOP3 ──
+1. 드라이기_전환  18.5만원 · ROAS 193%
+2. 구강가전_전환  13.1만원 · ROAS 56%
+3. 드라이기_맞춤타겟  9.7만원 · ROAS 182%
+
+── 신규 광고 (오늘) ──
+메타: 클린이워터B_웃을때자신있게, 클린이워터B_진짜관리는치아부터, 클린이워터B_실제후기, 클린이워터B_욕실버블 외 9개
+GFA: 없음
+─────────────────
+발송 완료 → jmpark@oa-world.com
+발송 완료 → kkeim@oa-world.com
+쿠팡 파일 없음
+지그재그 파일 없음
+경고: 쿠팡: 파일 없음; 지그재그: 파일 없음
+업서트 대상: 0행 (2026-07-15 ~ 2026-08-19)
+[2026. 8. 19. AM 9:05:00] 랭킹 실판매 동기화 시작
+  조회 중... 10행
+  → 10행 조회
+✅ 동기화 완료
+[2026. 8. 19. AM 9:10:00] 전제품 검색순위 동기화 시작
+  조회 중... 3213행 (D-90~)  조회 중... 6150행 (D-83~)  조회 중... 9469행 (D-76~)  조회 중... 12903행 (D-69~)[2026. 8. 19. AM 9:15:00] 우선순위 동기화 시작
+  조회 중... 16234행 (D-62~)  조회 중... 19640행 (D-55~)발송 완료 (썸네일 3장):
+📋 8/19(수) 아침 브리핑
+
+🎨 소재 검토 3건 (평균 CTR 1.79%)
+1. 소닉플로우_이민정 소구 1
+   ㄴ 7일 33만원 · CTR 0.46%
+   ㄴ 재제작: oa-dashboard2.vercel.app/?recreate=%EC%86%8C%EB%8B%89%ED%94%8C%EB%A1%9C%EC%9A%B0_%EC%9D%B4%EB%AF%BC%EC%A0%95%20%EC%86%8C%EA%B5%AC%201
+2. [행사X]에어리소닉_영상1
+   ㄴ 7일 24만원 · CTR 0.64%
+   ㄴ 재제작: oa-dashboard2.vercel.app/?recreate=%5B%ED%96%89%EC%82%ACX%5D%EC%97%90%EC%96%B4%EB%A6%AC%EC%86%8C%EB%8B%89_%EC%98%81%EC%83%811
+3. 소닉플로우_이민정 소구 4
+   ㄴ 7일 14만원 · CTR 0.47%
+   ㄴ 재제작: oa-dashboard2.vercel.app/?recreate=%EC%86%8C%EB%8B%89%ED%94%8C%EB%A1%9C%EC%9A%B0_%EC%9D%B4%EB%AF%BC%EC%A0%95%20%EC%86%8C%EA%B5%AC%204
+
+⚠️ 확인: 이미용 매출데이터 누락 · 메타광고 데이터 누락
+
+👉 oa-dashboard2.vercel.app
+  조회 중... 23049행 (D-48~)  매출 조회 중... 7714행 (D-180~)  조회 중... 26328행 (D-41~)  조회 중... 29776행 (D-34~)  조회 중... 33235행 (D-27~)  조회 중... 34227행 (D-20~)  조회 중... 34227행 (D-13~)  조회 중... 34227행 (D-6~)
+  → 키워드 529개 · 34227행 (90일)
+  조회 중... 0행  → payload 609KB
+✅ 동기화 완료
+스마트스토어 동기화 실패: 토큰 실패: {"code":"GW.IP_NOT_ALLOWED","message":"호출이 허용되지 않은 IP입니다.","timestamp":"2026-08-19T09:25:00.781+09:00","traceId":"AZ_RHYMOdryPjKxlryEoLw^1785919799126^87377382"}
+  매출 조회 중... 15453행 (D-150~)조회 기간: 2026-07-20 ~ 2026-08-18
+  page 1/4 — 누적 100행
+  page 2/4 — 누적 200행
+  page 3/4 — 누적 300행
+  page 4/4 — 누적 336행
+소재 336행 · 총비용 39,395,067원 · 구매완료 1869 · 전환매출 67,597,730원 · ROAS 172%
+업로드 완료 — 336행, targetRoas 300% 유지
+대시보드 GFA 탭 새로고침하면 반영됩니다
+  매출 조회 중... 23447행 (D-120~)시트 마지막 날짜: 2026-08-17
+메타 인사이트 조회: 2026-08-12 ~ 2026-08-18
+336행 (7일: 2026-08-12 ~ 2026-08-18)
+웹앱 응답: {'ok': True, 'removed': 289, 'added': 336, 'total': 19396}
+완료 — 대시보드 메타 탭 새로고침하면 반영됩니다
+  매출 조회 중... 31228행 (D-90~)  매출 조회 중... 38988행 (D-60~)  매출 조회 중... 46987행 (D-30~)
+  → 품목 382개 · 일별 46987행 (180일)
+  조회 중... 200행  조회 중... 319행
+  → 작년 동기 데이터 319개 품목
+  네이버 광고 조회 중... 0행 (D-180~)  네이버 광고 조회 중... 0행 (D-150~)  네이버 광고 조회 중... 0행 (D-120~)  네이버 광고 조회 중... 15311행 (D-90~)  네이버 광고 조회 중... 38692행 (D-60~)  네이버 광고 조회 중... 40256행 (D-30~)
+  → 네이버 광고그룹 819개 중 490개 제품 매칭
+  조회 중... 14행
+  → payload 1488KB
+✅ 동기화 완료
+리마인드 대상 없음
+daily-ad-report 실패: fetch failed
+daily-ad-report 실패: fetch failed
+쿠팡 파일 없음
+지그재그 파일 없음
+경고: 쿠팡: 파일 없음; 지그재그: 파일 없음
+업서트 대상: 0행 (2026-07-17 ~ 2026-08-21)
+[2026. 8. 21. AM 9:05:00] 랭킹 실판매 동기화 시작
+  조회 중... 10행
+  → 10행 조회
+✅ 동기화 완료
+[2026. 8. 21. AM 9:10:00] 전제품 검색순위 동기화 시작
+  조회 중... 3250행 (D-90~)  조회 중... 6072행 (D-83~)  조회 중... 9511행 (D-76~)[2026. 8. 21. AM 9:15:00] 우선순위 동기화 시작
+❌ 오류: fetch failed
+❌ 오류: fetch failed
+실패: fetch failed
+스마트스토어 동기화 실패: fetch failed
+조회 기간: 2026-07-22 ~ 2026-08-20
+Traceback (most recent call last):
+  File "/Users/kirby/oa-dashboard2/scripts/gfa/gfa_sync.py", line 124, in <module>
+    main()
+  File "/Users/kirby/oa-dashboard2/scripts/gfa/gfa_sync.py", line 106, in main
+    rows, start, end = fetch_report(a.days)
+  File "/Users/kirby/oa-dashboard2/scripts/gfa/gfa_sync.py", line 51, in fetch_report
+    r = ctx.request.get(url, headers={"Referer": "https://ads.naver.com/manage/ad-accounts/1742505/da/report/performance"})
+  File "/Users/kirby/Library/Python/3.9/lib/python/site-packages/playwright/sync_api/_generated.py", line 18545, in get
+    self._sync(
+  File "/Users/kirby/Library/Python/3.9/lib/python/site-packages/playwright/_impl/_sync_base.py", line 115, in _sync
+    return task.result()
+  File "/Users/kirby/Library/Python/3.9/lib/python/site-packages/playwright/_impl/_fetch.py", line 193, in get
+    return await self.fetch(
+  File "/Users/kirby/Library/Python/3.9/lib/python/site-packages/playwright/_impl/_fetch.py", line 319, in fetch
+    return await self._inner_fetch(
+  File "/Users/kirby/Library/Python/3.9/lib/python/site-packages/playwright/_impl/_fetch.py", line 410, in _inner_fetch
+    response = await self._channel.send(
+  File "/Users/kirby/Library/Python/3.9/lib/python/site-packages/playwright/_impl/_connection.py", line 69, in send
+    return await self._connection.wrap_api_call(
+  File "/Users/kirby/Library/Python/3.9/lib/python/site-packages/playwright/_impl/_connection.py", line 559, in wrap_api_call
+    raise rewrite_error(error, f"{parsed_st['apiName']}: {error}") from None
+playwright._impl._errors.TimeoutError: APIRequestContext.get: Timeout 30000ms exceeded.
+Call log:
+  - → GET https://ads.naver.com/apis/report/gfa/v1/adAccounts/1742505/stats/reportPerformance?startDate=2026-07-22&endDate=2026-08-20&reportAdUnit=CREATIVE&reportFilterListString=%5B%5D&pageNumber=1&pageSize=100
+    - user-agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/151.0.0.0 Safari/537.36
+    - accept: */*
+    - accept-encoding: gzip,deflate,br
+    - Referer: https://ads.naver.com/manage/ad-accounts/1742505/da/report/performance
+    - cookie: NNB=NRJTACYCERQGU; NAC=vlfHDYioCSOAA; nid_inf=-386784695; NID_AUT=wFAlrP+xszKI7AHvuTu8ncEw/yjqx2RtlhYDCVb/wf9NabtLAvVW8Tqbe9DllChp; BUC=0p8nQ0tKohNRepQpKlrd9ERDbPuln76Op6rDudqQ-uM=; NID_SES=AAABr035WSUfOu7tfKU8pwH2QmSyWHUZP+JQrITjcNwfU1jGNwuAiobe4dXXk9kIYq4lxBcupaUXo4lLysIKmeDHYSAB3aog44QqdXg0cPqOSsJ2VM/KaHp+axCW5kg1BDrxFhWXjGi4wtU8P1Wa8WWn4jo2HglWN/bLM4OtCoykPs52X1AvpYnp615XO2VX7BWsAsm84Y1Z6NLOyZsb+vJ8jqY+oMuGTg3wKg5EXBGndfN7ru+59jds6NyywVzlqCgB8oXNSs2GqYTTXy1RXc15rDLQE7s7rG0F/XBKetcTBMfYDY8TQMEunAJTKDAma9GwxyF8X+RGP15TzXvVIe2ZDn/a9xUsuI3U0g8ffOi1muihbNIcB+PzI51HaCFnpSozcS7vSq9k9F0frrOeRf/zqD7we65Gfc2L8ux7nbv7p+ZZypD7zo6ULZYYaqiq8cMsRH5rd+OV12f9MRNEYug7sxcfhTCnLYX3mhJhkEPwU7C7k89D9YLJ2+rj/WXJleo8UGPs60745ox17EjQkh7sweQAEgEHzjVi8EW+M9VOsYgVOkzJN5JCXu8RANHM+Byg1w==
+
+Traceback (most recent call last):
+  File "/Library/Developer/CommandLineTools/Library/Frameworks/Python3.framework/Versions/3.9/lib/python3.9/urllib/request.py", line 1346, in do_open
+    h.request(req.get_method(), req.selector, req.data, headers,
+  File "/Library/Developer/CommandLineTools/Library/Frameworks/Python3.framework/Versions/3.9/lib/python3.9/http/client.py", line 1257, in request
+    self._send_request(method, url, body, headers, encode_chunked)
+  File "/Library/Developer/CommandLineTools/Library/Frameworks/Python3.framework/Versions/3.9/lib/python3.9/http/client.py", line 1303, in _send_request
+    self.endheaders(body, encode_chunked=encode_chunked)
+  File "/Library/Developer/CommandLineTools/Library/Frameworks/Python3.framework/Versions/3.9/lib/python3.9/http/client.py", line 1252, in endheaders
+    self._send_output(message_body, encode_chunked=encode_chunked)
+  File "/Library/Developer/CommandLineTools/Library/Frameworks/Python3.framework/Versions/3.9/lib/python3.9/http/client.py", line 1012, in _send_output
+    self.send(msg)
+  File "/Library/Developer/CommandLineTools/Library/Frameworks/Python3.framework/Versions/3.9/lib/python3.9/http/client.py", line 952, in send
+    self.connect()
+  File "/Library/Developer/CommandLineTools/Library/Frameworks/Python3.framework/Versions/3.9/lib/python3.9/http/client.py", line 1419, in connect
+    super().connect()
+  File "/Library/Developer/CommandLineTools/Library/Frameworks/Python3.framework/Versions/3.9/lib/python3.9/http/client.py", line 923, in connect
+    self.sock = self._create_connection(
+  File "/Library/Developer/CommandLineTools/Library/Frameworks/Python3.framework/Versions/3.9/lib/python3.9/socket.py", line 822, in create_connection
+    for res in getaddrinfo(host, port, 0, SOCK_STREAM):
+  File "/Library/Developer/CommandLineTools/Library/Frameworks/Python3.framework/Versions/3.9/lib/python3.9/socket.py", line 953, in getaddrinfo
+    for res in _socket.getaddrinfo(host, port, family, type, proto, flags):
+socket.gaierror: [Errno 8] nodename nor servname provided, or not known
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/Users/kirby/oa-dashboard2/scripts/meta-sheet-sync.py", line 214, in <module>
+    main()
+  File "/Users/kirby/oa-dashboard2/scripts/meta-sheet-sync.py", line 176, in main
+    last = sheet_last_date()
+  File "/Users/kirby/oa-dashboard2/scripts/meta-sheet-sync.py", line 75, in sheet_last_date
+    with urllib.request.urlopen(urllib.request.Request(
+  File "/Library/Developer/CommandLineTools/Library/Frameworks/Python3.framework/Versions/3.9/lib/python3.9/urllib/request.py", line 214, in urlopen
+    return opener.open(url, data, timeout)
+  File "/Library/Developer/CommandLineTools/Library/Frameworks/Python3.framework/Versions/3.9/lib/python3.9/urllib/request.py", line 517, in open
+    response = self._open(req, data)
+  File "/Library/Developer/CommandLineTools/Library/Frameworks/Python3.framework/Versions/3.9/lib/python3.9/urllib/request.py", line 534, in _open
+    result = self._call_chain(self.handle_open, protocol, protocol +
+  File "/Library/Developer/CommandLineTools/Library/Frameworks/Python3.framework/Versions/3.9/lib/python3.9/urllib/request.py", line 494, in _call_chain
+    result = func(*args)
+  File "/Library/Developer/CommandLineTools/Library/Frameworks/Python3.framework/Versions/3.9/lib/python3.9/urllib/request.py", line 1389, in https_open
+    return self.do_open(http.client.HTTPSConnection, req,
+  File "/Library/Developer/CommandLineTools/Library/Frameworks/Python3.framework/Versions/3.9/lib/python3.9/urllib/request.py", line 1349, in do_open
+    raise URLError(err)
+urllib.error.URLError: <urlopen error [Errno 8] nodename nor servname provided, or not known>

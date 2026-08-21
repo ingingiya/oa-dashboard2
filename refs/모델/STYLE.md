@@ -58,8 +58,33 @@ near the product or presents it toward the camera leaning on her arm, product an
 the same focal plane, playful minimal art direction like a K-beauty color cosmetics campaign.
 ```
 
+## 4차 레퍼런스 추가 (2026-08-10, 구강가전 모델 3장 — 채팅 전달, 파일 미보관)
+구강가전(칫솔·구강세정기·미백기기) 모델컷 전용 레퍼런스:
+- **사용 직전 하프 프로파일**: 순백 하이키 배경, 검정 단발보브, 화이트 캐미솔,
+  제품을 뺨 옆으로 들어올려 "막 쓰려는 순간" — 시선은 살짝 아래/옆, 글래스 스킨
+- **치아 스마일 익스트림 클로즈업**: 프레임을 얼굴 반쪽으로 크롭, 젖은 슬릭 헤어,
+  진짜 모공·잔머리 살아있는 리얼 스킨, **하얗고 가지런한 치아가 보이는 진짜 웃음**
+  — 질감 있는 오프화이트 벽, 자연광. 구강 카테고리 애프터/결과 컷의 정석
+- **제품 얼굴 옆 프레젠팅**: 순백 배경, 센터파트 보브, 화이트 립리스 슬리브리스 톱,
+  제품을 눈높이 얼굴 옆에 들고 정면 응시 + 입술 살짝 벌어진 소프트 스마일(치아 살짝)
+- 공통: 배경 순백~오프화이트만, 의상 화이트 원톤, 액세서리 없음, 치아 노출이 핵심
+
+### 영어 프롬프트 블록 (ORAL_CARE_MODEL)
+```
+Oral-care beauty campaign: pure white high-key studio, black bob hair, minimal white
+sleeveless top, dewy glass skin with real texture. Either (a) half-profile raising the
+product beside her cheek about to use it, or (b) extreme close-up crop of a genuine smile
+revealing clean bright white even teeth, or (c) holding the product beside her face at eye
+level with a soft parted-lips smile, direct calm gaze.
+```
+
 ## 반영 기록
 - 2026-08-08: model/route.ts — MODEL_BASE 무드/헤어/의상/메이크업을 위 블록 기준으로 교체
 - 2026-08-08: 2차 6장 — 표정(치아 스마일·윙크)/주근깨 리얼 스킨/풀뱅·웻헤어 변주 반영
 - 2026-08-10: 3차 12장 — 파스텔 원컬러 세트·제품 프레젠팅·실루엣 역광·욕실 손샷 반영
   (page.tsx MODEL_POSES "파스텔 세트"·"제품 내밀기" + PRODUCT_CUTS "역광 실루엣 손")
+- 2026-08-10: 얼굴상 재증류 — 레퍼런스 사진 속 실제 얼굴 특징을 관찰해 model/route.ts
+  FACE_ARCHETYPES 7종으로 교체: 청순 인형상(라카 doll, 2de7c6/4d0f25)·시크 고양이상(웻룩
+  시레니쉬, 00c194)·내추럴 유니크상(내로우 헤이즐+두꺼운 눈썹+넓은 코, 949176)·주근깨
+  첫사랑상(bcdaaf)·둥근 순딩상(둥근 얼굴+훅눈 무쌍, 29158e)·우아 세련상(옆선+높은 콧대,
+  56d352)·발랄 풀뱅상(초승달 눈웃음, d41cd6) — 무드 문구가 아닌 실측 이목구비 기술

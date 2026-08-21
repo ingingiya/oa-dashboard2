@@ -7286,6 +7286,7 @@ export default function OaDashboard(){
   const [gfaReport, setGfaReport] = useSyncState("oa_gfa_report_v1", null);
   const [gfaThumbs, setGfaThumbs] = useSyncState("oa_gfa_thumbs_v1", {}); // {소재이름: 이미지URL}
   const [gfaProdFilter, setGfaProdFilter] = useState("전체"); // 소재 전체 목록 제품 필터
+  const [gfaShowOff, setGfaShowOff] = useState(false); // 꺼진(미송출) 소재 표시 여부 — 기본 숨김
   const [gfaAI, setGfaAI] = useSyncState("oa_gfa_analysis_v1", null); // AI 분석 결과 (팀 공유)
   const [gfaAILoading, setGfaAILoading] = useState(false);
   const [gfaExec, setGfaExec] = useSyncState("oa_gfa_exec_v1", []); // AI 추천 중 실제 실행한 액션 기록
@@ -8431,7 +8432,10 @@ export default function OaDashboard(){
       setGfaAILoading(false);
     };
 
-    const rows=gfaReport?.rows||[];
+    // 꺼진 소재 숨김 — gfa_sync가 어제~오늘 노출 기준으로 on 플래그 부여 (플래그 없는 옛 데이터는 전부 표시)
+    const allGfaRows=gfaReport?.rows||[];
+    const offCreaCnt=new Set(allGfaRows.filter(r=>r.on===false).map(r=>`${r.camp}|${r.group}|${r.name}`)).size;
+    const rows=gfaShowOff?allGfaRows:allGfaRows.filter(r=>r.on!==false);
     // 운영 경과일 — "2026.07.23." → 일수
     const parseGDate=s=>{const m=String(s||"").match(/(\d{4})\.(\d{1,2})\.(\d{1,2})/);return m?new Date(+m[1],+m[2]-1,+m[3]):null;};
     const daysRun=s=>{const d=parseGDate(s);return d?Math.max(1,Math.floor((Date.now()-d.getTime())/86400000)+1):null;};
@@ -8522,6 +8526,11 @@ export default function OaDashboard(){
             <button onClick={setTarget} style={{padding:"8px 14px",borderRadius:10,border:`1px solid ${C.border}`,background:"#fff",fontWeight:800,fontSize:13,cursor:"pointer",fontFamily:"inherit",color:C.ink}}>
               목표 ROAS {TARGET}%
             </button>
+            {offCreaCnt>0&&(
+              <button onClick={()=>setGfaShowOff(v=>!v)} style={{padding:"8px 14px",borderRadius:10,border:`1px solid ${C.border}`,background:gfaShowOff?C.ink:"#fff",fontWeight:800,fontSize:13,cursor:"pointer",fontFamily:"inherit",color:gfaShowOff?"#fff":C.inkLt}}>
+                {gfaShowOff?"꺼진 소재 숨기기":`꺼진 소재 ${offCreaCnt}개`}
+              </button>
+            )}
             {rows.length>0&&(
               <label style={{padding:"8px 14px",borderRadius:10,border:`1px solid ${C.border}`,background:"#fff",fontWeight:800,fontSize:13,cursor:"pointer",color:C.ink}}>
                 소재 이미지 업로드

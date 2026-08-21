@@ -4,8 +4,10 @@
 //   node scripts/daily-ad-report.mjs --dry-run          # 발송 없이 미리보기
 //   node scripts/daily-ad-report.mjs --weekly           # 주간 모드 강제 (테스트용)
 //   node scripts/daily-ad-report.mjs --to kkeim@oa-world.com
+//   node scripts/daily-ad-report.mjs --since 2026-08-19 --until 2026-08-20  # 놓친 기간 수동 발송
 //   node scripts/daily-ad-report.mjs                    # env DAILY_REPORT_TO 로 발송
 import { execFileSync } from 'child_process';
+import { readFileSync } from 'fs';
 import { dirname, resolve } from 'path';
 import { fileURLToPath } from 'url';
 import { env, sendToUser, telegram } from './nworks-lib.mjs';
@@ -18,9 +20,14 @@ const TO = args.includes('--to') ? args[args.indexOf('--to') + 1] : env.DAILY_RE
 const kstNow = () => new Date(Date.now() + 9 * 3600000);
 const kstDate = (offsetDays = 0) =>
   new Date(Date.now() + 9 * 3600000 - offsetDays * 86400000).toISOString().slice(0, 10);
-const WEEKLY = args.includes('--weekly') || kstNow().getUTCDay() === 1; // 월요일(KST)
-const SINCE = WEEKLY ? kstDate(7) : kstDate(1);
-const UNTIL = kstDate(1);
+const argOf = (name) => (args.includes(name) ? args[args.indexOf(name) + 1] : null);
+const CUSTOM_SINCE = argOf('--since');
+const WEEKLY = !CUSTOM_SINCE && (args.includes('--weekly') || kstNow().getUTCDay() === 1); // 월요일(KST)
+const SINCE = CUSTOM_SINCE || (WEEKLY ? kstDate(7) : kstDate(1));
+const UNTIL = argOf('--until') || CUSTOM_SINCE || kstDate(1);
+const DAYS = Math.round((new Date(UNTIL) - new Date(SINCE)) / 86400000) + 1;
+const dShift = (d, n) =>
+  new Date(new Date(`${d}T00:00:00Z`).getTime() + n * 86400000).toISOString().slice(0, 10);
 
 const manwon = (n) => n >= 10000
   ? `${(n / 10000).toLocaleString(undefined, { maximumFractionDigits: 1 })}만원`
@@ -62,8 +69,16 @@ async function metaRange(since, until) {
   return { conv, traf };
 }
 
-// 신규 광고 기준일: 평일=오늘 생성, 월요일(주간)=최근 7일
-const NEW_SINCE = WEEKLY ? kstDate(7) : kstDate(0);
+// 신규 광고 기준일: 평일=오늘 생성, 월요일(주간)=최근 7일, 수동 기간=시작일 이후
+const NEW_SINCE = CUSTOM_SINCE || (WEEKLY ? kstDate(7) : kstDate(0));
+
+// 일회성 스킵: scripts/.report-skip 에 적힌 날짜(KST)가 오늘이면 정기 발송 생략 (--since 수동 실행은 무시)
+if (!CUSTOM_SINCE) {
+  try {
+    const skip = readFileSync(resolve(HERE, '.report-skip'), 'utf8').trim();
+    if (skip === kstDate(0)) { console.log(`.report-skip ${skip} — 오늘 발송 생략`); process.exit(0); }
+  } catch {}
+}
 
 // 메타 신규 광고 (뷰티 캠페인, NEW_SINCE 이후 생성)
 async function metaNewAds() {
@@ -104,7 +119,7 @@ const newLine = (label, names) => {
 
 async function main() {
   const [{ conv, traf }, { conv: convP, traf: trafP }] = await Promise.all([
-    metaRange(SINCE, UNTIL), metaRange(kstDate(WEEKLY ? 14 : 8), kstDate(WEEKLY ? 8 : 2)),
+    metaRange(SINCE, UNTIL), metaRange(dShift(SINCE, -7), dShift(SINCE, -1)),
   ]);
   const g = gfaRange(SINCE, UNTIL);
   const gfa = g.tot;
@@ -113,7 +128,7 @@ async function main() {
   const totCost = conv.cost + traf.cost + gfa.cost;
   // 평소 = 직전 7일(주간은 직전 주) — 일간 비교는 일평균 기준
   const vsDaily = (cur, prev7) => {
-    const avg = WEEKLY ? prev7 : prev7 / 7;
+    const avg = prev7 / 7 * DAYS;
     if (!avg) return '';
     const p = Math.round((cur / avg - 1) * 100);
     return `  (평소 ${p >= 0 ? '+' : ''}${p}%)`;
@@ -121,7 +136,9 @@ async function main() {
 
   const title = WEEKLY
     ? `📊 부스터즈 주간 광고 리포트 (${md(SINCE)}~${md(UNTIL)})`
-    : `📊 부스터즈 광고 리포트 (${md(UNTIL)} ${dayKo(UNTIL)})`;
+    : SINCE !== UNTIL
+      ? `📊 부스터즈 광고 리포트 (${md(SINCE)}~${md(UNTIL)})`
+      : `📊 부스터즈 광고 리포트 (${md(UNTIL)} ${dayKo(UNTIL)})`;
   const lpvPct = (t) => (t.clk > 0 ? `랜딩 ${Math.round(t.lpv / t.clk * 100)}%` : '랜딩 -');
   const cpa = (t) => (t.buy > 0 ? `구매당 ${manwon(t.cost / t.buy)}` : '구매당 -');
   const cpc = (t) => (t.clk > 0 ? `CPC ${Math.round(t.cost / t.clk).toLocaleString()}원` : 'CPC -');
@@ -145,7 +162,7 @@ async function main() {
     `── GFA 캠페인 TOP${top3.length} ──`,
     ...top3.map((c, i) => `${i + 1}. ${c.name}  ${manwon(c.cost)} · ROAS ${roasOf(c)}%`),
     ``,
-    `── 신규 광고 (${WEEKLY ? '최근 7일' : '오늘'}) ──`,
+    `── 신규 광고 (${WEEKLY ? '최근 7일' : CUSTOM_SINCE ? `${md(NEW_SINCE)}~` : '오늘'}) ──`,
     newLine('메타', metaNew),
     newLine('GFA', g.newCreatives || []),
   ].join('\n');
