@@ -241,7 +241,7 @@ export default function AdOfficeTycoon() {
   // 💰 실시간 계약 체결 알림 — 오늘 구매수 diff (localStorage 기준, 날짜 바뀌면 리셋)
   useEffect(() => {
     if (!data?.campaigns) return;
-    const today = new Date().toISOString().slice(0, 10);
+    const today = new Date(Date.now() + 9 * 3600 * 1000).toISOString().slice(0, 10); // KST
     const map = Object.fromEntries(data.campaigns.flatMap((c) => c.adsets)
       .filter((s) => (s.buyToday || 0) > 0).map((s) => [s.id, s.buyToday]));
     try {
@@ -472,8 +472,8 @@ export default function AdOfficeTycoon() {
           ? `일예산 ₩${fmt(p.s.budget)} → ₩${fmt(p.extra.budget)} (${p.extra.budget >= p.s.budget ? "+" : ""}${Math.round(((p.extra.budget - p.s.budget) / Math.max(1, p.s.budget)) * 100)}%)`
           : p.action === "pause" ? `광고 세트 OFF — 일예산 ₩${fmt(p.s.budget)} 지출 중단 (퇴근 조치)`
           : `광고 세트 ON — 일예산 ₩${fmt(p.s.budget)} 지출 재개 (재고용)`;
-        const now = new Date();
-        const docNo = `OA-${now.toISOString().slice(0, 10).replace(/-/g, "")}-${String(p.s.id).slice(-4)}`;
+        const kstDate = new Date(Date.now() + 9 * 3600 * 1000).toISOString().slice(0, 10); // KST 기안일
+        const docNo = `OA-${kstDate.replace(/-/g, "")}-${String(p.s.id).slice(-4)}`;
         const rowSt = { display: "flex", borderBottom: "1px solid #00000018", fontSize: 12.5 };
         const th = { width: 88, background: "#00000008", padding: "8px 10px", fontWeight: 800, color: "#333", flexShrink: 0 };
         const td = { padding: "8px 10px", color: "#111", flex: 1, wordBreak: "keep-all" };
@@ -496,7 +496,7 @@ export default function AdOfficeTycoon() {
               <div style={{ textAlign: "center", fontSize: 19, fontWeight: 900, letterSpacing: 4, color: "#1a1a1a",
                 borderBottom: "2.5px solid #1a1a1a", paddingBottom: 10, marginBottom: 12 }}>{title}</div>
               <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10.5, color: "#666", marginBottom: 8 }}>
-                <span>문서번호 {docNo}</span><span>기안일 {now.toISOString().slice(0, 10)} · OA 광고상사</span>
+                <span>문서번호 {docNo}</span><span>기안일 {kstDate} · OA 광고상사</span>
               </div>
               <div style={{ border: "1.5px solid #00000030", borderRadius: 4, overflow: "hidden", marginBottom: 12 }}>
                 <div style={rowSt}><div style={th}>대상 사원</div><div style={td}>{p.s.name}</div></div>
@@ -854,7 +854,7 @@ export default function AdOfficeTycoon() {
         const m = data.monthly;
         const profit = (m.cur.rev || 0) - (m.cur.spend || 0);
         const pProfit = (m.prev.rev || 0) - (m.prev.spend || 0);
-        const yRow = [...(m.days30 || [])].reverse().find((d) => d.d < new Date().toISOString().slice(0, 10) && (d.spend > 0 || d.rev > 0));
+        const yRow = [...(m.days30 || [])].reverse().find((d) => d.d < new Date(Date.now() + 9 * 3600 * 1000).toISOString().slice(0, 10) && (d.spend > 0 || d.rev > 0));
         const yProfit = yRow ? (yRow.rev || 0) - yRow.spend : null;
         const roasM = m.cur.spend > 0 ? +(m.cur.rev / m.cur.spend).toFixed(1) : 0;
         const pc = profit >= 0 ? C.neon : C.red;
@@ -2290,7 +2290,7 @@ function Shell({ children, onRefresh, fx, shake, mute, toggleMute }) {
         <div className="fxToast">
           <span style={{ fontSize: 40 }}>{fx.emoji}</span>
           <span style={{ fontFamily: "'Press Start 2P', monospace", fontSize: 12, color: C.gold, textShadow: `0 0 12px ${C.gold}` }}>{fx.text}</span>
-          {fx.kind === "bonus" && <div className="confetti">{"🪙💵🪙✨🪙💵✨🪙".split("").map((ch, i) => <span key={i} style={{ "--i": i }}>{ch}</span>)}</div>}
+          {fx.kind === "bonus" && <div className="confetti">{[..."🪙💵🪙✨🪙💵✨🪙"].map((ch, i) => <span key={i} style={{ "--i": i }}>{ch}</span>)}</div>}
         </div>
       )}
       <div style={{ maxWidth: 1160, margin: "0 auto", padding: "26px 20px 80px", position: "relative", zIndex: 2 }}>
