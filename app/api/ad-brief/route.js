@@ -22,7 +22,7 @@ export async function GET(req) {
   if (!key) return Response.json({ error: "ANTHROPIC_API_KEY 없음" }, { status: 500 });
 
   const { data: cRow } = await s.from("settings").select("value").eq("key", "oa_ad_console_cache_v1").maybeSingle();
-  const cs = cRow?.value?.data;
+  const cs = cRow?.value?.payload;
   if (!cs?.campaigns) return Response.json({ error: "콘솔 데이터 없음 — 먼저 /ads를 열어주세요" }, { status: 404 });
 
   // 브리핑 재료: KPI + 활성 세트 성과 요약 (텍스트 압축)
