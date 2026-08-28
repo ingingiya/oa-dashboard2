@@ -12,6 +12,14 @@ const C = {
 };
 const fmt = (n) => (n == null ? "-" : Number(n).toLocaleString());
 
+// 서버가 타임아웃/장애로 JSON 아닌 텍스트("An error occurred…")를 뱉으면 SyntaxError 나던 것 방지
+async function jfetch(url, opt) {
+  const r = await fetch(url, opt);
+  const t = await r.text();
+  try { return JSON.parse(t); }
+  catch { throw new Error(`서버 응답 지연/오류 (${r.status}) — 잠시 후 다시 시도해주세요`); }
+}
+
 // ── 8비트 효과음 (WebAudio 합성 — 파일 없음) ──────────────────────────────
 let audioCtx = null;
 let sfxOn = true;
@@ -66,7 +74,9 @@ const TEAM = [
   { name: "혜영", img: SPRITE_BASE + "mtcovgjk_hud_hyeyeong.png" },
   { name: "지원", img: SPRITE_BASE + "mtcov5ta_hud_jiwon.png", still: true },
 ];
-const BOSS_IMG = SPRITE_BASE + "mtcov5no_hud_kyeongeun.png"; // 경은 사장님 👑
+const BOSS_IMG = SPRITE_BASE + "mtcov5no_hud_kyeongeun.png"; // 경은 사장님
+// 결재 서명자 → 캐릭터 사진 (인사기록부·결재서류에 이름과 함께 표시)
+const SIGNER_IMG = { 영서: TEAM[0].img, 소리: TEAM[1].img, 혜영: TEAM[2].img, 지원: TEAM[3].img, 경은: BOSS_IMG };
 const BANNER_IMG = SPRITE_BASE + "mtcop9ce_hud_banner.png";
 const teamOf = (id = "") => TEAM[[...String(id)].reduce((a, ch) => a + ch.charCodeAt(0), 0) % TEAM.length];
 const charOf = (id = "") => teamOf(id).img;
@@ -84,6 +94,48 @@ const TALK = {
   idle: ["일감(전환)이 안 들어와요…", "대기 중… 뭐라도 시켜주세요", "월급 루팡 아닙니다…"],
 };
 const talkOf = (tier, seed) => TALK[tier][seed % TALK[tier].length];
+
+// 🏆 업적 컬렉션 — 전부 실데이터에서 파생 (표시 전용, 돈과 무관)
+function calcAchievements(data) {
+  if (!data) return [];
+  const log = data.log || [];
+  const sets = (data.campaigns || []).flatMap((c) => c.adsets);
+  const act = sets.filter((s) => s.status === "ACTIVE");
+  const wins = log.filter((l) => l.verdict === "win").length;
+  const judged = log.filter((l) => l.verdict === "win" || l.verdict === "fail").length;
+  let combo = 0; for (const l of log) { if (!l.verdict) continue; if (l.verdict === "win") combo++; else break; }
+  const cur = data.monthly?.cur || {};
+  const signers = new Set(log.map((l) => l.by).filter(Boolean));
+  const y = data.kpi?.yesterday || {}, t = data.kpi?.today || {};
+  const hasMvp = sets.some((s) => s.cpa7 && s.target && s.cpa7 <= s.target);
+  const queueN = act.filter((s) => s.judge).length;
+  const hh = new Date().getHours(), dw = new Date().getDay();
+  return [
+    { id: "open", e: "🔑", n: "개업", d: "OA 광고상사 사무실 개업", done: true },
+    { id: "act1", e: "🖊", n: "첫 결재", d: "결재 도장 1건 집행", done: log.length >= 1 },
+    { id: "act10", e: "📚", n: "결재왕", d: "누적 결재 10건", done: log.length >= 10 },
+    { id: "act50", e: "🗄", n: "서류의 산", d: "누적 결재 50건", done: log.length >= 50 },
+    { id: "win1", e: "✅", n: "첫 성공", d: "결재 후 성과 개선 1건", done: wins >= 1 },
+    { id: "combo3", e: "🔥", n: "3연승", d: "성공 결재 3연속", done: combo >= 3 },
+    { id: "combo5", e: "⚡", n: "신들린 손", d: "성공 결재 5연속", done: combo >= 5 },
+    { id: "rate60", e: "🎯", n: "명장", d: "결재 승률 60%↑ (5건 이상)", done: judged >= 5 && wins / judged >= 0.6 },
+    { id: "roas4", e: "💎", n: "S급 사무실", d: "어제 ROAS 4.0 달성", done: (y.roas || 0) >= 4 },
+    { id: "profit", e: "📈", n: "흑자 경영", d: "이번 달 매출 > 광고비", done: (cur.rev || 0) > (cur.spend || 0) && (cur.spend || 0) > 0 },
+    { id: "rev100m", e: "🏦", n: "억대 상사", d: "이번 달 광고 매출 1억", done: (cur.rev || 0) >= 100000000 },
+    { id: "mvp", e: "🌟", n: "에이스 보유", d: "목표 CPA 이내 사원 보유", done: hasMvp },
+    { id: "staff10", e: "🏢", n: "중견기업", d: "근무 중 사원 10명", done: act.length >= 10 },
+    { id: "staff20", e: "🏙", n: "대기업 흉내", d: "근무 중 사원 20명", done: act.length >= 20 },
+    { id: "buy10", e: "🛒", n: "장사 잘되는 집", d: "어제 하루 계약 10건", done: (y.purchases || 0) >= 10 },
+    { id: "today1", e: "💰", n: "오늘도 개시", d: "오늘 실시간 계약 발생", done: (t.purchases || 0) >= 1 },
+    { id: "rules", e: "📐", n: "룰대로 간다", d: "목표 CPA 룰 설정", done: (data.targets?.rules || []).length >= 1 },
+    { id: "vault", e: "💳", n: "금고지기", d: "월 예산 한도 설정", done: (data.targets?.monthCap || 0) > 0 },
+    { id: "sign3", e: "🖐", n: "결재 삼총사", d: "서명 도장 3명 이상 참여", done: signers.size >= 3 },
+    { id: "sign5", e: "🤝", n: "5인 완전체", d: "영서·경은·지원·소리·혜영 전원 서명", done: signers.size >= 5 },
+    { id: "clean", e: "🧹", n: "결재함 클리어", d: "대기 결재 0건 달성", done: log.length >= 1 && queueN === 0 },
+    { id: "night", e: "🌙", n: "야근 수당", d: "밤 10시 이후 출근 도장", done: hh >= 22 || hh < 5 },
+    { id: "weekend", e: "🏖", n: "주말 출근", d: "주말에도 사무실 점검", done: dw === 0 || dw === 6 },
+  ];
+}
 
 // 광고 스튜디오(소재 제작) 연결 — 세트명에서 제품 키워드 추출해 딥링크
 const PRODUCT_KEYS = ["소닉플로우", "에어리소닉", "클린이워터", "클린이스윙", "프리온", "오마컬", "듀얼포켓건", "아이스볼트", "퀵롤차저", "오아데이", "클린이"];
@@ -123,6 +175,8 @@ export default function AdOfficeTycoon() {
   const [tgtEdit, setTgtEdit] = useState(null); // 🎯 목표 CPA 편집 {default, rules[], monthCap} | null
   const [paper, setPaper] = useState(null); // 🖊 결재서류 {action, s, extra, stamped} — 도장 찍어야 실행
   const [signer, setSigner] = useState(""); // 결재 도장 이름 (마지막 사용 기억)
+  const [weekly, setWeekly] = useState(null); // 📜 주간 경영 리포트 (신문)
+  const [weeklyBusy, setWeeklyBusy] = useState(false);
 
   useEffect(() => {
     try { const m = localStorage.getItem("oa_ads_mute") === "1"; setMute(m); sfxOn = !m; } catch {}
@@ -184,11 +238,35 @@ export default function AdOfficeTycoon() {
     if (cands.length && Math.random() < 0.5) setNego({ s: cands[Math.floor(Math.random() * cands.length)] });
   }, [data]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // 🏆 새 업적 언락 팡파레 (최초 방문 시엔 조용히 전부 저장)
+  useEffect(() => {
+    if (!data) return;
+    try {
+      const un = calcAchievements(data).filter((a) => a.done);
+      const raw = localStorage.getItem("oa_ads_achv_v1");
+      const seen = new Set(JSON.parse(raw || "[]"));
+      const freshA = un.filter((a) => !seen.has(a.id));
+      if (freshA.length && raw != null) {
+        SFX.bonus();
+        setFx({ emoji: "🏆", text: `업적 달성! ${freshA[0].e} ${freshA[0].n}`, kind: "bonus" });
+        setTimeout(() => setFx(null), 2600);
+      }
+      localStorage.setItem("oa_ads_achv_v1", JSON.stringify([...seen, ...freshA.map((a) => a.id)]));
+    } catch {}
+  }, [data]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // 📜 주간 경영 리포트 — 리포트 탭 첫 진입 시 1회 로드 (서버 주간 캐시)
+  useEffect(() => {
+    if (tab !== "report" || weekly || weeklyBusy) return;
+    setWeeklyBusy(true);
+    jfetch("/api/ad-weekly").then((j) => { if (!j.error) setWeekly(j); }).catch(() => {}).finally(() => setWeeklyBusy(false));
+  }, [tab]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // 🤵 AI 비서 브리핑 — 콘솔 캐시 기반, 서버 3h 캐시
   async function loadBrief(fresh) {
     SFX.click(); setBriefBusy(true);
     try {
-      const j = await fetch("/api/ad-brief" + (fresh ? "?fresh=1" : "")).then((r) => r.json());
+      const j = await jfetch("/api/ad-brief" + (fresh ? "?fresh=1" : ""));
       if (j.error) throw new Error(j.error);
       setBrief(j);
     } catch (e) { alert("브리핑 실패: " + e.message); } finally { setBriefBusy(false); }
@@ -196,8 +274,8 @@ export default function AdOfficeTycoon() {
   const toggleMute = () => setMute((m) => { const n = !m; sfxOn = !n; try { localStorage.setItem("oa_ads_mute", n ? "1" : "0"); } catch {}; return n; });
 
   // 기본은 5분 서버 캐시(메타 호출 제한 보호) — 순찰·조치 직후만 fresh
-  const load = (fresh) => fetch("/api/ad-console" + (fresh ? "?fresh=1" : "")).then((r) => r.json())
-    .then((j) => (j.ok ? setData(j) : setErr(j.error))).catch((e) => setErr(String(e)));
+  const load = (fresh) => jfetch("/api/ad-console" + (fresh ? "?fresh=1" : ""))
+    .then((j) => (j.ok ? setData(j) : setErr(j.error))).catch((e) => setErr(e.message || String(e)));
   useEffect(() => { load(); }, []);
 
   // 🖊 결재는 반드시 결재서류에 도장을 찍어야 실행 — act()는 서류만 올림
@@ -208,10 +286,10 @@ export default function AdOfficeTycoon() {
   async function doAct(action, s, extra = {}, by = "") {
     setBusy(s.id);
     try {
-      const j = await fetch("/api/ad-console", { method: "POST",
+      const j = await jfetch("/api/ad-console", { method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action, adsetId: s.id, name: s.name, by,
-          before: { cpa7: s.cpa7, spend7: s.spend7, purchases7: s.purchases7, budget: s.budget }, ...extra }) }).then((r) => r.json());
+          before: { cpa7: s.cpa7, spend7: s.spend7, purchases7: s.purchases7, budget: s.budget }, ...extra }) });
       if (!j.ok) throw new Error(j.error);
       if (action === "pause") {
         SFX.fire(); setShake(true); setTimeout(() => setShake(false), 500);
@@ -237,7 +315,7 @@ export default function AdOfficeTycoon() {
     SFX.click();
     setDetail({ busy: true, kind, camp: campName });
     try {
-      const j = await fetch(`/api/ad-console?detail=${id}&kind=${kind}`).then((r) => r.json());
+      const j = await jfetch(`/api/ad-console?detail=${id}&kind=${kind}`);
       if (!j.ok) throw new Error(j.error);
       setDetail({ busy: false, kind, camp: campName, data: j.detail });
     } catch (e) { alert("상세 조회 실패: " + e.message); setDetail(null); }
@@ -247,9 +325,9 @@ export default function AdOfficeTycoon() {
   async function adStatus(sid, ad, turnOff) {
     if (!confirm(turnOff ? `📉 소재 "${ad.name}"만 끌까요? (사원은 계속 근무)` : `소재 "${ad.name}"을 다시 켤까요?`)) return;
     try {
-      const j = await fetch("/api/ad-console", { method: "POST", headers: { "Content-Type": "application/json" },
+      const j = await jfetch("/api/ad-console", { method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action: turnOff ? "adPause" : "adResume", adId: ad.id, adsetId: sid, name: ad.name,
-          before: { cpa7: ad.cpa, spend7: ad.spend, purchases7: ad.purchases } }) }).then((r) => r.json());
+          before: { cpa7: ad.cpa, spend7: ad.spend, purchases7: ad.purchases } }) });
       if (!j.ok) throw new Error(j.error);
       SFX.stamp();
       setAdsCache((cc) => ({ ...cc, [sid]: (cc[sid] || []).map((x) => x.id === ad.id ? { ...x, status: turnOff ? "PAUSED" : "ACTIVE" } : x) }));
@@ -260,8 +338,10 @@ export default function AdOfficeTycoon() {
     SFX.click();
     setAdsOpen((o) => ({ ...o, [sid]: !o[sid] }));
     if (!adsCache[sid]) {
-      const j = await fetch(`/api/ad-console?adset=${sid}`).then((r) => r.json());
-      if (j.ok) setAdsCache((c) => ({ ...c, [sid]: j.ads }));
+      try {
+        const j = await jfetch(`/api/ad-console?adset=${sid}`);
+        if (j.ok) setAdsCache((c) => ({ ...c, [sid]: j.ads }));
+      } catch {}
     }
   }
 
@@ -283,7 +363,7 @@ export default function AdOfficeTycoon() {
     for (const s of targets) {
       if (adsCache[s.id]) continue;
       try {
-        const j = await fetch(`/api/ad-console?adset=${s.id}`).then((r) => r.json());
+        const j = await jfetch(`/api/ad-console?adset=${s.id}`);
         if (j.ok) setAdsCache((c) => ({ ...c, [s.id]: j.ads }));
       } catch {}
     }
@@ -393,9 +473,11 @@ export default function AdOfficeTycoon() {
                           color: "#C0392B", display: "flex", alignItems: "center", justifyContent: "center",
                           fontSize: 14, fontWeight: 900, transform: "rotate(-12deg)", letterSpacing: 1,
                           boxShadow: "inset 0 0 6px #C0392B33" }}>{nm}</div>
-                      ) : <span style={{ fontSize: 10, color: "#bbb" }}>(인)</span>}
+                      ) : SIGNER_IMG[nm]
+                        ? <img src={SIGNER_IMG[nm]} alt="" style={{ width: 40, height: 40, borderRadius: 8, imageRendering: "pixelated", objectFit: "cover", opacity: 0.9 }} />
+                        : <span style={{ fontSize: 10, color: "#bbb" }}>(인)</span>}
                     </div>
-                    <span style={{ fontSize: 11, fontWeight: 800, color: "#333" }}>{nm}{nm === "경은" ? " 👑" : ""}</span>
+                    <span style={{ fontSize: 11, fontWeight: 800, color: "#333" }}>{nm}</span>
                   </button>
                 ))}
               </div>
@@ -527,7 +609,7 @@ export default function AdOfficeTycoon() {
         <div className="gradeCard" onClick={() => { SFX.click(); setBossSay(BOSS_LINES[Math.floor(Math.random() * BOSS_LINES.length)]); setTimeout(() => setBossSay(""), 3200); }}
           title="사장님(클릭하면 한마디)" style={{ ...card, minWidth: 150, flex: "0 0 auto", textAlign: "center", borderColor: grade[1], "--glow": grade[1], cursor: "pointer", position: "relative" }}>
           {bossSay && <div className="bubble" style={{ top: -30, left: 10, right: -60, borderColor: `${grade[1]}66`, zIndex: 9 }}>👔 {bossSay}</div>}
-          <img src={BOSS_IMG} alt="" title="경은 사장님 👑" style={{ width: 54, height: 54, borderRadius: 10, imageRendering: "pixelated",
+          <img src={BOSS_IMG} alt="" title="경은 사장님" style={{ width: 54, height: 54, borderRadius: 10, imageRendering: "pixelated",
             border: `1px solid ${C.border}`, display: "block", margin: "0 auto 4px" }} />
           <div style={pxLabel}>🏢 사무실 등급</div>
           <div style={{ fontSize: 40, fontWeight: 900, color: grade[1], textShadow: `0 0 18px ${grade[1]}`, lineHeight: 1.1, fontFamily: "'Press Start 2P', monospace" }}>{grade[0]}</div>
@@ -830,6 +912,88 @@ export default function AdOfficeTycoon() {
           </div>
         );
       })()}
+
+      {/* 🏆 업적·배지 트로피룸 */}
+      {tab === "report" && (() => {
+        const achv = calcAchievements(data);
+        const done = achv.filter((a) => a.done).length;
+        return (
+          <div style={{ ...card, marginTop: 12 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10, flexWrap: "wrap" }}>
+              <span style={px}>업적</span>
+              <span style={{ fontSize: 12.5, fontWeight: 800 }}>🏆 트로피룸</span>
+              <span style={{ fontSize: 10.5, color: C.gold, fontWeight: 800 }}>{done} / {achv.length} 달성</span>
+              <div style={{ flex: 1, minWidth: 120, height: 7, background: "#0d0a12", borderRadius: 4, overflow: "hidden", border: `1px solid ${C.border}` }}>
+                <div style={{ width: `${Math.round((done / achv.length) * 100)}%`, height: "100%", background: C.gold, boxShadow: `0 0 6px ${C.gold}` }} />
+              </div>
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(128px, 1fr))", gap: 8 }}>
+              {achv.map((a) => (
+                <div key={a.id} title={a.d + (a.done ? "" : " (미달성)")}
+                  style={{ background: a.done ? `${C.gold}10` : "#ffffff06", border: `1px solid ${a.done ? `${C.gold}55` : C.border}`,
+                    borderRadius: 10, padding: "8px 9px", opacity: a.done ? 1 : 0.5 }}>
+                  <div style={{ fontSize: 18, filter: a.done ? "none" : "grayscale(1)" }}>{a.done ? a.e : "🔒"}</div>
+                  <div style={{ fontSize: 11, fontWeight: 800, color: a.done ? C.gold : C.mid, marginTop: 3 }}>{a.n}</div>
+                  <div style={{ fontSize: 9.5, color: C.mid, marginTop: 2, lineHeight: 1.4 }}>{a.d}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* 📜 주간 경영 리포트 — AI 신문 */}
+      {tab === "report" && (
+        <div style={{ marginTop: 12, background: "#FBF8F1", border: "1px solid #D8CFBB", borderRadius: 6, padding: "16px 20px",
+          fontFamily: "'Noto Serif KR', 'Apple SD Gothic Neo', serif", color: "#2B2620" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", borderBottom: "2.5px solid #2B2620", paddingBottom: 6 }}>
+            <span style={{ fontSize: 17, fontWeight: 900, letterSpacing: 3 }}>주간 광고상사 신문</span>
+            <span style={{ fontSize: 10, color: "#7A6F5C" }}>{weekly?.week || ""} · AI 편집국{weekly?.cached ? " · 보관본" : ""}</span>
+          </div>
+          {!weekly ? (
+            <div style={{ padding: "18px 0", fontSize: 12, color: "#7A6F5C" }}>
+              {weeklyBusy ? "🗞 편집국에서 이번 주 신문을 찍는 중… (첫 발행은 30초쯤)" : "신문 준비 중…"}
+            </div>
+          ) : (
+            <>
+              <div style={{ fontSize: 20, fontWeight: 900, margin: "12px 0 4px", lineHeight: 1.35 }}>{weekly.headline}</div>
+              <div style={{ fontSize: 12, lineHeight: 1.7, color: "#4A4336" }}>{weekly.lede}</div>
+              <div style={{ display: "flex", gap: 14, marginTop: 12, flexWrap: "wrap" }}>
+                <div style={{ flex: 1, minWidth: 220, borderTop: "1px solid #D8CFBB", paddingTop: 8 }}>
+                  <div style={{ fontSize: 11, fontWeight: 900 }}>🏅 이주의 우수사원</div>
+                  <div style={{ fontSize: 11.5, lineHeight: 1.65, marginTop: 3 }}>{weekly.best}</div>
+                </div>
+                <div style={{ flex: 1, minWidth: 220, borderTop: "1px solid #D8CFBB", paddingTop: 8 }}>
+                  <div style={{ fontSize: 11, fontWeight: 900 }}>🧊 반성문 코너</div>
+                  <div style={{ fontSize: 11.5, lineHeight: 1.65, marginTop: 3 }}>{weekly.worst}</div>
+                </div>
+              </div>
+              <div style={{ display: "flex", gap: 14, marginTop: 10, flexWrap: "wrap" }}>
+                <div style={{ flex: 1, minWidth: 220, borderTop: "1px solid #D8CFBB", paddingTop: 8 }}>
+                  <div style={{ fontSize: 11, fontWeight: 900 }}>🖊 결재 리뷰 {weekly.winRate != null && <span style={{ color: "#8A2B2B" }}>(승률 {weekly.winRate}%)</span>}</div>
+                  <div style={{ fontSize: 11.5, lineHeight: 1.65, marginTop: 3 }}>{weekly.decision}</div>
+                </div>
+                <div style={{ flex: 1, minWidth: 220, borderTop: "1px solid #D8CFBB", paddingTop: 8 }}>
+                  <div style={{ fontSize: 11, fontWeight: 900 }}>🧭 다음 주 경영 방침</div>
+                  <div style={{ fontSize: 11.5, lineHeight: 1.65, marginTop: 3 }}>{weekly.strategy}</div>
+                </div>
+              </div>
+              {weekly.quote && (
+                <div style={{ marginTop: 12, borderTop: "1px dashed #D8CFBB", paddingTop: 8, fontSize: 11.5, fontStyle: "italic", color: "#7A6F5C", textAlign: "center" }}>
+                  “{weekly.quote}”
+                </div>
+              )}
+              <div style={{ textAlign: "right", marginTop: 8 }}>
+                <button onClick={() => { setWeekly(null); setWeeklyBusy(true);
+                  jfetch("/api/ad-weekly?fresh=1").then((j) => { if (!j.error) setWeekly(j); }).catch((e) => alert(e.message)).finally(() => setWeeklyBusy(false)); }}
+                  style={{ background: "transparent", border: "1px solid #C9BFA8", borderRadius: 4, padding: "3px 10px", fontSize: 10, color: "#7A6F5C", cursor: "pointer" }}>
+                  🗞 호외 발행 (새로 쓰기)
+                </button>
+              </div>
+            </>
+          )}
+        </div>
+      )}
 
       {/* 오늘의 미션 */}
       {tab === "work" && (() => {
@@ -1206,8 +1370,10 @@ export default function AdOfficeTycoon() {
               return (
               <div key={i} style={{ padding: "4px 0", color: C.mid }}>
                 <span style={{ color: C.purple }}>{(l.at || "").slice(5, 16).replace("T", " ")}</span> — <b style={{ color: C.ink }}>{l.name}</b> {l.desc} {l.note && `(${l.note})`}
-                {l.by && <span title={`결재 도장: ${l.by}`} style={{ marginLeft: 5, fontSize: 9.5, color: "#E06C5E",
-                  border: "1px solid #E06C5E66", borderRadius: 99, padding: "1px 6px", fontWeight: 800 }}>🖊 {l.by}</span>}
+                {l.by && <span title={`결재 도장: ${l.by}`} style={{ marginLeft: 5, fontSize: 9.5, color: "#E06C5E", verticalAlign: "middle",
+                  border: "1px solid #E06C5E66", borderRadius: 99, padding: "1px 6px 1px 2px", fontWeight: 800, display: "inline-flex", alignItems: "center", gap: 4 }}>
+                  {SIGNER_IMG[l.by] && <img src={SIGNER_IMG[l.by]} alt="" style={{ width: 16, height: 16, borderRadius: 99, imageRendering: "pixelated", objectFit: "cover" }} />}
+                  🖊 {l.by}</span>}
                 {l.before && l.now && (l.before.cpa7 || l.now.cpa3) && (
                   <span style={{ fontSize: 11, color: C.cyan }}>
                     {" "}📒 당시 CPA {l.before.cpa7 ? `₩${fmt(l.before.cpa7)}` : "-"} → 지금 3일 {l.now.cpa3 ? `₩${fmt(l.now.cpa3)}` : "판매 없음"}
@@ -1527,6 +1693,52 @@ function Desk({ s, busy, act, adsOpen, ads, toggleAds, isMvp, talkTick, onAdStat
       {/* 작업물 포트폴리오 */}
       {adsOpen && (
         <div style={{ marginTop: 8, borderTop: `1px dashed ${C.border}`, paddingTop: 8 }}>
+          {/* ⚔️ 소재 배틀 아레나 — 지출 상위 2개 소재 맞대결 (표시 전용, OFF는 기존 결재 버튼) */}
+          {ads && (() => {
+            const fighters = ads.filter((a) => a.status === "ACTIVE" && (a.spend || 0) > 0)
+              .sort((a, b) => (b.spend || 0) - (a.spend || 0)).slice(0, 2);
+            if (fighters.length < 2) return null;
+            const [A, B] = fighters;
+            // 승부 판정: CPA 낮은 쪽 > 구매 많은 쪽 > CTR 높은 쪽
+            const winA = A.cpa && B.cpa ? A.cpa <= B.cpa
+              : (A.purchases || 0) !== (B.purchases || 0) ? (A.purchases || 0) > (B.purchases || 0)
+              : (A.ctr || 0) >= (B.ctr || 0);
+            const W = winA ? A : B, L = winA ? B : A;
+            const bar = (v, max, cl) => (
+              <div style={{ height: 6, background: "#0d0a12", borderRadius: 3, overflow: "hidden", border: `1px solid ${C.border}` }}>
+                <div style={{ width: `${max > 0 ? Math.max(6, Math.round((v / max) * 100)) : 6}%`, height: "100%", background: cl, boxShadow: `0 0 5px ${cl}` }} />
+              </div>);
+            const maxBuy = Math.max(A.purchases || 0, B.purchases || 0, 1);
+            const maxCtr = Math.max(A.ctr || 0, B.ctr || 0, 0.01);
+            const Fighter = ({ a, win }) => (
+              <div style={{ flex: 1, minWidth: 0, background: win ? `${C.gold}12` : `${C.red}0C`, border: `1px solid ${win ? `${C.gold}66` : C.border}`, borderRadius: 8, padding: 7 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                  <span style={{ fontSize: 13 }}>{win ? "🥇" : "🥊"}</span>
+                  <span style={{ fontSize: 10, fontWeight: 800, color: win ? C.gold : C.ink, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={a.name}>{a.name}</span>
+                </div>
+                {a.thumb && <img src={a.thumb} alt="" style={{ width: "100%", height: 46, objectFit: "cover", borderRadius: 5, marginTop: 4 }} />}
+                <div style={{ fontSize: 9.5, color: C.mid, marginTop: 4 }}>CPA {a.cpa ? `₩${fmt(a.cpa)}` : "-"}</div>
+                <div style={{ marginTop: 2 }}>{bar(a.purchases || 0, maxBuy, C.neon)}</div>
+                <div style={{ fontSize: 9, color: C.mid }}>🛒{a.purchases || 0} · CTR {(a.ctr || 0).toFixed(2)}%</div>
+                <div style={{ marginTop: 2 }}>{bar(a.ctr || 0, maxCtr, C.cyan)}</div>
+              </div>);
+            return (
+              <div style={{ marginBottom: 8, background: "#1B1426", border: `1px solid ${C.border}`, borderRadius: 10, padding: "8px 10px" }}>
+                <div style={{ fontSize: 10, color: C.purple, fontWeight: 800, letterSpacing: 1, marginBottom: 6 }}>
+                  ⚔️ 소재 배틀 아레나 <span style={{ color: C.mid, fontWeight: 400 }}>— 지출 TOP2 맞대결</span>
+                </div>
+                <div style={{ display: "flex", gap: 8, alignItems: "stretch" }}>
+                  <Fighter a={A} win={winA} />
+                  <div style={{ alignSelf: "center", fontFamily: "'Press Start 2P', monospace", fontSize: 11, color: C.red }}>VS</div>
+                  <Fighter a={B} win={!winA} />
+                </div>
+                <div style={{ fontSize: 10, color: C.mid, marginTop: 6 }}>
+                  판정: <b style={{ color: C.gold }}>{W.name.slice(0, 24)}</b> 승 —
+                  패자 <b style={{ color: C.red }}>{L.name.slice(0, 24)}</b>는 <b style={{ color: C.red }}>교체 후보</b> (아래 ⏸로 끄고 🎨 소재 의뢰)
+                </div>
+              </div>
+            );
+          })()}
           {!ads ? <span style={{ fontSize: 11, color: C.mid }}>📁 포트폴리오 가져오는 중…</span>
             : ads.length === 0 ? <span style={{ fontSize: 11, color: C.mid }}>작업물 없음</span> : (
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
