@@ -177,6 +177,7 @@ export default function AdOfficeTycoon() {
   const [signer, setSigner] = useState(""); // 결재 도장 이름 (마지막 사용 기억)
   const [weekly, setWeekly] = useState(null); // 📜 주간 경영 리포트 (신문)
   const [weeklyBusy, setWeeklyBusy] = useState(false);
+  const [realloc, setRealloc] = useState(null); // 💸 회수 예산 재배치 제안 {freed, from}
 
   useEffect(() => {
     try { const m = localStorage.getItem("oa_ads_mute") === "1"; setMute(m); sfxOn = !m; } catch {}
@@ -294,6 +295,7 @@ export default function AdOfficeTycoon() {
       if (action === "pause") {
         SFX.fire(); setShake(true); setTimeout(() => setShake(false), 500);
         setFx({ emoji: "🪑", text: "퇴근 조치 완료 — 예산 회수!", kind: "fire" });
+        if ((s.budget || 0) > 0) setRealloc({ freed: s.budget, from: s.name }); // 회수한 월급 어디에 넣을지 제안
       } else if (action === "resume") {
         SFX.hire(); setFx({ emoji: "📢", text: "재고용! 자리로 복귀합니다", kind: "hire" });
       } else {
@@ -492,6 +494,46 @@ export default function AdOfficeTycoon() {
           </div>
         );
       })()}
+      {/* 💸 회수 예산 재배치 — 퇴근 조치로 뜬 월급을 어디에 넣을지 제안 (실행은 결재서류 경유) */}
+      {realloc && !paper && (() => {
+        const cands = allSets.filter((x) => x.status === "ACTIVE" && (x.purchases7 || 0) > 0 && x.cpa7 && (!x.target || x.cpa7 <= x.target * 1.1))
+          .sort((a, b) => a.cpa7 - b.cpa7).slice(0, 4);
+        return (
+          <div onClick={() => setRealloc(null)} style={{ position: "fixed", inset: 0, background: "#000000AA", zIndex: 60,
+            display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
+            <div onClick={(e) => e.stopPropagation()} style={{ width: 460, maxWidth: "94vw", background: C.panel,
+              border: `1px solid ${C.gold}66`, borderRadius: 14, padding: "16px 18px", boxShadow: `0 0 30px ${C.gold}33` }}>
+              <div style={{ fontSize: 13.5, fontWeight: 900, color: C.gold }}>💸 회수한 월급 ₩{fmt(realloc.freed)}/일 — 어디에 넣을까요?</div>
+              <div style={{ fontSize: 11, color: C.mid, marginTop: 4 }}>{realloc.from} 퇴근으로 예산이 떴어요. 잘하는 사원에게 보너스로 재배치하거나, 그냥 금고에 아껴둘 수 있습니다.</div>
+              {cands.length === 0 ? (
+                <div style={{ fontSize: 11.5, color: C.mid, marginTop: 12 }}>지금 증액할 만한 우수 사원이 없어요 — 금고에 아껴두시죠 🏦</div>
+              ) : (
+                <div style={{ marginTop: 12, display: "flex", flexDirection: "column", gap: 8 }}>
+                  {cands.map((x) => (
+                    <div key={x.id} style={{ display: "flex", alignItems: "center", gap: 10, background: "#ffffff08",
+                      border: `1px solid ${C.border}`, borderRadius: 10, padding: "8px 10px" }}>
+                      <span style={{ fontSize: 16 }}>{avatarOf(x.name)}</span>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: 11.5, fontWeight: 800, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{x.name}</div>
+                        <div style={{ fontSize: 10, color: C.mid }}>CPA ₩{fmt(x.cpa7)} · 7일 🛒{x.purchases7} · 현재 ₩{fmt(x.budget)}/일</div>
+                      </div>
+                      <button style={{ ...btn(C.gold), padding: "5px 10px", fontSize: 11, whiteSpace: "nowrap" }}
+                        onClick={() => { setRealloc(null); act("budget", x, { budget: (x.budget || 0) + realloc.freed, note: `${realloc.from} 회수 예산 재배치` }); }}>
+                        ＋₩{fmt(realloc.freed)} 결재
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+              <div style={{ textAlign: "center", marginTop: 12 }}>
+                <button onClick={() => setRealloc(null)} style={{ background: "transparent", border: `1px solid ${C.border}`,
+                  borderRadius: 8, padding: "6px 16px", fontSize: 11.5, color: C.mid, cursor: "pointer" }}>🏦 그냥 금고에 아끼기 (닫기)</button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
       {/* 픽셀 사무실 배너 */}
       <div style={{ position: "relative", borderRadius: 16, overflow: "hidden", marginBottom: 14, border: `1px solid ${C.border}` }}>
         <img src={BANNER_IMG} alt="" style={{ width: "100%", height: 150, objectFit: "cover", display: "block", imageRendering: "pixelated" }} />
@@ -789,6 +831,60 @@ export default function AdOfficeTycoon() {
                   <span style={{ width: 88, textAlign: "right", color: C.mid, fontSize: 11 }}>₩{fmt(d.sp)}</span>
                   <span style={{ width: 80, textAlign: "right", color: C.mid, fontSize: 11 }}>{d.cpa ? `CPA ₩${fmt(d.cpa)}` : "-"}</span>
                   {last && <span style={{ fontSize: 10, color: C.red }}>야근 확정</span>}
+                </div>
+              );
+            })}
+          </div>
+        );
+      })()}
+
+      {/* 💼 카테고리(제품)별 예산 분배 — 지금 일예산이 어디에 몰려있는지 + 효율 대비 판단 */}
+      {tab === "report" && (() => {
+        const groups = {};
+        for (const s of allSets.filter((x) => x.status === "ACTIVE" && (x.budget || 0) > 0)) {
+          const k = prodKeyOf(s.name) || "기타";
+          const g = groups[k] || (groups[k] = { k, budget: 0, spend7: 0, buy7: 0, n: 0 });
+          g.budget += s.budget; g.spend7 += s.spend7 || 0; g.buy7 += s.purchases7 || 0; g.n++;
+        }
+        const rows = Object.values(groups).sort((a, b) => b.budget - a.budget);
+        if (rows.length < 2) return null;
+        const total = rows.reduce((a, g) => a + g.budget, 0);
+        const cpaOf = (g) => (g.buy7 > 0 ? Math.round(g.spend7 / g.buy7) : null);
+        const bestCpa = Math.min(...rows.map((g) => cpaOf(g) || Infinity));
+        return (
+          <div style={{ ...card, marginTop: 12 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8, flexWrap: "wrap" }}>
+              <span style={px}>예산분배</span>
+              <span style={{ fontSize: 12.5, fontWeight: 800 }}>💼 카테고리별 월급(일예산) 분배 — 총 ₩{fmt(total)}/일</span>
+              <span style={{ fontSize: 10, color: C.mid }}>회수한 예산은 CPA 좋은 카테고리부터 채우는 게 정석</span>
+            </div>
+            {/* 한 줄 분배 바 */}
+            <div style={{ display: "flex", height: 14, borderRadius: 7, overflow: "hidden", border: `1px solid ${C.border}`, marginBottom: 10 }}>
+              {rows.map((g, i) => {
+                const cls = [C.neon, C.cyan, C.gold, C.purple, C.pink, C.red];
+                return <div key={g.k} title={`${g.k} ₩${fmt(g.budget)}/일 (${Math.round((g.budget / total) * 100)}%)`}
+                  style={{ width: `${(g.budget / total) * 100}%`, background: cls[i % cls.length], opacity: 0.75 }} />;
+              })}
+            </div>
+            {rows.map((g, i) => {
+              const cpa = cpaOf(g);
+              const isBest = cpa != null && cpa === bestCpa;
+              const cls = [C.neon, C.cyan, C.gold, C.purple, C.pink, C.red][i % 6];
+              const starving = isBest && g.budget / total < 0.25; // 효율 1등인데 예산 비중은 작음
+              return (
+                <div key={g.k} style={{ display: "flex", alignItems: "center", gap: 10, padding: "4px 8px", fontSize: 12,
+                  background: isBest ? "#4ADE8010" : "transparent", borderRadius: 8 }}>
+                  <span style={{ width: 10, height: 10, borderRadius: 3, background: cls, opacity: 0.85 }} />
+                  <span style={{ width: 120, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontWeight: 700 }}>{g.k}</span>
+                  <b style={{ width: 96, textAlign: "right", color: C.ink }}>₩{fmt(g.budget)}/일</b>
+                  <span style={{ width: 44, textAlign: "right", color: C.mid, fontSize: 11 }}>{Math.round((g.budget / total) * 100)}%</span>
+                  <span style={{ width: 60, textAlign: "right", color: C.mid, fontSize: 11 }}>🛒{g.buy7}</span>
+                  <span style={{ width: 90, textAlign: "right", color: isBest ? C.neon : C.mid, fontSize: 11, fontWeight: isBest ? 800 : 400 }}>
+                    {cpa ? `CPA ₩${fmt(cpa)}` : "판매없음"}
+                  </span>
+                  <span style={{ flex: 1, fontSize: 10, color: starving ? C.gold : C.mid }}>
+                    {starving ? "⭐ 효율 1등인데 예산 비중 낮음 — 회수 예산 여기로" : isBest ? "⭐ 효율 1등" : cpa == null && g.spend7 >= 30000 ? "⚠️ 지출만 있고 판매 없음" : ""}
+                  </span>
                 </div>
               );
             })}
