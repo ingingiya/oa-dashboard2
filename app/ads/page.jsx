@@ -81,6 +81,7 @@ const SIGNER_IMG = { 영서: TEAM[0].img, 소리: TEAM[1].img, 혜영: TEAM[2].i
 const PX = Object.fromEntries([
   ...["trophy", "vault", "paper", "vs", "siren", "chick", "money", "cabinet", "medal", "sadplant"].map((k) => [k, SPRITE_BASE + `px2_${k}.png`]),
   ...["officebg", "deskset", "coffee", "plant", "lamp", "fax", "clock", "rep_naver", "rep_boost", "rep_gfa"].map((k) => [k, SPRITE_BASE + `px3_${k}.png`]),
+  ...["bld1", "bld2", "bld3", "bld4", "bld5", "rep_park"].map((k) => [k, SPRITE_BASE + `px4_${k}.png`]),
 ]);
 const Px = ({ k, s = 20, style }) => (
   <img src={PX[k]} alt="" style={{ width: s, height: s, borderRadius: Math.max(4, Math.round(s / 6)),
@@ -117,6 +118,21 @@ function rankOf(s) {
   for (let i = 0; i < RANK_DEF.length; i++) if (pts >= RANK_DEF[i][1]) { r = RANK_DEF[i]; next = RANK_DEF[i + 1] || null; }
   return { rank: r[0], color: r[2], pts, next: next ? { rank: next[0], need: next[1] - pts } : null };
 }
+
+// 🏢 사옥 성장 — 사무실 레벨로 건물 티어 결정 (표시 전용)
+const BLD_DEF = [[1, "bld1", "옥탑 판잣집"], [3, "bld2", "골목 상가"], [5, "bld3", "5층 오피스"], [8, "bld4", "오피스 타워"], [11, "bld5", "광고상사 본사 빌딩"]];
+function bldOf(level) {
+  let b = BLD_DEF[0], next = null;
+  for (let i = 0; i < BLD_DEF.length; i++) if (level >= BLD_DEF[i][0]) { b = BLD_DEF[i]; next = BLD_DEF[i + 1] || null; }
+  return { k: b[1], name: b[2], next: next ? { lv: next[0], name: next[2] } : null };
+}
+
+// 👔 박이사님 어록 — 날짜 시드로 하루 한 마디 (실적 티어별 풀)
+const PARK_LINES = {
+  good: ["숫자가 좋으면 회의는 짧게 갑니다.", "이 페이스 유지합시다. 도장은 아끼지 마시고.", "결재 올라온 거 보니 다들 일 좀 하는구먼.", "이번 주 실적, 본사에 보고할 맛이 나요."],
+  mid: ["나쁘지 않은데, '나쁘지 않다'로 월급은 못 줍니다.", "애매한 세트는 오래 끌지 마세요. 결단이 반입니다.", "숫자는 거짓말을 안 해요. 사람이 하지.", "커피 한 잔 하고 결재함부터 비웁시다."],
+  bad: ["광고비가 아니라 등록금을 내고 있구먼…", "부진 세트 방치는 결재권자 책임입니다.", "내일 아침까지 개선안 하나씩 올리세요.", "이럴 때일수록 기본으로 — 소재, 타겟, 예산."],
+};
 
 // 🏆 업적 컬렉션 — 전부 실데이터에서 파생 (표시 전용, 돈과 무관)
 function calcAchievements(data) {
@@ -654,6 +670,30 @@ export default function AdOfficeTycoon() {
         );
       })()}
 
+      {/* 🎂 입사식·기념일 — 세트 생성일 파생 이벤트 (표시 전용) */}
+      {tab === "work" && (() => {
+        const evs = [];
+        for (const s of allSets.filter((x) => x.status === "ACTIVE" && x.created)) {
+          const days = Math.floor((Date.now() - new Date(s.created)) / 86400000);
+          if (days >= 0 && days <= 3) evs.push({ icon: "🎊", key: s.id, t: `신입 입사식 — ${s.name}`,
+            sub: `입사 ${days === 0 ? "당일" : days + "일차"} 신입사원 · 첫 주는 학습 기간, 따뜻하게 지켜봐 주세요` });
+          else if ([30, 100, 365].includes(days)) evs.push({ icon: "🎂", key: s.id, t: `근속 ${days}일 기념일 — ${s.name}`,
+            sub: days === 365 ? "1주년! 창립 멤버급 장수 사원입니다 🎉" : `7일 계약 ${s.purchases7 || 0}건 · 탕비실에 케이크 하나 돌리시죠` });
+        }
+        if (!evs.length) return null;
+        return (
+          <div style={{ background: `${C.gold}0C`, border: `1px solid ${C.gold}55`, borderRadius: 14, padding: "10px 14px", marginBottom: 14 }}>
+            {evs.slice(0, 3).map((e) => (
+              <div key={e.key} style={{ display: "flex", gap: 10, alignItems: "center", padding: "3px 0", fontSize: 12 }}>
+                <span style={{ fontSize: 17 }}>{e.icon}</span>
+                <b style={{ color: C.gold }}>{e.t}</b>
+                <span style={{ fontSize: 10.5, color: C.mid }}>{e.sub}</span>
+              </div>
+            ))}
+          </div>
+        );
+      })()}
+
       {/* 🚨 비상벨 — 급변 감지 */}
       {tab === "work" && alarms.length > 0 && (
         <div className="siren" style={{ background: "#FF6B8112", border: `1.5px solid ${C.red}88`, borderRadius: 14,
@@ -738,8 +778,18 @@ export default function AdOfficeTycoon() {
         <Stat label="🎯 CPA (가중)" v={data.kpi.yesterday.cpa} prefix="₩" color={C.cyan} />
         <Stat label="📆 7일 광고비" v={data.kpi.week.spend} prefix="₩" color={C.purple} />
         <Stat label="🗓 30일 광고비" v={data.kpi.month?.spend} prefix="₩" color={C.pink} suffix={data.kpi.month?.roas ? ` (x${data.kpi.month.roas})` : ""} />
-        <div style={{ ...card, flex: "1 1 170px", minWidth: 160 }}>
-          <div style={pxLabel}>🏆 사무실 Lv.{level}</div>
+        <div style={{ ...card, flex: "1 1 200px", minWidth: 190 }}>
+          {/* 🏢 사옥 성장 — 레벨 티어별 건물 (표시 전용) */}
+          {(() => { const b = bldOf(level); return (
+            <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+              <Px k={b.k} s={46} style={{ border: `1px solid ${C.border}`, background: "#1A2030" }} />
+              <div style={{ flex: 1 }}>
+                <div style={pxLabel}>🏆 사무실 Lv.{level}</div>
+                <div style={{ fontSize: 11, fontWeight: 800, color: C.cyan }}>{b.name}</div>
+                {b.next && <div style={{ fontSize: 9, color: C.mid }}>Lv.{b.next.lv} 달성 시 「{b.next.name}」 이전 🏗</div>}
+              </div>
+            </div>
+          ); })()}
           <div style={{ height: 8, background: "#0d0a12", borderRadius: 4, margin: "8px 0 5px", overflow: "hidden", border: `1px solid ${C.border}` }}>
             <div className="xpbar" style={{ width: `${xpPct}%`, height: "100%" }} />
           </div>
@@ -813,6 +863,57 @@ export default function AdOfficeTycoon() {
             })()}
             <div style={{ marginLeft: "auto", fontSize: 10.5, color: C.mid }}>
               지난달 손익 {pProfit >= 0 ? "+" : "−"}₩{fmt(Math.abs(pProfit))} · 원가·수수료 미반영 참고치
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* 👔 박이사님 이사실 + 🍜 회식 게이지 (표시 전용) */}
+      {tab === "work" && (() => {
+        const judged = logArr.filter((l) => l.verdict === "win" || l.verdict === "fail").length;
+        const winRate = judged ? Math.round((wins / judged) * 100) : null;
+        const wr = data.kpi.week.roas || 0;
+        const tier = wr >= 3 || (winRate != null && winRate >= 70) ? "good" : wr >= 1.5 ? "mid" : "bad";
+        const seed = Number(new Date(Date.now() + 9 * 3600 * 1000).toISOString().slice(0, 10).replace(/-/g, ""));
+        const line = PARK_LINES[tier][seed % PARK_LINES[tier].length];
+        const goal = 3; // 주간 ROAS 목표 — 달성 시 회식각
+        const pct = Math.min(100, Math.round((wr / goal) * 100));
+        const full = pct >= 100;
+        return (
+          <div style={{ display: "flex", gap: 12, marginTop: 14, flexWrap: "wrap" }}>
+            <div style={{ ...card, flex: "2 1 320px", display: "flex", gap: 14, alignItems: "center" }}>
+              <Px k="rep_park" s={56} style={{ border: `1.5px solid ${C.border}`, borderRadius: 12 }} />
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 11.5, fontWeight: 800, color: C.purple, display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
+                  👔 이사실 — 박이사님
+                  <span style={{ fontSize: 9.5, color: C.mid, fontWeight: 500 }}>결재 총괄 · 오늘의 한마디</span>
+                </div>
+                <div style={{ fontSize: 12.5, fontStyle: "italic", color: C.ink, margin: "4px 0 6px", wordBreak: "keep-all" }}>“{line}”</div>
+                <div style={{ fontSize: 10.5, color: C.mid }}>
+                  누적 결재 <b style={{ color: C.cyan }}>{logArr.length}건</b>
+                  {winRate != null && <> · 성과판정 승률 <b style={{ color: winRate >= 60 ? C.neon : C.red }}>{winRate}%</b></>}
+                  {combo >= 2 && <> · <b style={{ color: C.gold }}>🔥 {combo}연속 성공</b></>}
+                </div>
+              </div>
+            </div>
+            <div style={{ ...card, flex: "1 1 230px", position: "relative", overflow: "hidden",
+              borderColor: full ? C.gold + "77" : C.border }}>
+              {full && <div className="confetti" style={{ position: "absolute", inset: 0, pointerEvents: "none" }}>
+                {[..."🍜🍻🎉🍗🍻🎉🍜✨"].map((ch, i) =>
+                  <span key={i} style={{ "--i": i, animationIterationCount: "infinite", animationDuration: "2.4s" }}>{ch}</span>)}
+              </div>}
+              <div style={{ fontSize: 11.5, fontWeight: 800, color: full ? C.gold : C.ink }}>
+                🍜 회식 게이지 {full && "— 오늘 회식각!! 🍻"}
+              </div>
+              <div style={{ height: 10, background: "#0d0a12", borderRadius: 5, margin: "8px 0 5px", overflow: "hidden", border: `1px solid ${C.border}` }}>
+                <div className="hpbar" style={{ width: `${pct}%`, height: "100%", "--hp": full ? C.gold : C.neon,
+                  background: `repeating-linear-gradient(45deg, ${full ? C.gold : C.neon}, ${full ? C.gold : C.neon} 6px, ${(full ? C.gold : C.neon)}AA 6px, ${(full ? C.gold : C.neon)}AA 12px)`,
+                  boxShadow: full ? `0 0 10px ${C.gold}` : "none" }} />
+              </div>
+              <div style={{ fontSize: 10, color: C.mid }}>
+                주간 ROAS <b style={{ color: full ? C.gold : C.cyan }}>x{wr}</b> / 목표 x{goal} ({pct}%)
+                {!full && <span> — {pct >= 70 ? "삼겹살 냄새가 나기 시작…" : pct >= 40 ? "구내식당은 확보" : "당분간 편의점 도시락"}</span>}
+              </div>
             </div>
           </div>
         );
