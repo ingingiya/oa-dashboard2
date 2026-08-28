@@ -1,6 +1,7 @@
 // AI 비서 브리핑 — 광고상사(/ads) 콘솔 캐시를 요약해 Claude가 오늘의 지시 3개 생성
 // GET: 캐시(oa_ad_brief_v1, 3h) 반환 / ?fresh=1 강제 재생성. Meta 직접 호출 없음(콘솔 KV만 읽음)
 export const dynamic = "force-dynamic";
+export const fetchCache = "force-no-store"; // ★ad-weekly와 동일 — Data Cache 스테일 픽스
 export const maxDuration = 60;
 
 import Anthropic from "@anthropic-ai/sdk";

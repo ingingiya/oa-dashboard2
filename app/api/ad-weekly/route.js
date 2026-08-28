@@ -1,6 +1,7 @@
 // 📜 주간 경영 리포트 — 광고상사(/ads) 콘솔 캐시+결재 로그를 Claude가 신문 기사로 요약
 // GET: 주간 캐시(oa_ad_weekly_v1, 월요일 기준 주 단위) 반환 / ?fresh=1 강제 재발행. Meta 직접 호출 없음
 export const dynamic = "force-dynamic";
+export const fetchCache = "force-no-store"; // ★Route Handler 내 fetch(Supabase GET·Anthropic POST)가 Data Cache에 물려 스테일 응답 — 전면 no-store
 export const maxDuration = 60;
 
 import Anthropic from "@anthropic-ai/sdk";
