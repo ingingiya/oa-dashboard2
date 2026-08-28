@@ -229,6 +229,7 @@ export default function AdOfficeTycoon() {
   const [weeklyBusy, setWeeklyBusy] = useState(false);
   const [realloc, setRealloc] = useState(null); // 💸 회수 예산 재배치 제안 {freed, from}
   const [bet, setBet] = useState(null); // 🎲 사장의 베팅 {date, pickId, pickName, map, streak, best, last} — 표시 전용
+  const [daily, setDaily] = useState(null); // 📅 출근부 — 하루 첫 접속 어제 정산 모달
 
   useEffect(() => {
     try { const m = localStorage.getItem("oa_ads_mute") === "1"; setMute(m); sfxOn = !m; } catch {}
@@ -297,6 +298,28 @@ export default function AdOfficeTycoon() {
         setTimeout(() => setFx(null), 3200);
       }
     }
+  }, [data]);
+
+  // 📅 출근부 — 하루 첫 접속 시 어제 정산 모달 (베팅 판정 effect 뒤에 두어 localStorage 판정 결과를 읽음)
+  useEffect(() => {
+    if (!data?.kpi?.yesterday) return;
+    const today = new Date(Date.now() + 9 * 3600 * 1000).toISOString().slice(0, 10); // KST
+    try {
+      if (localStorage.getItem("oa_ads_daily_v1") === today) return;
+      localStorage.setItem("oa_ads_daily_v1", today);
+    } catch { return; }
+    const yd = new Date(Date.now() + 9 * 3600 * 1000 - 86400000).toISOString().slice(0, 10); // KST 어제
+    const yRow = [...(data.monthly?.days30 || [])].reverse().find((d) => d.d === yd);
+    const stamps = (data.log || []).filter((l) => (l.at || "").slice(0, 10) === yd).length;
+    let betLine = null;
+    try {
+      const b = JSON.parse(localStorage.getItem("oa_ads_bet_v1") || "null");
+      if (b?.last?.date === yd && b.last.win != null)
+        betLine = b.last.win ? `🎯 베팅 적중! ${prodKeyOf(b.last.pickName) || b.last.pickName} 계약왕 (🔥${b.streak}연속)`
+          : `😅 베팅 빗나감 — 계약왕은 ${prodKeyOf(b.last.winName) || b.last.winName} (${b.last.winBuy}건)`;
+    } catch {}
+    setDaily({ date: today, yd, y: data.kpi.yesterday,
+      profit: yRow ? (yRow.rev || 0) - (yRow.spend || 0) : null, stamps, betLine });
   }, [data]);
 
   // 🎲 랜덤 사무실 이벤트 — 40초마다 20% 확률, 4초 토스트 (업무 방해 없음)
@@ -957,6 +980,50 @@ export default function AdOfficeTycoon() {
       </div>
       )}
 
+      {/* 📅 출근부 — 하루 첫 접속 어제 정산 모달 (표시 전용) */}
+      {daily && (() => {
+        const y = daily.y || {};
+        const close = () => { SFX.stamp(); setDaily(null); };
+        const pc = (daily.profit ?? 0) >= 0 ? C.neon : C.red;
+        return (
+          <div onClick={close} style={{ position: "fixed", inset: 0, background: "#000000B8", zIndex: 95,
+            display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
+            <div onClick={(e) => e.stopPropagation()} style={{ background: C.panel, border: `1.5px solid ${C.gold}55`,
+              borderRadius: 16, padding: "20px 22px", width: "min(420px, 94vw)" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+                <span style={{ fontSize: 22 }}>📅</span>
+                <b style={{ fontSize: 14, color: C.gold }}>출근부 — {daily.date}</b>
+                <button onClick={close} style={{ marginLeft: "auto", background: "none", border: "none", color: C.mid, fontSize: 16, cursor: "pointer" }}>✕</button>
+              </div>
+              <div style={{ fontSize: 11.5, color: C.mid, marginBottom: 12 }}>☀️ 좋은 아침입니다 사장님 — 어제({daily.yd.slice(5)}) 정산 보고드립니다</div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 10, fontSize: 12 }}>
+                {[["어제 지출", `₩${fmt(y.spend || 0)}`, C.gold], ["어제 계약", `🛒 ${y.purchases || 0}건`, C.neon],
+                  ["CPA", y.cpa ? `₩${fmt(y.cpa)}` : "-", C.cyan], ["ROAS", y.roas ? `x${y.roas}` : "-", (y.roas || 0) >= 3 ? C.neon : C.ink]]
+                  .map(([l, v, cl]) => (
+                    <div key={l} style={{ background: "#0d0a12", border: `1px solid ${C.border}`, borderRadius: 9, padding: "8px 12px" }}>
+                      <div style={{ fontSize: 9.5, color: C.mid }}>{l}</div>
+                      <b style={{ fontSize: 14, color: cl }}>{v}</b>
+                    </div>
+                  ))}
+              </div>
+              {daily.profit != null && (
+                <div style={{ fontSize: 11.5, marginBottom: 5 }}>
+                  💰 어제 하루 손익 <b style={{ color: pc }}>{daily.profit >= 0 ? "+" : "−"}₩{fmt(Math.abs(daily.profit))}</b>
+                  <span style={{ color: C.mid }}> (매출−광고비, 원가 미반영)</span>
+                </div>
+              )}
+              <div style={{ fontSize: 11.5, color: C.mid, marginBottom: daily.betLine ? 5 : 12 }}>
+                🖊 어제 결재 <b style={{ color: C.cyan }}>{daily.stamps}건</b>{daily.stamps === 0 && " — 조용한 하루였네요"}
+              </div>
+              {daily.betLine && <div style={{ fontSize: 11.5, color: C.purple, fontWeight: 700, marginBottom: 12 }}>{daily.betLine}</div>}
+              <button onClick={close} style={{ width: "100%", background: C.gold, color: "#0d0a12", border: "none",
+                borderRadius: 10, padding: "10px 0", fontSize: 12.5, fontWeight: 900, cursor: "pointer" }}>
+                🖊 출근 도장 찍고 업무 시작</button>
+            </div>
+          </div>
+        );
+      })()}
+
       {/* 💰 회사 손익 계좌 — 진짜 돈: 전환매출 − 광고비 (메타 기준, 마진 미반영) */}
       {tab === "work" && data.monthly?.cur && (() => {
         const m = data.monthly;
@@ -992,6 +1059,12 @@ export default function AdOfficeTycoon() {
               const usedPct = Math.min(100, Math.round(((m.cur.spend || 0) / cap) * 100));
               const proj = Math.round((m.cur.spend || 0) / now.getDate() * dim);
               const over = proj > cap;
+              // 🏦 금고 잔고·가불 경고 — 남은 예산 ÷ 남은 일수 = 하루 가용액 vs 현재 활성 일예산 합
+              const remain = Math.max(0, cap - (m.cur.spend || 0));
+              const daysLeft = Math.max(1, dim - now.getDate() + 1);
+              const avail = Math.round(remain / daysLeft);
+              const dailySum = allSets.filter((s) => s.status === "ACTIVE").reduce((a, s) => a + (s.budget || 0), 0);
+              const advance = dailySum > avail; // 가불 — 월급 총액이 하루 가용액을 초과
               return (
                 <div style={{ flex: "1 1 230px", minWidth: 210 }}>
                   <div style={{ fontSize: 10, color: C.mid, display: "flex", justifyContent: "space-between" }}>
@@ -1006,6 +1079,10 @@ export default function AdOfficeTycoon() {
                   </div>
                   <div style={{ fontSize: 9.5, color: over ? C.red : C.mid, marginTop: 3, fontWeight: over ? 800 : 500 }}>
                     이 페이스면 월말 ₩{fmt(proj)} {over ? "— 한도 초과 예상 ⚠️ 지출 점검!" : "— 한도 내 페이스 ✅"} · 경과 {elapsed}%
+                  </div>
+                  <div style={{ fontSize: 9.5, marginTop: 3, color: advance ? C.red : C.mid, fontWeight: advance ? 800 : 500 }}>
+                    🏦 잔고 ₩{fmt(remain)} · 남은 {daysLeft}일 → 하루 가용 ₩{fmt(avail)} vs 월급 합 ₩{fmt(dailySum)}
+                    {advance ? " — ⚠️ 가불 페이스! 일예산이 가용액 초과" : " ✅"}
                   </div>
                 </div>
               );
