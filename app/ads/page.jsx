@@ -57,6 +57,20 @@ function useCountUp(v, ms = 700) {
   return typeof v === "number" ? x : v;
 }
 
+// 픽셀아트 스프라이트 (나노바나나 생성, detail-assets 공개 스토리지)
+const SPRITE_BASE = "https://lugqeflqusqsyotdiaxg.supabase.co/storage/v1/object/public/detail-assets/hudassets/";
+// 팀원 캐릭터 — 영서·소리·혜영·지원(고양이, 가만히 있음 ㅎㅎ). 사장 = 경은
+const TEAM = [
+  { name: "영서", img: SPRITE_BASE + "mtcov5hd_hud_yeongseo.png" },
+  { name: "소리", img: SPRITE_BASE + "mtcov5kx_hud_sori.png" },
+  { name: "혜영", img: SPRITE_BASE + "mtcovgjk_hud_hyeyeong.png" },
+  { name: "지원", img: SPRITE_BASE + "mtcov5ta_hud_jiwon.png", still: true }, // 고양이는 움직이지 않는다
+];
+const BOSS_IMG = SPRITE_BASE + "mtcov5no_hud_kyeongeun.png"; // 경은 사장님 👑
+const BANNER_IMG = SPRITE_BASE + "mtcop9ce_hud_banner.png";
+const teamOf = (id = "") => TEAM[[...String(id)].reduce((a, ch) => a + ch.charCodeAt(0), 0) % TEAM.length];
+const charOf = (id = "") => teamOf(id).img;
+
 const AVATARS = [["소닉", "🧑‍💻"], ["에어리", "👩‍💼"], ["드라이", "💇"], ["클린이워터", "🧑‍🔬"], ["워터", "🧑‍🔬"],
   ["스윙", "🦷"], ["칫솔", "🦷"], ["프리온", "👩‍🎤"], ["고데기", "💁‍♀️"], ["뷰러", "🧝‍♀️"], ["마사지", "💆"],
   ["포켓건", "🕵️"], ["아이스", "🥶"], ["테스트", "🧪"]];
@@ -201,6 +215,16 @@ export default function AdOfficeTycoon() {
 
   return (
     <Shell onRefresh={() => { SFX.click(); load(true); }} fx={fx} shake={shake} mute={mute} toggleMute={toggleMute}>
+      {/* 픽셀 사무실 배너 */}
+      <div style={{ position: "relative", borderRadius: 16, overflow: "hidden", marginBottom: 14, border: `1px solid ${C.border}` }}>
+        <img src={BANNER_IMG} alt="" style={{ width: "100%", height: 150, objectFit: "cover", display: "block", imageRendering: "pixelated" }} />
+        <div style={{ position: "absolute", inset: 0, background: "linear-gradient(90deg, #141019EE 0%, #14101966 40%, transparent 70%)" }} />
+        <div style={{ position: "absolute", left: 18, bottom: 14 }}>
+          <div style={{ fontFamily: "'Press Start 2P', monospace", fontSize: 13, color: "#4ADE80", textShadow: "0 0 12px #4ADE80AA" }}>OA 광고상사</div>
+          <div style={{ fontSize: 11, color: C.ink, marginTop: 5, opacity: 0.85 }}>AI 사원 {allSets.filter((x) => x.status === "ACTIVE").length}명 근무 중 · {officeHour()}</div>
+        </div>
+      </div>
+
       {/* 메타 회선 불통 배너 */}
       {data.metaDown && (
         <div style={{ background: "#FF6B8115", border: `1px solid ${C.red}55`, borderRadius: 12, padding: "10px 16px",
@@ -232,8 +256,9 @@ export default function AdOfficeTycoon() {
       {/* 복도 — 산책하는 사원들 */}
       <div style={{ position: "relative", height: 34, marginBottom: 6, overflow: "hidden" }} title="복도를 산책 중인 사원들">
         {allSets.filter((x) => x.status === "ACTIVE").slice(0, 7).map((x, i) => (
-          <span key={x.id} className="walker" style={{ "--dur": `${14 + (i * 3.7) % 12}s`, "--delay": `-${(i * 5.3) % 14}s`, top: i % 2 ? 2 : 8 }}>
-            {avatarOf(x.name)}{i % 3 === 0 ? "☕" : ""}
+          <span key={x.id} className="walker" style={{ "--dur": `${14 + (i * 3.7) % 12}s`, "--delay": `-${(i * 5.3) % 14}s`, top: i % 2 ? 0 : 5 }}>
+            <img src={charOf(x.id)} alt="" style={{ width: 26, height: 26, borderRadius: 6, imageRendering: "pixelated", verticalAlign: "middle" }} />
+            {i % 3 === 0 ? "☕" : ""}
           </span>
         ))}
       </div>
@@ -243,6 +268,8 @@ export default function AdOfficeTycoon() {
         <div className="gradeCard" onClick={() => { SFX.click(); setBossSay(BOSS_LINES[Math.floor(Math.random() * BOSS_LINES.length)]); setTimeout(() => setBossSay(""), 3200); }}
           title="사장님(클릭하면 한마디)" style={{ ...card, minWidth: 150, flex: "0 0 auto", textAlign: "center", borderColor: grade[1], "--glow": grade[1], cursor: "pointer", position: "relative" }}>
           {bossSay && <div className="bubble" style={{ top: -30, left: 10, right: -60, borderColor: `${grade[1]}66`, zIndex: 9 }}>👔 {bossSay}</div>}
+          <img src={BOSS_IMG} alt="" title="경은 사장님 👑" style={{ width: 54, height: 54, borderRadius: 10, imageRendering: "pixelated",
+            border: `1px solid ${C.border}`, display: "block", margin: "0 auto 4px" }} />
           <div style={pxLabel}>🏢 사무실 등급</div>
           <div style={{ fontSize: 40, fontWeight: 900, color: grade[1], textShadow: `0 0 18px ${grade[1]}`, lineHeight: 1.1, fontFamily: "'Press Start 2P', monospace" }}>{grade[0]}</div>
           <div style={{ fontSize: 10, color: grade[1], marginTop: 3, fontWeight: 700 }}>{grade[2]}</div>
@@ -270,7 +297,7 @@ export default function AdOfficeTycoon() {
       {/* 이달의 사원 */}
       {mvp && (
         <div className="mvp" style={{ marginTop: 14, borderRadius: 14, padding: "12px 18px", display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
-          <span style={{ fontSize: 28 }} className="empWork">{avatarOf(mvp.name)}</span>
+          <img src={charOf(mvp.id)} alt="" className="empWork" style={{ width: 44, height: 44, borderRadius: 10, imageRendering: "pixelated", border: "2px solid #1a1a1a" }} />
           <span style={{ fontFamily: "'Press Start 2P', monospace", fontSize: 10, color: "#1a1a1a", background: "#fff8", padding: "4px 8px", borderRadius: 6 }}>이달의 사원</span>
           <b style={{ fontSize: 13.5 }}>{mvp.name}</b>
           <span style={{ fontSize: 12, color: "#3b2f00" }}>7일 판매 {mvp.purchases7}{mvp.view7 ? `+👁${mvp.view7}` : ""} · CPA ₩{fmt(mvp.cpa7)} — 사진 액자에 걸어드렸습니다 🖼</span>
@@ -526,7 +553,8 @@ export default function AdOfficeTycoon() {
               return (
                 <>
                   <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", marginBottom: 4 }}>
-                    <span style={{ fontSize: 24 }}>{detail.kind === "camp" ? "🚪" : avatarOf(d.name)}</span>
+                    {detail.kind === "camp" ? <span style={{ fontSize: 24 }}>🚪</span>
+                      : <img src={charOf(d.id)} alt="" style={{ width: 44, height: 44, borderRadius: 10, imageRendering: "pixelated", border: `1px solid ${C.border}` }} />}
                     <div style={{ flex: 1, minWidth: 200 }}>
                       <div style={{ fontSize: 14.5, fontWeight: 800 }}>{d.name}</div>
                       <div style={{ fontSize: 11, color: C.mid }}>
@@ -665,18 +693,20 @@ function Desk({ s, busy, act, adsOpen, ads, toggleAds, isMvp, talkTick, onAdStat
       {/* 말풍선 */}
       {!adsOpen && (
         <div className="bubble" key={tier + (seed % 7)} style={{ borderColor: `${mColor}55` }}>
-          {dead ? "…퇴근했습니다 (OFF)" : talkOf(tier, seed)}
+          {dead ? "…퇴근했습니다 (OFF)" : teamOf(s.id).still ? ["...", "냐", "(응시)", "...zzz", "골골골"][seed % 5] : talkOf(tier, seed)}
         </div>
       )}
       {/* 직원 + 책상 */}
       <div style={{ display: "flex", alignItems: "flex-end", gap: 10 }}>
-        <div style={{ position: "relative", width: 52, textAlign: "center", flex: "none" }}>
-          <span className={dead ? "" : tier === "great" ? "empWork fast" : tier === "bad" ? "empSad" : "empWork"}
+        <div style={{ position: "relative", width: 56, textAlign: "center", flex: "none" }}>
+          <img src={charOf(s.id)} alt="" className={dead || teamOf(s.id).still ? "" : tier === "great" ? "empWork fast" : tier === "bad" ? "empSad" : "empWork"}
             onClick={() => { if (dead) return; SFX.coin(); setPet((p) => p + 1); setTimeout(() => setPet((p) => Math.max(0, p - 1)), 1100); }}
-            title={dead ? "" : "쓰다듬기"}
-            style={{ fontSize: 30, display: "inline-block", filter: dead ? "grayscale(1)" : "none", cursor: dead ? "default" : "pointer" }}>
-            {dead ? "🪑" : avatarOf(s.name)}
-          </span>
+            title={dead ? "퇴근" : "쓰다듬기"}
+            style={{ width: 52, height: 52, borderRadius: 10, imageRendering: "pixelated", display: "inline-block",
+              border: `1.5px solid ${dead ? C.border : `${mColor}55`}`, boxShadow: dead ? "none" : `0 0 10px ${mColor}33`,
+              filter: dead ? "grayscale(1) brightness(0.55)" : tier === "bad" ? "saturate(0.65)" : "none",
+              cursor: dead ? "default" : "pointer" }} />
+          <div style={{ fontSize: 9, color: C.mid, marginTop: 2, fontWeight: 700 }}>{teamOf(s.id).name}{teamOf(s.id).still && !dead ? " 🐈" : ""}</div>
           {pet > 0 && <span className="petHeart" style={{ position: "absolute", top: -10, left: 8, fontSize: 15 }}>💖</span>}
           {earning && <span className="coinPop" style={{ position: "absolute", top: -6, right: -4, fontSize: 13 }}>🪙</span>}
           {tier === "bad" && !dead && <span style={{ position: "absolute", top: -2, right: 0, fontSize: 12 }}>💦</span>}
