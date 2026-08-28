@@ -14,3 +14,6 @@ refs/**/*.jpg
 refs/**/*.jpeg
 refs/**/*.png
 refs/**/*.webp
+scripts/adboost/.env
+scripts/adboost/.adboost_profile/
+scripts/adboost/*.png

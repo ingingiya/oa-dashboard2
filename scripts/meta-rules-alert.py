@@ -182,6 +182,36 @@ def naver_section():
     return out
 
 
+
+def advoost_section():
+    import subprocess
+    r = subprocess.run([sys.executable, str(ROOT / "scripts" / "adboost" / "adboost_daily.py")],
+                       capture_output=True, text=True, timeout=300)
+    data = json.loads(r.stdout.strip().splitlines()[-1])
+    if not data.get("ok"):
+        raise RuntimeError(data.get("error", "실패"))
+    # 대시보드 /ads용 스냅샷 적재
+    try:
+        denv = load_env(Path.home() / "oa-detail-app" / ".env.local")
+        sb_url, sb_key = denv["NEXT_PUBLIC_SUPABASE_URL"], denv["SUPABASE_SERVICE_ROLE_KEY"]
+        body = json.dumps({"key": "oa_advoost_v1", "value": data}).encode()
+        req = urllib.request.Request(f"{sb_url}/rest/v1/settings?on_conflict=key", data=body,
+            headers={"apikey": sb_key, "Authorization": f"Bearer {sb_key}",
+                     "Content-Type": "application/json", "Prefer": "resolution=merge-duplicates"}, method="POST")
+        urllib.request.urlopen(req, timeout=30)
+    except Exception:
+        pass
+    bt = data["boost_tot"]
+    out = []
+    if bt["cost"]:
+        out.append(f"AD부스터 합계 ₩{bt['cost']:,.0f} · 전환 {bt['conv']} · ROAS {bt['rev'] / bt['cost']:.1f} ({data['period']})")
+        for b in data["boost"][:6]:
+            roas = b["rev"] / b["cost"] if b["cost"] else 0
+            flag = " ⚠️점검" if b["cost"] >= 200000 and roas < 3 else ""
+            out.append(f"· {b['name'].replace('MO_오아_AD부스터_', '')[:20]}: ₩{b['cost']:,.0f} · ROAS {roas:.1f}{flag}")
+    return out
+
+
 def gfa_section():
     import subprocess
     r = subprocess.run([sys.executable, str(ROOT / "scripts" / "gfa" / "gfa_daily.py")],
@@ -338,6 +368,14 @@ def main():
             lines += ["", "━━ 🛒 네이버 검색광고 (어제)"] + nv
     except Exception as e:
         lines += ["", f"🛒 네이버 검색광고 실패: {str(e)[:60]}"]
+
+    # ── 🚀 AD부스터/ADVoost (통합광고주센터, 7일) ──
+    try:
+        av = advoost_section()
+        if av:
+            lines += ["", "━━ 🚀 AD부스터 (7일)"] + av
+    except Exception as e:
+        lines += ["", f"🚀 AD부스터 실패: {str(e)[:60]} — NID 캡차 가능성, ads_login.py 확인"]
 
     # ── 📊 GFA 어제 성과 (gfa_daily.py — 실패해도 브리핑은 발송) ──
     try:
