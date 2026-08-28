@@ -21,7 +21,8 @@ async function main() {
   let st = {};
   try { st = JSON.parse(readFileSync(STATE, 'utf8')); } catch {}
   const today = kst(0);
-  if (st.date !== today) st = { date: today, hit: {}, ranks: st.ranks || {}, quest: st.quest || null }; // hit: {adsetId:[마일스톤]}, ranks·quest는 날짜 무관 유지
+  if (st.date !== today) st = { date: today, hit: {}, ranks: st.ranks || {}, quest: st.quest || null, planSeen: st.planSeen || {} }; // hit: {adsetId:[마일스톤]}, ranks·quest·planSeen은 날짜 무관 유지
+  st.planSeen = st.planSeen || {};
 
   const owners = j.owners || {};
   const lines = [];
@@ -53,7 +54,21 @@ async function main() {
     st.ranks[nm] = rank;
   }
 
-  // ③ 전사 협력 퀘스트 달성 — ★/ads page.jsx 협력 퀘스트 산식과 동일해야 함 (지난주 +5%, 최소 10)
+  // ③ 신규 채용 기획서 공고 — 제출/채택을 각 1회만 공고 (planSeen: {planId: 마지막 공고 status})
+  for (const p of j.plans || []) {
+    const seen = st.planSeen[p.id];
+    if (!seen && p.status === "pending") {
+      st.planSeen[p.id] = "pending";
+      lines.push(`📝 신규 채용 기획서 — ${p.by}님이 [${p.product}] 기획서를 올렸습니다. 사장 결재 대기 중 🖊`);
+    } else if (seen !== "approved" && p.status === "approved") {
+      st.planSeen[p.id] = "approved";
+      lines.push(`🎉 기획 채택 — ${p.by}님의 [${p.product}] 기획이 채택됐습니다! 소재 제작 들어갑니다 🎨 (커리어 +3pt)`);
+    } else if (!seen && p.status === "rejected") {
+      st.planSeen[p.id] = "rejected"; // 반려는 공고 없이 조용히 마킹
+    }
+  }
+
+  // ④ 전사 협력 퀘스트 달성 — ★/ads page.jsx 협력 퀘스트 산식과 동일해야 함 (지난주 +5%, 최소 10)
   const days = j.monthly?.days30 || [];
   if (days.length) {
     const now = new Date(Date.now() + 9 * 3600 * 1000);

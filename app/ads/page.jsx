@@ -232,6 +232,10 @@ export default function AdOfficeTycoon() {
   const [realloc, setRealloc] = useState(null); // 💸 회수 예산 재배치 제안 {freed, from}
   const [bet, setBet] = useState(null); // 🎲 사장의 베팅 {date, pickId, pickName, map, streak, best, last} — 표시 전용
   const [daily, setDaily] = useState(null); // 📅 출근부 — 하루 첫 접속 어제 정산 모달
+  const [planOpen, setPlanOpen] = useState(false); // 📝 채용 기획서 폼 토글
+  const [planForm, setPlanForm] = useState({ product: "", concept: "", target: "", usp: "", ref: "" });
+  const [planDrafts, setPlanDrafts] = useState(null); // 🤖 AI 초안 3안
+  const [planBusy, setPlanBusy] = useState(false);
 
   useEffect(() => {
     try { const m = localStorage.getItem("oa_ads_mute") === "1"; setMute(m); sfxOn = !m; } catch {}
@@ -1888,6 +1892,126 @@ export default function AdOfficeTycoon() {
               ))}
               {pend.length > 6 && <span style={{ fontSize: 10, color: C.mid }}>외 {pend.length - 6}건 — 아래 부서에서 확인</span>}
             </div>
+          </div>
+        );
+      })()}
+      {/* 📝 신규 채용 기획서 — 팀원이 새 광고를 직접 기획. 제출 1pt·채택 3pt, 채택되면 스튜디오에서 제작 */}
+      {(() => {
+        const plans = data.plans || [];
+        const pending = plans.filter((p) => p.status === "pending");
+        const decided = plans.filter((p) => p.status !== "pending").slice(0, 4);
+        const setF = (k) => (e) => setPlanForm((f) => ({ ...f, [k]: e.target.value }));
+        const submitPlan = async () => {
+          if (!signer) return alert("먼저 우측 상단에서 도장 이름을 설정하세요");
+          if (!planForm.product.trim() || !planForm.concept.trim()) return alert("제품·컨셉은 필수예요");
+          setPlanBusy(true);
+          try {
+            const j = await jfetch("/api/ad-console", { method: "POST", headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ action: "plan", by: signer, plan: planForm }) });
+            if (!j.ok) throw new Error(j.error);
+            SFX.stamp();
+            setData((d) => d && ({ ...d, plans: j.plans }));
+            setPlanForm({ product: "", concept: "", target: "", usp: "", ref: "" });
+            setPlanDrafts(null); setPlanOpen(false);
+            setFx({ emoji: "📝", text: "기획서 제출! 커리어 +1pt — 사장 결재 대기", kind: "hire" });
+            setTimeout(() => setFx(null), 2200);
+          } catch (e) { alert("실패: " + e.message); } finally { setPlanBusy(false); }
+        };
+        const decide = async (p, st) => {
+          if (!confirm(st === "approved" ? `📝 [${p.product}] ${p.by}님 기획을 채택할까요? (기획자 +3pt)` : `반려할까요?`)) return;
+          try {
+            const j = await jfetch("/api/ad-console", { method: "POST", headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ action: "planStatus", by: signer, planId: p.id, planStatus: st }) });
+            if (!j.ok) throw new Error(j.error);
+            SFX.stamp();
+            setData((d) => d && ({ ...d, plans: j.plans }));
+          } catch (e) { alert("실패: " + e.message); }
+        };
+        const askAI = async () => {
+          setPlanBusy(true); setPlanDrafts(null);
+          try {
+            const j = await jfetch("/api/ad-console", { method: "POST", headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ action: "planDraft", plan: { product: planForm.product } }) });
+            if (!j.ok) throw new Error(j.error);
+            setPlanDrafts(j.drafts || []);
+          } catch (e) { alert("초안 실패: " + e.message); } finally { setPlanBusy(false); }
+        };
+        return (
+          <div style={{ ...card, marginBottom: 12 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+              <b style={{ fontSize: 12, color: C.ink }}>📝 신규 채용 기획서 <span style={{ color: C.mid, fontWeight: 400, fontSize: 10.5 }}>— 새 광고는 여기서 태어나요 (제출 1pt · 채택 3pt)</span></b>
+              {pending.length > 0 && <span style={{ fontSize: 10, fontWeight: 800, color: C.gold, border: `1px solid ${C.gold}66`, borderRadius: 99, padding: "1px 7px" }}>결재 대기 {pending.length}</span>}
+              <span style={{ flex: 1 }} />
+              <button style={{ ...btn(C.cyan), padding: "3px 10px", fontSize: 11 }} onClick={() => { SFX.click(); setPlanOpen((o) => !o); }}>
+                {planOpen ? "✕ 닫기" : "＋ 기획서 쓰기"}</button>
+            </div>
+            {planOpen && (
+              <div style={{ marginTop: 10, display: "flex", flexDirection: "column", gap: 6 }}>
+                <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                  <input placeholder="제품명 *" value={planForm.product} onChange={setF("product")}
+                    style={{ flex: "1 1 160px", fontSize: 11.5, background: "#0d0a12", color: C.ink, border: `1px solid ${C.border}`, borderRadius: 7, padding: "6px 9px" }} />
+                  <input placeholder="타겟 (예: 3040 여성, 여름 출퇴근족)" value={planForm.target} onChange={setF("target")}
+                    style={{ flex: "2 1 220px", fontSize: 11.5, background: "#0d0a12", color: C.ink, border: `1px solid ${C.border}`, borderRadius: 7, padding: "6px 9px" }} />
+                </div>
+                <textarea placeholder="소재 컨셉 * — 어떤 그림/이야기로 팔 건지 2~3문장" value={planForm.concept} onChange={setF("concept")} rows={2}
+                  style={{ fontSize: 11.5, background: "#0d0a12", color: C.ink, border: `1px solid ${C.border}`, borderRadius: 7, padding: "6px 9px", resize: "vertical" }} />
+                <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                  <input placeholder="핵심 소구점 (예: 3초 냉각, 세척 간편)" value={planForm.usp} onChange={setF("usp")}
+                    style={{ flex: "2 1 220px", fontSize: 11.5, background: "#0d0a12", color: C.ink, border: `1px solid ${C.border}`, borderRadius: 7, padding: "6px 9px" }} />
+                  <input placeholder="참고 링크 (선택)" value={planForm.ref} onChange={setF("ref")}
+                    style={{ flex: "1 1 160px", fontSize: 11.5, background: "#0d0a12", color: C.ink, border: `1px solid ${C.border}`, borderRadius: 7, padding: "6px 9px" }} />
+                </div>
+                <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                  <button style={{ ...btn(C.neon), padding: "4px 12px", fontSize: 11 }} disabled={planBusy} onClick={submitPlan}>🖊 기획서 제출</button>
+                  <button style={{ background: "transparent", color: C.cyan, border: `1px solid ${C.cyan}55`, borderRadius: 7, padding: "4px 10px", fontSize: 11, cursor: "pointer" }}
+                    disabled={planBusy} onClick={askAI}>{planBusy ? "생각 중…" : "🤖 초안 비서 (실데이터 기반 3안)"}</button>
+                  <span style={{ fontSize: 9.5, color: C.mid }}>제품명 넣고 누르면 그 제품 맞춤 초안</span>
+                </div>
+                {planDrafts && (
+                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 2 }}>
+                    {planDrafts.map((d, i) => (
+                      <div key={i} onClick={() => { SFX.click(); setPlanForm((f) => ({ ...f, concept: `${d.concept} (훅: ${d.hook})`, target: d.target || f.target, usp: d.usp || f.usp })); }}
+                        style={{ flex: "1 1 200px", cursor: "pointer", background: "#0d0a1266", border: `1px solid ${C.cyan}44`, borderRadius: 9, padding: "8px 10px", fontSize: 10.5 }}>
+                        <b style={{ color: C.cyan }}>💡 {d.title}</b>
+                        <div style={{ color: C.mid, marginTop: 3 }}>{d.concept}</div>
+                        <div style={{ marginTop: 3 }}>🎯 {d.target} · ✨ {d.usp}</div>
+                        <div style={{ color: C.gold, marginTop: 3 }}>훅: "{d.hook}"</div>
+                        <div style={{ color: C.mid, marginTop: 3, fontSize: 9 }}>클릭하면 폼에 채워져요</div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+            {(pending.length > 0 || decided.length > 0) && (
+              <div style={{ marginTop: planOpen ? 10 : 8, display: "flex", flexDirection: "column", gap: 5 }}>
+                {pending.map((p) => (
+                  <div key={p.id} style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", fontSize: 11,
+                    background: "#0d0a1266", border: `1px solid ${C.gold}44`, borderRadius: 9, padding: "6px 10px" }}>
+                    {SIGNER_IMG[p.by] && <img src={SIGNER_IMG[p.by]} alt="" style={{ width: 18, height: 18, borderRadius: 5, imageRendering: "pixelated", flex: "none" }} />}
+                    <span style={{ flex: 1, minWidth: 160 }}>
+                      <b>[{p.product}]</b> {p.concept}
+                      <span style={{ display: "block", fontSize: 9.5, color: C.mid }}>{p.by} · {(p.at || "").slice(5, 10)}{p.target && ` · 🎯 ${p.target}`}{p.usp && ` · ✨ ${p.usp}`}</span>
+                    </span>
+                    <button style={{ ...btn(C.neon), padding: "3px 9px", fontSize: 10.5 }} onClick={() => decide(p, "approved")}>🖊 채택</button>
+                    <button style={{ background: "transparent", color: C.mid, border: `1px solid ${C.border}`, borderRadius: 7, padding: "3px 9px", fontSize: 10.5, cursor: "pointer" }}
+                      onClick={() => decide(p, "rejected")}>반려</button>
+                  </div>
+                ))}
+                {decided.map((p) => (
+                  <div key={p.id} style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", fontSize: 10.5, opacity: 0.85,
+                    borderRadius: 9, padding: "4px 10px", background: p.status === "approved" ? `${C.neon}0A` : "transparent" }}>
+                    <span style={{ flex: "none" }}>{p.status === "approved" ? "✅" : "🗑"}</span>
+                    <span style={{ flex: 1, minWidth: 140, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", color: C.mid }}>
+                      <b style={{ color: p.status === "approved" ? C.neon : C.mid }}>[{p.product}]</b> {p.concept} — {p.by}
+                    </span>
+                    {p.status === "approved" && (
+                      <a href={studioUrl(p.product)} target="_blank" rel="noreferrer" style={{ ...btn(C.cyan), padding: "3px 9px", fontSize: 10.5, textDecoration: "none" }}>🎨 소재 제작</a>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         );
       })()}

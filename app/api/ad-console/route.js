@@ -339,6 +339,7 @@ export async function GET(req) {
     const { data: advRow } = await sb().from("settings").select("value").eq("key", "oa_advoost_v1").maybeSingle();
     // 👤 캠페인 담당자 — {campaignId: 이름}, 웍스 아침 개인 알림의 기준
     const { data: ownRow } = await sb().from("settings").select("value").eq("key", "oa_ad_owners_v1").maybeSingle();
+    const { data: planRow } = await sb().from("settings").select("value").eq("key", "oa_ad_plans_v1").maybeSingle();
 
     // 조치 로그 (최근 30) — "손댄 건 성공했나" 추적: 조치한 세트의 현재 3일 성과로 판정
     const { data: logRow } = await sb().from("settings").select("value").eq("key", LOG_KEY).maybeSingle();
@@ -379,7 +380,7 @@ export async function GET(req) {
       }
     } catch {}
 
-    const payload = { ok: true, kpi, monthly, hall, campaigns, naver, gfa: gfaRow?.value || null, advoost: advRow?.value || null, log, targets: conf, owners: ownRow?.value || {}, career };
+    const payload = { ok: true, kpi, monthly, hall, campaigns, naver, gfa: gfaRow?.value || null, advoost: advRow?.value || null, log, targets: conf, owners: ownRow?.value || {}, career, plans: planRow?.value?.items || [] };
     await sb().from("settings").upsert({ key: CACHE_KEY, value: { at: Date.now(), payload } }, { onConflict: "key" });
     return Response.json({ ...payload, cachedAt: Date.now() });
   } catch (e) {
@@ -422,8 +423,62 @@ async function expireCache(s) {
 
 export async function POST(req) {
   try {
-    const { action, adsetId, adId, budget, note, name, before, by, targets: tgtBody, campId, owner } = await req.json();
+    const { action, adsetId, adId, budget, note, name, before, by, targets: tgtBody, campId, owner, plan, planId, planStatus } = await req.json();
     const signer = String(by || "").slice(0, 10); // 🖊 결재 도장 — 진행자 이름 (영서/경은/지원/소리/혜영)
+    const PLAN_KEY = "oa_ad_plans_v1";
+    // 📝 신규 채용 기획서 제출 — {by, plan:{product,concept,target,usp,ref}} → 검토 대기, 제출 1pt
+    if (action === "plan") {
+      if (!signer) throw new Error("도장 이름(by) 필요");
+      const p = plan || {};
+      if (!String(p.product || "").trim() || !String(p.concept || "").trim()) throw new Error("제품·컨셉은 필수");
+      const s0 = sb();
+      const { data: row } = await s0.from("settings").select("value").eq("key", PLAN_KEY).maybeSingle();
+      const items = row?.value?.items || [];
+      items.unshift({ id: `p${Date.now()}`, at: new Date().toISOString(), by: signer, status: "pending",
+        product: String(p.product).slice(0, 40), concept: String(p.concept).slice(0, 300),
+        target: String(p.target || "").slice(0, 120), usp: String(p.usp || "").slice(0, 300), ref: String(p.ref || "").slice(0, 200) });
+      await s0.from("settings").upsert({ key: PLAN_KEY, value: { items: items.slice(0, 40) } }, { onConflict: "key" });
+      await careerAdd(s0, signer, 1); // 기획 제출 1pt (도장 아님)
+      return Response.json({ ok: true, plans: items.slice(0, 40) });
+    }
+    // 📝 기획서 결재 — {planId, planStatus:"approved"|"rejected"} 채택 시 기획자 +3pt
+    if (action === "planStatus") {
+      if (!planId || !["approved", "rejected"].includes(planStatus)) throw new Error("planId/planStatus 필요");
+      const s0 = sb();
+      const { data: row } = await s0.from("settings").select("value").eq("key", PLAN_KEY).maybeSingle();
+      const items = row?.value?.items || [];
+      const it = items.find((x) => x.id === planId);
+      if (!it) throw new Error("기획서 없음");
+      if (it.status === "pending" && planStatus === "approved") await careerAdd(s0, it.by, 3);
+      it.status = planStatus; it.decidedBy = signer; it.decidedAt = new Date().toISOString();
+      await s0.from("settings").upsert({ key: PLAN_KEY, value: { items } }, { onConflict: "key" });
+      return Response.json({ ok: true, plans: items });
+    }
+    // 🤖 기획 초안 비서 — 콘솔 실데이터(잘된/죽은 세트 패턴)로 Claude가 컨셉 3안 제안
+    if (action === "planDraft") {
+      const key = process.env.ANTHROPIC_API_KEY;
+      if (!key) throw new Error("ANTHROPIC_API_KEY 없음");
+      const s0 = sb();
+      const { data: cRow } = await s0.from("settings").select("value").eq("key", "oa_ad_console_cache_v1").maybeSingle();
+      const camps = cRow?.value?.payload?.campaigns || [];
+      const sets = camps.flatMap((c) => (c.adsets || []).map((s) => ({ ...s, camp: c.name })));
+      const good = sets.filter((s) => s.judge === "scale").slice(0, 6).map((s) => `${s.name} (CPA ₩${s.cpa7 || "-"}, 7일 구매 ${s.purchases7 || 0})`);
+      const bad = sets.filter((s) => s.judge === "kill").slice(0, 6).map((s) => `${s.name} (CPA ₩${s.cpa7 || "-"})`);
+      const prod = String(plan?.product || "").slice(0, 40);
+      const { default: Anthropic } = await import("@anthropic-ai/sdk");
+      const msg = await new Anthropic({ apiKey: key }).messages.create({
+        model: "claude-sonnet-4-6", max_tokens: 1200,
+        messages: [{ role: "user", content: `당신은 OA 뷰티(소형 생활가전) 메타 광고 기획자. 아래 실데이터 패턴을 참고해 ${prod ? `제품 "${prod}"의` : "새"} 광고 소재 기획 3안을 제안해줘.
+
+[잘 나가는 세트]\n${good.join("\n") || "없음"}\n\n[죽은 세트 — 이런 패턴 피할 것]\n${bad.join("\n") || "없음"}
+
+각 안은 서로 다른 각도(예: 문제 후킹/데모 증명/감성 라이프스타일)로. JSON만 출력:
+{"drafts":[{"title":"안 이름(10자)","concept":"소재 컨셉 2문장","target":"타겟 1줄","usp":"핵심 소구점 1~2개","hook":"첫 3초 후킹 문구"}]}` }] });
+      const txt = msg.content?.[0]?.text || "";
+      const m = txt.match(/\{[\s\S]*\}/);
+      if (!m) throw new Error("초안 파싱 실패");
+      return Response.json({ ok: true, ...JSON.parse(m[0]) });
+    }
     // 👤 담당자 지정 — {campId, owner:""=해제} → oa_ad_owners_v1
     if (action === "owner") {
       if (!campId) throw new Error("campId 필요");
