@@ -1068,7 +1068,10 @@ export default function AdOfficeTycoon() {
               return (
                 <div style={{ flex: "1 1 230px", minWidth: 210 }}>
                   <div style={{ fontSize: 10, color: C.mid, display: "flex", justifyContent: "space-between" }}>
-                    <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}><Px k="vault" s={16} /> 월 예산 금고 ₩{fmt(cap)}</span>
+                    <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
+                      <Px k="vault" s={16} /> 금고 잔고 <b style={{ fontSize: 13, color: advance || over ? C.red : C.neon }}>₩{fmt(remain)}</b>
+                      <span style={{ opacity: 0.7 }}>/ 한도 ₩{fmt(cap)}</span>
+                    </span>
                     <span style={{ color: over ? C.red : C.neon, fontWeight: 800 }}>{usedPct}% 소진</span>
                   </div>
                   <div style={{ position: "relative", height: 10, background: "#0d0a12", border: `1px solid ${C.border}`,
