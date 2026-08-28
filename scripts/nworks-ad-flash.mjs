@@ -21,7 +21,7 @@ async function main() {
   let st = {};
   try { st = JSON.parse(readFileSync(STATE, 'utf8')); } catch {}
   const today = kst(0);
-  if (st.date !== today) st = { date: today, hit: {}, ranks: st.ranks || {} }; // hit: {adsetId:[마일스톤]}, ranks는 날짜 무관 유지
+  if (st.date !== today) st = { date: today, hit: {}, ranks: st.ranks || {}, quest: st.quest || null }; // hit: {adsetId:[마일스톤]}, ranks·quest는 날짜 무관 유지
 
   const owners = j.owners || {};
   const lines = [];
@@ -51,6 +51,26 @@ async function main() {
       if (nowIdx > wasIdx) lines.push(`🎖 인사발령 — ${nm} ${prev}, 금일부로 ${rank} 승진을 명함 (커리어 ${cc.pts}pt). 축하 도장 부탁드립니다 🖊`);
     }
     st.ranks[nm] = rank;
+  }
+
+  // ③ 전사 협력 퀘스트 달성 — ★/ads page.jsx 협력 퀘스트 산식과 동일해야 함 (지난주 +5%, 최소 10)
+  const days = j.monthly?.days30 || [];
+  if (days.length) {
+    const now = new Date(Date.now() + 9 * 3600 * 1000);
+    const dow = (now.getUTCDay() + 6) % 7; // 월=0
+    const mon = new Date(now); mon.setUTCDate(now.getUTCDate() - dow);
+    const monS = mon.toISOString().slice(0, 10);
+    const pmon = new Date(mon); pmon.setUTCDate(mon.getUTCDate() - 7);
+    const pmonS = pmon.toISOString().slice(0, 10);
+    const cur = days.filter((d) => d.d >= monS).reduce((a, d) => a + (d.buy || 0), 0);
+    const prevW = days.filter((d) => d.d >= pmonS && d.d < monS).reduce((a, d) => a + (d.buy || 0), 0);
+    if (prevW) {
+      const goal = Math.max(10, Math.ceil(prevW * 1.05));
+      if (cur >= goal && st.quest !== monS) {
+        st.quest = monS; // 주당 1회만 공고
+        lines.push(`🎯 전사 퀘스트 달성 — 이번 주 계약 ${cur}건, 목표 ${goal}건(지난주 +5%) 돌파! 전 부서 협력의 승리입니다 👏`);
+      }
+    }
   }
 
   if (!lines.length) { console.log('발표할 소식 없음'); if (!DRY) writeFileSync(STATE, JSON.stringify(st)); return; }

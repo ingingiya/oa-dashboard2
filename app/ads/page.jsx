@@ -757,6 +757,46 @@ export default function AdOfficeTycoon() {
         );
       })()}
 
+      {/* 🎯 전사 협력 퀘스트 — 이번 주 전사 계약 목표 (지난주 +5%, 경쟁 아닌 협력 프레임, 표시 전용) */}
+      {tab === "work" && (() => {
+        const days = data.monthly?.days30 || [];
+        if (!days.length) return null;
+        const now = new Date(Date.now() + 9 * 3600 * 1000); // KST
+        const dow = (now.getUTCDay() + 6) % 7; // 월=0
+        const mon = new Date(now); mon.setUTCDate(now.getUTCDate() - dow);
+        const monS = mon.toISOString().slice(0, 10);
+        const pmon = new Date(mon); pmon.setUTCDate(mon.getUTCDate() - 7);
+        const pmonS = pmon.toISOString().slice(0, 10);
+        const cur = days.filter((d) => d.d >= monS).reduce((a, d) => a + (d.buy || 0), 0);
+        const prev = days.filter((d) => d.d >= pmonS && d.d < monS).reduce((a, d) => a + (d.buy || 0), 0);
+        if (!prev) return null; // 지난주 데이터 없으면 목표 산정 불가
+        const goal = Math.max(10, Math.ceil(prev * 1.05));
+        const done = cur >= goal;
+        const pct = Math.min(100, Math.round((cur / goal) * 100));
+        const dleft = 6 - dow; // 일요일까지 남은 날
+        return (
+          <div style={{ background: C.panel, border: `1px solid ${done ? C.gold + "66" : C.border}`, borderRadius: 14,
+            padding: "10px 14px", marginBottom: 14 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+              <span style={px}>협력</span>
+              <b style={{ fontSize: 12, color: done ? C.gold : C.ink }}>
+                🎯 전사 퀘스트 — 이번 주 계약 <span style={{ color: C.neon }}>{goal}건</span>
+                <span style={{ color: C.mid, fontWeight: 400, fontSize: 10.5 }}> (지난주 {prev}건 +5%)</span>
+              </b>
+              <div style={{ flex: 1, minWidth: 120, maxWidth: 240, height: 9, background: "#0d0a12", borderRadius: 5, overflow: "hidden", border: `1px solid ${C.border}` }}>
+                <div className="hpbar" style={{ width: `${pct}%`, height: "100%", "--hp": done ? C.gold : C.neon,
+                  background: `repeating-linear-gradient(45deg, ${done ? C.gold : C.neon}, ${done ? C.gold : C.neon} 6px, ${(done ? C.gold : C.neon)}AA 6px, ${(done ? C.gold : C.neon)}AA 12px)`,
+                  boxShadow: `0 0 8px ${done ? C.gold : C.neon}` }} />
+              </div>
+              <b style={{ fontSize: 11.5, color: done ? C.gold : C.neon }}>
+                {done ? `달성! 🎉 ${cur}/${goal}` : `${cur}/${goal} · ${pct}%`}
+              </b>
+              {!done && <span style={{ fontSize: 10, color: C.mid }}>일요일까지 {dleft ? `${dleft}일` : "오늘까지"} — 다 같이 {goal - cur}건 남았어요</span>}
+            </div>
+          </div>
+        );
+      })()}
+
       {/* 🎲 사장의 베팅 — 오늘의 계약왕 맞히기 (표시 전용, 돈 안 움직임) */}
       {tab === "work" && (() => {
         const today = new Date(Date.now() + 9 * 3600 * 1000).toISOString().slice(0, 10); // KST
@@ -1811,6 +1851,43 @@ export default function AdOfficeTycoon() {
               {up > 0 && <span style={{ color: C.neon }}>🚀 증액 후보 {up}</span>}
               {bad > 0 ? <span style={{ color: C.red }}>⚠️ 요주의 {bad} — 결재 필요</span> : <span style={{ color: C.neon }}>✅ 요주의 없음</span>}
             </div>}
+          </div>
+        );
+      })()}
+      {/* 📥 결재 대기함 — 내 담당 부서의 요주의(kill/watch) 사원 모음, 도장 원클릭 동선 */}
+      {signer && (() => {
+        const ow = data.owners || {};
+        const pend = data.campaigns.filter((c) => ow[c.id] === signer)
+          .flatMap((c) => c.adsets.map((s) => ({ ...s, campId: c.id, campName: c.name })))
+          .filter((s) => s.status === "ACTIVE" && (s.judge === "kill" || s.judge === "watch"))
+          .sort((a, b) => (a.judge === "kill" ? 0 : 1) - (b.judge === "kill" ? 0 : 1));
+        if (!pend.length) return null;
+        return (
+          <div style={{ ...card, marginBottom: 12, borderColor: `${C.red}44` }}>
+            <b style={{ fontSize: 12, color: C.red }}>📥 결재 대기함 <span style={{ color: C.mid, fontWeight: 400, fontSize: 10.5 }}>— 내 담당 요주의 {pend.length}건, 판단해 주세요</span></b>
+            <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 6 }}>
+              {pend.slice(0, 6).map((s) => (
+                <div key={s.id} style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", fontSize: 11.5,
+                  background: "#0d0a1266", border: `1px solid ${s.judge === "kill" ? `${C.red}44` : C.border}`, borderRadius: 9, padding: "6px 10px" }}>
+                  <span style={{ flex: "none" }}>{s.judge === "kill" ? "🚨" : "👀"}</span>
+                  <span style={{ flex: 1, minWidth: 140, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    <b>{s.name}</b>
+                    <span style={{ display: "block", fontSize: 10, color: C.mid }}>
+                      [{s.campName}] 7일 ₩{fmt(s.spend7)} · 🛒{s.purchases7 || 0} · CPA {s.cpa7 ? `₩${fmt(s.cpa7)}` : "없음"} → {s.judge === "kill" ? "중지 검토" : "유지관찰"}
+                    </span>
+                  </span>
+                  {s.judge === "kill" && (
+                    <button style={{ ...btn(C.red), padding: "3px 9px", fontSize: 10.5 }} disabled={busy === s.id}
+                      onClick={() => act("pause", s, { note: "결재 대기함" })}>🖊 퇴근 결재</button>
+                  )}
+                  <button style={{ background: "transparent", color: C.mid, border: `1px solid ${C.border}`, borderRadius: 7,
+                    padding: "3px 9px", fontSize: 10.5, cursor: "pointer" }} onClick={() => jumpToDesk(s)}>👀 책상</button>
+                  <button style={{ background: "transparent", color: C.mid, border: `1px solid ${C.border}`, borderRadius: 7,
+                    padding: "3px 9px", fontSize: 10.5, cursor: "pointer" }} onClick={() => jumpToDesk(s, true)}>🎨 소재</button>
+                </div>
+              ))}
+              {pend.length > 6 && <span style={{ fontSize: 10, color: C.mid }}>외 {pend.length - 6}건 — 아래 부서에서 확인</span>}
+            </div>
           </div>
         );
       })()}
