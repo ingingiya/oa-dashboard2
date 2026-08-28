@@ -204,11 +204,18 @@ def advoost_section():
     bt = data["boost_tot"]
     out = []
     if bt["cost"]:
-        out.append(f"AD부스터 합계 ₩{bt['cost']:,.0f} · 전환 {bt['conv']} · ROAS {bt['rev'] / bt['cost']:.1f} ({data['period']})")
-        for b in data["boost"][:6]:
+        out.append(f"AD부스터/ADVoost 합계 ₩{bt['cost']:,.0f} · 전환 {bt['conv']} · ROAS {bt['rev'] / bt['cost']:.1f} ({data['period']})")
+        for b in data["boost"][:8]:
             roas = b["rev"] / b["cost"] if b["cost"] else 0
             flag = " ⚠️점검" if b["cost"] >= 200000 and roas < 3 else ""
-            out.append(f"· {b['name'].replace('MO_오아_AD부스터_', '')[:20]}: ₩{b['cost']:,.0f} · ROAS {roas:.1f}{flag}")
+            nm = b["name"].replace("MO_오아_AD부스터_", "").split("#")[0][:22]
+            out.append(f"· [{b.get('acct', '')}] {nm}: ₩{b['cost']:,.0f} · ROAS {roas:.1f}{flag}")
+    # 두 계정 전체에서 낭비 캠페인 경고 (7일 10만↑ 쓰고 ROAS<1)
+    waste = [r for r in data.get("rows", []) if r["cost"] >= 100000 and (r["rev"] / r["cost"] if r["cost"] else 0) < 1]
+    if waste:
+        out.append(f"🚨 낭비 의심 {len(waste)}건 (7일 10만↑·ROAS<1):")
+        for w in sorted(waste, key=lambda x: -x["cost"])[:5]:
+            out.append(f"· [{w.get('acct', '')}] {w['name'][:22]}: ₩{w['cost']:,.0f} · ROAS {w['rev'] / w['cost']:.1f}")
     return out
 
 

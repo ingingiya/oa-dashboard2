@@ -14,36 +14,43 @@ def main():
     try:
         import openpyxl
         from playwright.sync_api import sync_playwright
-        from adboost_lib import launch, ensure_login, ACCOUNT
+        from adboost_lib import launch, ensure_login
+        # 운영 계정 2개 (2026-08-28 사용자 확인): k2ci00 + 12n300
+        ACCOUNTS = [("1742505", "k2ci00"), ("1822880", "12n300")]
+        bufs, period = [], "최근 7일"
         with sync_playwright() as pw:
             ctx = launch(pw)
             page = ctx.pages[0] if ctx.pages else ctx.new_page()
             ensure_login(page)
-            page.goto(f"https://ads.naver.com/manage/ad-accounts/{ACCOUNT}/all-campaigns", timeout=60000)
-            page.wait_for_timeout(12000)
-            # 기간 라벨 (예: 2026.08.21. ~ 2026.08.27.)
-            body = page.inner_text("body")[:3000]
-            m = re.findall(r"(\d{4}\.\d{2}\.\d{2})", body)
-            period = f"{m[0]}~{m[1]}" if len(m) >= 2 else "최근 7일"
-            with page.expect_download(timeout=30000) as dl:
-                page.click("text=다운로드", timeout=10000)
-            buf = io.BytesIO(Path(dl.value.path()).read_bytes())
+            for acct, label in ACCOUNTS:
+                try:
+                    page.goto(f"https://ads.naver.com/manage/ad-accounts/{acct}/all-campaigns", timeout=60000)
+                    page.wait_for_timeout(12000)
+                    body = page.inner_text("body")[:3000]
+                    m = re.findall(r"(\d{4}\.\d{2}\.\d{2})", body)
+                    if len(m) >= 2:
+                        period = f"{m[0]}~{m[1]}"
+                    with page.expect_download(timeout=30000) as dl:
+                        page.click("text=다운로드", timeout=10000)
+                    bufs.append((label, io.BytesIO(Path(dl.value.path()).read_bytes())))
+                except Exception:
+                    pass
             ctx.close()
 
-        wb = openpyxl.load_workbook(buf)
-        rows = list(wb.active.iter_rows(values_only=True))
         out = []
-        for r in rows[1:]:
-            if len(r) < 14 or not r[5]:
-                continue
-            gu, name = str(r[1] or ""), str(r[5])
-            num = lambda v: float(re.sub(r"[^0-9.]", "", str(v)) or 0)
-            cost = num(r[11])
-            if cost <= 0 or not gu:
-                continue
-            out.append({"gu": gu, "name": name, "cost": cost,
-                        "conv": int(num(r[12])), "rev": num(r[13])})
-        boost = [x for x in out if "부스터" in x["name"] or "부스트" in x["name"]]
+        for label, buf in bufs:
+            wb = openpyxl.load_workbook(buf)
+            for r in list(wb.active.iter_rows(values_only=True))[1:]:
+                if len(r) < 14 or not r[5]:
+                    continue
+                gu, name = str(r[1] or ""), str(r[5])
+                num = lambda v: float(re.sub(r"[^0-9.]", "", str(v)) or 0)
+                cost = num(r[11])
+                if cost <= 0 or not gu:
+                    continue
+                out.append({"acct": label, "gu": gu, "name": name, "cost": cost,
+                            "conv": int(num(r[12])), "rev": num(r[13])})
+        boost = [x for x in out if "부스터" in x["name"] or "부스트" in x["name"] or "voost" in x["name"].lower()]
         da = [x for x in out if "디스플레이" in x["gu"]]
         tot = lambda xs, k: sum(x[k] for x in xs)
         print(json.dumps({"ok": True, "period": period,
