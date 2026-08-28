@@ -59,12 +59,12 @@ function useCountUp(v, ms = 700) {
 
 // 픽셀아트 스프라이트 (나노바나나 생성, detail-assets 공개 스토리지)
 const SPRITE_BASE = "https://lugqeflqusqsyotdiaxg.supabase.co/storage/v1/object/public/detail-assets/hudassets/";
-// 팀원 캐릭터 — 영서·소리·혜영·지원(고양이, 가만히 있음 ㅎㅎ). 사장 = 경은
+// 팀원 캐릭터 — 영서·소리·혜영·지원. 사장 = 경은
 const TEAM = [
   { name: "영서", img: SPRITE_BASE + "mtcov5hd_hud_yeongseo.png" },
   { name: "소리", img: SPRITE_BASE + "mtcov5kx_hud_sori.png" },
   { name: "혜영", img: SPRITE_BASE + "mtcovgjk_hud_hyeyeong.png" },
-  { name: "지원", img: SPRITE_BASE + "mtcov5ta_hud_jiwon.png", still: true }, // 고양이는 움직이지 않는다
+  { name: "지원", img: SPRITE_BASE + "mtcov5ta_hud_jiwon.png", still: true },
 ];
 const BOSS_IMG = SPRITE_BASE + "mtcov5no_hud_kyeongeun.png"; // 경은 사장님 👑
 const BANNER_IMG = SPRITE_BASE + "mtcop9ce_hud_banner.png";
@@ -120,20 +120,47 @@ export default function AdOfficeTycoon() {
   const [evt, setEvt] = useState(null); // 랜덤 사무실 이벤트 토스트
   const [nego, setNego] = useState(null); // 💰 연봉 협상 {s} | "no"(이번 세션 무시)
   const [tab, setTab] = useState("work"); // 🗂 메인 탭 — work 오늘 업무 / report 리포트 / partner 협력사 / log 기록
-  const [tgtEdit, setTgtEdit] = useState(null); // 🎯 목표 CPA 편집 {default, rules[]} | null
+  const [tgtEdit, setTgtEdit] = useState(null); // 🎯 목표 CPA 편집 {default, rules[], monthCap} | null
+  const [paper, setPaper] = useState(null); // 🖊 결재서류 {action, s, extra, stamped} — 도장 찍어야 실행
+  const [signer, setSigner] = useState(""); // 결재 도장 이름 (마지막 사용 기억)
 
   useEffect(() => {
     try { const m = localStorage.getItem("oa_ads_mute") === "1"; setMute(m); sfxOn = !m; } catch {}
+    try { setSigner(localStorage.getItem("oa_ads_signer_v1") || ""); } catch {}
     const t = setTimeout(() => setBoot(false), 1500);
     const talk = setInterval(() => setTalkTick((x) => x + 1), 6000); // 말풍선 로테이션
-    return () => { clearTimeout(t); clearInterval(talk); };
-  }, []);
+    const auto = setInterval(() => load(false), 5 * 60_000); // 🔄 5분 자동 새로고침 (서버 캐시 내 — 메타 호출 없음)
+    return () => { clearTimeout(t); clearInterval(talk); clearInterval(auto); };
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // 💰 실시간 계약 체결 알림 — 오늘 구매수 diff (localStorage 기준, 날짜 바뀌면 리셋)
+  useEffect(() => {
+    if (!data?.campaigns) return;
+    const today = new Date().toISOString().slice(0, 10);
+    const map = Object.fromEntries(data.campaigns.flatMap((c) => c.adsets)
+      .filter((s) => (s.buyToday || 0) > 0).map((s) => [s.id, s.buyToday]));
+    try {
+      const prev = JSON.parse(localStorage.getItem("oa_ads_todaybuy_v1") || "null");
+      if (prev?.date === today) {
+        const gains = Object.entries(map).map(([id, n]) => ({ id, n: n - (prev.map[id] || 0) })).filter((x) => x.n > 0);
+        if (gains.length) {
+          const top = gains.sort((a, b) => b.n - a.n)[0];
+          const s = data.campaigns.flatMap((c) => c.adsets).find((x) => x.id === top.id);
+          const tot = gains.reduce((a, x) => a + x.n, 0);
+          SFX.coin();
+          setEvt(["💰", `${prodKeyOf(s?.name || "") || s?.name || "사원"} 사원 방금 계약 ${top.n}건 체결!${tot > top.n ? ` (외 ${tot - top.n}건)` : ""}`]);
+          setTimeout(() => setEvt(null), 5000);
+        }
+      }
+      localStorage.setItem("oa_ads_todaybuy_v1", JSON.stringify({ date: today, map }));
+    } catch {}
+  }, [data]);
 
   // 🎲 랜덤 사무실 이벤트 — 40초마다 20% 확률, 4초 토스트 (업무 방해 없음)
   useEffect(() => {
     const EVENTS = [
       ["🚚", "택배가 도착했습니다 — 누가 또 뭘 샀는지…"],
-      ["🐈", "지원(고양이)이 키보드 위를 지나갑니다. asdfghjk"],
+      ["🐈", "길고양이가 창밖 난간을 지나갑니다"],
       ["🤝", "거래처(메타 본사)에서 인사 왔습니다"],
       ["☕", "커피 타임 — 3분간 전 직원 충전 중"],
       ["🍕", "누군가 회의실에 피자를 시켰습니다"],
@@ -173,16 +200,17 @@ export default function AdOfficeTycoon() {
     .then((j) => (j.ok ? setData(j) : setErr(j.error))).catch((e) => setErr(String(e)));
   useEffect(() => { load(); }, []);
 
-  async function act(action, s, extra = {}) {
-    const label = action === "pause" ? `🪑 "${s.name}" 사원을 퇴근(OFF)시킬까요?`
-      : action === "resume" ? `📢 "${s.name}" 사원을 재고용(ON)할까요?`
-      : `💰 "${s.name}" 보너스 결재: 일예산 ₩${fmt(extra.budget)}로?`;
-    if (!confirm(label)) return;
+  // 🖊 결재는 반드시 결재서류에 도장을 찍어야 실행 — act()는 서류만 올림
+  function act(action, s, extra = {}) {
+    SFX.click();
+    setPaper({ action, s, extra, stamped: "" });
+  }
+  async function doAct(action, s, extra = {}, by = "") {
     setBusy(s.id);
     try {
       const j = await fetch("/api/ad-console", { method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action, adsetId: s.id, name: s.name,
+        body: JSON.stringify({ action, adsetId: s.id, name: s.name, by,
           before: { cpa7: s.cpa7, spend7: s.spend7, purchases7: s.purchases7, budget: s.budget }, ...extra }) }).then((r) => r.json());
       if (!j.ok) throw new Error(j.error);
       if (action === "pause") {
@@ -309,6 +337,79 @@ export default function AdOfficeTycoon() {
 
   return (
     <Shell onRefresh={() => { SFX.click(); load(true); }} fx={fx} shake={shake} mute={mute} toggleMute={toggleMute}>
+      {/* 🖊 결재서류 — 도장을 찍어야 실제 집행 (진짜 돈이 움직이는 문서) */}
+      {paper && (() => {
+        const p = paper;
+        const title = p.action === "budget" ? "예 산 변 경 품 의 서" : p.action === "pause" ? "광 고 중 지 품 의 서" : "광 고 재 개 품 의 서";
+        const chg = p.action === "budget"
+          ? `일예산 ₩${fmt(p.s.budget)} → ₩${fmt(p.extra.budget)} (${p.extra.budget >= p.s.budget ? "+" : ""}${Math.round(((p.extra.budget - p.s.budget) / Math.max(1, p.s.budget)) * 100)}%)`
+          : p.action === "pause" ? `광고 세트 OFF — 일예산 ₩${fmt(p.s.budget)} 지출 중단 (퇴근 조치)`
+          : `광고 세트 ON — 일예산 ₩${fmt(p.s.budget)} 지출 재개 (재고용)`;
+        const now = new Date();
+        const docNo = `OA-${now.toISOString().slice(0, 10).replace(/-/g, "")}-${String(p.s.id).slice(-4)}`;
+        const rowSt = { display: "flex", borderBottom: "1px solid #00000018", fontSize: 12.5 };
+        const th = { width: 88, background: "#00000008", padding: "8px 10px", fontWeight: 800, color: "#333", flexShrink: 0 };
+        const td = { padding: "8px 10px", color: "#111", flex: 1, wordBreak: "keep-all" };
+        const stamp = (name) => {
+          if (p.stamped) return;
+          SFX.stamp();
+          try { localStorage.setItem("oa_ads_signer_v1", name); } catch {}
+          setSigner(name);
+          setPaper({ ...p, stamped: name });
+          setTimeout(() => { setPaper(null); doAct(p.action, p.s, p.extra, name); }, 850);
+        };
+        return (
+          <div style={{ position: "fixed", inset: 0, zIndex: 300, background: "#000000AA", display: "flex",
+            alignItems: "center", justifyContent: "center", padding: 16 }}
+            onClick={() => !p.stamped && setPaper(null)}>
+            <div className="paperIn" onClick={(e) => e.stopPropagation()}
+              style={{ background: "#FBF8F1", borderRadius: 6, width: "min(480px, 94vw)", padding: "22px 22px 18px",
+                boxShadow: "0 20px 60px #000000AA", border: "1px solid #00000022", color: "#111",
+                fontFamily: "'Noto Serif KR', serif" }}>
+              <div style={{ textAlign: "center", fontSize: 19, fontWeight: 900, letterSpacing: 4, color: "#1a1a1a",
+                borderBottom: "2.5px solid #1a1a1a", paddingBottom: 10, marginBottom: 12 }}>{title}</div>
+              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10.5, color: "#666", marginBottom: 8 }}>
+                <span>문서번호 {docNo}</span><span>기안일 {now.toISOString().slice(0, 10)} · OA 광고상사</span>
+              </div>
+              <div style={{ border: "1.5px solid #00000030", borderRadius: 4, overflow: "hidden", marginBottom: 12 }}>
+                <div style={rowSt}><div style={th}>대상 사원</div><div style={td}>{p.s.name}</div></div>
+                <div style={rowSt}><div style={th}>결재 내용</div><div style={{ ...td, fontWeight: 800 }}>{chg}</div></div>
+                <div style={rowSt}><div style={th}>최근 성과</div><div style={td}>7일 지출 ₩{fmt(p.s.spend7)} · 구매 {p.s.purchases7 ?? 0}건 · CPA {p.s.cpa7 ? "₩" + fmt(p.s.cpa7) : "—"}{p.s.target ? ` (목표 ₩${fmt(p.s.target)})` : ""}</div></div>
+                <div style={{ ...rowSt, borderBottom: "none" }}><div style={th}>사유</div><div style={td}>{p.extra.note || "사장 직권 결재"}</div></div>
+              </div>
+              <div style={{ fontSize: 11, color: "#8A2B2B", marginBottom: 10, fontWeight: 700 }}>
+                ⚠️ 본 결재는 메타 광고비(실제 돈)가 즉시 움직입니다. 담당자 서명 도장을 찍어야 집행됩니다.
+              </div>
+              <div style={{ fontSize: 11, color: "#555", marginBottom: 6, fontWeight: 800 }}>결재란 — 진행자 본인 도장을 찍어주세요</div>
+              <div style={{ display: "flex", gap: 8, justifyContent: "center" }}>
+                {["영서", "경은", "지원", "소리", "혜영"].map((nm) => (
+                  <button key={nm} onClick={() => stamp(nm)} disabled={!!p.stamped}
+                    style={{ width: 72, cursor: p.stamped ? "default" : "pointer", background: "#fff",
+                      border: `1.5px solid ${signer === nm && !p.stamped ? "#B3392F" : "#00000025"}`, borderRadius: 4,
+                      padding: "6px 0 5px", display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
+                    <div style={{ width: 46, height: 46, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                      {p.stamped === nm ? (
+                        <div className="stampIn" style={{ width: 44, height: 44, borderRadius: "50%", border: "2.5px solid #C0392B",
+                          color: "#C0392B", display: "flex", alignItems: "center", justifyContent: "center",
+                          fontSize: 14, fontWeight: 900, transform: "rotate(-12deg)", letterSpacing: 1,
+                          boxShadow: "inset 0 0 6px #C0392B33" }}>{nm}</div>
+                      ) : <span style={{ fontSize: 10, color: "#bbb" }}>(인)</span>}
+                    </div>
+                    <span style={{ fontSize: 11, fontWeight: 800, color: "#333" }}>{nm}{nm === "경은" ? " 👑" : ""}</span>
+                  </button>
+                ))}
+              </div>
+              {!p.stamped && (
+                <div style={{ textAlign: "center", marginTop: 12 }}>
+                  <button onClick={() => setPaper(null)} style={{ background: "transparent", border: "1px solid #00000030",
+                    borderRadius: 6, padding: "6px 18px", fontSize: 12, color: "#666", cursor: "pointer" }}>↩ 반려 (취소)</button>
+                </div>
+              )}
+              {p.stamped && <div style={{ textAlign: "center", marginTop: 10, fontSize: 12.5, fontWeight: 900, color: "#C0392B" }}>결재 완료 — 집행 중…</div>}
+            </div>
+          </div>
+        );
+      })()}
       {/* 픽셀 사무실 배너 */}
       <div style={{ position: "relative", borderRadius: 16, overflow: "hidden", marginBottom: 14, border: `1px solid ${C.border}` }}>
         <img src={BANNER_IMG} alt="" style={{ width: "100%", height: 150, objectFit: "cover", display: "block", imageRendering: "pixelated" }} />
@@ -438,6 +539,8 @@ export default function AdOfficeTycoon() {
             <div style={{ fontSize: 9, color: C.mid, marginTop: 2 }}>🕐 {Math.round((Date.now() - data.cachedAt) / 60_000)}분 전 · 🔄순찰=실시간</div>
           ) : null}
         </div>
+        {data.kpi.today && <Stat label="🔥 오늘 실황 (계약)" v={data.kpi.today.purchases}
+          suffix={`건 · ₩${fmt(data.kpi.today.spend)}`} color={C.gold} />}
         <Stat label="💸 어제 광고비" v={data.kpi.yesterday.spend} prefix="₩" color={C.gold} />
         <Stat label="🛒 어제 판매" v={data.kpi.yesterday.purchases} suffix={data.kpi.yesterday.views ? ` +👁${data.kpi.yesterday.views}` : ""} color={C.neon} />
         <Stat label="🎯 CPA (가중)" v={data.kpi.yesterday.cpa} prefix="₩" color={C.cyan} />
@@ -489,6 +592,33 @@ export default function AdOfficeTycoon() {
                 어제 하루 <b style={{ color: yProfit >= 0 ? C.neon : C.red }}>{yProfit >= 0 ? "+" : "−"}₩{fmt(Math.abs(yProfit))}</b>
               </div>
             )}
+            {/* 💳 월 예산 금고 — 한도 대비 소진 페이스 (목표 CPA ⚙️에서 설정) */}
+            {(data.targets?.monthCap || 0) > 0 && (() => {
+              const cap = data.targets.monthCap;
+              const now = new Date();
+              const dim = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+              const elapsed = Math.round((now.getDate() / dim) * 100);
+              const usedPct = Math.min(100, Math.round(((m.cur.spend || 0) / cap) * 100));
+              const proj = Math.round((m.cur.spend || 0) / now.getDate() * dim);
+              const over = proj > cap;
+              return (
+                <div style={{ flex: "1 1 230px", minWidth: 210 }}>
+                  <div style={{ fontSize: 10, color: C.mid, display: "flex", justifyContent: "space-between" }}>
+                    <span>💳 월 예산 금고 ₩{fmt(cap)}</span>
+                    <span style={{ color: over ? C.red : C.neon, fontWeight: 800 }}>{usedPct}% 소진</span>
+                  </div>
+                  <div style={{ position: "relative", height: 10, background: "#0d0a12", border: `1px solid ${C.border}`,
+                    borderRadius: 5, marginTop: 4, overflow: "hidden" }}>
+                    <div style={{ width: `${usedPct}%`, height: "100%",
+                      background: over ? C.red : usedPct > elapsed + 10 ? C.gold : C.neon }} />
+                    <div title={`이번 달 경과 ${elapsed}%`} style={{ position: "absolute", left: `${elapsed}%`, top: 0, bottom: 0, width: 2, background: "#ffffff88" }} />
+                  </div>
+                  <div style={{ fontSize: 9.5, color: over ? C.red : C.mid, marginTop: 3, fontWeight: over ? 800 : 500 }}>
+                    이 페이스면 월말 ₩{fmt(proj)} {over ? "— 한도 초과 예상 ⚠️ 지출 점검!" : "— 한도 내 페이스 ✅"} · 경과 {elapsed}%
+                  </div>
+                </div>
+              );
+            })()}
             <div style={{ marginLeft: "auto", fontSize: 10.5, color: C.mid }}>
               지난달 손익 {pProfit >= 0 ? "+" : "−"}₩{fmt(Math.abs(pProfit))} · 원가·수수료 미반영 참고치
             </div>
@@ -657,6 +787,50 @@ export default function AdOfficeTycoon() {
         );
       })()}
 
+      {/* 📆 요일별 성과 히트맵 — 60일 표본, 어느 요일에 장사가 잘되나 */}
+      {tab === "report" && (data.monthly?.days60?.length || 0) >= 14 && (() => {
+        const days = data.monthly.days60.filter((d) => d.spend > 0 || d.buy > 0);
+        const WD = ["일", "월", "화", "수", "목", "금", "토"];
+        const agg = WD.map((w, i) => {
+          const rows = days.filter((d) => new Date(d.d + "T12:00:00").getDay() === i);
+          const sp = rows.reduce((a, x) => a + x.spend, 0), buy = rows.reduce((a, x) => a + x.buy, 0),
+            rev = rows.reduce((a, x) => a + x.rev, 0);
+          return { w, n: rows.length, spend: rows.length ? Math.round(sp / rows.length) : 0,
+            buy: rows.length ? +(buy / rows.length).toFixed(1) : 0,
+            roas: sp > 0 ? +(rev / sp).toFixed(1) : 0 };
+        });
+        const best = [...agg].sort((a, b) => b.roas - a.roas)[0];
+        const maxRoas = Math.max(0.1, ...agg.map((a) => a.roas));
+        return (
+          <div style={{ ...card, marginTop: 12 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8, flexWrap: "wrap" }}>
+              <span style={px}>요일</span>
+              <span style={{ fontSize: 12.5, fontWeight: 800 }}>📆 요일별 장사 성적표 (최근 60일 평균)</span>
+              {best?.roas > 0 && <span style={{ fontSize: 10.5, color: C.gold, fontWeight: 700 }}>🏆 {best.w}요일이 최고 효율 (ROAS x{best.roas}) — 이 날 예산을 아끼지 마세요</span>}
+            </div>
+            <div style={{ display: "flex", gap: 6 }}>
+              {agg.map((a) => {
+                const heat = a.roas / maxRoas; // 0~1
+                const bg = a.roas <= 0 ? "#ffffff08" : `rgba(78, 222, 128, ${0.08 + heat * 0.38})`;
+                const isBest = a.w === best?.w && a.roas > 0;
+                return (
+                  <div key={a.w} title={`${a.w}요일 · 표본 ${a.n}일 · 일평균 지출 ₩${fmt(a.spend)} / 판매 ${a.buy}건 / ROAS x${a.roas}`}
+                    style={{ flex: 1, textAlign: "center", borderRadius: 10, padding: "9px 4px", background: bg,
+                      border: `1px solid ${isBest ? C.gold + "77" : C.border}` }}>
+                    <div style={{ fontSize: 11, fontWeight: 900, color: a.w === "일" ? C.red : a.w === "토" ? C.cyan : C.ink }}>{a.w}</div>
+                    <div style={{ fontSize: 13, fontWeight: 900, color: a.roas >= 3 ? C.neon : a.roas >= 1.5 ? C.cyan : C.mid, marginTop: 3 }}>
+                      x{a.roas}
+                    </div>
+                    <div style={{ fontSize: 9, color: C.mid, marginTop: 2 }}>🛒{a.buy} · ₩{fmt(a.spend)}</div>
+                  </div>
+                );
+              })}
+            </div>
+            <div style={{ fontSize: 9.5, color: C.mid, opacity: 0.6, marginTop: 5 }}>진할수록 ROAS 높음 · 요일당 표본 8~9일 평균이라 참고용</div>
+          </div>
+        );
+      })()}
+
       {/* 오늘의 미션 */}
       {tab === "work" && (() => {
         const todayStr = new Date().toISOString().slice(0, 10);
@@ -712,14 +886,12 @@ export default function AdOfficeTycoon() {
                   </div>
                   {canAct && /증액/.test(it.action) && (
                     <button className="stampBtn" style={{ ...btn(C.neon), padding: "3px 10px", fontSize: 10.5 }} disabled={busy === hit.id}
-                      onClick={() => { if (!confirm(`${hit.name}\n일예산 ₩${fmt(hit.budget)} → ₩${fmt(Math.round(hit.budget * 1.25 / 1000) * 1000)} (+25%) 결재할까요?`)) return;
-                        SFX.stamp(); act("budget", hit, { budget: Math.round(hit.budget * 1.25 / 1000) * 1000, note: "비서 지시 증액" }); }}>
+                      onClick={() => act("budget", hit, { budget: Math.round(hit.budget * 1.25 / 1000) * 1000, note: "비서 지시 증액" })}>
                       🖊 결재 +25%</button>
                   )}
                   {canAct && /중지|OFF/.test(it.action) && (
                     <button className="stampBtn" style={{ ...btn(C.red), padding: "3px 10px", fontSize: 10.5 }} disabled={busy === hit.id}
-                      onClick={() => { if (!confirm(`${hit.name}\n광고를 중지(퇴근)시킬까요?`)) return;
-                        SFX.stamp(); act("pause", hit, { note: "비서 지시 중지" }); }}>
+                      onClick={() => act("pause", hit, { note: "비서 지시 중지" })}>
                       🖊 퇴근 결재</button>
                   )}
                   {canAct && /유지|관찰|교체/.test(it.action) && (
@@ -783,12 +955,12 @@ export default function AdOfficeTycoon() {
             </div>
             {s.judge === "scale" && (
               <button className="btnGlow stampBtn" style={btn(C.neon)} disabled={busy === s.id}
-                onClick={() => { SFX.stamp(); act("budget", s, { budget: Math.round(s.budget * 1.25 / 1000) * 1000, note: "룰 증액 +25%" }); }}>
+                onClick={() => act("budget", s, { budget: Math.round(s.budget * 1.25 / 1000) * 1000, note: "룰 증액 +25%" })}>
                 🖊 보너스 +25% 결재</button>
             )}
             {s.judge === "kill" && (
               <button className="btnShake stampBtn" style={btn(C.red)} disabled={busy === s.id}
-                onClick={() => { SFX.stamp(); act("pause", s, { note: "룰 중지" }); }}>🖊 퇴근 결재</button>
+                onClick={() => act("pause", s, { note: "룰 중지" })}>🖊 퇴근 결재</button>
             )}
             {s.judge === "watch" && <span style={{ fontSize: 11.5, color: C.mid }}>소재(작업물) 교체 → 광고 스튜디오</span>}
           </div>
@@ -800,6 +972,7 @@ export default function AdOfficeTycoon() {
         <button style={{ ...btn(C.mid), padding: "3px 10px", fontSize: 10.5, marginLeft: "auto" }}
           onClick={() => { SFX.click(); setTgtEdit(tgtEdit ? null : {
             default: data.targets?.default || 30000,
+            monthCap: data.targets?.monthCap || 0,
             rules: (data.targets?.rules || []).map((r) => ({ ...r })) }); }}>
           ⚙️ 목표 CPA {tgtEdit ? "닫기" : "관리"}</button>
       </h2>
@@ -815,6 +988,13 @@ export default function AdOfficeTycoon() {
               onChange={(e) => setTgtEdit({ ...tgtEdit, default: Number(e.target.value) })}
               style={{ width: 110, background: "#0d0a12", border: `1px solid ${C.border}`, borderRadius: 7, color: C.ink, padding: "5px 8px", fontSize: 12 }} />
             <span style={{ color: C.mid, fontSize: 10.5 }}>원</span>
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6, fontSize: 12 }}>
+            <span style={{ width: 130, color: C.mid }}>💳 월 예산 한도</span>
+            <input type="number" step={100000} value={tgtEdit.monthCap || 0}
+              onChange={(e) => setTgtEdit({ ...tgtEdit, monthCap: Number(e.target.value) })}
+              style={{ width: 130, background: "#0d0a12", border: `1px solid ${C.border}`, borderRadius: 7, color: C.ink, padding: "5px 8px", fontSize: 12 }} />
+            <span style={{ color: C.mid, fontSize: 10.5 }}>원 (0=미설정 — 설정하면 계좌 카드에 금고 게이지 표시)</span>
           </div>
           {tgtEdit.rules.map((r, i) => (
             <div key={i} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 5, fontSize: 12 }}>
@@ -1019,9 +1199,15 @@ export default function AdOfficeTycoon() {
         <>
           <h2 style={h2}><span style={px}>인사부</span> 📇 인사 기록부 <span style={{ fontSize: 10.5, color: C.mid, fontWeight: 400 }}>결재 후 3일 실적으로 승진/반성 판정</span></h2>
           <div style={{ background: C.panel, border: `1px solid ${C.border}`, borderRadius: 14, padding: "10px 16px", fontSize: 12 }}>
-            {logArr.map((l, i) => (
+            {logArr.map((l, i) => {
+              // ↩️ 실패 결재 원클릭 롤백 — 예산 결재가 fail이면 당시 예산으로 되돌리는 결재서류를 올림
+              const rbSet = l.verdict === "fail" && l.before?.budget && l.desc?.includes("예산")
+                ? allSets.find((x) => x.id === l.adsetId && x.status === "ACTIVE" && x.budget !== l.before.budget) : null;
+              return (
               <div key={i} style={{ padding: "4px 0", color: C.mid }}>
                 <span style={{ color: C.purple }}>{(l.at || "").slice(5, 16).replace("T", " ")}</span> — <b style={{ color: C.ink }}>{l.name}</b> {l.desc} {l.note && `(${l.note})`}
+                {l.by && <span title={`결재 도장: ${l.by}`} style={{ marginLeft: 5, fontSize: 9.5, color: "#E06C5E",
+                  border: "1px solid #E06C5E66", borderRadius: 99, padding: "1px 6px", fontWeight: 800 }}>🖊 {l.by}</span>}
                 {l.before && l.now && (l.before.cpa7 || l.now.cpa3) && (
                   <span style={{ fontSize: 11, color: C.cyan }}>
                     {" "}📒 당시 CPA {l.before.cpa7 ? `₩${fmt(l.before.cpa7)}` : "-"} → 지금 3일 {l.now.cpa3 ? `₩${fmt(l.now.cpa3)}` : "판매 없음"}
@@ -1030,10 +1216,16 @@ export default function AdOfficeTycoon() {
                   </span>
                 )}
                 {l.verdict === "win" && <span style={{ color: C.neon, fontWeight: 800 }}> ✅ 승진! (3일 CPA ₩{fmt(l.now?.cpa3)})</span>}
-                {l.verdict === "fail" && <span style={{ color: C.red, fontWeight: 800 }}> ❌ 반성문 ({l.now?.cpa3 ? `₩${fmt(l.now.cpa3)}` : "판매 0"}) → 롤백 검토</span>}
+                {l.verdict === "fail" && <span style={{ color: C.red, fontWeight: 800 }}> ❌ 반성문 ({l.now?.cpa3 ? `₩${fmt(l.now.cpa3)}` : "판매 0"}){!rbSet && " → 롤백 검토"}</span>}
+                {rbSet && (
+                  <button style={{ ...btn(C.red), padding: "2px 9px", fontSize: 10.5, marginLeft: 6 }} disabled={busy === rbSet.id}
+                    onClick={() => act("budget", rbSet, { budget: l.before.budget, note: "실패 결재 롤백" })}>
+                    ↩️ ₩{fmt(l.before.budget)}로 롤백
+                  </button>
+                )}
                 {!l.verdict && l.now && l.desc?.includes("예산") && <span> ⏳ 인사평가 대기</span>}
               </div>
-            ))}
+            ); })}
           </div>
         </>
       )}
@@ -1270,6 +1462,7 @@ function Desk({ s, busy, act, adsOpen, ads, toggleAds, isMvp, talkTick, onAdStat
           </div>
           <div style={{ fontSize: 11, color: C.mid, display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: 4 }}>
             <span>사기 {morale} · 7일 <b style={{ color: C.gold }}>₩{fmt(s.spend7)}</b> · 🛒{s.purchases7}{s.view7 ? `+👁${s.view7}` : ""}
+              {(s.buyToday || 0) > 0 && <b title="오늘 실시간 계약" style={{ color: C.neon, marginLeft: 4 }}>· 오늘 💰{s.buyToday}건!</b>}
               {(s.hr?.s > 0 || s.hr?.c > 0) && (
                 <span title="14일 상벌 이력 — 🏅표창(S등급 일수) ⚠️경고(C등급 일수), 경고 3회 누적 시 퇴근 심사" style={{ marginLeft: 4 }}>
                   {s.hr.s > 0 && <span style={{ color: C.gold }}> 🏅{s.hr.s}</span>}
@@ -1290,7 +1483,7 @@ function Desk({ s, busy, act, adsOpen, ads, toggleAds, isMvp, talkTick, onAdStat
             <input type="number" value={eb} onChange={(e) => setEb(e.target.value)} step="1000"
               style={{ width: 84, fontSize: 11.5, background: "#0d0a12", color: C.ink, border: `1px solid ${C.border}`, borderRadius: 6, padding: "3px 6px" }} />
             <button style={{ ...btn(C.neon), padding: "3px 9px", fontSize: 11 }} disabled={busy === s.id}
-              onClick={async () => { await act("budget", s, { budget: Number(eb), note: "수동" }); setEb(null); }}>결재</button>
+              onClick={() => { act("budget", s, { budget: Number(eb), note: "수동" }); setEb(null); }}>결재</button>
             <button style={{ ...btn(C.mid), padding: "3px 7px", fontSize: 11 }} onClick={() => setEb(null)}>✕</button>
           </>
         )}
@@ -1427,6 +1620,10 @@ function Shell({ children, onRefresh, fx, shake, mute, toggleMute }) {
       </div>
       <style>{`
         @keyframes blink { 50% { opacity: 0.25; } }
+        .paperIn { animation: paperIn 0.28s cubic-bezier(0.2, 1.4, 0.4, 1); }
+        @keyframes paperIn { from { opacity: 0; transform: translateY(26px) scale(0.92) rotate(-1deg); } to { opacity: 1; transform: none; } }
+        .stampIn { animation: stampIn 0.32s cubic-bezier(0.3, 1.6, 0.5, 1); }
+        @keyframes stampIn { 0% { opacity: 0; transform: rotate(-12deg) scale(2.6); } 60% { opacity: 1; transform: rotate(-12deg) scale(0.92); } 100% { transform: rotate(-12deg) scale(1); } }
         @keyframes floatUp { from { opacity: 0; transform: translate(-50%, 24px) scale(0.8); } 15% { opacity: 1; transform: translate(-50%, 0) scale(1.06); } 80% { opacity: 1; } to { opacity: 0; transform: translate(-50%, -18px); } }
         @keyframes hpshift { to { background-position: 24px 0; } }
         @keyframes pulse { 0%,100% { box-shadow: 0 0 14px var(--glow, #4ADE80)33; } 50% { box-shadow: 0 0 30px var(--glow, #4ADE80)77; } }

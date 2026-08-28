@@ -221,15 +221,22 @@ export async function GET(req) {
     const monSum = (mon) => dailyRows.filter((x) => x.d.startsWith(mon))
       .reduce((a, x) => ({ spend: a.spend + x.spend, buy: a.buy + x.buy, rev: a.rev + x.rev }), { spend: 0, buy: 0, rev: 0 });
     const monthly = { cur: { mon: curMon, ...monSum(curMon) }, prev: { mon: prevMon, ...monSum(prevMon) },
-      days30: dailyRows.slice(-30).map(({ d, spend, buy, rev }) => ({ d, spend, buy, rev: Math.round(rev) })) };
+      days30: dailyRows.slice(-30).map(({ d, spend, buy, rev }) => ({ d, spend, buy, rev: Math.round(rev) })),
+      // 📆 요일별 성과 히트맵용 — 60일 전체 (요일당 샘플 8~9개)
+      days60: dailyRows.map(({ d, spend, buy, rev }) => ({ d, spend, buy, rev: Math.round(rev) })) };
 
-    // 세트 + 성과 (7일/3일) — 인사이트는 계정 단위 한 번에
-    const [ins7, ins3] = await Promise.all(["last_7d", "last_3d"].map((p) =>
+    // 세트 + 성과 (7일/3일/오늘) — 인사이트는 계정 단위 한 번에
+    const [ins7, ins3, insT] = await Promise.all(["last_7d", "last_3d", "today"].map((p) =>
       g(`act_${acct}/insights`, { level: "adset", date_preset: p, limit: "300",
-        fields: "adset_id,campaign_id,spend,ctr,cpm,actions,catalog_segment_actions",
+        fields: "adset_id,campaign_id,spend,ctr,cpm,actions,catalog_segment_actions,action_values,catalog_segment_value",
         action_attribution_windows: JSON.stringify(["7d_click", "1d_view"]) })));
     const by7 = Object.fromEntries((ins7.data || []).map((r) => [r.adset_id, r]));
     const by3 = Object.fromEntries((ins3.data || []).map((r) => [r.adset_id, r]));
+    const byT = Object.fromEntries((insT.data || []).map((r) => [r.adset_id, r]));
+    // 🔥 오늘 실황 KPI — 실시간 계약 체결 연출용
+    kpi.today = (insT.data || []).reduce((a, r) => ({
+      spend: a.spend + Math.round(Number(r.spend || 0)), purchases: a.purchases + purchasesOf(r),
+      rev: a.rev + Math.round(revenueOf(r)) }), { spend: 0, purchases: 0, rev: 0 });
 
     const campaigns = [];
     for (const c of active) {
@@ -237,7 +244,7 @@ export async function GET(req) {
         fields: "id,name,daily_budget,effective_status,optimization_goal,created_time,ads.limit(15){effective_status,creative{image_url,thumbnail_url}}", limit: "100" });
       const tgt = targetFor(conf, c.name);
       const rows = (sets.data || []).filter((s) => s.effective_status !== "DELETED").map((s) => {
-        const r7 = by7[s.id] || {}, r3 = by3[s.id] || {};
+        const r7 = by7[s.id] || {}, r3 = by3[s.id] || {}, rT = byT[s.id] || {};
         const sp7 = Number(r7.spend || 0), pu7 = weightedOf(r7);
         const sp3 = Number(r3.spend || 0), pu3 = weightedOf(r3);
         const cpa7 = pu7 >= 1 ? sp7 / pu7 : null, cpa3 = pu3 >= 1 ? sp3 / pu3 : null;
@@ -267,7 +274,8 @@ export async function GET(req) {
           spend7: Math.round(sp7), purchases7: purchasesOf(r7), cpa7: cpa7 ? Math.round(cpa7) : null,
           spend3: Math.round(sp3), cpa3: cpa3 ? Math.round(cpa3) : null,
           cpm7: Math.round(Number(r7.cpm || 0)), cpm3: Math.round(Number(r3.cpm || 0)),
-          ctr7: Number(r7.ctr || 0), judge, target: tgt };
+          ctr7: Number(r7.ctr || 0), judge, target: tgt,
+          buyToday: purchasesOf(rT), spendToday: Math.round(Number(rT.spend || 0)) };
       }).filter((s) => s.status === "ACTIVE" || s.spend7 > 0)
         .sort((a, b) => b.spend7 - a.spend7);
       if (rows.length) campaigns.push({ id: c.id, name: c.name, target: tgt, adsets: rows });
@@ -379,7 +387,8 @@ async function expireCache(s) {
 
 export async function POST(req) {
   try {
-    const { action, adsetId, adId, budget, note, name, before, targets: tgtBody } = await req.json();
+    const { action, adsetId, adId, budget, note, name, before, by, targets: tgtBody } = await req.json();
+    const signer = String(by || "").slice(0, 10); // 🖊 결재 도장 — 진행자 이름 (영서/경은/지원/소리/혜영)
     // 🎯 목표 CPA 설정 저장 — 등급/판정/브리핑 전부 이 기준
     if (action === "targets") {
       const def = Math.round(Number(tgtBody?.default));
@@ -387,8 +396,9 @@ export async function POST(req) {
       const rules = (tgtBody?.rules || [])
         .map((r) => ({ match: String(r.match || "").slice(0, 30), cpa: Math.round(Number(r.cpa)) }))
         .filter((r) => r.match && r.cpa >= 1000).slice(0, 30);
+      const monthCap = Math.max(0, Math.round(Number(tgtBody?.monthCap)) || 0); // 💳 월 예산 한도 (0=미설정)
       const s0 = sb();
-      await s0.from("settings").upsert({ key: "oa_ad_targets_v1", value: { default: def, rules } }, { onConflict: "key" });
+      await s0.from("settings").upsert({ key: "oa_ad_targets_v1", value: { default: def, rules, monthCap } }, { onConflict: "key" });
       await expireCache(s0);
       return Response.json({ ok: true });
     }
@@ -400,7 +410,7 @@ export async function POST(req) {
       await expireCache(s0);
       const { data: d0 } = await s0.from("settings").select("value").eq("key", LOG_KEY).maybeSingle();
       const items0 = d0?.value?.items || [];
-      items0.unshift({ at: new Date().toISOString(), adsetId: adsetId || "", name: name || adId,
+      items0.unshift({ at: new Date().toISOString(), adsetId: adsetId || "", name: name || adId, by: signer,
         desc: action === "adPause" ? "소재 OFF" : "소재 ON", note: note || "", before: before || null });
       await s0.from("settings").upsert({ key: LOG_KEY, value: { items: items0.slice(0, 100) } }, { onConflict: "key" });
       return Response.json({ ok: true });
@@ -440,7 +450,7 @@ export async function POST(req) {
     // 로그
     const { data } = await s.from("settings").select("value").eq("key", LOG_KEY).maybeSingle();
     const items = data?.value?.items || [];
-    items.unshift({ at: new Date().toISOString(), adsetId, name: String(name || "").slice(0, 50),
+    items.unshift({ at: new Date().toISOString(), adsetId, name: String(name || "").slice(0, 50), by: signer,
       desc, note: String(note || "").slice(0, 80), before: before || null });
     await s.from("settings").upsert({ key: LOG_KEY, value: { items: items.slice(0, 200) } }, { onConflict: "key" });
     return Response.json({ ok: true, desc });
