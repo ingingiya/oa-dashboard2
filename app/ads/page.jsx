@@ -77,6 +77,13 @@ const TEAM = [
 const BOSS_IMG = SPRITE_BASE + "mtcov5no_hud_kyeongeun.png"; // 경은 사장님
 // 결재 서명자 → 캐릭터 사진 (인사기록부·결재서류에 이름과 함께 표시)
 const SIGNER_IMG = { 영서: TEAM[0].img, 소리: TEAM[1].img, 혜영: TEAM[2].img, 지원: TEAM[3].img, 경은: BOSS_IMG };
+// 픽셀 소품 스프라이트 (Comfy Cloud 나노바나나 생성, hudassets/px2_*)
+const PX = Object.fromEntries(["trophy", "vault", "paper", "vs", "siren", "chick", "money", "cabinet", "medal", "sadplant"]
+  .map((k) => [k, SPRITE_BASE + `px2_${k}.png`]));
+const Px = ({ k, s = 20, style }) => (
+  <img src={PX[k]} alt="" style={{ width: s, height: s, borderRadius: Math.max(4, Math.round(s / 6)),
+    imageRendering: "pixelated", verticalAlign: "middle", flex: "none", ...style }} />
+);
 const BANNER_IMG = SPRITE_BASE + "mtcop9ce_hud_banner.png";
 const teamOf = (id = "") => TEAM[[...String(id)].reduce((a, ch) => a + ch.charCodeAt(0), 0) % TEAM.length];
 const charOf = (id = "") => teamOf(id).img;
@@ -503,7 +510,8 @@ export default function AdOfficeTycoon() {
             display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
             <div onClick={(e) => e.stopPropagation()} style={{ width: 460, maxWidth: "94vw", background: C.panel,
               border: `1px solid ${C.gold}66`, borderRadius: 14, padding: "16px 18px", boxShadow: `0 0 30px ${C.gold}33` }}>
-              <div style={{ fontSize: 13.5, fontWeight: 900, color: C.gold }}>💸 회수한 월급 ₩{fmt(realloc.freed)}/일 — 어디에 넣을까요?</div>
+              <div style={{ fontSize: 13.5, fontWeight: 900, color: C.gold, display: "flex", alignItems: "center", gap: 8 }}>
+                <Px k="money" s={30} /> 회수한 월급 ₩{fmt(realloc.freed)}/일 — 어디에 넣을까요?</div>
               <div style={{ fontSize: 11, color: C.mid, marginTop: 4 }}>{realloc.from} 퇴근으로 예산이 떴어요. 잘하는 사원에게 보너스로 재배치하거나, 그냥 금고에 아껴둘 수 있습니다.</div>
               {cands.length === 0 ? (
                 <div style={{ fontSize: 11.5, color: C.mid, marginTop: 12 }}>지금 증액할 만한 우수 사원이 없어요 — 금고에 아껴두시죠 🏦</div>
@@ -591,7 +599,7 @@ export default function AdOfficeTycoon() {
         <div className="siren" style={{ background: "#FF6B8112", border: `1.5px solid ${C.red}88`, borderRadius: 14,
           padding: "10px 14px", marginBottom: 14 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
-            <span className="sirenLight" style={{ fontSize: 18 }}>🚨</span>
+            <span className="sirenLight" style={{ display: "inline-flex" }}><Px k="siren" s={28} /></span>
             <b style={{ fontSize: 12.5, color: C.red }}>비상벨 — 최근 3일 급변 감지 {alarms.length}건</b>
             <span style={{ fontSize: 10.5, color: C.mid }}>7일 평균 대비 CPA 1.8배↑ · 지출 2배↑ · CPM 1.5배↑(경매 과열)</span>
           </div>
@@ -728,7 +736,7 @@ export default function AdOfficeTycoon() {
               return (
                 <div style={{ flex: "1 1 230px", minWidth: 210 }}>
                   <div style={{ fontSize: 10, color: C.mid, display: "flex", justifyContent: "space-between" }}>
-                    <span>💳 월 예산 금고 ₩{fmt(cap)}</span>
+                    <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}><Px k="vault" s={16} /> 월 예산 금고 ₩{fmt(cap)}</span>
                     <span style={{ color: over ? C.red : C.neon, fontWeight: 800 }}>{usedPct}% 소진</span>
                   </div>
                   <div style={{ position: "relative", height: 10, background: "#0d0a12", border: `1px solid ${C.border}`,
@@ -768,7 +776,8 @@ export default function AdOfficeTycoon() {
         <div style={{ display: "flex", gap: 12, marginTop: 12, flexWrap: "wrap" }}>
           {fame.length > 0 && (
             <div style={{ ...card, flex: "2 1 340px" }}>
-              <div style={{ fontSize: 11.5, color: C.gold, fontWeight: 800, marginBottom: 10 }}>🖼 명예의 전당 — 이번 주 벽에 걸린 소재</div>
+              <div style={{ fontSize: 11.5, color: C.gold, fontWeight: 800, marginBottom: 10, display: "flex", alignItems: "center", gap: 6 }}>
+                <Px k="medal" s={22} /> 명예의 전당 — 이번 주 벽에 걸린 소재</div>
               <div style={{ display: "flex", gap: 14, flexWrap: "wrap" }}>
                 {fame.map((s, i) => (
                   <div key={s.id} className="fameFrame" onClick={() => jumpToDesk(s)} title={s.name}>
@@ -782,7 +791,8 @@ export default function AdOfficeTycoon() {
           )}
           {shame.length > 0 && (
             <div style={{ ...card, flex: "1 1 240px", borderColor: `${C.red}44` }}>
-              <div style={{ fontSize: 11.5, color: C.red, fontWeight: 800, marginBottom: 10 }}>📌 반성의 구석 — 돈만 쓰는 소재</div>
+              <div style={{ fontSize: 11.5, color: C.red, fontWeight: 800, marginBottom: 10, display: "flex", alignItems: "center", gap: 6 }}>
+                <Px k="sadplant" s={22} /> 반성의 구석 — 돈만 쓰는 소재</div>
               <div style={{ display: "flex", gap: 14, flexWrap: "wrap" }}>
                 {shame.map((s) => (
                   <div key={s.id} className="shamePoster" onClick={() => jumpToDesk(s)} title={s.name}>
@@ -948,7 +958,8 @@ export default function AdOfficeTycoon() {
             {/* 🏆 주간 MVP 명예의전당 — 매주 자동 기록 */}
             {data.hall?.length > 0 && (
               <div style={{ marginTop: 8 }}>
-                <div style={{ fontSize: 10.5, color: C.mid, marginBottom: 4 }}>🏆 주간 MVP 명예의전당 (매주 자동 헌액)</div>
+                <div style={{ fontSize: 10.5, color: C.mid, marginBottom: 4, display: "flex", alignItems: "center", gap: 5 }}>
+                  <Px k="medal" s={16} /> 주간 MVP 명예의전당 (매주 자동 헌액)</div>
                 <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                   {data.hall.map((h, i) => (
                     <div key={h.w} style={{ fontSize: 11, background: i === 0 ? `${C.gold}14` : "#ffffff06",
@@ -1017,7 +1028,8 @@ export default function AdOfficeTycoon() {
           <div style={{ ...card, marginTop: 12 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10, flexWrap: "wrap" }}>
               <span style={px}>업적</span>
-              <span style={{ fontSize: 12.5, fontWeight: 800 }}>🏆 트로피룸</span>
+              <Px k="trophy" s={26} />
+              <span style={{ fontSize: 12.5, fontWeight: 800 }}>트로피룸</span>
               <span style={{ fontSize: 10.5, color: C.gold, fontWeight: 800 }}>{done} / {achv.length} 달성</span>
               <div style={{ flex: 1, minWidth: 120, height: 7, background: "#0d0a12", borderRadius: 4, overflow: "hidden", border: `1px solid ${C.border}` }}>
                 <div style={{ width: `${Math.round((done / achv.length) * 100)}%`, height: "100%", background: C.gold, boxShadow: `0 0 6px ${C.gold}` }} />
@@ -1043,7 +1055,8 @@ export default function AdOfficeTycoon() {
         <div style={{ marginTop: 12, background: "#FBF8F1", border: "1px solid #D8CFBB", borderRadius: 6, padding: "16px 20px",
           fontFamily: "'Noto Serif KR', 'Apple SD Gothic Neo', serif", color: "#2B2620" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", borderBottom: "2.5px solid #2B2620", paddingBottom: 6 }}>
-            <span style={{ fontSize: 17, fontWeight: 900, letterSpacing: 3 }}>주간 광고상사 신문</span>
+            <span style={{ fontSize: 17, fontWeight: 900, letterSpacing: 3, display: "inline-flex", alignItems: "center", gap: 8 }}>
+              <Px k="paper" s={30} style={{ border: "1px solid #D8CFBB" }} /> 주간 광고상사 신문</span>
             <span style={{ fontSize: 10, color: "#7A6F5C" }}>{weekly?.week || ""} · AI 편집국{weekly?.cached ? " · 보관본" : ""}</span>
           </div>
           {!weekly ? (
@@ -1207,7 +1220,8 @@ export default function AdOfficeTycoon() {
               <div style={{ fontSize: 13, fontWeight: 700 }}>{s.name}</div>
               <div style={{ fontSize: 11.5, color: C.mid }}>{s.camp} · 7일 ₩{fmt(s.spend7)} · 🛒{s.purchases7}{s.view7 ? `+👁${s.view7}` : ""} · CPA {s.cpa7 ? `₩${fmt(s.cpa7)}` : "-"} / 목표 ₩{fmt(s.target)}</div>
               {s.judge === "kill" && s.created && Math.floor((Date.now() - new Date(s.created)) / 86400000) < 7 && (
-                <div style={{ fontSize: 10.5, color: C.gold }}>🐣 수습 기간(생성 7일 미만) — 학습 중이라 성급한 퇴근 주의</div>
+                <div style={{ fontSize: 10.5, color: C.gold, display: "flex", alignItems: "center", gap: 4 }}>
+                  <Px k="chick" s={14} /> 수습 기간(생성 7일 미만) — 학습 중이라 성급한 퇴근 주의</div>
               )}
               {s.judge === "kill" && s.hr?.c >= 3 && (
                 <div style={{ fontSize: 10.5, color: C.red }}>⚠️ 경고 {s.hr.c}회 누적(14일) — 인사규정상 퇴근 대상입니다</div>
@@ -1229,6 +1243,15 @@ export default function AdOfficeTycoon() {
 
       {/* ③ 사무실 층별(부서) → 직원 책상 */}
       <h2 style={h2}><span style={px}>사무실</span> 부서별 직원 현황
+        {(() => { // 💰 월급 총 지급액 — 출근 중인 사원(ACTIVE) 일예산 합계
+          const payroll = allSets.filter((s) => s.status === "ACTIVE").reduce((a, s) => a + (s.budget || 0), 0);
+          return payroll > 0 ? (
+            <span title="출근 중인 전 사원 일예산 합계 (월 환산은 ×30)"
+              style={{ fontSize: 10.5, color: C.gold, fontWeight: 800, border: `1px solid ${C.gold}55`, borderRadius: 6,
+                padding: "2px 8px", display: "inline-flex", alignItems: "center", gap: 5 }}>
+              <Px k="money" s={14} /> 월급 총 지급 ₩{fmt(payroll)}/일 · 월 ₩{fmt(payroll * 30)}</span>
+          ) : null;
+        })()}
         <button style={{ ...btn(C.mid), padding: "3px 10px", fontSize: 10.5, marginLeft: "auto" }}
           onClick={() => { SFX.click(); setTgtEdit(tgtEdit ? null : {
             default: data.targets?.default || 30000,
@@ -1492,8 +1515,10 @@ export default function AdOfficeTycoon() {
         </>
       )}
       {tab === "log" && logArr.length === 0 && (
-        <div style={{ fontSize: 12.5, color: C.mid, padding: "20px 16px", background: C.panel, border: `1px dashed ${C.border}`, borderRadius: 12 }}>
-          📇 아직 결재 기록이 없어요 — 결재함에서 첫 결재를 하면 여기에 남습니다
+        <div style={{ fontSize: 12.5, color: C.mid, padding: "20px 16px", background: C.panel, border: `1px dashed ${C.border}`, borderRadius: 12,
+          display: "flex", alignItems: "center", gap: 14 }}>
+          <Px k="cabinet" s={56} />
+          아직 결재 기록이 없어요 — 결재함에서 첫 결재를 하면 여기에 남습니다
         </div>
       )}
       {/* 📋 인사카드 모달 — 세트/캠페인 14일 상세 */}
@@ -1711,8 +1736,9 @@ function Desk({ s, busy, act, adsOpen, ads, toggleAds, isMvp, talkTick, onAdStat
               const days = s.created ? Math.floor((Date.now() - new Date(s.created)) / 86400000) : null;
               return days != null && days < 7 ? (
                 <span title="세트 생성 7일 미만 — 머신러닝 학습 기간이라 판단 보류 권장"
-                  style={{ fontSize: 9.5, color: C.gold, border: `1px solid ${C.gold}66`, borderRadius: 4, padding: "1px 5px", flex: "none", fontWeight: 800 }}>
-                  🐣 수습 D+{days}</span>
+                  style={{ fontSize: 9.5, color: C.gold, border: `1px solid ${C.gold}66`, borderRadius: 4, padding: "1px 5px", flex: "none", fontWeight: 800,
+                    display: "inline-flex", alignItems: "center", gap: 3 }}>
+                  <Px k="chick" s={13} /> 수습 D+{days}</span>
               ) : null;
             })()}
           </div>
@@ -1820,8 +1846,8 @@ function Desk({ s, busy, act, adsOpen, ads, toggleAds, isMvp, talkTick, onAdStat
               </div>);
             return (
               <div style={{ marginBottom: 8, background: "#1B1426", border: `1px solid ${C.border}`, borderRadius: 10, padding: "8px 10px" }}>
-                <div style={{ fontSize: 10, color: C.purple, fontWeight: 800, letterSpacing: 1, marginBottom: 6 }}>
-                  ⚔️ 소재 배틀 아레나 <span style={{ color: C.mid, fontWeight: 400 }}>— 지출 TOP2 맞대결</span>
+                <div style={{ fontSize: 10, color: C.purple, fontWeight: 800, letterSpacing: 1, marginBottom: 6, display: "flex", alignItems: "center", gap: 6 }}>
+                  <Px k="vs" s={24} /> 소재 배틀 아레나 <span style={{ color: C.mid, fontWeight: 400 }}>— 지출 TOP2 맞대결</span>
                 </div>
                 <div style={{ display: "flex", gap: 8, alignItems: "stretch" }}>
                   <Fighter a={A} win={winA} />
