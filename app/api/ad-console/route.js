@@ -241,7 +241,7 @@ export async function GET(req) {
           else if ((sp7 >= tgt * 3 && pu7 === 0) || (cpa7 && cpa7 >= tgt * 3 && sp7 >= 100000)) judge = "kill";
           else if (cpa7 && cpa7 >= tgt * 2 && sp7 >= 100000) judge = "watch";
         }
-        return { id: s.id, name: s.name, status: s.effective_status, view7: viewOf(r7), thumb,
+        return { id: s.id, name: s.name, status: effStatus, view7: viewOf(r7), thumb,
           budget: Number(s.daily_budget || 0), goal: isTraffic ? "트래픽" : "전환",
           spend7: Math.round(sp7), purchases7: purchasesOf(r7), cpa7: cpa7 ? Math.round(cpa7) : null,
           spend3: Math.round(sp3), cpa3: cpa3 ? Math.round(cpa3) : null,

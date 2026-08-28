@@ -115,6 +115,9 @@ export default function AdOfficeTycoon() {
   const [mute, setMute] = useState(false);
   const [talkTick, setTalkTick] = useState(0);
   const [spot, setSpot] = useState(null); // 전광판→책상 점프 스포트라이트
+  const [brief, setBrief] = useState(null); // AI 비서 브리핑 {items, mood, at}
+  const [briefBusy, setBriefBusy] = useState(false);
+  const [evt, setEvt] = useState(null); // 랜덤 사무실 이벤트 토스트
 
   useEffect(() => {
     try { const m = localStorage.getItem("oa_ads_mute") === "1"; setMute(m); sfxOn = !m; } catch {}
@@ -122,6 +125,37 @@ export default function AdOfficeTycoon() {
     const talk = setInterval(() => setTalkTick((x) => x + 1), 6000); // 말풍선 로테이션
     return () => { clearTimeout(t); clearInterval(talk); };
   }, []);
+
+  // 🎲 랜덤 사무실 이벤트 — 40초마다 20% 확률, 4초 토스트 (업무 방해 없음)
+  useEffect(() => {
+    const EVENTS = [
+      ["🚚", "택배가 도착했습니다 — 누가 또 뭘 샀는지…"],
+      ["🐈", "지원(고양이)이 키보드 위를 지나갑니다. asdfghjk"],
+      ["🤝", "거래처(메타 본사)에서 인사 왔습니다"],
+      ["☕", "커피 타임 — 3분간 전 직원 충전 중"],
+      ["🍕", "누군가 회의실에 피자를 시켰습니다"],
+      ["📠", "팩스가 왔습니다. 2026년에 팩스라니…"],
+      ["💡", "절전 모드 — 복도 형광등이 깜빡입니다"],
+      ["🪴", "화분에 물 주는 날입니다"],
+    ];
+    const iv = setInterval(() => {
+      if (Math.random() < 0.2) {
+        setEvt(EVENTS[Math.floor(Math.random() * EVENTS.length)]);
+        setTimeout(() => setEvt(null), 4000);
+      }
+    }, 40000);
+    return () => clearInterval(iv);
+  }, []);
+
+  // 🤵 AI 비서 브리핑 — 콘솔 캐시 기반, 서버 3h 캐시
+  async function loadBrief(fresh) {
+    SFX.click(); setBriefBusy(true);
+    try {
+      const j = await fetch("/api/ad-brief" + (fresh ? "?fresh=1" : "")).then((r) => r.json());
+      if (j.error) throw new Error(j.error);
+      setBrief(j);
+    } catch (e) { alert("브리핑 실패: " + e.message); } finally { setBriefBusy(false); }
+  }
   const toggleMute = () => setMute((m) => { const n = !m; sfxOn = !n; try { localStorage.setItem("oa_ads_mute", n ? "1" : "0"); } catch {}; return n; });
 
   // 기본은 5분 서버 캐시(메타 호출 제한 보호) — 순찰·조치 직후만 fresh
@@ -481,6 +515,39 @@ export default function AdOfficeTycoon() {
         );
       })()}
 
+      {/* 🤵 AI 비서 브리핑 */}
+      <div style={{ ...card, marginTop: 12, borderColor: brief ? `${C.purple}55` : C.border }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+          <span style={px}>비서실</span>
+          <span style={{ fontSize: 12.5, fontWeight: 800 }}>🤵 AI 비서 브리핑</span>
+          <span style={{ fontSize: 10.5, color: C.mid }}>실데이터 기반 오늘의 지시 3개</span>
+          <button style={{ ...btn(C.purple), padding: "4px 12px", fontSize: 11.5, marginLeft: "auto" }} disabled={briefBusy}
+            onClick={() => loadBrief(false)}>{briefBusy ? "보고서 작성 중…" : brief ? "🔄 새 브리핑" : "📋 브리핑 받기"}</button>
+        </div>
+        {brief && (
+          <div style={{ marginTop: 10 }}>
+            {brief.mood && <div style={{ fontSize: 12, color: C.gold, marginBottom: 8, fontStyle: "italic" }}>💬 "{brief.mood}"</div>}
+            {(brief.items || []).map((it, i) => {
+              const cl = /증액/.test(it.action) ? C.neon : /중지|OFF/.test(it.action) ? C.red : /교체/.test(it.action) ? C.pink : C.gold;
+              return (
+                <div key={i} style={{ display: "flex", gap: 10, alignItems: "flex-start", padding: "6px 8px", fontSize: 12,
+                  background: "#ffffff06", borderRadius: 8, marginBottom: 5 }}>
+                  <span style={{ fontSize: 10, fontWeight: 800, color: cl, border: `1px solid ${cl}66`, borderRadius: 5,
+                    padding: "2px 7px", whiteSpace: "nowrap", marginTop: 1 }}>{it.action}</span>
+                  <div style={{ flex: 1 }}>
+                    <b style={{ color: C.ink }}>{it.target}</b>
+                    <span style={{ color: C.mid }}> — {it.reason}</span>
+                  </div>
+                </div>
+              );
+            })}
+            <div style={{ fontSize: 9.5, color: C.mid, opacity: 0.6 }}>
+              {brief.at ? `${new Date(brief.at).toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit" })} 보고` : ""}{brief.cached ? " · 캐시" : ""}
+            </div>
+          </div>
+        )}
+      </div>
+
       {/* ② 결재 서류함 */}
       <h2 style={h2}><span style={px}>결재함</span> 사장님 결재 대기 {queue.length
         ? <span style={{ color: C.gold }}>({queue.length}건)</span>
@@ -522,7 +589,7 @@ export default function AdOfficeTycoon() {
         const wsum = buy + vw * 0.3;
         const cCpa = wsum >= 1 ? Math.round(tot / wsum) : null;
         const alive = c.adsets.filter((s) => s.status === "ACTIVE").length;
-        if (!alive) return null; // 전원 퇴근한 부서는 통째로 숨김 ("운영 안하는 건 안 보이게")
+        if (!alive || (tot <= 0 && buy <= 0)) return null; // 전원 퇴근·7일 지출 0 부서는 통째로 숨김 ("운영 안하는 건 안 보이게")
         return (
           <div key={c.id} style={{ background: C.panel, border: `1px solid ${C.border}`, borderRadius: 14, marginBottom: 12, overflow: "hidden" }}>
             <button onClick={() => { SFX.click(); const opening = !openCamp[c.id]; setOpenCamp((o) => ({ ...o, [c.id]: !o[c.id] })); if (opening) autoOpenAds(c.adsets); }}
@@ -809,6 +876,15 @@ export default function AdOfficeTycoon() {
           </div>
         </div>
       )}
+      {/* 🎲 랜덤 사무실 이벤트 토스트 */}
+      {evt && (
+        <div className="evtToast" style={{ position: "fixed", left: 16, bottom: 16, zIndex: 55, background: C.panel,
+          border: `1px solid ${C.border}`, borderRadius: 12, padding: "9px 14px", display: "flex", gap: 9, alignItems: "center",
+          boxShadow: "0 6px 24px #000A", fontSize: 12, maxWidth: 320 }}>
+          <span style={{ fontSize: 20 }}>{evt[0]}</span>
+          <span style={{ color: C.mid }}>{evt[1]}</span>
+        </div>
+      )}
     </Shell>
   );
 }
@@ -915,6 +991,34 @@ function Desk({ s, busy, act, adsOpen, ads, toggleAds, isMvp, talkTick, onAdStat
             <button style={{ ...btn(C.mid), padding: "3px 7px", fontSize: 11 }} onClick={() => setEb(null)}>✕</button>
           </>
         )}
+        {/* 💹 예산 시뮬레이터 — 7일 실적 기반 예상치 (체감 수익 체감: ^0.8) */}
+        {eb != null && (() => {
+          const nb = Number(eb) || 0;
+          const daily = s.spend7 / 7;
+          if (!(daily > 0 && s.purchases7 > 0 && nb > 0)) return (
+            <div style={{ flexBasis: "100%", fontSize: 10, color: C.mid }}>
+              <input type="range" min={Math.max(1000, Math.round(s.budget * 0.5 / 1000) * 1000)} max={s.budget * 2} step={1000}
+                value={nb || s.budget} onChange={(e) => setEb(Number(e.target.value))} style={{ width: "100%", accentColor: C.cyan }} />
+              실적이 부족해 예측 불가 — 감으로 결재하시죠 🎲
+            </div>
+          );
+          const ratio = (nb / daily) ** 0.8; // 예산 늘려도 효율은 완만히 감소
+          const pBuy = Math.round(s.purchases7 * ratio * 10) / 10;
+          const pCpa = pBuy >= 0.5 ? Math.round((nb * 7) / pBuy) : null;
+          const worse = pCpa && s.target && pCpa > s.target;
+          return (
+            <div style={{ flexBasis: "100%" }}>
+              <input type="range" min={Math.max(1000, Math.round(s.budget * 0.5 / 1000) * 1000)} max={s.budget * 2} step={1000}
+                value={nb} onChange={(e) => setEb(Number(e.target.value))} style={{ width: "100%", accentColor: C.cyan }} />
+              <div style={{ fontSize: 10.5, color: C.mid }}>
+                💹 ₩{fmt(nb)}/일이면 7일 예상: <b style={{ color: C.neon }}>🛒{pBuy}</b>
+                {pCpa && <> · CPA <b style={{ color: worse ? C.red : C.cyan }}>₩{fmt(pCpa)}</b></>}
+                {worse && <span style={{ color: C.red }}> ⚠️ 목표 초과 예상</span>}
+                <span style={{ opacity: 0.55 }}> (7일 실적 기반 추정)</span>
+              </div>
+            </div>
+          );
+        })()}
         {!dead
           ? <button style={{ ...btn(C.red), padding: "4px 10px", fontSize: 11 }} disabled={busy === s.id} onClick={() => act("pause", s)} title="퇴근(OFF)">🪑 퇴근</button>
           : <button style={{ ...btn(C.neon), padding: "4px 10px", fontSize: 11 }} disabled={busy === s.id} onClick={() => act("resume", s)}>📢 재고용</button>}
@@ -987,12 +1091,16 @@ const btn = (color) => ({ background: `${color}1E`, color, border: `1px solid ${
   padding: "6px 12px", fontSize: 12, fontWeight: 700, cursor: "pointer" });
 
 function Shell({ children, onRefresh, fx, shake, mute, toggleMute }) {
+  // 🌙 밤 연출 — 19시~익일 7시는 사무실 소등 톤
+  const hh = new Date().getHours();
+  const night = hh >= 19 || hh < 7;
   return (
-    <div className={shake ? "screenShake" : ""} style={{ minHeight: "100vh", background: C.bg, fontFamily: "'Pretendard','Apple SD Gothic Neo',sans-serif", color: C.ink, position: "relative", overflow: "hidden" }}>
+    <div className={shake ? "screenShake" : ""} style={{ minHeight: "100vh", background: night ? "#0C0912" : C.bg, fontFamily: "'Pretendard','Apple SD Gothic Neo',sans-serif", color: C.ink, position: "relative", overflow: "hidden" }}>
       <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet" />
       {/* 사무실 바닥 타일 + 창밖 야경 별 */}
-      <div className="officeTiles" />
-      <div className="stars" />
+      <div className="officeTiles" style={night ? { opacity: 0.45 } : undefined} />
+      <div className="stars" style={night ? { opacity: 1 } : undefined} />
+      {night && <span style={{ position: "fixed", top: 18, right: 24, fontSize: 26, zIndex: 1, filter: "drop-shadow(0 0 14px #FFD16688)" }}>🌙</span>}
       {fx && (
         <div className="fxToast">
           <span style={{ fontSize: 40 }}>{fx.emoji}</span>
@@ -1027,6 +1135,8 @@ function Shell({ children, onRefresh, fx, shake, mute, toggleMute }) {
         @keyframes coinUp { 0% { opacity: 0; transform: translateY(6px) scale(0.6); } 30% { opacity: 1; } 100% { opacity: 0; transform: translateY(-14px) scale(1.1); } }
         @keyframes bubbleIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; } }
         @keyframes shakeX { 0%,100% { transform: translateX(0); } 20% { transform: translateX(-6px); } 40% { transform: translateX(5px); } 60% { transform: translateX(-3px); } 80% { transform: translateX(2px); } }
+        @keyframes evtIn { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+        .evtToast { animation: evtIn 0.3s ease-out; }
         @keyframes doorOpen { 0%,100% { transform: scale(1); } 50% { transform: scale(1.12) rotate(-2deg); } }
         @keyframes confettiFall { 0% { opacity: 1; transform: translateY(0) rotate(0); } 100% { opacity: 0; transform: translateY(70px) rotate(200deg); } }
         @keyframes xpGlow { 0%,100% { filter: brightness(1); } 50% { filter: brightness(1.4); } }
