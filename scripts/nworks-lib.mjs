@@ -22,6 +22,7 @@ export const MEMBER_EMAIL = {
   지수: 'jisu01@oa-world.com',
   소리: 'srahn@oa-world.com',
   영서: 'bread22@oa-world.com',
+  // TODO: 혜영 웍스 이메일 미확보 — 계정 패턴이 불규칙해 추측 금지, 사용자 확인 후 추가할 것
 };
 
 export const kst = (offsetDays = 0) =>

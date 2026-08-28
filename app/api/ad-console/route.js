@@ -8,6 +8,7 @@ export const maxDuration = 60;
 
 import { createClient } from "@supabase/supabase-js";
 import crypto from "crypto";
+import { SHOP } from "../../../lib/ad-ranks.mjs"; // 🛍 복지몰 카탈로그 (page.jsx와 공유)
 
 // 네이버 검색광고 (쇼핑검색 포함) — 라이브 API
 async function naverYesterday() {
@@ -340,6 +341,8 @@ export async function GET(req) {
     // 👤 캠페인 담당자 — {campaignId: 이름}, 웍스 아침 개인 알림의 기준
     const { data: ownRow } = await sb().from("settings").select("value").eq("key", "oa_ad_owners_v1").maybeSingle();
     const { data: planRow } = await sb().from("settings").select("value").eq("key", "oa_ad_plans_v1").maybeSingle();
+    // 🗓 출근부 — {이름:{last,streak,total}} (POST attend가 기록)
+    const { data: attRow } = await sb().from("settings").select("value").eq("key", "oa_ad_attend_v1").maybeSingle();
 
     // 조치 로그 (최근 30) — "손댄 건 성공했나" 추적: 조치한 세트의 현재 3일 성과로 판정
     const { data: logRow } = await sb().from("settings").select("value").eq("key", LOG_KEY).maybeSingle();
@@ -380,7 +383,7 @@ export async function GET(req) {
       }
     } catch {}
 
-    const payload = { ok: true, kpi, monthly, hall, campaigns, naver, gfa: gfaRow?.value || null, advoost: advRow?.value || null, log, targets: conf, owners: ownRow?.value || {}, career, plans: planRow?.value?.items || [] };
+    const payload = { ok: true, kpi, monthly, hall, campaigns, naver, gfa: gfaRow?.value || null, advoost: advRow?.value || null, log, targets: conf, owners: ownRow?.value || {}, career, plans: planRow?.value?.items || [], attend: attRow?.value || {} };
     await sb().from("settings").upsert({ key: CACHE_KEY, value: { at: Date.now(), payload } }, { onConflict: "key" });
     return Response.json({ ...payload, cachedAt: Date.now() });
   } catch (e) {
@@ -423,7 +426,7 @@ async function expireCache(s) {
 
 export async function POST(req) {
   try {
-    const { action, adsetId, adId, budget, note, name, before, by, targets: tgtBody, campId, owner, plan, planId, planStatus } = await req.json();
+    const { action, adsetId, adId, budget, note, name, before, by, targets: tgtBody, campId, owner, plan, planId, planStatus, reason, itemId } = await req.json();
     const signer = String(by || "").slice(0, 10); // 🖊 결재 도장 — 진행자 이름 (영서/경은/지원/소리/혜영)
     const PLAN_KEY = "oa_ad_plans_v1";
     // 📝 신규 채용 기획서 제출 — {by, plan:{product,concept,target,usp,ref}} → 검토 대기, 제출 1pt
@@ -451,8 +454,55 @@ export async function POST(req) {
       if (!it) throw new Error("기획서 없음");
       if (it.status === "pending" && planStatus === "approved") await careerAdd(s0, it.by, 3);
       it.status = planStatus; it.decidedBy = signer; it.decidedAt = new Date().toISOString();
+      if (planStatus === "rejected") it.reason = String(reason || "").slice(0, 200); // 반려 사유 (기획자에게 표시)
       await s0.from("settings").upsert({ key: PLAN_KEY, value: { items } }, { onConflict: "key" });
       return Response.json({ ok: true, plans: items });
+    }
+    // 📝 기획서 회수(삭제) — 본인 pending만 (제출 pt는 유지)
+    if (action === "planDelete") {
+      if (!planId || !signer) throw new Error("planId/by 필요");
+      const s0 = sb();
+      const { data: row } = await s0.from("settings").select("value").eq("key", PLAN_KEY).maybeSingle();
+      const items = row?.value?.items || [];
+      const it = items.find((x) => x.id === planId);
+      if (!it) throw new Error("기획서 없음");
+      if (it.status !== "pending") throw new Error("결재 완료된 기획서는 회수 불가");
+      if (it.by !== signer) throw new Error("본인 기획서만 회수 가능");
+      const next = items.filter((x) => x.id !== planId);
+      await s0.from("settings").upsert({ key: PLAN_KEY, value: { items: next } }, { onConflict: "key" });
+      return Response.json({ ok: true, plans: next });
+    }
+    // 🛍 복지몰 — 커리어 pt로 칭호 구매 (표시 전용, spent만 누적 — 직급은 누적 pts 기준이라 안 떨어짐)
+    if (action === "shopBuy") {
+      if (!signer || !itemId) throw new Error("by/itemId 필요");
+      const item = SHOP.find((x) => x.id === itemId);
+      if (!item) throw new Error("없는 상품");
+      const s0 = sb();
+      const { data: row } = await s0.from("settings").select("value").eq("key", CAREER_KEY).maybeSingle();
+      const map = { ...(row?.value || {}) };
+      const c = map[signer] || {};
+      const items = c.items || [];
+      if (items.includes(itemId)) throw new Error("이미 보유한 칭호");
+      const wallet = (c.pts || 0) - (c.spent || 0);
+      if (wallet < item.cost) throw new Error(`pt 부족 — 지갑 ${wallet}pt / 필요 ${item.cost}pt`);
+      map[signer] = { ...c, spent: (c.spent || 0) + item.cost, items: [...items, itemId] };
+      await s0.from("settings").upsert({ key: CAREER_KEY, value: map }, { onConflict: "key" });
+      return Response.json({ ok: true, career: map });
+    }
+    // 🗓 출근 도장 — 하루 1회, KST 어제 출근이면 스트릭 +1 아니면 리셋
+    if (action === "attend") {
+      if (!signer) throw new Error("by 필요");
+      const ATT_KEY = "oa_ad_attend_v1";
+      const today = new Date(Date.now() + 9 * 3600 * 1000).toISOString().slice(0, 10); // KST
+      const yd = new Date(Date.now() + 9 * 3600 * 1000 - 86400000).toISOString().slice(0, 10);
+      const s0 = sb();
+      const { data: row } = await s0.from("settings").select("value").eq("key", ATT_KEY).maybeSingle();
+      const map = { ...(row?.value || {}) };
+      const a = map[signer] || {};
+      if (a.last === today) return Response.json({ ok: true, attend: map }); // 이미 출근 — 멱등
+      map[signer] = { last: today, streak: a.last === yd ? (a.streak || 0) + 1 : 1, total: (a.total || 0) + 1 };
+      await s0.from("settings").upsert({ key: ATT_KEY, value: map }, { onConflict: "key" });
+      return Response.json({ ok: true, attend: map });
     }
     // 🤖 기획 초안 비서 — 콘솔 실데이터(잘된/죽은 세트 패턴)로 Claude가 컨셉 3안 제안
     if (action === "planDraft") {

@@ -2,13 +2,11 @@
 // 크론: 매월 1일 아침. 지난달 결산은 payload monthly.prev(1일엔 cur이 새 달) 기준
 // 사용법: node scripts/nworks-ad-awards.mjs [--dry-run]
 import { sendToChannel, telegram } from './nworks-lib.mjs';
+import { rankOf } from '../lib/ad-ranks.mjs'; // ★공유 모듈 — /ads page.jsx와 단일 소스
 
 const DRY = process.argv.includes('--dry-run');
 const URL = 'https://oa-dashboard2.vercel.app/api/ad-console?fresh=1';
 const w = (n) => `₩${Math.round(n || 0).toLocaleString()}`;
-// ★/ads page.jsx RANKS와 동일해야 함
-const RANKS = [[0, '인턴'], [2, '사원'], [5, '주임'], [10, '대리'], [18, '과장'], [30, '차장'], [45, '부장'], [70, '상무'], [100, '전무'], [140, '부사장']];
-const rankOf = (pts) => { let r = RANKS[0][1]; for (const [th, nm] of RANKS) if (pts >= th) r = nm; return r; };
 
 async function main() {
   const j = await (await fetch(URL)).json();

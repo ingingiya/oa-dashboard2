@@ -5,14 +5,12 @@ import { readFileSync, writeFileSync } from 'fs';
 import { dirname, resolve } from 'path';
 import { fileURLToPath } from 'url';
 import { sendToChannel, telegram, kst } from './nworks-lib.mjs';
+import { RANKS, rankOf, weekWindow, questGoal } from '../lib/ad-ranks.mjs'; // ★공유 모듈 — /ads page.jsx와 단일 소스
 
 const DRY = process.argv.includes('--dry-run');
 const URL = 'https://oa-dashboard2.vercel.app/api/ad-console';
 const STATE = resolve(dirname(fileURLToPath(import.meta.url)), '.flash-state.json');
 const MILESTONES = [3, 5, 10, 20, 30, 50];
-// ★/ads page.jsx RANKS와 동일해야 함
-const RANKS = [[0, '인턴'], [2, '사원'], [5, '주임'], [10, '대리'], [18, '과장'], [30, '차장'], [45, '부장'], [70, '상무'], [100, '전무'], [140, '부사장']];
-const rankOf = (pts) => { let r = RANKS[0][1]; for (const [th, nm] of RANKS) if (pts >= th) r = nm; return r; };
 
 async function main() {
   const j = await (await fetch(URL)).json();
@@ -23,6 +21,8 @@ async function main() {
   const today = kst(0);
   if (st.date !== today) st = { date: today, hit: {}, ranks: st.ranks || {}, quest: st.quest || null, planSeen: st.planSeen || {} }; // hit: {adsetId:[마일스톤]}, ranks·quest·planSeen은 날짜 무관 유지
   st.planSeen = st.planSeen || {};
+  // 🧹 planSeen 무한 누적 방지 — 현재 payload에 없는(cap 40 밀려난) 기획서 id는 정리
+  st.planSeen = Object.fromEntries(Object.entries(st.planSeen).filter(([id]) => (j.plans || []).some((p) => p.id === id)));
 
   const owners = j.owners || {};
   const lines = [];
@@ -68,19 +68,14 @@ async function main() {
     }
   }
 
-  // ④ 전사 협력 퀘스트 달성 — ★/ads page.jsx 협력 퀘스트 산식과 동일해야 함 (지난주 +5%, 최소 10)
+  // ④ 전사 협력 퀘스트 달성 — 산식은 lib/ad-ranks.mjs 공유 (지난주 +5%, 최소 10)
   const days = j.monthly?.days30 || [];
   if (days.length) {
-    const now = new Date(Date.now() + 9 * 3600 * 1000);
-    const dow = (now.getUTCDay() + 6) % 7; // 월=0
-    const mon = new Date(now); mon.setUTCDate(now.getUTCDate() - dow);
-    const monS = mon.toISOString().slice(0, 10);
-    const pmon = new Date(mon); pmon.setUTCDate(mon.getUTCDate() - 7);
-    const pmonS = pmon.toISOString().slice(0, 10);
+    const { monS, pmonS } = weekWindow();
     const cur = days.filter((d) => d.d >= monS).reduce((a, d) => a + (d.buy || 0), 0);
     const prevW = days.filter((d) => d.d >= pmonS && d.d < monS).reduce((a, d) => a + (d.buy || 0), 0);
     if (prevW) {
-      const goal = Math.max(10, Math.ceil(prevW * 1.05));
+      const goal = questGoal(prevW);
       if (cur >= goal && st.quest !== monS) {
         st.quest = monS; // 주당 1회만 공고
         lines.push(`🎯 전사 퀘스트 달성 — 이번 주 계약 ${cur}건, 목표 ${goal}건(지난주 +5%) 돌파! 전 부서 협력의 승리입니다 👏`);
