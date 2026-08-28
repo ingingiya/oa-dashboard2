@@ -193,11 +193,16 @@ export async function GET(req) {
     const conf = await targets();
     const KPI_FIELDS = "spend,actions,action_values,catalog_segment_actions,catalog_segment_value";
     const AW = JSON.stringify(["7d_click", "1d_view"]);
-    const [camps, kpiY, kpi7, kpi30] = await Promise.all([
+    const d60 = new Date(Date.now() - 60 * 86400_000).toISOString().slice(0, 10);
+    const dToday = new Date().toISOString().slice(0, 10);
+    const [camps, kpiY, kpi7, kpi30, kpiDaily] = await Promise.all([
       g(`act_${acct}/campaigns`, { fields: "id,name,effective_status", limit: "200" }),
       g(`act_${acct}/insights`, { date_preset: "yesterday", fields: KPI_FIELDS, action_attribution_windows: AW }),
       g(`act_${acct}/insights`, { date_preset: "last_7d", fields: KPI_FIELDS, action_attribution_windows: AW }),
       g(`act_${acct}/insights`, { date_preset: "last_30d", fields: KPI_FIELDS, action_attribution_windows: AW }),
+      // 월말 결산용 — 60일 일별 (이번 달 vs 지난 달 + 30일 추이 차트)
+      g(`act_${acct}/insights`, { time_increment: "1", limit: "100", fields: "date_start," + KPI_FIELDS,
+        time_range: JSON.stringify({ since: d60, until: dToday }), action_attribution_windows: AW }),
     ]);
     const active = (camps.data || []).filter((c) => c.effective_status === "ACTIVE");
     const kpi = {};
@@ -207,6 +212,16 @@ export async function GET(req) {
       kpi[k] = { spend: Math.round(sp), purchases: pu, views: vw, roas: sp ? +(rev / sp).toFixed(2) : 0,
         cpa: w >= 1 ? Math.round(sp / w) : null };
     }
+
+    // 📅 월말 결산 — 이번 달 vs 지난 달 + 최근 30일 일별 추이
+    const dailyRows = (kpiDaily.data || []).map((r) => ({ d: r.date_start, spend: Math.round(Number(r.spend || 0)),
+      buy: purchasesOf(r), rev: revenueOf(r) }));
+    const curMon = dToday.slice(0, 7);
+    const prevMon = new Date(new Date(dToday).getFullYear(), new Date(dToday).getMonth() - 1, 15).toISOString().slice(0, 7);
+    const monSum = (mon) => dailyRows.filter((x) => x.d.startsWith(mon))
+      .reduce((a, x) => ({ spend: a.spend + x.spend, buy: a.buy + x.buy, rev: a.rev + x.rev }), { spend: 0, buy: 0, rev: 0 });
+    const monthly = { cur: { mon: curMon, ...monSum(curMon) }, prev: { mon: prevMon, ...monSum(prevMon) },
+      days30: dailyRows.slice(-30).map(({ d, spend, buy }) => ({ d, spend, buy })) };
 
     // 세트 + 성과 (7일/3일) — 인사이트는 계정 단위 한 번에
     const [ins7, ins3] = await Promise.all(["last_7d", "last_3d"].map((p) =>
@@ -219,7 +234,7 @@ export async function GET(req) {
     const campaigns = [];
     for (const c of active) {
       const sets = await g(`${c.id}/adsets`, {
-        fields: "id,name,daily_budget,effective_status,optimization_goal,ads.limit(15){effective_status,creative{image_url,thumbnail_url}}", limit: "100" });
+        fields: "id,name,daily_budget,effective_status,optimization_goal,created_time,ads.limit(15){effective_status,creative{image_url,thumbnail_url}}", limit: "100" });
       const tgt = targetFor(conf, c.name);
       const rows = (sets.data || []).filter((s) => s.effective_status !== "DELETED").map((s) => {
         const r7 = by7[s.id] || {}, r3 = by3[s.id] || {};
@@ -241,7 +256,7 @@ export async function GET(req) {
           else if ((sp7 >= tgt * 3 && pu7 === 0) || (cpa7 && cpa7 >= tgt * 3 && sp7 >= 100000)) judge = "kill";
           else if (cpa7 && cpa7 >= tgt * 2 && sp7 >= 100000) judge = "watch";
         }
-        return { id: s.id, name: s.name, status: effStatus, view7: viewOf(r7), thumb,
+        return { id: s.id, name: s.name, status: effStatus, view7: viewOf(r7), thumb, created: (s.created_time || "").slice(0, 10),
           budget: Number(s.daily_budget || 0), goal: isTraffic ? "트래픽" : "전환",
           spend7: Math.round(sp7), purchases7: purchasesOf(r7), cpa7: cpa7 ? Math.round(cpa7) : null,
           spend3: Math.round(sp3), cpa3: cpa3 ? Math.round(cpa3) : null,
@@ -277,7 +292,7 @@ export async function GET(req) {
       return { ...l, now: { cpa3: s.cpa3, spend3: s.spend3, target: s.target, status: s.status }, verdict };
     });
 
-    const payload = { ok: true, kpi, campaigns, naver, gfa: gfaRow?.value || null, advoost: advRow?.value || null, log, targets: conf };
+    const payload = { ok: true, kpi, monthly, campaigns, naver, gfa: gfaRow?.value || null, advoost: advRow?.value || null, log, targets: conf };
     await sb().from("settings").upsert({ key: CACHE_KEY, value: { at: Date.now(), payload } }, { onConflict: "key" });
     return Response.json({ ...payload, cachedAt: Date.now() });
   } catch (e) {
