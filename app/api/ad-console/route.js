@@ -238,7 +238,7 @@ export async function GET(req) {
       return { ...l, now: { cpa3: s.cpa3, spend3: s.spend3, target: s.target, status: s.status }, verdict };
     });
 
-    const payload = { ok: true, kpi, campaigns, naver, gfa: gfaRow?.value || null, log, targets: conf };
+    const payload = { ok: true, kpi, campaigns, naver, gfa: gfaRow?.value || null, advoost: advRow?.value || null, log, targets: conf };
     await sb().from("settings").upsert({ key: CACHE_KEY, value: { at: Date.now(), payload } }, { onConflict: "key" });
     return Response.json({ ...payload, cachedAt: Date.now() });
   } catch (e) {
