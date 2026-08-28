@@ -128,6 +128,24 @@ export default function AdConsole() {
         );
       })}
 
+      {/* 네이버 검색광고 */}
+      {data.naver && (
+        <>
+          <h2 style={h2}>🛒 네이버 검색광고 전선 <span style={{ fontSize: 11, color: C.mid, fontWeight: 400 }}>{data.naver.date} · 집행은 searchad.naver.com</span></h2>
+          <div style={{ background: C.panel, border: `1px solid ${C.border}`, borderRadius: 14, padding: "12px 16px", fontSize: 13 }}>
+            <div style={{ fontWeight: 800, marginBottom: 8, color: C.neon }}>
+              합계 ₩{fmt(Math.round(data.naver.tot.spend))} · 전환 {data.naver.tot.conv} · ROAS {data.naver.tot.spend ? (data.naver.tot.rev / data.naver.tot.spend).toFixed(1) : "-"}
+            </div>
+            {data.naver.camps.slice(0, 10).map((g, i) => {
+              const r = g.spend ? g.rev / g.spend : 0;
+              const danger = g.spend >= 30000 && r < 3;
+              return <div key={i} style={{ padding: "3px 0", color: danger ? C.gold : C.ink, fontSize: 12.5 }}>
+                {danger ? "⚠️" : "·"} {g.name}: ₩{fmt(Math.round(g.spend))} · 전환 {g.conv} · ROAS {r.toFixed(1)}</div>;
+            })}
+          </div>
+        </>
+      )}
+
       {/* ④ GFA */}
       {data.gfa && (
         <>
@@ -190,7 +208,7 @@ function Unit({ s, busy, act, adsOpen, ads, toggleAds }) {
           boxShadow: `0 0 8px ${hpColor}`, transition: "width .4s" }} />
       </div>
       <div style={{ fontSize: 11, color: C.mid, display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: 4 }}>
-        <span>7일 <b style={{ color: C.gold }}>₩{fmt(s.spend7)}</b> · 🛒{s.purchases7}</span>
+        <span>7일 <b style={{ color: C.gold }}>₩{fmt(s.spend7)}</b> · 🛒{s.purchases7}{s.view7 ? `+👁${s.view7}` : ""}</span>
         <span>CPA <b style={{ color: hpColor }}>{s.cpa7 ? `₩${fmt(s.cpa7)}` : "-"}</b>/₩{fmt(s.target)}</span>
       </div>
       <div style={{ display: "flex", gap: 6, marginTop: 8, alignItems: "center", flexWrap: "wrap" }}>

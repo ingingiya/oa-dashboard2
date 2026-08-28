@@ -7,6 +7,41 @@ export const maxDuration = 60;
 // POST { action:"budget"|"pause"|"resume", adsetId, budget?, note? } → 실행 + 로그
 
 import { createClient } from "@supabase/supabase-js";
+import crypto from "crypto";
+
+// 네이버 검색광고 (쇼핑검색 포함) — 라이브 API
+async function naverYesterday() {
+  const key = process.env.NAVER_API_KEY, cust = process.env.NAVER_CUSTOMER_ID, sec = process.env.NAVER_SECRET_KEY;
+  if (!key) return null;
+  const nh = (path) => {
+    const ts = Date.now().toString();
+    return { "X-API-KEY": key, "X-Customer": cust, "X-Timestamp": ts,
+      "X-Signature": crypto.createHmac("sha256", sec).update(`${ts}.GET.${path}`).digest("base64") };
+  };
+  const nget = async (path, params = {}) => {
+    const qs = new URLSearchParams(params).toString();
+    const r = await fetch(`https://api.searchad.naver.com${path}${qs ? "?" + qs : ""}`, { headers: nh(path) });
+    if (!r.ok) throw new Error(`네이버 ${path} ${r.status}`);
+    return r.json();
+  };
+  const y = new Date(Date.now() - 864e5).toISOString().slice(0, 10);
+  const camps = await nget("/ncc/campaigns");
+  const rows = [];
+  for (const c of camps) {
+    if (!["ELIGIBLE", "PAUSED"].includes(c.status)) continue;
+    const st = await nget("/stats", { id: c.nccCampaignId,
+      fields: JSON.stringify(["salesAmt", "ccnt", "convAmt"]),
+      timeRange: JSON.stringify({ since: y, until: y }) });
+    const d = st.data?.[0] || {};
+    const sp = Number(d.salesAmt || 0);
+    if (sp < 1000) continue;
+    rows.push({ name: c.name, spend: sp, conv: Number(d.ccnt || 0), rev: Number(d.convAmt || 0) });
+  }
+  rows.sort((a, b) => b.spend - a.spend);
+  const tot = rows.reduce((a, r) => ({ spend: a.spend + r.spend, conv: a.conv + r.conv, rev: a.rev + r.rev }),
+    { spend: 0, conv: 0, rev: 0 });
+  return { date: y, tot, camps: rows };
+}
 
 const GRAPH = "https://graph.facebook.com/v19.0";
 const PURCHASE_TYPES = ["omni_purchase", "purchase", "offsite_conversion.fb_pixel_purchase",
@@ -37,6 +72,7 @@ const purchasesOf = (row, win = "7d_click") => {
   return 0;
 };
 const viewOf = (row) => purchasesOf(row, "1d_view");
+const weightedOf = (row) => purchasesOf(row) + 0.3 * viewOf(row); // 판정용 가중 구매
 const revenueOf = (row) => {
   for (const key of ["catalog_segment_value", "action_values"])
     for (const a of row?.[key] || [])
@@ -70,11 +106,11 @@ export async function GET(req) {
         ok: true,
         ads: (ads.data || []).map((a) => {
           const i = a.insights?.data?.[0] || {};
-          const sp = Number(i.spend || 0), pu = purchasesOf(i);
+          const sp = Number(i.spend || 0), pu = purchasesOf(i), w = purchasesOf(i) + 0.3 * viewOf(i);
           return { id: a.id, name: a.name, status: a.effective_status,
             thumb: a.creative?.image_url || a.creative?.thumbnail_url || "",
             spend: Math.round(sp), ctr: Number(i.ctr || 0), purchases: pu,
-            cpa: pu ? Math.round(sp / pu) : null };
+            cpa: w >= 1 ? Math.round(sp / w) : null };
         }).sort((x, y) => y.spend - x.spend),
       });
     }
@@ -89,9 +125,10 @@ export async function GET(req) {
     const active = (camps.data || []).filter((c) => c.effective_status === "ACTIVE");
     const kpi = {};
     for (const [k, r] of [["yesterday", kpiY.data?.[0]], ["week", kpi7.data?.[0]]]) {
-      const sp = Number(r?.spend || 0), pu = purchasesOf(r), rev = revenueOf(r);
-      kpi[k] = { spend: Math.round(sp), purchases: pu, roas: sp ? +(rev / sp).toFixed(2) : 0,
-        cpa: pu ? Math.round(sp / pu) : null };
+      const sp = Number(r?.spend || 0), pu = purchasesOf(r), vw = viewOf(r), rev = revenueOf(r);
+      const w = pu + 0.3 * vw;
+      kpi[k] = { spend: Math.round(sp), purchases: pu, views: vw, roas: sp ? +(rev / sp).toFixed(2) : 0,
+        cpa: w >= 1 ? Math.round(sp / w) : null };
     }
 
     // 세트 + 성과 (7일/3일) — 인사이트는 계정 단위 한 번에
@@ -109,9 +146,9 @@ export async function GET(req) {
       const tgt = targetFor(conf, c.name);
       const rows = (sets.data || []).filter((s) => s.effective_status !== "DELETED").map((s) => {
         const r7 = by7[s.id] || {}, r3 = by3[s.id] || {};
-        const sp7 = Number(r7.spend || 0), pu7 = purchasesOf(r7);
-        const sp3 = Number(r3.spend || 0), pu3 = purchasesOf(r3);
-        const cpa7 = pu7 ? sp7 / pu7 : null, cpa3 = pu3 ? sp3 / pu3 : null;
+        const sp7 = Number(r7.spend || 0), pu7 = weightedOf(r7);
+        const sp3 = Number(r3.spend || 0), pu3 = weightedOf(r3);
+        const cpa7 = pu7 >= 1 ? sp7 / pu7 : null, cpa3 = pu3 >= 1 ? sp3 / pu3 : null;
         const goal = (s.optimization_goal || "").toUpperCase();
         const isTraffic = /LANDING|LINK_CLICK|TRAFFIC/.test(goal);
         let judge = "";
@@ -122,7 +159,7 @@ export async function GET(req) {
         }
         return { id: s.id, name: s.name, status: s.effective_status, view7: viewOf(r7),
           budget: Number(s.daily_budget || 0), goal: isTraffic ? "트래픽" : "전환",
-          spend7: Math.round(sp7), purchases7: pu7, cpa7: cpa7 ? Math.round(cpa7) : null,
+          spend7: Math.round(sp7), purchases7: purchasesOf(r7), cpa7: cpa7 ? Math.round(cpa7) : null,
           spend3: Math.round(sp3), cpa3: cpa3 ? Math.round(cpa3) : null,
           ctr7: Number(r7.ctr || 0), judge, target: tgt };
       }).filter((s) => s.status === "ACTIVE" || s.spend7 > 0)
@@ -130,6 +167,10 @@ export async function GET(req) {
       if (rows.length) campaigns.push({ id: c.id, name: c.name, target: tgt, adsets: rows });
     }
     campaigns.sort((a, b) => b.adsets.reduce((s, x) => s + x.spend7, 0) - a.adsets.reduce((s, x) => s + x.spend7, 0));
+
+    // 네이버 검색광고 — 라이브 (실패해도 나머지는 응답)
+    let naver = null;
+    try { naver = await naverYesterday(); } catch { }
 
     // GFA — 로컬 크론이 적재한 최신 스냅샷 (없으면 생략)
     const { data: gfaRow } = await sb().from("settings").select("value").eq("key", "oa_gfa_daily_v1").maybeSingle();
@@ -150,7 +191,7 @@ export async function GET(req) {
       return { ...l, now: { cpa3: s.cpa3, spend3: s.spend3, target: s.target, status: s.status }, verdict };
     });
 
-    return Response.json({ ok: true, kpi, campaigns, gfa: gfaRow?.value || null, log, targets: conf });
+    return Response.json({ ok: true, kpi, campaigns, naver, gfa: gfaRow?.value || null, log, targets: conf });
   } catch (e) {
     return Response.json({ ok: false, error: String(e.message || e) }, { status: 500 });
   }

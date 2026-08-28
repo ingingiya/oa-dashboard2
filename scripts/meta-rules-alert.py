@@ -65,6 +65,11 @@ def view_of(row):
     return purchases_of(row, "1d_view")
 
 
+def weighted_of(row):
+    # 판정용 가중 구매 — 클릭 + 뷰스루×0.3 (업계식 절충, 2026-08-28 사용자 합의)
+    return purchases_of(row) + 0.3 * view_of(row)
+
+
 def insights_by_adset(acct, token, preset, campaign_ids):
     rows, url_params = [], dict(
         level="adset", date_preset=preset, limit=200,
@@ -98,13 +103,14 @@ def meta_yesterday_section(acct, token):
     tot_sp = sum(float(r["spend"]) for r in rows)
     tot_pu = sum(purchases_of(r) for r in rows)
     tot_view = sum(view_of(r) for r in rows)
+    tot_w = tot_pu + 0.3 * tot_view
     tot_rev = sum(revenue_of(r) for r in rows)
     out = [f"합계 ₩{tot_sp:,.0f} · 클릭구매 {tot_pu} (+뷰 {tot_view}) · ROAS {tot_rev / tot_sp if tot_sp else 0:.1f}"
-           + (f" · CPA ₩{tot_sp / tot_pu:,.0f}" if tot_pu else "")]
+           + (f" · 가중CPA ₩{tot_sp / tot_w:,.0f}" if tot_w >= 1 else "")]
     for r in sorted(rows, key=lambda x: -float(x["spend"]))[:5]:
-        sp = float(r["spend"]); pu = purchases_of(r); rev = revenue_of(r)
+        sp = float(r["spend"]); pu = purchases_of(r); vw = view_of(r); rev = revenue_of(r)
         flag = " ⚠️점검" if sp >= 30000 and rev / sp < 1 else ""
-        out.append(f"· {r['campaign_name'][:20]}: ₩{sp:,.0f} · 구매 {pu} · ROAS {rev / sp:.1f}{flag}")
+        out.append(f"· {r['campaign_name'][:20]}: ₩{sp:,.0f} · 구매 {pu}+뷰{vw} · ROAS {rev / sp:.1f}{flag}")
     return out
 
 
@@ -133,6 +139,46 @@ def testzone_section(acct, token):
             st = f"₩{r['sp']:,.0f}·CTR {r['ctr']:.2f}%" + (f"·LPV ₩{r['cpl']:,.0f}" if r["cpl"] else "")
             out.append(f"· {r['n']}: {st}")
         out.append("(판정엔 세트당 ₩15,000 지출 필요)")
+    return out
+
+
+
+def naver_section():
+    import hmac, hashlib, base64, time, datetime
+    env = load_env(ROOT / ".env.local")
+    api_key, cust, secret = env.get("NAVER_API_KEY"), env.get("NAVER_CUSTOMER_ID"), env.get("NAVER_SECRET_KEY")
+    if not api_key:
+        raise RuntimeError("네이버 검색광고 키 없음")
+    def nh(path):
+        ts = str(int(time.time() * 1000))
+        sig = base64.b64encode(hmac.new(secret.encode(), f"{ts}.GET.{path}".encode(), hashlib.sha256).digest()).decode()
+        return {"X-API-KEY": api_key, "X-Customer": cust, "X-Timestamp": ts, "X-Signature": sig}
+    def nget(path, **params):
+        qs = urllib.parse.urlencode(params)
+        req = urllib.request.Request(f"https://api.searchad.naver.com{path}?{qs}", headers=nh(path))
+        return json.loads(urllib.request.urlopen(req, timeout=60).read())
+    y = str(datetime.date.today() - datetime.timedelta(days=1))
+    camps = nget("/ncc/campaigns")
+    rows = []
+    for c in camps:
+        if c.get("status") not in ("ELIGIBLE", "PAUSED"):
+            continue
+        st = nget("/stats", id=c["nccCampaignId"], fields=json.dumps(["salesAmt", "ccnt", "convAmt"]),
+                  timeRange=json.dumps({"since": y, "until": y}))
+        d = (st.get("data") or [{}])[0]
+        sp = float(d.get("salesAmt") or 0)
+        if sp < 1000:
+            continue
+        rows.append({"n": c["name"][:18], "sp": sp, "cv": int(d.get("ccnt") or 0), "rev": float(d.get("convAmt") or 0)})
+    if not rows:
+        return ["어제 지출 있는 캠페인 없음"]
+    rows.sort(key=lambda r: -r["sp"])
+    tsp = sum(r["sp"] for r in rows); tcv = sum(r["cv"] for r in rows); trev = sum(r["rev"] for r in rows)
+    out = [f"합계 ₩{tsp:,.0f} · 전환 {tcv} · ROAS {trev / tsp if tsp else 0:.1f}"]
+    for r in rows[:6]:
+        roas = r["rev"] / r["sp"] if r["sp"] else 0
+        flag = " ⚠️점검" if r["sp"] >= 30000 and roas < 1 else ""
+        out.append(f"· {r['n']}: ₩{r['sp']:,.0f} · 전환 {r['cv']} · ROAS {roas:.1f}{flag}")
     return out
 
 
@@ -237,13 +283,13 @@ def main():
             continue
         r7, r3 = i7.get(sid, {}), i3.get(sid, {})
         sp7 = float(r7.get("spend") or 0)
-        pu7 = purchases_of(r7)
+        pu7 = weighted_of(r7)
         sp3 = float(r3.get("spend") or 0)
-        pu3 = purchases_of(r3)
+        pu3 = weighted_of(r3)
         if sp7 < 1:
             continue  # 지출 없는 세트는 스킵
-        cpa7 = sp7 / pu7 if pu7 else None
-        cpa3 = sp3 / pu3 if pu3 else None
+        cpa7 = sp7 / pu7 if pu7 >= 1 else None
+        cpa3 = sp3 / pu3 if pu3 >= 1 else None
         budget = int(s.get("daily_budget") or 0)  # KRW는 제로데시멀 — 그대로 원 단위
         camp = (r7.get("campaign_name") or r3.get("campaign_name") or "")
         tgt = target_for(camp)
@@ -252,14 +298,14 @@ def main():
         if (pu7 >= SCALE_MIN_PURCHASES and cpa7 and cpa7 <= tgt
                 and (cpa3 is None or cpa3 <= tgt * 1.5)):
             new_budget = int(round(budget * SCALE_STEP, -3))
-            scale.append(f"· {name}\n  7일 클릭CPA ₩{cpa7:,.0f} (클릭 {pu7}건+뷰 {view_of(r7)}건/₩{sp7:,.0f}) → 예산 ₩{budget:,}→₩{new_budget:,} (+25%)")
+            scale.append(f"· {name}\n  7일 가중CPA ₩{cpa7:,.0f} (클릭 {purchases_of(r7)}+뷰 {view_of(r7)}/₩{sp7:,.0f}) → 예산 ₩{budget:,}→₩{new_budget:,} (+25%)")
         elif (sp7 >= tgt * 3 and pu7 == 0) or (cpa7 and cpa7 >= tgt * 3 and sp7 >= 100_000):
             why = "구매 0" if pu7 == 0 else f"CPA ₩{cpa7:,.0f}"
             kill.append(f"· {name}\n  7일 ₩{sp7:,.0f} 지출, {why} → OFF 권고")
         elif cpa7 and tgt * 2 <= cpa7 < tgt * 3 and sp7 >= 100_000:
             watch.append(f"· {name}\n  7일 CPA ₩{cpa7:,.0f} — 소재 교체 검토")
 
-    lines = ["📣 아침 광고 브리핑"]
+    lines = ["📣 아침 광고 브리핑 (가중구매=클릭+뷰×0.3)"]
     # ── 📈 메타 어제 성과 ──
     try:
         lines += ["", "━━ 📈 메타 (어제)"] + meta_yesterday_section(acct, token)
@@ -284,6 +330,14 @@ def main():
             lines += ["", "━━ 🧪 테스트존"] + tz
     except Exception as e:
         lines += ["", f"🧪 테스트존 판정 실패: {str(e)[:60]}"]
+
+    # ── 🛒 네이버 쇼핑검색광고 (라이브 API) ──
+    try:
+        nv = naver_section()
+        if nv:
+            lines += ["", "━━ 🛒 네이버 검색광고 (어제)"] + nv
+    except Exception as e:
+        lines += ["", f"🛒 네이버 검색광고 실패: {str(e)[:60]}"]
 
     # ── 📊 GFA 어제 성과 (gfa_daily.py — 실패해도 브리핑은 발송) ──
     try:
