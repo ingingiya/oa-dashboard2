@@ -440,6 +440,19 @@ export default function AdOfficeTycoon() {
     } catch (e) { alert("실패: " + e.message); }
   }
 
+  // 👤 부서(캠페인) 담당자 지정 — 아침 웍스 개인 알림·책임 소재의 기준
+  async function setOwner(campId, current) {
+    const nm = prompt("이 부서 담당자 이름 (영서/소리/혜영/지원/경은 — 빈칸=해제)", current || "");
+    if (nm === null) return;
+    try {
+      const j = await jfetch("/api/ad-console", { method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "owner", campId, owner: nm.trim() }) });
+      if (!j.ok) throw new Error(j.error);
+      SFX.stamp();
+      setData((d) => d && ({ ...d, owners: j.owners }));
+    } catch (e) { alert("실패: " + e.message); }
+  }
+
   async function toggleAds(sid) {
     SFX.click();
     setAdsOpen((o) => ({ ...o, [sid]: !o[sid] }));
@@ -1780,6 +1793,14 @@ export default function AdOfficeTycoon() {
               <span>🚪 {c.name}
                 <span onClick={(e) => { e.stopPropagation(); openDetail(c.id, "camp", c.name); }} title="캠페인 14일 상세"
                   style={{ marginLeft: 8, fontSize: 12, cursor: "pointer" }}>📋</span>
+                {(() => { const ow = (data.owners || {})[c.id]; return (
+                  <span onClick={(e) => { e.stopPropagation(); setOwner(c.id, ow); }} title="담당자 지정 — 아침 웍스 알림 대상"
+                    style={{ marginLeft: 7, fontSize: 10.5, fontWeight: 700, cursor: "pointer", padding: "2px 7px", borderRadius: 99,
+                      border: `1px solid ${ow ? `${C.cyan}66` : C.border}`, color: ow ? C.cyan : C.mid, opacity: ow ? 1 : 0.6,
+                      display: "inline-flex", alignItems: "center", gap: 4, verticalAlign: "middle" }}>
+                    {ow && SIGNER_IMG[ow] && <img src={SIGNER_IMG[ow]} alt="" style={{ width: 14, height: 14, borderRadius: 99, imageRendering: "pixelated", objectFit: "cover" }} />}
+                    {ow ? `담당 ${ow}` : "담당 없음"}
+                  </span>); })()}
                 <span style={{ color: C.mid, fontWeight: 500, fontSize: 11, marginLeft: 6 }}>목표 ₩{fmt(c.target)} · 근무 {alive}/{c.adsets.length}명</span></span>
               <span style={{ color: C.gold }}>₩{fmt(tot)} <span style={{ color: C.neon, fontSize: 11.5 }}>🛒{buy}{vw ? `+👁${vw}` : ""}</span>{cCpa && <span style={{ color: C.cyan, fontSize: 11.5 }}> CPA ₩{fmt(cCpa)}</span>} {openCamp[c.id] ? "▲" : "▼"}</span>
             </button>

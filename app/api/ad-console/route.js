@@ -327,6 +327,8 @@ export async function GET(req) {
     const { data: gfaRow } = await sb().from("settings").select("value").eq("key", "oa_gfa_daily_v1").maybeSingle();
     // AD부스터(ADVoost) — 아침 브리핑 크롤러가 적재 (7일)
     const { data: advRow } = await sb().from("settings").select("value").eq("key", "oa_advoost_v1").maybeSingle();
+    // 👤 캠페인 담당자 — {campaignId: 이름}, 웍스 아침 개인 알림의 기준
+    const { data: ownRow } = await sb().from("settings").select("value").eq("key", "oa_ad_owners_v1").maybeSingle();
 
     // 조치 로그 (최근 30) — "손댄 건 성공했나" 추적: 조치한 세트의 현재 3일 성과로 판정
     const { data: logRow } = await sb().from("settings").select("value").eq("key", LOG_KEY).maybeSingle();
@@ -344,7 +346,7 @@ export async function GET(req) {
       return { ...l, now: { cpa3: s.cpa3, spend3: s.spend3, target: s.target, status: s.status }, verdict };
     });
 
-    const payload = { ok: true, kpi, monthly, hall, campaigns, naver, gfa: gfaRow?.value || null, advoost: advRow?.value || null, log, targets: conf };
+    const payload = { ok: true, kpi, monthly, hall, campaigns, naver, gfa: gfaRow?.value || null, advoost: advRow?.value || null, log, targets: conf, owners: ownRow?.value || {} };
     await sb().from("settings").upsert({ key: CACHE_KEY, value: { at: Date.now(), payload } }, { onConflict: "key" });
     return Response.json({ ...payload, cachedAt: Date.now() });
   } catch (e) {
@@ -387,8 +389,20 @@ async function expireCache(s) {
 
 export async function POST(req) {
   try {
-    const { action, adsetId, adId, budget, note, name, before, by, targets: tgtBody } = await req.json();
+    const { action, adsetId, adId, budget, note, name, before, by, targets: tgtBody, campId, owner } = await req.json();
     const signer = String(by || "").slice(0, 10); // 🖊 결재 도장 — 진행자 이름 (영서/경은/지원/소리/혜영)
+    // 👤 담당자 지정 — {campId, owner:""=해제} → oa_ad_owners_v1
+    if (action === "owner") {
+      if (!campId) throw new Error("campId 필요");
+      const s0 = sb();
+      const { data: row } = await s0.from("settings").select("value").eq("key", "oa_ad_owners_v1").maybeSingle();
+      const map = { ...(row?.value || {}) };
+      const nm = String(owner || "").slice(0, 10);
+      if (nm) map[campId] = nm; else delete map[campId];
+      await s0.from("settings").upsert({ key: "oa_ad_owners_v1", value: map }, { onConflict: "key" });
+      await expireCache(s0);
+      return Response.json({ ok: true, owners: map });
+    }
     // 🎯 목표 CPA 설정 저장 — 등급/판정/브리핑 전부 이 기준
     if (action === "targets") {
       const def = Math.round(Number(tgtBody?.default));
