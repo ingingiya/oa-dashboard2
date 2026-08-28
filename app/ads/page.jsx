@@ -235,6 +235,7 @@ export default function AdOfficeTycoon() {
   const [planForm, setPlanForm] = useState({ product: "", concept: "", target: "", usp: "", ref: "" });
   const [planDrafts, setPlanDrafts] = useState(null); // 🤖 AI 초안 3안
   const [planBusy, setPlanBusy] = useState(false);
+  const [planBy, setPlanBy] = useState(""); // 📝 기획자 선택 — 비면 도장 이름(signer) 사용
 
   useEffect(() => {
     try { const m = localStorage.getItem("oa_ads_mute") === "1"; setMute(m); sfxOn = !m; } catch {}
@@ -1904,13 +1905,14 @@ export default function AdOfficeTycoon() {
         const pending = plans.filter((p) => p.status === "pending");
         const decided = plans.filter((p) => p.status !== "pending").slice(0, 10);
         const setF = (k) => (e) => setPlanForm((f) => ({ ...f, [k]: e.target.value }));
+        const author = planBy || signer; // 기획자 — 선택 없으면 도장 이름
         const submitPlan = async () => {
-          if (!signer) return alert("먼저 우측 상단에서 도장 이름을 설정하세요");
+          if (!author) return alert("기획자를 선택하세요 (용지 우측 상단 얼굴 클릭)");
           if (!planForm.product.trim() || !planForm.concept.trim()) return alert("제품·컨셉은 필수예요");
           setPlanBusy(true);
           try {
             const j = await jfetch("/api/ad-console", { method: "POST", headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ action: "plan", by: signer, plan: planForm }) });
+              body: JSON.stringify({ action: "plan", by: author, plan: planForm }) });
             if (!j.ok) throw new Error(j.error);
             SFX.stamp();
             setData((d) => d && ({ ...d, plans: j.plans }));
@@ -1986,8 +1988,15 @@ export default function AdOfficeTycoon() {
                 <b style={{ fontSize: 12.5, color: C.ink }}>📄 신규 채용 기획서</b>
                 <span style={{ fontSize: 9.5, color: C.mid }}>— 이 사원(광고)을 채용해야 하는 이유를 쓰세요</span>
                 <span style={{ flex: 1 }} />
-                {SIGNER_IMG[signer] && <img src={SIGNER_IMG[signer]} alt="" style={{ width: 20, height: 20, borderRadius: 6, imageRendering: "pixelated" }} />}
-                <span style={{ fontSize: 10, color: C.cyan, fontWeight: 700 }}>{signer ? `기획자 ${signer}` : "도장 이름 미설정"}</span>
+                <span style={{ fontSize: 9.5, color: C.mid, fontWeight: 700 }}>기획자</span>
+                {Object.keys(SIGNER_IMG).map((nm) => (
+                  <img key={nm} src={SIGNER_IMG[nm]} alt={nm} title={nm}
+                    onClick={() => { SFX.click(); setPlanBy(nm); }}
+                    style={{ width: 24, height: 24, borderRadius: 7, imageRendering: "pixelated", cursor: "pointer",
+                      border: `2px solid ${author === nm ? C.cyan : "transparent"}`,
+                      opacity: author === nm ? 1 : 0.45, boxShadow: author === nm ? `0 0 8px ${C.cyan}66` : "none" }} />
+                ))}
+                <span style={{ fontSize: 10, color: author ? C.cyan : C.gold, fontWeight: 700 }}>{author || "선택하세요"}</span>
               </div>
               <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                 <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
