@@ -77,14 +77,19 @@ const TEAM = [
 const BOSS_IMG = SPRITE_BASE + "mtcov5no_hud_kyeongeun.png"; // 경은 사장님
 // 결재 서명자 → 캐릭터 사진 (인사기록부·결재서류에 이름과 함께 표시)
 const SIGNER_IMG = { 영서: TEAM[0].img, 소리: TEAM[1].img, 혜영: TEAM[2].img, 지원: TEAM[3].img, 경은: BOSS_IMG };
-// 픽셀 소품 스프라이트 (Comfy Cloud 나노바나나 생성, hudassets/px2_*)
-const PX = Object.fromEntries(["trophy", "vault", "paper", "vs", "siren", "chick", "money", "cabinet", "medal", "sadplant"]
-  .map((k) => [k, SPRITE_BASE + `px2_${k}.png`]));
+// 픽셀 소품 스프라이트 (Comfy Cloud 나노바나나 생성, hudassets/px2_* + px3_*)
+const PX = Object.fromEntries([
+  ...["trophy", "vault", "paper", "vs", "siren", "chick", "money", "cabinet", "medal", "sadplant"].map((k) => [k, SPRITE_BASE + `px2_${k}.png`]),
+  ...["officebg", "deskset", "coffee", "plant", "lamp", "fax", "clock", "rep_naver", "rep_boost", "rep_gfa"].map((k) => [k, SPRITE_BASE + `px3_${k}.png`]),
+]);
 const Px = ({ k, s = 20, style }) => (
   <img src={PX[k]} alt="" style={{ width: s, height: s, borderRadius: Math.max(4, Math.round(s / 6)),
     imageRendering: "pixelated", verticalAlign: "middle", flex: "none", ...style }} />
 );
-const BANNER_IMG = SPRITE_BASE + "mtcop9ce_hud_banner.png";
+const BANNER_IMG = SPRITE_BASE + "px3_officebg.png"; // 🌃 야간 사무실 배경 (Comfy Cloud 21:9, 구 배너 mtcop9ce_hud_banner.png)
+// 책상 소품 — 세트 id 시드로 사원마다 다른 소품 하나씩
+const DESK_PROPS = ["coffee", "plant", "lamp", "clock"];
+const propOf = (id = "") => DESK_PROPS[[...String(id)].reduce((a, ch) => a + ch.charCodeAt(0), 0) % DESK_PROPS.length];
 const teamOf = (id = "") => TEAM[[...String(id)].reduce((a, ch) => a + ch.charCodeAt(0), 0) % TEAM.length];
 const charOf = (id = "") => teamOf(id).img;
 
@@ -544,7 +549,7 @@ export default function AdOfficeTycoon() {
 
       {/* 픽셀 사무실 배너 */}
       <div style={{ position: "relative", borderRadius: 16, overflow: "hidden", marginBottom: 14, border: `1px solid ${C.border}` }}>
-        <img src={BANNER_IMG} alt="" style={{ width: "100%", height: 150, objectFit: "cover", display: "block", imageRendering: "pixelated" }} />
+        <img src={BANNER_IMG} alt="" style={{ width: "100%", height: 170, objectFit: "cover", objectPosition: "center 62%", display: "block", imageRendering: "pixelated" }} />
         <div style={{ position: "absolute", inset: 0, background: "linear-gradient(90deg, #141019EE 0%, #14101966 40%, transparent 70%)" }} />
         <div style={{ position: "absolute", left: 18, bottom: 14 }}>
           <div style={{ fontFamily: "'Press Start 2P', monospace", fontSize: 13, color: "#4ADE80", textShadow: "0 0 12px #4ADE80AA" }}>OA 광고상사</div>
@@ -555,8 +560,8 @@ export default function AdOfficeTycoon() {
       {/* 메타 회선 불통 배너 */}
       {data.metaDown && (
         <div style={{ background: "#FF6B8115", border: `1px solid ${C.red}55`, borderRadius: 12, padding: "10px 16px",
-          marginBottom: 14, fontSize: 12.5, color: C.red, fontWeight: 700 }}>
-          📠 메타 본사 회선 불통 — {data.metaDownReason || "일시 오류"}. 협력사(네이버·GFA)·직영(AD부스터)·인사기록만 표시 중이에요. 회복되면 자동으로 전체가 돌아옵니다.
+          marginBottom: 14, fontSize: 12.5, color: C.red, fontWeight: 700, display: "flex", alignItems: "center", gap: 8 }}>
+          <Px k="fax" s={26} /><span>메타 본사 회선 불통 — {data.metaDownReason || "일시 오류"}. 협력사(네이버·GFA)·직영(AD부스터)·인사기록만 표시 중이에요. 회복되면 자동으로 전체가 돌아옵니다.</span>
         </div>
       )}
 
@@ -568,6 +573,12 @@ export default function AdOfficeTycoon() {
         if (queue.length) news.push(`🖊 인사부: 사장님 결재 대기 ${queue.length}건 — 결재함을 확인해 주세요`);
         else news.push("✅ 인사부: 결재 대기 없음 — 사무실이 평화롭습니다");
         if (data.naver?.tot?.spend) news.push(`🟢 협력사 네이버: 어제 ROAS x${(data.naver.tot.rev / data.naver.tot.spend).toFixed(1)} — ${data.naver.tot.rev / data.naver.tot.spend >= 3 ? "회식 각입니다" : "분발 요망"}`);
+        if (data.gfa?.tot?.cost) { const gr = (data.gfa.tot.rev || 0) / data.gfa.tot.cost;
+          news.push(`🟩 협력사 GFA: ROAS x${gr.toFixed(1)} — ${gr >= 3 ? "지과장이 어깨 펴는 중" : gr >= 1 ? "성실 납품 중" : "계약 재검토 검토 중"}`);
+          const danger = (data.gfa.camps || []).filter((g) => g.cost >= 30000 && (g.rev || 0) / g.cost < 1).length;
+          if (danger) news.push(`⚠️ GFA 소재 ${danger}건 적자 납품 — 협력사 탭 확인`); }
+        if (data.advoost?.ok && data.advoost.boost_tot?.cost) { const ar = data.advoost.boost_tot.rev / data.advoost.boost_tot.cost;
+          news.push(`🚀 직영 AD부스터: 7일 ROAS x${ar.toFixed(1)} — ${ar >= 10 ? "천팀장 보너스 각" : ar >= 3 ? "무난한 한 주" : "천팀장 야근 중"}`); }
         if (combo >= 2) news.push(`🔥 사장님 결재 ${combo}연속 성공 — 촉이 좋으십니다`);
         if (roas >= 3) news.push(`📈 어제 ROAS ${roas} — 경영지원팀이 박수 치는 중`);
         else if (roas < 1.5) news.push(`📉 어제 ROAS ${roas} — 전 직원 비상 근무 태세`);
@@ -1373,6 +1384,7 @@ export default function AdOfficeTycoon() {
         <>
           <h2 style={h2}><span style={px}>협력사</span> 🟢 네이버 검색광고 <span style={{ fontSize: 10.5, color: C.mid, fontWeight: 400 }}>어제 {data.naver.date}</span></h2>
           <div style={{ background: C.panel, border: `1px solid ${C.border}`, borderRadius: 14, padding: "14px 16px" }}>
+            <RepDesk img={PX.rep_naver} name="박대리" org="네이버 검색광고" roas={nR} goodAt={3} spend={data.naver.tot.spend} />
             <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 12 }}>
               <Partner label="💸 어제 지출" v={`₩${fmt(Math.round(data.naver.tot.spend))}`} color={C.gold} />
               <Partner label="🛒 전환" v={fmt(data.naver.tot.conv)} color={C.neon} />
@@ -1410,6 +1422,7 @@ export default function AdOfficeTycoon() {
         <>
           <h2 style={h2}><span style={px}>직영</span> 🚀 AD부스터 <span style={{ fontSize: 10.5, color: C.mid, fontWeight: 400 }}>{data.advoost.period} · 매일 아침 갱신</span></h2>
           <div style={{ background: C.panel, border: `1px solid ${C.border}`, borderRadius: 14, padding: "14px 16px" }}>
+            <RepDesk img={PX.rep_boost} name="천팀장" org="AD부스터 직영" roas={aR} goodAt={10} spend={bt.cost} />
             <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 12 }}>
               <Partner label="💸 7일 지출" v={`₩${fmt(Math.round(bt.cost))}`} color={C.gold} />
               <Partner label="🛒 전환" v={fmt(bt.conv)} color={C.neon} />
@@ -1447,6 +1460,7 @@ export default function AdOfficeTycoon() {
         <>
           <h2 style={h2}><span style={px}>협력사</span> 🟩 GFA 성과형 <span style={{ fontSize: 10.5, color: C.mid, fontWeight: 400 }}>{data.gfa.date || ""}</span></h2>
           <div style={{ background: C.panel, border: `1px solid ${C.border}`, borderRadius: 14, padding: "14px 16px" }}>
+            <RepDesk img={PX.rep_gfa} name="지과장" org="GFA 성과형" roas={gR} goodAt={3} spend={data.gfa.tot?.cost || 0} />
             <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 12 }}>
               <Partner label="💸 지출" v={`₩${fmt(Math.round(data.gfa.tot?.cost || 0))}`} color={C.gold} />
               <Partner label="🛒 구매" v={fmt(data.gfa.tot?.buy)} color={C.neon} />
@@ -1658,6 +1672,45 @@ function Partner({ label, v, color, big }) {
   );
 }
 
+// 🤝 협력사 담당자 데스크 — 픽셀 캐릭터+대사+거래 신뢰도 (전부 실성과 파생, 표시 전용)
+function RepDesk({ img, name, org, roas, goodAt = 3, spend = 0 }) {
+  const tier = roas >= goodAt ? "great" : roas >= 1 ? "ok" : spend > 0 ? "bad" : "idle";
+  const cl = tier === "great" ? C.neon : tier === "ok" ? C.gold : tier === "bad" ? C.red : C.mid;
+  const trust = Math.max(5, Math.min(100, Math.round((roas / goodAt) * 70 + (roas >= 1 ? 15 : 0))));
+  const TALKS = {
+    great: [`사장님, 이번 성적 x${roas.toFixed(1)}입니다. 회식 한번 어떠세요? 🍻`, `저희 ${org}, 외주비 밥값은 확실히 합니다 💰`, `납품(매출)이 외주비를 한참 앞섰습니다!`],
+    ok: [`x${roas.toFixed(1)}… 나쁘지 않죠? 더 끌어올려 보겠습니다`, `꾸준히 납품 중입니다. 조금만 지켜봐 주세요 ☕`, `이번 주도 성실 거래 중입니다`],
+    bad: [`죄…죄송합니다 사장님, x${roas.toFixed(1)}은 변명의 여지가 없네요 😰`, `계약 재검토 전에 한 번만 더 기회를…!`, `원인 분석 보고서 올리겠습니다 💦`],
+    idle: ["이번 기간엔 발주가 없었습니다", "발주 주시면 바로 납품 들어갑니다!"],
+  };
+  const pool = TALKS[tier];
+  const talk = pool[((org.charCodeAt(0) || 0) + new Date().getDate()) % pool.length];
+  const verdict = tier === "great" ? "🍻 회식각 거래처" : tier === "ok" ? "🏪 성실 거래처" : tier === "bad" ? "🚨 계약 재검토" : "💤 발주 대기";
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12, padding: "10px 12px",
+      background: "#ffffff06", border: `1px solid ${cl}33`, borderRadius: 10 }}>
+      <img src={img} alt="" style={{ width: 54, height: 54, borderRadius: 10, imageRendering: "pixelated", flex: "none",
+        border: `1.5px solid ${cl}55`, boxShadow: `0 0 10px ${cl}33`, filter: tier === "bad" ? "saturate(0.7)" : "none" }} />
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+          <b style={{ fontSize: 12.5, color: C.ink }}>{name}</b>
+          <span style={{ fontSize: 10, color: C.mid }}>{org} 담당</span>
+          <span style={{ fontSize: 9.5, fontWeight: 800, color: cl, border: `1px solid ${cl}55`, borderRadius: 4, padding: "1px 6px" }}>{verdict}</span>
+        </div>
+        <div style={{ fontSize: 11.5, color: C.ink, opacity: 0.9, margin: "4px 0 5px", fontStyle: "italic" }}>“{talk}”</div>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <span style={{ fontSize: 9.5, color: C.mid, flex: "none" }}>거래 신뢰도</span>
+          <div style={{ flex: 1, maxWidth: 180, height: 8, background: "#0d0a12", borderRadius: 5, overflow: "hidden", border: `1px solid ${C.border}` }}>
+            <div className="hpbar" style={{ width: `${trust}%`, height: "100%", "--hp": cl,
+              background: `repeating-linear-gradient(45deg, ${cl}, ${cl} 6px, ${cl}AA 6px, ${cl}AA 12px)`, boxShadow: `0 0 8px ${cl}` }} />
+          </div>
+          <b style={{ fontSize: 10.5, color: cl }}>{trust}</b>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function Stat({ label, v, prefix = "", suffix = "", color }) {
   const x = useCountUp(v);
   return (
@@ -1702,6 +1755,10 @@ function Desk({ s, busy, act, adsOpen, ads, toggleAds, isMvp, talkTick, onAdStat
               border: `1.5px solid ${dead ? C.border : `${mColor}55`}`, boxShadow: dead ? "none" : `0 0 10px ${mColor}33`,
               filter: dead ? "grayscale(1) brightness(0.55)" : tier === "bad" ? "saturate(0.65)" : "none",
               cursor: dead ? "default" : "pointer" }} />
+          {/* 책상 소품 — 사원마다 커피/화분/램프/시계 하나씩 */}
+          <Px k={propOf(s.id)} s={17} style={{ position: "absolute", bottom: -3, right: -6,
+            filter: dead ? "grayscale(1) brightness(0.55)" : "none", opacity: dead ? 0.6 : 0.95,
+            border: `1px solid ${C.border}` }} />
           {pet > 0 && <span className="petHeart" style={{ position: "absolute", top: -10, left: 8, fontSize: 15 }}>💖</span>}
           {earning && <span className="coinPop" style={{ position: "absolute", top: -6, right: -4, fontSize: 13 }}>🪙</span>}
           {tier === "bad" && !dead && <span style={{ position: "absolute", top: -2, right: 0, fontSize: 12 }}>💦</span>}
