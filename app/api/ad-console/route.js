@@ -163,7 +163,7 @@ export async function GET(req) {
     const adsetId = url.searchParams.get("adset");
     if (adsetId) {
       const ads = await g(`${adsetId}/ads`, {
-        fields: "name,status,effective_status,creative{thumbnail_url,image_url},insights.date_preset(last_7d).action_attribution_windows(['7d_click','1d_view']){spend,ctr,actions,catalog_segment_actions}",
+        fields: "name,status,effective_status,creative{thumbnail_url,image_url},insights.date_preset(last_7d).action_attribution_windows(['7d_click','1d_view']){spend,ctr,frequency,actions,catalog_segment_actions}",
         limit: "50",
       });
       return Response.json({
@@ -173,7 +173,7 @@ export async function GET(req) {
           const sp = Number(i.spend || 0), pu = purchasesOf(i), w = purchasesOf(i) + 0.3 * viewOf(i);
           return { id: a.id, name: a.name, status: a.effective_status,
             thumb: a.creative?.image_url || a.creative?.thumbnail_url || "",
-            spend: Math.round(sp), ctr: Number(i.ctr || 0), purchases: pu,
+            spend: Math.round(sp), ctr: Number(i.ctr || 0), freq: Number(i.frequency || 0), purchases: pu,
             cpa: w >= 1 ? Math.round(sp / w) : null };
         }).sort((x, y) => y.spend - x.spend),
       });
@@ -219,7 +219,7 @@ export async function GET(req) {
     const campaigns = [];
     for (const c of active) {
       const sets = await g(`${c.id}/adsets`, {
-        fields: "id,name,daily_budget,effective_status,optimization_goal,ads.limit(3){effective_status,creative{image_url,thumbnail_url}}", limit: "100" });
+        fields: "id,name,daily_budget,effective_status,optimization_goal,ads.limit(15){effective_status,creative{image_url,thumbnail_url}}", limit: "100" });
       const tgt = targetFor(conf, c.name);
       const rows = (sets.data || []).filter((s) => s.effective_status !== "DELETED").map((s) => {
         const r7 = by7[s.id] || {}, r3 = by3[s.id] || {};
@@ -231,8 +231,12 @@ export async function GET(req) {
         const thumb = bestAd?.creative?.image_url || bestAd?.creative?.thumbnail_url || "";
         const goal = (s.optimization_goal || "").toUpperCase();
         const isTraffic = /LANDING|LINK_CLICK|TRAFFIC/.test(goal);
+        // ★CPAS 세트는 세트 단위 OFF 불가 → 소재 전체 OFF로 퇴근 처리하는데, 세트 status는 ACTIVE로 남음
+        //   → 소재가 전부 꺼진 세트는 "퇴근"으로 간주 (결재함/책상에 살아 돌아오는 사고 픽스, 08-28)
+        const effStatus = s.effective_status === "ACTIVE" && adsArr.length > 0
+          && !adsArr.some((a) => a.effective_status === "ACTIVE") ? "PAUSED" : s.effective_status;
         let judge = "";
-        if (!isTraffic && s.effective_status === "ACTIVE" && sp7 > 0) {
+        if (!isTraffic && effStatus === "ACTIVE" && sp7 > 0) {
           if (pu7 >= 8 && cpa7 && cpa7 <= tgt && (!cpa3 || cpa3 <= tgt * 1.5)) judge = "scale";
           else if ((sp7 >= tgt * 3 && pu7 === 0) || (cpa7 && cpa7 >= tgt * 3 && sp7 >= 100000)) judge = "kill";
           else if (cpa7 && cpa7 >= tgt * 2 && sp7 >= 100000) judge = "watch";
@@ -316,7 +320,7 @@ async function expireCache(s) {
 
 export async function POST(req) {
   try {
-    const { action, adsetId, adId, budget, note, name } = await req.json();
+    const { action, adsetId, adId, budget, note, name, before } = await req.json();
     // 개별 소재(광고) ON/OFF — 부진 소재만 끄는 "소재 교체" 절반
     if (action === "adPause" || action === "adResume") {
       if (!adId) throw new Error("adId 필요");
@@ -326,7 +330,7 @@ export async function POST(req) {
       const { data: d0 } = await s0.from("settings").select("value").eq("key", LOG_KEY).maybeSingle();
       const items0 = d0?.value?.items || [];
       items0.unshift({ at: new Date().toISOString(), adsetId: adsetId || "", name: name || adId,
-        desc: action === "adPause" ? "소재 OFF" : "소재 ON", note: note || "" });
+        desc: action === "adPause" ? "소재 OFF" : "소재 ON", note: note || "", before: before || null });
       await s0.from("settings").upsert({ key: LOG_KEY, value: { items: items0.slice(0, 100) } }, { onConflict: "key" });
       return Response.json({ ok: true });
     }
@@ -366,7 +370,7 @@ export async function POST(req) {
     const { data } = await s.from("settings").select("value").eq("key", LOG_KEY).maybeSingle();
     const items = data?.value?.items || [];
     items.unshift({ at: new Date().toISOString(), adsetId, name: String(name || "").slice(0, 50),
-      desc, note: String(note || "").slice(0, 80) });
+      desc, note: String(note || "").slice(0, 80), before: before || null });
     await s.from("settings").upsert({ key: LOG_KEY, value: { items: items.slice(0, 200) } }, { onConflict: "key" });
     return Response.json({ ok: true, desc });
   } catch (e) {
