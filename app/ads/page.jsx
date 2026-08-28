@@ -709,7 +709,9 @@ export default function AdOfficeTycoon() {
 
       {/* 🗂 메인 탭 — 화면 정리: 매일 보는 것만 앞에, 나머지는 탭 뒤로 */}
       <div style={{ display: "flex", gap: 6, marginBottom: 14, flexWrap: "wrap" }}>
-        {[["work", "📋 오늘 업무", queue.length + alarms.length], ["report", "📊 리포트", 0],
+        {[["work", "📋 오늘 업무", queue.length + alarms.length],
+          ["plan", "📝 기획실", (data.plans || []).filter((p) => p.status === "pending").length],
+          ["report", "📊 리포트", 0],
           ["partner", "🤝 협력사·직영", 0], ["log", "🗂 기록", 0]].map(([k, label, n]) => (
           <button key={k} onClick={() => { SFX.click(); setTab(k); }}
             style={{ background: tab === k ? "#ffffff10" : "transparent", color: tab === k ? C.ink : C.mid,
@@ -1895,8 +1897,10 @@ export default function AdOfficeTycoon() {
           </div>
         );
       })()}
-      {/* 📝 신규 채용 기획서 — 팀원이 새 광고를 직접 기획. 제출 1pt·채택 3pt, 채택되면 스튜디오에서 제작 */}
-      {(() => {
+      </>)}
+
+      {/* 📝 기획실 탭 — 신규 채용 기획서: 팀원이 새 광고를 직접 기획. 제출 1pt·채택 3pt, 채택되면 스튜디오에서 제작 */}
+      {tab === "plan" && (() => {
         const plans = data.plans || [];
         const pending = plans.filter((p) => p.status === "pending");
         const decided = plans.filter((p) => p.status !== "pending").slice(0, 4);
@@ -2015,6 +2019,8 @@ export default function AdOfficeTycoon() {
           </div>
         );
       })()}
+
+      {tab === "work" && (<>
       {[...data.campaigns].sort((a, b) =>
         ((signer && (data.owners || {})[b.id] === signer) ? 1 : 0) - ((signer && (data.owners || {})[a.id] === signer) ? 1 : 0)).map((c) => {
         const tot = c.adsets.reduce((a, s) => a + s.spend7, 0);
