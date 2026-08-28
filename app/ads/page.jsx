@@ -3,7 +3,7 @@
 // 증액 = 보너스 결재, 중지 = 퇴근 조치, 소재 = 작업물 포트폴리오. 재미는 껍데기, 돈은 진짜.
 // (기존 AD BATTLE STATION 전면 리스킨 — API 계약 동일: /api/ad-console GET/POST)
 import { useEffect, useRef, useState } from "react";
-import { RANKS, SHOP, weekWindow, questGoal } from "../../lib/ad-ranks.mjs";
+import { RANKS, SHOP, AVATAR_OPTS, weekWindow, questGoal } from "../../lib/ad-ranks.mjs";
 
 const C = {
   bg: "#141019", floor: "#1D1526", floor2: "#231A2E", panel: "#241B31", panel2: "#1B1424",
@@ -77,6 +77,23 @@ const TEAM = [
 const BOSS_IMG = SPRITE_BASE + "mtcov5no2_hud_kyeongeun.png"; // 경은 사장님 (왕관 제거판)
 // 결재 서명자 → 캐릭터 사진 (인사기록부·결재서류에 이름과 함께 표시)
 const SIGNER_IMG = { 영서: TEAM[0].img, 소리: TEAM[1].img, 혜영: TEAM[2].img, 경은: BOSS_IMG };
+// 🎨 사원증 아바타 — 스프라이트 + 꾸미기(모자/손/오라) 오버레이. av는 서버 avatars[name]
+function Avatar({ name, av, size = 24, style }) {
+  const img = SIGNER_IMG[name];
+  if (!img) return null;
+  const a = av || {};
+  return (
+    <span style={{ position: "relative", display: "inline-block", width: size, height: size, flex: "none", ...style }}>
+      <img src={img} alt={name} style={{ width: size, height: size, borderRadius: size * 0.28, imageRendering: "pixelated",
+        objectFit: "cover", display: "block", boxShadow: a.aura ? `0 0 ${Math.round(size / 4)}px ${a.aura}` : "none",
+        border: `1px solid ${a.aura || "transparent"}` }} />
+      {a.hat && <span style={{ position: "absolute", top: -size * 0.28, left: "50%", transform: "translateX(-50%) rotate(-8deg)",
+        fontSize: size * 0.42, lineHeight: 1, pointerEvents: "none" }}>{a.hat}</span>}
+      {a.hand && <span style={{ position: "absolute", bottom: -size * 0.08, right: -size * 0.12,
+        fontSize: size * 0.4, lineHeight: 1, pointerEvents: "none" }}>{a.hand}</span>}
+    </span>
+  );
+}
 // 🎖 직급 사다리(RANKS) — 커리어 포인트 기준, lib/ad-ranks.mjs 공유 모듈에서 import (봇들과 단일 소스)
 // 픽셀 소품 스프라이트 (Comfy Cloud 나노바나나 생성, hudassets/px2_* + px3_*)
 const PX = Object.fromEntries([
@@ -238,6 +255,8 @@ export default function AdOfficeTycoon() {
   const [planBy, setPlanBy] = useState(""); // 📝 기획자 선택 — 비면 도장 이름(signer) 사용
   const [ownerPick, setOwnerPick] = useState(null); // 👤 부서 담당자 지정 모달 {campId, cur}
   const [onboard, setOnboard] = useState(false); // 👋 온보딩 — 도장 이름 미설정 시 얼굴 선택 오버레이
+  const [avEdit, setAvEdit] = useState(null); // 🎨 사원증 꾸미기 모달 {hat,hand,aura,motto}
+  const [avBusy, setAvBusy] = useState(false);
 
   useEffect(() => {
     try { const m = localStorage.getItem("oa_ads_mute") === "1"; setMute(m); sfxOn = !m; } catch {}
@@ -630,7 +649,7 @@ export default function AdOfficeTycoon() {
                           fontSize: 14, fontWeight: 900, transform: "rotate(-12deg)", letterSpacing: 1,
                           boxShadow: "inset 0 0 6px #C0392B33" }}>{nm}</div>
                       ) : SIGNER_IMG[nm]
-                        ? <img src={SIGNER_IMG[nm]} alt="" style={{ width: 40, height: 40, borderRadius: 8, imageRendering: "pixelated", objectFit: "cover", opacity: 0.9 }} />
+                        ? <Avatar name={nm} av={data?.avatars?.[nm]} size={40} style={{ opacity: 0.9 }} />
                         : <span style={{ fontSize: 10, color: "#bbb" }}>(인)</span>}
                     </div>
                     <span style={{ fontSize: 11, fontWeight: 800, color: "#333" }}>{nm}</span>
@@ -662,7 +681,7 @@ export default function AdOfficeTycoon() {
                   style={{ width: 68, cursor: "pointer", background: ownerPick.cur === nm ? `${C.cyan}18` : "#ffffff06",
                     border: `1.5px solid ${ownerPick.cur === nm ? C.cyan : C.border}`, borderRadius: 10,
                     padding: "8px 0 6px", display: "flex", flexDirection: "column", alignItems: "center", gap: 5 }}>
-                  <img src={SIGNER_IMG[nm]} alt="" style={{ width: 40, height: 40, borderRadius: 9, imageRendering: "pixelated", objectFit: "cover" }} />
+                  <Avatar name={nm} av={data?.avatars?.[nm]} size={40} />
                   <span style={{ fontSize: 11, fontWeight: 800, color: ownerPick.cur === nm ? C.cyan : C.ink }}>{nm}</span>
                 </button>
               ))}
@@ -674,6 +693,84 @@ export default function AdOfficeTycoon() {
               )}
               <button onClick={() => setOwnerPick(null)} style={{ background: "transparent", border: `1px solid ${C.border}`,
                 borderRadius: 8, padding: "6px 14px", fontSize: 11, color: C.mid, cursor: "pointer" }}>닫기</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 🎨 사원증 꾸미기 — 모자/손/오라/좌우명 커스텀 (서버 oa_ad_avatar_v1, 전원에게 표시) */}
+      {avEdit && signer && (
+        <div onClick={() => setAvEdit(null)} style={{ position: "fixed", inset: 0, background: "#000000AA", zIndex: 330,
+          display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
+          <div onClick={(e) => e.stopPropagation()} style={{ width: 460, maxWidth: "94vw", background: C.panel,
+            border: `1px solid ${C.cyan}66`, borderRadius: 14, padding: "18px 20px", boxShadow: `0 0 30px ${C.cyan}22` }}>
+            <div style={{ fontSize: 13.5, fontWeight: 900, color: C.cyan }}>🎨 {signer}님 사원증 꾸미기</div>
+            <div style={{ fontSize: 10.5, color: C.mid, marginTop: 3 }}>결재란·인사기록부 등 회사 전체에 이렇게 보여요 (팀원 모두에게 표시)</div>
+            <div style={{ display: "flex", justifyContent: "center", margin: "22px 0 14px" }}>
+              <div style={{ textAlign: "center" }}>
+                <Avatar name={signer} av={avEdit} size={96} />
+                {avEdit.motto && <div style={{ marginTop: 10, fontSize: 11, fontStyle: "italic", color: C.mid }}>“{avEdit.motto}”</div>}
+              </div>
+            </div>
+            {[["🎩 모자", "hat"], ["🤲 소지품", "hand"]].map(([label, k]) => (
+              <div key={k} style={{ marginTop: 10 }}>
+                <div style={{ fontSize: 10.5, fontWeight: 800, color: C.mid, marginBottom: 5 }}>{label}</div>
+                <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                  {AVATAR_OPTS[k].map((e) => (
+                    <button key={e || "none"} onClick={() => setAvEdit((a) => ({ ...a, [k]: e }))}
+                      style={{ width: 36, height: 36, fontSize: e ? 17 : 10, cursor: "pointer", color: C.mid,
+                        background: avEdit[k] === e ? `${C.cyan}22` : "#ffffff06",
+                        border: `1.5px solid ${avEdit[k] === e ? C.cyan : C.border}`, borderRadius: 9 }}>
+                      {e || "없음"}</button>
+                  ))}
+                </div>
+              </div>
+            ))}
+            <div style={{ marginTop: 10 }}>
+              <div style={{ fontSize: 10.5, fontWeight: 800, color: C.mid, marginBottom: 5 }}>✨ 오라 (빛)</div>
+              <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                {AVATAR_OPTS.aura.map((cl) => (
+                  <button key={cl || "none"} onClick={() => setAvEdit((a) => ({ ...a, aura: cl }))}
+                    style={{ width: 36, height: 36, cursor: "pointer", fontSize: 10, color: C.mid,
+                      background: cl || "#ffffff06", boxShadow: cl ? `0 0 10px ${cl}` : "none",
+                      border: `2px solid ${avEdit.aura === cl ? C.cyan : C.border}`, borderRadius: 9 }}>
+                    {cl ? "" : "없음"}</button>
+                ))}
+              </div>
+            </div>
+            <div style={{ marginTop: 12 }}>
+              <div style={{ fontSize: 10.5, fontWeight: 800, color: C.mid, marginBottom: 5 }}>💬 좌우명 (14자)</div>
+              <input value={avEdit.motto || ""} maxLength={14} placeholder="예: 오늘도 칼결재"
+                onChange={(e) => setAvEdit((a) => ({ ...a, motto: e.target.value.slice(0, 14) }))}
+                style={{ width: "100%", boxSizing: "border-box", background: "#ffffff08", border: `1px solid ${C.border}`,
+                  borderRadius: 8, padding: "8px 10px", fontSize: 12, color: C.ink, outline: "none" }} />
+            </div>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 16 }}>
+              <button onClick={() => {
+                const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
+                setAvEdit((a) => ({ ...a, hat: pick(AVATAR_OPTS.hat), hand: pick(AVATAR_OPTS.hand), aura: pick(AVATAR_OPTS.aura) }));
+              }} style={{ background: "transparent", border: `1px solid ${C.border}`, borderRadius: 8,
+                padding: "7px 14px", fontSize: 11, color: C.mid, cursor: "pointer" }}>🎲 랜덤</button>
+              <div style={{ display: "flex", gap: 8 }}>
+                <button onClick={() => setAvEdit(null)} style={{ background: "transparent", border: `1px solid ${C.border}`,
+                  borderRadius: 8, padding: "7px 14px", fontSize: 11, color: C.mid, cursor: "pointer" }}>닫기</button>
+                <button disabled={avBusy} onClick={async () => {
+                  setAvBusy(true);
+                  try {
+                    const j = await jfetch("/api/ad-console", { method: "POST", headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ action: "avatar", by: signer, avatar: avEdit }) });
+                    if (!j.ok) throw new Error(j.error);
+                    SFX.bonus();
+                    setData((d) => d && ({ ...d, avatars: j.avatars }));
+                    setAvEdit(null);
+                    setFx({ emoji: "🪪", text: "사원증 갱신 완료 — 멋진데요?", kind: "bonus" });
+                    setTimeout(() => setFx(null), 2400);
+                  } catch (e) { alert("저장 실패: " + e.message); }
+                  setAvBusy(false);
+                }} style={{ background: C.cyan, border: "none", borderRadius: 8, padding: "7px 18px",
+                  fontSize: 11.5, fontWeight: 900, color: "#04252A", cursor: avBusy ? "wait" : "pointer", opacity: avBusy ? 0.6 : 1 }}>
+                  {avBusy ? "저장 중…" : "🖊 결재 (저장)"}</button>
+              </div>
             </div>
           </div>
         </div>
@@ -702,7 +799,7 @@ export default function AdOfficeTycoon() {
                 }}
                   style={{ width: 76, cursor: "pointer", background: "#ffffff06", border: `1.5px solid ${C.border}`,
                     borderRadius: 12, padding: "10px 0 8px", display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
-                  <img src={SIGNER_IMG[nm]} alt="" style={{ width: 48, height: 48, borderRadius: 10, imageRendering: "pixelated", objectFit: "cover" }} />
+                  <Avatar name={nm} av={data?.avatars?.[nm]} size={48} />
                   <span style={{ fontSize: 12, fontWeight: 800, color: C.ink }}>{nm}</span>
                 </button>
               ))}
@@ -1950,7 +2047,7 @@ export default function AdOfficeTycoon() {
         return (
           <>
           <div style={{ ...card, marginBottom: 12, borderColor: `${C.cyan}55`, display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
-            {SIGNER_IMG[signer] && <img src={SIGNER_IMG[signer]} alt="" style={{ width: 44, height: 44, borderRadius: 10, imageRendering: "pixelated", objectFit: "cover", border: `1px solid ${C.border}` }} />}
+            {SIGNER_IMG[signer] && <Avatar name={signer} av={data.avatars?.[signer]} size={44} />}
             <div style={{ flex: 1, minWidth: 200 }}>
               <b style={{ fontSize: 12.5, color: C.cyan }}>📊 {signer} <span style={{ color: C.gold }}>{rank}</span>님 담당 실적
                 {title && <span title={title.desc} style={{ marginLeft: 6, fontSize: 9.5, fontWeight: 800, color: C.purple,
@@ -1958,6 +2055,12 @@ export default function AdOfficeTycoon() {
                   {title.icon} {title.name}</span>}
                 {att?.streak > 1 && <span title={`총 출근 ${att.total || 0}일`} style={{ marginLeft: 6, fontSize: 9.5, fontWeight: 800, color: C.gold,
                   verticalAlign: "middle" }}>🔥 {att.streak}일 연속 출근</span>}
+                {data.avatars?.[signer]?.motto && <span style={{ marginLeft: 6, fontSize: 10, fontWeight: 600, fontStyle: "italic",
+                  color: C.mid, verticalAlign: "middle" }}>“{data.avatars[signer].motto}”</span>}
+                <button onClick={() => setAvEdit({ hat: "", hand: "", aura: "", motto: "", ...(data.avatars?.[signer] || {}) })}
+                  style={{ marginLeft: 8, fontSize: 9.5, fontWeight: 800, color: C.cyan, background: `${C.cyan}12`,
+                    border: `1px solid ${C.cyan}55`, borderRadius: 99, padding: "2px 9px", cursor: "pointer", verticalAlign: "middle" }}>
+                  🎨 사원증 꾸미기</button>
               </b>
               <div style={{ fontSize: 11, color: C.mid, marginTop: 3 }}>
                 {mineC.length
@@ -2222,7 +2325,7 @@ export default function AdOfficeTycoon() {
                   <div key={p.id} style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap", fontSize: 11.5,
                     background: C.panel, borderLeft: `3px solid ${C.gold}`, border: `1px solid ${C.gold}33`,
                     borderRadius: 11, padding: "9px 13px" }}>
-                    {SIGNER_IMG[p.by] && <img src={SIGNER_IMG[p.by]} alt="" style={{ width: 26, height: 26, borderRadius: 7, imageRendering: "pixelated", flex: "none" }} />}
+                    {SIGNER_IMG[p.by] && <Avatar name={p.by} av={data?.avatars?.[p.by]} size={26} />}
                     <span style={{ flex: 1, minWidth: 180 }}>
                       <b style={{ color: C.gold }}>[{p.product}]</b> {p.concept}
                       <span style={{ display: "block", fontSize: 9.5, color: C.mid, marginTop: 2 }}>{p.by} · {(p.at || "").slice(5, 10)}{p.target && ` · 🎯 ${p.target}`}{p.usp && ` · ✨ ${p.usp}`}</span>
