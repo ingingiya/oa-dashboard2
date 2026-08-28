@@ -15,7 +15,7 @@ def main():
         import openpyxl
         from playwright.sync_api import sync_playwright
         from adboost_lib import launch, ensure_login
-        # 오아만 — k2ci00 + 오아운영(2236, 대행사 카테고리별 AD부스터). 보아르(12n300+이름 필터)는 제외
+        # 오아만 — k2ci00 + 오아운영(2236, 카테고리별 AD부스터 — 사용자 직접 운영). 보아르(12n300+이름 필터)는 제외
         ACCOUNTS = [("1742505", "k2ci00"), ("2236", "오아운영")]
         bufs, period = [], "최근 7일"
         with sync_playwright() as pw:
