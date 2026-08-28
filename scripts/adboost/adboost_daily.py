@@ -15,8 +15,8 @@ def main():
         import openpyxl
         from playwright.sync_api import sync_playwright
         from adboost_lib import launch, ensure_login
-        # 오아만 (보아르 12n300은 사용자 지시로 제외, 2026-08-28)
-        ACCOUNTS = [("1742505", "k2ci00")]
+        # 오아만 — k2ci00 + 오아운영(2236, 대행사 카테고리별 AD부스터). 보아르(12n300+이름 필터)는 제외
+        ACCOUNTS = [("1742505", "k2ci00"), ("2236", "오아운영")]
         bufs, period = [], "최근 7일"
         with sync_playwright() as pw:
             ctx = launch(pw)
@@ -48,6 +48,8 @@ def main():
                 cost = num(r[11])
                 if cost <= 0 or not gu:
                     continue
+                if "보아르" in name:
+                    continue  # 보아르 캠페인 제외 (사용자 지시)
                 out.append({"acct": label, "gu": gu, "name": name, "cost": cost,
                             "conv": int(num(r[12])), "rev": num(r[13])})
         boost = [x for x in out if "부스터" in x["name"] or "부스트" in x["name"] or "voost" in x["name"].lower()]
