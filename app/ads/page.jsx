@@ -167,9 +167,11 @@ export default function AdOfficeTycoon() {
           <div style={{ fontSize: 40, fontWeight: 900, color: grade[1], textShadow: `0 0 18px ${grade[1]}`, lineHeight: 1.1, fontFamily: "'Press Start 2P', monospace" }}>{grade[0]}</div>
           <div style={{ fontSize: 10, color: grade[1], marginTop: 3, fontWeight: 700 }}>{grade[2]}</div>
           <div style={{ fontSize: 10, color: C.mid }}>어제 ROAS {roas}</div>
-          {data.cachedAt && Date.now() - data.cachedAt > 60_000 && (
+          {data.stale ? (
+            <div style={{ fontSize: 9, color: C.gold, marginTop: 2 }}>⚠️ {data.staleReason || "일시 오류"} · 마지막 스냅샷 표시 중</div>
+          ) : data.cachedAt && Date.now() - data.cachedAt > 60_000 ? (
             <div style={{ fontSize: 9, color: C.mid, marginTop: 2 }}>🕐 {Math.round((Date.now() - data.cachedAt) / 60_000)}분 전 · 🔄순찰=실시간</div>
-          )}
+          ) : null}
         </div>
         <Stat label="💸 어제 광고비" v={data.kpi.yesterday.spend} prefix="₩" color={C.gold} />
         <Stat label="🛒 어제 판매" v={data.kpi.yesterday.purchases} suffix={data.kpi.yesterday.views ? ` +👁${data.kpi.yesterday.views}` : ""} color={C.neon} />

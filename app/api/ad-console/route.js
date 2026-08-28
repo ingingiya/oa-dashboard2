@@ -208,7 +208,19 @@ export async function GET(req) {
     await sb().from("settings").upsert({ key: CACHE_KEY, value: { at: Date.now(), payload } }, { onConflict: "key" });
     return Response.json({ ...payload, cachedAt: Date.now() });
   } catch (e) {
-    return Response.json({ ok: false, error: String(e.message || e) }, { status: 500 });
+    const msg = String(e.message || e);
+    // ★메타 호출 제한 등 일시 오류 — 마지막 성공 스냅샷이 있으면 그걸로 버틴다 (나이 무관)
+    try {
+      const { data: cRow } = await sb().from("settings").select("value").eq("key", "oa_ad_console_cache_v1").maybeSingle();
+      const c = cRow?.value;
+      if (c?.payload)
+        return Response.json({ ...c.payload, cachedAt: c.at, stale: true,
+          staleReason: /request limit/i.test(msg) ? "메타 호출 제한 — 잠시 후 자동 회복" : msg });
+    } catch {}
+    return Response.json({ ok: false,
+      error: /request limit/i.test(msg)
+        ? "메타 API 호출 제한 — 보통 1시간 내 자동 해제돼요. 잠시 후 다시 열어주세요 (해제되면 캐시가 쌓여 재발 안 함)"
+        : msg }, { status: 500 });
   }
 }
 
