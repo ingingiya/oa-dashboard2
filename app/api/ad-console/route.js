@@ -117,14 +117,17 @@ export async function GET(req) {
 
     // ── 전체 트리 ──
     const conf = await targets();
-    const [camps, kpiY, kpi7] = await Promise.all([
+    const KPI_FIELDS = "spend,actions,action_values,catalog_segment_actions,catalog_segment_value";
+    const AW = JSON.stringify(["7d_click", "1d_view"]);
+    const [camps, kpiY, kpi7, kpi30] = await Promise.all([
       g(`act_${acct}/campaigns`, { fields: "id,name,effective_status", limit: "200" }),
-      g(`act_${acct}/insights`, { date_preset: "yesterday", fields: "spend,actions,action_values,catalog_segment_actions,catalog_segment_value", action_attribution_windows: JSON.stringify(["7d_click", "1d_view"]) }),
-      g(`act_${acct}/insights`, { date_preset: "last_7d", fields: "spend,actions,action_values,catalog_segment_actions,catalog_segment_value", action_attribution_windows: JSON.stringify(["7d_click", "1d_view"]) }),
+      g(`act_${acct}/insights`, { date_preset: "yesterday", fields: KPI_FIELDS, action_attribution_windows: AW }),
+      g(`act_${acct}/insights`, { date_preset: "last_7d", fields: KPI_FIELDS, action_attribution_windows: AW }),
+      g(`act_${acct}/insights`, { date_preset: "last_30d", fields: KPI_FIELDS, action_attribution_windows: AW }),
     ]);
     const active = (camps.data || []).filter((c) => c.effective_status === "ACTIVE");
     const kpi = {};
-    for (const [k, r] of [["yesterday", kpiY.data?.[0]], ["week", kpi7.data?.[0]]]) {
+    for (const [k, r] of [["yesterday", kpiY.data?.[0]], ["week", kpi7.data?.[0]], ["month", kpi30.data?.[0]]]) {
       const sp = Number(r?.spend || 0), pu = purchasesOf(r), vw = viewOf(r), rev = revenueOf(r);
       const w = pu + 0.3 * vw;
       kpi[k] = { spend: Math.round(sp), purchases: pu, views: vw, roas: sp ? +(rev / sp).toFixed(2) : 0,
