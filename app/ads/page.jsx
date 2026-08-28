@@ -107,6 +107,17 @@ const TALK = {
 };
 const talkOf = (tier, seed) => TALK[tier][seed % TALK[tier].length];
 
+// 🎖 승진 직급제 — 근속(세트 생성일)+7일 계약+표창으로 산정 (표시 전용, 돈과 무관)
+const RANK_DEF = [["인턴", 0, "#8A93A6"], ["사원", 8, "#C9D1D9"], ["대리", 20, "#7FDBFF"],
+  ["과장", 40, "#4ADE80"], ["부장", 70, "#FFD166"], ["이사", 110, "#C792EA"]];
+function rankOf(s) {
+  const months = s.created ? (Date.now() - new Date(s.created)) / 2592000000 : 0;
+  const pts = Math.round(months * 3 + (s.purchases7 || 0) + (s.hr?.s || 0) * 5);
+  let r = RANK_DEF[0], next = null;
+  for (let i = 0; i < RANK_DEF.length; i++) if (pts >= RANK_DEF[i][1]) { r = RANK_DEF[i]; next = RANK_DEF[i + 1] || null; }
+  return { rank: r[0], color: r[2], pts, next: next ? { rank: next[0], need: next[1] - pts } : null };
+}
+
 // 🏆 업적 컬렉션 — 전부 실데이터에서 파생 (표시 전용, 돈과 무관)
 function calcAchievements(data) {
   if (!data) return [];
@@ -605,6 +616,44 @@ export default function AdOfficeTycoon() {
         ))}
       </div>
 
+      {/* ✅ 오늘의 퀘스트 — 실데이터 파생 미션 3개 (표시 전용) */}
+      {tab === "work" && (() => {
+        const today = new Date(Date.now() + 9 * 3600 * 1000).toISOString().slice(0, 10); // KST
+        const stampedToday = logArr.filter((l) => (l.at || "").slice(0, 10) === today).length;
+        const quests = [
+          { icon: "🖊", t: "결재함 비우기", done: queue.length === 0, sub: queue.length ? `${queue.length}건 남음` : "완료!" },
+          { icon: "🚨", t: "비상벨 전부 처리", done: alarms.length === 0, sub: alarms.length ? `${alarms.length}건 울리는 중` : "조용한 사무실" },
+          { icon: "📋", t: "오늘 결재 도장 1건", done: stampedToday > 0, sub: stampedToday ? `오늘 ${stampedToday}건 결재` : "아직 도장 0건" },
+        ];
+        const doneN = quests.filter((q) => q.done).length;
+        return (
+          <div style={{ background: C.panel, border: `1px solid ${doneN === 3 ? C.gold + "66" : C.border}`, borderRadius: 14,
+            padding: "10px 14px", marginBottom: 14 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 7 }}>
+              <span style={px}>퀘스트</span>
+              <b style={{ fontSize: 12, color: doneN === 3 ? C.gold : C.ink }}>오늘의 퀘스트 {doneN}/3{doneN === 3 && " — 퍼펙트 데이! 🎉"}</b>
+              <div style={{ flex: 1, maxWidth: 140, height: 7, background: "#0d0a12", borderRadius: 4, overflow: "hidden", border: `1px solid ${C.border}` }}>
+                <div className="hpbar" style={{ width: `${(doneN / 3) * 100}%`, height: "100%", "--hp": C.gold,
+                  background: `repeating-linear-gradient(45deg, ${C.gold}, ${C.gold} 6px, ${C.gold}AA 6px, ${C.gold}AA 12px)`, boxShadow: `0 0 8px ${C.gold}` }} />
+              </div>
+            </div>
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+              {quests.map((q) => (
+                <div key={q.t} style={{ flex: "1 1 160px", display: "flex", alignItems: "center", gap: 8, fontSize: 11.5,
+                  background: q.done ? `${C.neon}0E` : "#0d0a1266", border: `1px solid ${q.done ? C.neon + "44" : C.border}`,
+                  borderRadius: 9, padding: "7px 10px", opacity: q.done ? 1 : 0.85 }}>
+                  <span style={{ fontSize: 14 }}>{q.done ? "✅" : q.icon}</span>
+                  <span style={{ flex: 1 }}>
+                    <b style={{ color: q.done ? C.neon : C.ink, textDecoration: q.done ? "line-through" : "none" }}>{q.t}</b>
+                    <span style={{ display: "block", fontSize: 9.5, color: C.mid }}>{q.sub}</span>
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+      })()}
+
       {/* 🚨 비상벨 — 급변 감지 */}
       {tab === "work" && alarms.length > 0 && (
         <div className="siren" style={{ background: "#FF6B8112", border: `1.5px solid ${C.red}88`, borderRadius: 14,
@@ -914,6 +963,53 @@ export default function AdOfficeTycoon() {
       })()}
 
       {/* 📅 월말 결산 — 이번 달 vs 지난 달 + 30일 지출 차트 */}
+      {/* 🏆 월말 시상식 — 지난달 결산+수상자 (결재 로그·장부 파생, 표시 전용) */}
+      {tab === "report" && data.monthly?.prev?.mon && (() => {
+        const p = data.monthly.prev;
+        if (!(p.spend > 0 || p.buy > 0)) return null;
+        const mLog = logArr.filter((l) => (l.at || "").startsWith(p.mon));
+        const cnt = (arr, key) => { const m = {}; for (const l of arr) if (l[key]) m[l[key]] = (m[l[key]] || 0) + 1;
+          const top = Object.entries(m).sort((a, b) => b[1] - a[1])[0]; return top ? { name: top[0], n: top[1] } : null; };
+        const kingStamp = cnt(mLog, "by");
+        const kingWin = cnt(mLog.filter((l) => l.verdict === "win"), "by");
+        const kingFail = cnt(mLog.filter((l) => l.verdict === "fail"), "name");
+        const pR = p.spend ? (p.rev || 0) / p.spend : 0;
+        const monLabel = `${Number(p.mon.slice(5, 7))}월`;
+        return (
+          <>
+            <h2 style={h2}><span style={px}>시상식</span> 🏆 {monLabel} 월말 시상식 <span style={{ fontSize: 10.5, color: C.mid, fontWeight: 400 }}>지난달 마감 결산</span></h2>
+            <div style={{ background: C.panel, border: `1px solid ${C.gold}44`, borderRadius: 14, padding: "14px 16px", marginBottom: 12 }}>
+              <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 12 }}>
+                <Partner label="💸 지출" v={`₩${fmt(Math.round(p.spend || 0))}`} color={C.gold} />
+                <Partner label="💰 매출" v={`₩${fmt(Math.round(p.rev || 0))}`} color={C.cyan} />
+                <Partner label="🛒 계약" v={fmt(p.buy || 0)} color={C.neon} />
+                <Partner label="📈 ROAS" v={`x${pR.toFixed(1)}`} color={pR >= 3 ? C.neon : pR >= 1 ? C.gold : C.red} big />
+              </div>
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                {[kingStamp && { icon: <Px k="medal" s={22} />, t: "결재왕", who: kingStamp.name, sub: `도장 ${kingStamp.n}회`, cl: C.gold, img: SIGNER_IMG[kingStamp.name] },
+                  kingWin && { icon: "🎯", t: "명중왕", who: kingWin.name, sub: `성공 판정 ${kingWin.n}회`, cl: C.neon, img: SIGNER_IMG[kingWin.name] },
+                  kingFail && { icon: <Px k="sadplant" s={20} />, t: "반성상", who: kingFail.name.slice(0, 16), sub: `실패 판정 ${kingFail.n}회`, cl: C.red }]
+                  .filter(Boolean).map((a, i) => (
+                    <div key={i} style={{ flex: "1 1 170px", display: "flex", alignItems: "center", gap: 9,
+                      background: `${a.cl}0C`, border: `1px solid ${a.cl}44`, borderRadius: 10, padding: "8px 12px" }}>
+                      <span style={{ fontSize: 16, display: "inline-flex" }}>{a.icon}</span>
+                      <span style={{ flex: 1, minWidth: 0 }}>
+                        <span style={{ display: "block", fontSize: 9.5, color: a.cl, fontWeight: 800 }}>{a.t}</span>
+                        <b style={{ fontSize: 12, color: C.ink, display: "flex", alignItems: "center", gap: 5 }}>
+                          {a.img && <img src={a.img} alt="" style={{ width: 20, height: 20, borderRadius: 5, imageRendering: "pixelated" }} />}
+                          <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{a.who}</span>
+                        </b>
+                        <span style={{ display: "block", fontSize: 9.5, color: C.mid }}>{a.sub}</span>
+                      </span>
+                    </div>
+                  ))}
+                {!kingStamp && <span style={{ fontSize: 11, color: C.mid }}>지난달 결재 기록이 없어 수상자 없음 — 이번 달은 도장 찍어보시죠</span>}
+              </div>
+            </div>
+          </>
+        );
+      })()}
+
       {tab === "report" && data.monthly?.days30?.length > 0 && (() => {
         const { cur, prev, days30 } = data.monthly;
         const roasOf = (m) => (m.spend > 0 ? Math.round((m.rev / m.spend) * 100) / 100 : 0);
@@ -1360,7 +1456,7 @@ export default function AdOfficeTycoon() {
                     {list.map((s) => (
                       <Desk key={s.id} s={s} busy={busy} act={act} adsOpen={adsOpen[s.id]} ads={adsCache[s.id]}
                         toggleAds={toggleAds} isMvp={mvp && s.id === mvp.id} talkTick={talkTick} onAdStatus={adStatus} onDetail={openDetail}
-                        spot={spot === s.id} />
+                        spot={spot === s.id} log={logArr} />
                     ))}
                   </div>
                   {off.length > 0 && (
@@ -1722,10 +1818,12 @@ function Stat({ label, v, prefix = "", suffix = "", color }) {
 }
 
 // ── 직원 책상 카드 ──────────────────────────────────────────────────────
-function Desk({ s, busy, act, adsOpen, ads, toggleAds, isMvp, talkTick, onAdStatus, onDetail, spot }) {
+function Desk({ s, busy, act, adsOpen, ads, toggleAds, isMvp, talkTick, onAdStatus, onDetail, spot, log = [] }) {
   const [eb, setEb] = useState(null);
   const [pet, setPet] = useState(0); // 쓰다듬기 하트 이펙트
   const [showOffAds, setShowOffAds] = useState(false); // 꺼진 소재 표시 토글
+  const [resume, setResume] = useState(false); // 📄 이력서 모달
+  const rk = rankOf(s);
   const morale = s.cpa7 == null ? (s.spend7 > 0 ? 20 : 60)
     : Math.max(5, Math.min(100, Math.round(100 - ((s.cpa7 / s.target) - 0.5) * 40)));
   const mColor = morale >= 70 ? C.neon : morale >= 40 ? C.gold : C.red;
@@ -1780,6 +1878,11 @@ function Desk({ s, busy, act, adsOpen, ads, toggleAds, isMvp, talkTick, onAdStat
               style={{ background: "none", border: "none", color: C.ink, fontSize: 12.5, fontWeight: 700, cursor: "pointer", textAlign: "left", padding: 0, flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
               {s.name.slice(0, 26)}
             </button>
+            {/* 🎖 직급 명찰 — 근속+실적 산정, 클릭=이력서 */}
+            <span onClick={() => { SFX.click(); setResume(true); }}
+              title={`직급 ${rk.rank} (${rk.pts}점)${rk.next ? ` — ${rk.next.rank}까지 ${rk.next.need}점` : " — 최고 직급"} · 클릭하면 이력서`}
+              style={{ fontSize: 9.5, fontWeight: 800, color: rk.color, border: `1px solid ${rk.color}66`, borderRadius: 4,
+                padding: "1px 6px", flex: "none", cursor: "pointer" }}>{rk.rank}</span>
             {s.grade && (() => { // 🏅 성과등급 — 목표 CPA 대비 규정 (서버 판정)
               const gc = { S: C.gold, A: C.neon, B: C.cyan, C: C.red }[s.grade];
               return (
@@ -1869,6 +1972,56 @@ function Desk({ s, busy, act, adsOpen, ads, toggleAds, isMvp, talkTick, onAdStat
           style={{ ...btn(C.pink), padding: "4px 10px", fontSize: 11, textDecoration: "none" }}>🎨 소재 의뢰</a>
         {s.ctr7 > 0 && <span style={{ fontSize: 10.5, color: C.mid }}>CTR {s.ctr7.toFixed(2)}%</span>}
       </div>
+      {/* 📄 사원 이력서 모달 — 명찰 클릭 (전부 실데이터) */}
+      {resume && (() => {
+        const days = s.created ? Math.floor((Date.now() - new Date(s.created)) / 86400000) : null;
+        const hist = log.filter((l) => l.name === s.name).slice(0, 8);
+        return (
+          <div onClick={() => setResume(false)} style={{ position: "fixed", inset: 0, background: "#000000AA", zIndex: 90,
+            display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
+            <div onClick={(e) => e.stopPropagation()} style={{ background: C.panel, border: `1.5px solid ${rk.color}66`,
+              borderRadius: 16, padding: "18px 20px", width: "min(420px, 94vw)", maxHeight: "84vh", overflowY: "auto" }}>
+              <div style={{ display: "flex", gap: 12, alignItems: "center", marginBottom: 12 }}>
+                <img src={charOf(s.id)} alt="" style={{ width: 62, height: 62, borderRadius: 12, imageRendering: "pixelated",
+                  border: `1.5px solid ${rk.color}66`, boxShadow: `0 0 12px ${rk.color}33` }} />
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 13.5, fontWeight: 800, color: C.ink, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.name}</div>
+                  <div style={{ fontSize: 11, color: rk.color, fontWeight: 800, marginTop: 2 }}>
+                    {rk.rank} <span style={{ color: C.mid, fontWeight: 400 }}>· {rk.pts}점{rk.next ? ` (${rk.next.rank} 승진까지 ${rk.next.need}점)` : " · 최고 직급"}</span>
+                  </div>
+                  <div style={{ fontSize: 10.5, color: C.mid, marginTop: 2 }}>
+                    입사 {s.created ? s.created.slice(0, 10) : "미상"}{days != null && ` · 근속 ${days}일`} · {teamOf(s.id).name} 담당
+                  </div>
+                </div>
+                <button onClick={() => setResume(false)} style={{ background: "none", border: "none", color: C.mid, fontSize: 16, cursor: "pointer" }}>✕</button>
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 12, fontSize: 11.5 }}>
+                {[["7일 지출", `₩${fmt(s.spend7)}`, C.gold], ["7일 계약", `🛒${s.purchases7 || 0}${s.view7 ? `+👁${s.view7}` : ""}`, C.neon],
+                  ["CPA", s.cpa7 ? `₩${fmt(s.cpa7)}` : "-", mColor], ["사기", `${morale}`, mColor],
+                  ["월급(일예산)", `₩${fmt(s.budget)}`, C.cyan], ["상벌 14일", `🏅${s.hr?.s || 0} ⚠️${s.hr?.c || 0}`, (s.hr?.c || 0) >= 3 ? C.red : C.ink]]
+                  .map(([l, v, cl]) => (
+                    <div key={l} style={{ background: "#0d0a12", border: `1px solid ${C.border}`, borderRadius: 8, padding: "6px 10px" }}>
+                      <div style={{ fontSize: 9.5, color: C.mid }}>{l}</div>
+                      <b style={{ color: cl }}>{v}</b>
+                    </div>
+                  ))}
+              </div>
+              <div style={{ fontSize: 10.5, color: C.mid, fontWeight: 800, marginBottom: 5 }}>🖊 결재 히스토리</div>
+              {hist.length === 0 ? <div style={{ fontSize: 11, color: C.mid, opacity: 0.7 }}>기록 없음 — 아직 결재받은 적이 없어요</div>
+                : hist.map((l, i) => (
+                  <div key={i} style={{ display: "flex", gap: 7, alignItems: "center", fontSize: 11, padding: "4px 6px",
+                    background: i % 2 ? "transparent" : "#ffffff06", borderRadius: 6 }}>
+                    <span style={{ color: C.mid, flex: "none" }}>{(l.at || "").slice(5, 10)}</span>
+                    <span style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{l.desc || "-"}</span>
+                    {l.by && SIGNER_IMG[l.by] && <img src={SIGNER_IMG[l.by]} alt="" title={`도장: ${l.by}`}
+                      style={{ width: 18, height: 18, borderRadius: 5, imageRendering: "pixelated", flex: "none" }} />}
+                    {l.verdict && <b style={{ color: l.verdict === "win" ? C.neon : C.red, flex: "none" }}>{l.verdict === "win" ? "성공" : "실패"}</b>}
+                  </div>
+                ))}
+            </div>
+          </div>
+        );
+      })()}
       {/* 작업물 포트폴리오 */}
       {adsOpen && (
         <div style={{ marginTop: 8, borderTop: `1px dashed ${C.border}`, paddingTop: 8 }}>
