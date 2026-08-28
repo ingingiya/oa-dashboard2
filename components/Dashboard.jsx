@@ -9182,6 +9182,7 @@ export default function OaDashboard(){
     {id:"home",      icon:"home",           label:"홈"},
     {id:"portfolio", icon:"donut_small",    label:"포트폴리오"},
     {id:"priority",  icon:"local_fire_department", label:"우선순위"},
+    {id:"warroom",   icon:"sports_esports", label:"광고 관제", href:"/ads"},
     {id:"naver",     icon:"ads_click",      label:"네이버광고"},
     {id:"meta",      icon:"campaign",       label:"메타광고"},
     {id:"gfa",       icon:"insights",       label:"GFA"},
