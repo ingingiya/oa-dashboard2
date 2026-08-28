@@ -34,15 +34,17 @@ async function main() {
       const buy = act.reduce((a, s) => a + (s.purchases7 || 0), 0);
       const cpa = buy ? Math.round(spend / buy) : null;
       lines.push('', `🚪 ${c.name} — 7일 ${w(spend)} · 구매 ${buy}${cpa ? ` · CPA ${w(cpa)}` : ''} (목표 ${w(c.target)})`);
+      // judge: scale=증액 추천(좋음) / watch=관찰 / kill=중지 검토(나쁨)
+      const JUDGE = { scale: ['🚀', '증액 추천'], watch: ['👀', '유지관찰'], kill: ['🚨', '중지 검토'] };
       for (const s of act.slice(0, 5)) {
-        const bad = s.judge && s.judge !== '정상';
-        if (bad) alerts++;
-        lines.push(`${bad ? '⚠️' : '·'} ${s.name} — ${w(s.spend7)} · 구매 ${s.purchases7 || 0}` +
-          `${s.cpa7 ? ` · CPA ${w(s.cpa7)}` : ' · CPA 없음'}${bad ? ` → ${s.judge}` : ''}`);
+        const [ico, label] = JUDGE[s.judge] || [];
+        if (s.judge === 'kill' || s.judge === 'watch') alerts++;
+        lines.push(`${ico || '·'} ${s.name} — ${w(s.spend7)} · 구매 ${s.purchases7 || 0}` +
+          `${s.cpa7 ? ` · CPA ${w(s.cpa7)}` : ' · CPA 없음'}${label ? ` → ${label}` : ''}`);
       }
       if (act.length > 5) lines.push(`· 외 ${act.length - 5}명 근무 중`);
     }
-    lines.push('', alerts ? `⚠️ 요주의 ${alerts}건 — 콘솔에서 결재 부탁드려요` : '✅ 오늘은 요주의 없음',
+    lines.push('', alerts ? `⚠️ 요주의 ${alerts}건 — 콘솔에서 결재 부탁드려요` : '✅ 요주의 없음 — 오늘도 순항 중',
       '👉 oa-dashboard2.vercel.app/ads');
     const msg = lines.join('\n');
 
