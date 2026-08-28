@@ -112,7 +112,42 @@ export async function GET(req) {
       const t = tot.data?.[0] || {};
       const sp = Number(t.spend || 0), pu = purchasesOf(t), vw = viewOf(t), rev = revenueOf(t);
       const w = pu + 0.3 * vw;
+      // 소재별 + 제품별(CPAS product_id 브레이크다운) — 세트일 때만, 실패해도 개요는 응답
+      let adsList = [], products = [];
+      if (!isCamp) {
+        try {
+          const adsR = await g(`${detailId}/ads`, {
+            fields: "name,effective_status,creative{thumbnail_url,image_url},insights.date_preset(last_14d).action_attribution_windows(['7d_click','1d_view']){spend,ctr,actions,catalog_segment_actions,action_values,catalog_segment_value}",
+            limit: "50" });
+          adsList = (adsR.data || []).map((a) => {
+            const i = a.insights?.data?.[0] || {};
+            const asp = Number(i.spend || 0), apu = purchasesOf(i), avw = viewOf(i), arev = revenueOf(i);
+            const aw = apu + 0.3 * avw;
+            return { id: a.id, name: a.name, status: a.effective_status,
+              thumb: a.creative?.image_url || a.creative?.thumbnail_url || "",
+              spend: Math.round(asp), ctr: Number(i.ctr || 0), purchases: apu, views: avw,
+              revenue: Math.round(arev), roas: asp ? +(arev / asp).toFixed(2) : 0,
+              cpa: aw >= 1 ? Math.round(asp / aw) : null };
+          }).sort((x, y) => y.spend - x.spend);
+        } catch {}
+        try {
+          const pr = await g(`${detailId}/insights`, { date_preset: "last_14d", breakdowns: "product_id",
+            fields: "spend,actions,catalog_segment_actions,action_values,catalog_segment_value",
+            action_attribution_windows: AW0, limit: "50" });
+          products = (pr.data || []).map((r) => {
+            const psp = Number(r.spend || 0), ppu = purchasesOf(r), pvw = viewOf(r), prev = revenueOf(r);
+            return { productId: r.product_id || "", spend: Math.round(psp), purchases: ppu, views: pvw,
+              revenue: Math.round(prev), roas: psp ? +(prev / psp).toFixed(2) : 0 };
+          }).filter((p) => p.spend > 0 || p.purchases > 0).sort((x, y) => y.revenue - x.revenue).slice(0, 20);
+          // 제품명 해석 시도 (파트너 카탈로그면 실패 — id 그대로 표시)
+          await Promise.all(products.slice(0, 20).map(async (p) => {
+            if (!p.productId) return;
+            try { const pm = await g(p.productId, { fields: "name" }); p.name = pm.name || ""; } catch {}
+          }));
+        } catch {}
+      }
       return Response.json({ ok: true, detail: {
+        ads: adsList, products,
         id: detailId, name: meta.name, status: meta.effective_status, budget: Number(meta.daily_budget || 0),
         goal: meta.optimization_goal || "", created: (meta.created_time || "").slice(0, 10),
         days: (daily.data || []).map((d) => ({ date: (d.date_start || "").slice(5), spend: Math.round(Number(d.spend || 0)),
@@ -258,6 +293,15 @@ export async function GET(req) {
   }
 }
 
+// 캐시 만료 — payload는 남기고 at만 0으로 (제한/오류 시 stale 폴백용)
+async function expireCache(s) {
+  try {
+    const { data } = await s.from("settings").select("value").eq("key", "oa_ad_console_cache_v1").maybeSingle();
+    await s.from("settings").upsert({ key: "oa_ad_console_cache_v1",
+      value: { at: 0, payload: data?.value?.payload || null } }, { onConflict: "key" });
+  } catch {}
+}
+
 export async function POST(req) {
   try {
     const { action, adsetId, adId, budget, note, name } = await req.json();
@@ -266,7 +310,7 @@ export async function POST(req) {
       if (!adId) throw new Error("adId 필요");
       await g(adId, { status: action === "adPause" ? "PAUSED" : "ACTIVE" }, "POST");
       const s0 = sb();
-      await s0.from("settings").upsert({ key: "oa_ad_console_cache_v1", value: { at: 0 } }, { onConflict: "key" });
+      await expireCache(s0);
       const { data: d0 } = await s0.from("settings").select("value").eq("key", LOG_KEY).maybeSingle();
       const items0 = d0?.value?.items || [];
       items0.unshift({ at: new Date().toISOString(), adsetId: adsetId || "", name: name || adId,
@@ -303,9 +347,9 @@ export async function POST(req) {
       }
     } else throw new Error("지원하지 않는 액션");
 
-    // 조치 성공 → 캐시 무효화
+    // 조치 성공 → 캐시 만료 (★스냅샷은 보존 — 날리면 제한 중 폴백이 사라짐)
     const s = sb();
-    await s.from("settings").upsert({ key: "oa_ad_console_cache_v1", value: { at: 0 } }, { onConflict: "key" });
+    await expireCache(s);
     // 로그
     const { data } = await s.from("settings").select("value").eq("key", LOG_KEY).maybeSingle();
     const items = data?.value?.items || [];

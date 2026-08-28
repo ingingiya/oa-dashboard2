@@ -508,6 +508,10 @@ export default function AdOfficeTycoon() {
             ) : (() => {
               const d = detail.data;
               const mx = Math.max(1, ...d.days.map((x) => x.spend));
+              const tabs = detail.kind === "set"
+                ? [["개요", "ov"], [`소재별 (${(d.ads || []).length})`, "ads"], [`제품별 (${(d.products || []).length})`, "prod"]]
+                : [["개요", "ov"]];
+              const dt = detail.tab || "ov";
               return (
                 <>
                   <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", marginBottom: 4 }}>
@@ -521,6 +525,52 @@ export default function AdOfficeTycoon() {
                     </div>
                     <button onClick={() => setDetail(null)} style={{ ...btn(C.mid), padding: "4px 10px" }}>✕</button>
                   </div>
+                  {tabs.length > 1 && (
+                    <div style={{ display: "flex", gap: 6, margin: "10px 0 2px" }}>
+                      {tabs.map(([lb, k]) => (
+                        <button key={k} onClick={() => setDetail((dd) => ({ ...dd, tab: k }))}
+                          style={{ ...btn(dt === k ? C.neon : C.mid), padding: "4px 12px", fontSize: 11.5,
+                            background: dt === k ? `${C.neon}22` : "transparent" }}>{lb}</button>
+                      ))}
+                    </div>
+                  )}
+                  {dt === "ads" && (
+                    <div style={{ marginTop: 10 }}>
+                      {(d.ads || []).length === 0 && <div style={{ fontSize: 12, color: C.mid, padding: 20 }}>소재 데이터 없음</div>}
+                      {(d.ads || []).map((a) => {
+                        const off = a.status !== "ACTIVE";
+                        return (
+                          <div key={a.id} style={{ display: "flex", gap: 10, alignItems: "center", padding: "7px 8px",
+                            background: "#ffffff06", borderRadius: 10, marginBottom: 6, opacity: off ? 0.5 : 1 }}>
+                            {a.thumb ? <img src={a.thumb} alt="" style={{ width: 52, height: 52, objectFit: "cover", borderRadius: 7, filter: off ? "grayscale(1)" : "none" }} />
+                              : <span style={{ width: 52, textAlign: "center", fontSize: 22 }}>🖼</span>}
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <div style={{ fontSize: 12, fontWeight: 700, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{off ? "⏸ " : ""}{a.name}</div>
+                              <div style={{ fontSize: 10.5, color: C.mid }}>₩{fmt(a.spend)} · 🛒{a.purchases}{a.views ? `+👁${a.views}` : ""} · CTR {a.ctr.toFixed(2)}%{a.cpa ? ` · CPA ₩${fmt(a.cpa)}` : ""}</div>
+                            </div>
+                            <b style={{ color: a.roas >= 3 ? C.neon : a.roas >= 1 ? C.gold : C.red, fontSize: 13 }}>x{a.roas}</b>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                  {dt === "prod" && (
+                    <div style={{ marginTop: 10 }}>
+                      {(d.products || []).length === 0 && <div style={{ fontSize: 12, color: C.mid, padding: 20 }}>제품별 분해 데이터가 없어요 (카탈로그 세트가 아니거나 기간 내 실적 없음)</div>}
+                      {(d.products || []).map((p, i) => (
+                        <div key={p.productId + i} style={{ display: "flex", gap: 10, alignItems: "center", padding: "7px 8px",
+                          background: "#ffffff06", borderRadius: 10, marginBottom: 6 }}>
+                          <span style={{ fontSize: 16 }}>{i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : "📦"}</span>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ fontSize: 12, fontWeight: 700, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.name || `제품 ${p.productId}`}</div>
+                            <div style={{ fontSize: 10.5, color: C.mid }}>₩{fmt(p.spend)} · 🛒{p.purchases}{p.views ? `+👁${p.views}` : ""} · 매출 ₩{fmt(p.revenue)}</div>
+                          </div>
+                          <b style={{ color: p.roas >= 3 ? C.neon : p.roas >= 1 ? C.gold : C.red, fontSize: 13 }}>x{p.roas}</b>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {dt === "ov" && (<>
                   <div style={{ fontSize: 10.5, color: C.mid, margin: "10px 0 4px" }}>최근 14일 일별 지출 (🛒 = 그날 판매)</div>
                   <div style={{ display: "flex", alignItems: "flex-end", gap: 4, height: 110, padding: "0 2px", borderBottom: `1px solid ${C.border}` }}>
                     {d.days.map((x) => {
@@ -554,6 +604,7 @@ export default function AdOfficeTycoon() {
                     ))}
                   </div>
                   {d.tot.freq >= 4 && <div style={{ marginTop: 8, fontSize: 11, color: C.red }}>⚠️ 빈도 {d.tot.freq.toFixed(1)} — 같은 사람에게 너무 자주 노출 중, 소재 교체 시점</div>}
+                  </>)}
                 </>
               );
             })()}
