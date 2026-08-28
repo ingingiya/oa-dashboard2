@@ -82,8 +82,7 @@ const PX = Object.fromEntries([
   ...["trophy", "vault", "paper", "vs", "siren", "chick", "money", "cabinet", "medal", "sadplant"].map((k) => [k, SPRITE_BASE + `px2_${k}.png`]),
   ...["officebg", "deskset", "coffee", "plant", "lamp", "fax", "clock", "rep_naver", "rep_boost", "rep_gfa"].map((k) => [k, SPRITE_BASE + `px3_${k}.png`]),
   ...["bld1", "bld2", "bld3", "bld4", "bld5", "rep_park"].map((k) => [k, SPRITE_BASE + `px4_${k}.png`]),
-  ...["rooftop", "headhunter"].map((k) => [k, SPRITE_BASE + `px5_${k}.png`]),
-  ...["nurse", "auditor", "fortune"].map((k) => [k, SPRITE_BASE + `px6_${k}.png`]),
+  ...["nurse", "auditor"].map((k) => [k, SPRITE_BASE + `px6_${k}.png`]),
 ]);
 const Px = ({ k, s = 20, style }) => (
   <img src={PX[k]} alt="" style={{ width: s, height: s, borderRadius: Math.max(4, Math.round(s / 6)),
@@ -136,11 +135,6 @@ const PARK_LINES = {
   bad: ["광고비가 아니라 등록금을 내고 있구먼…", "부진 세트 방치는 결재권자 책임입니다.", "내일 아침까지 개선안 하나씩 올리세요.", "이럴 때일수록 기본으로 — 소재, 타겟, 예산."],
 };
 
-// 💼 헤드헌터 스카웃 — MVP급 사원에게 라이벌 회사 제안 개그 (표시 전용)
-const RIVALS = ["대박기획", "황금손애드", "클릭왕상사", "전환의신 에이전시", "불꽃미디어", "로켓광고공사"];
-const HH_LINES = ["조용히 얘기 좀… 연봉은 부르는 대로 드립니다.", "이런 인재가 왜 여기 있습니까?", "명함 한 장 두고 갑니다. 생각 있으면 연락 주세요.", "우리 회사엔 야근이 없습니다. 어떻습니까?"];
-// 🚬 옥상 휴게실 — 부진·중지 사원들의 한숨 (표시 전용)
-const SIGH_LINES = ["하… 담배는 안 피우는데 그냥 올라왔어요", "내 CPA가 왜 이럴까…", "바람이나 쐬려고요…", "자판기 커피가 제일 싸고 맛있네요", "내일은 터지겠지… 내일은…", "사장님이 절 잊으신 건 아니겠죠"];
 
 // 🏥 의무실 — 세트 상태를 병명으로 진단 (표시 전용)
 function diagnose(s) {
@@ -151,9 +145,6 @@ function diagnose(s) {
   if ((s.spend7 || 0) >= 30000 && !(s.purchases7 > 0)) ills.push({ ill: "식욕부진(무전환)", why: `₩${fmt(s.spend7)} 쓰고 계약 0건`, rx: "랜딩·오퍼 정밀 검진" });
   return ills;
 }
-// 🍀 오늘의 운세 문구 풀 (날짜 시드)
-const LUCK_GOOD = ["금전운 대통 — 오늘 들어오는 계약은 놓치지 마세요", "귀인(고효율 타겟)이 서쪽에서 옵니다", "숫자가 웃는 날 — 증액 결재에 길함", "오전에 맺은 계약이 오후에 두 배로"];
-const LUCK_BAD = ["지출수 조심 — 오늘은 큰 결재를 삼가세요", "경매장에 살(煞)이 끼었으니 입찰 과열 주의", "서두르면 CPA가 달아나는 날", "오늘은 관망이 상책 — 내일 다시 보세요"];
 
 // 🏆 업적 컬렉션 — 전부 실데이터에서 파생 (표시 전용, 돈과 무관)
 function calcAchievements(data) {
@@ -691,55 +682,6 @@ export default function AdOfficeTycoon() {
         );
       })()}
 
-      {/* 🎂 입사식·기념일 — 세트 생성일 파생 이벤트 (표시 전용) */}
-      {tab === "work" && (() => {
-        const evs = [];
-        for (const s of allSets.filter((x) => x.status === "ACTIVE" && x.created)) {
-          const days = Math.floor((Date.now() - new Date(s.created)) / 86400000);
-          if (days >= 0 && days <= 3) evs.push({ icon: "🎊", key: s.id, t: `신입 입사식 — ${s.name}`,
-            sub: `입사 ${days === 0 ? "당일" : days + "일차"} 신입사원 · 첫 주는 학습 기간, 따뜻하게 지켜봐 주세요` });
-          else if ([30, 100, 365].includes(days)) evs.push({ icon: "🎂", key: s.id, t: `근속 ${days}일 기념일 — ${s.name}`,
-            sub: days === 365 ? "1주년! 창립 멤버급 장수 사원입니다 🎉" : `7일 계약 ${s.purchases7 || 0}건 · 탕비실에 케이크 하나 돌리시죠` });
-        }
-        if (!evs.length) return null;
-        return (
-          <div style={{ background: `${C.gold}0C`, border: `1px solid ${C.gold}55`, borderRadius: 14, padding: "10px 14px", marginBottom: 14 }}>
-            {evs.slice(0, 3).map((e) => (
-              <div key={e.key} style={{ display: "flex", gap: 10, alignItems: "center", padding: "3px 0", fontSize: 12 }}>
-                <span style={{ fontSize: 17 }}>{e.icon}</span>
-                <b style={{ color: C.gold }}>{e.t}</b>
-                <span style={{ fontSize: 10.5, color: C.mid }}>{e.sub}</span>
-              </div>
-            ))}
-          </div>
-        );
-      })()}
-
-      {/* 💼 헤드헌터 스카웃 — MVP급 사원 노리는 라이벌 회사 (개그, 표시 전용) */}
-      {tab === "work" && top3.length > 0 && (() => {
-        const seed = Number(new Date(Date.now() + 9 * 3600 * 1000).toISOString().slice(0, 10).replace(/-/g, ""));
-        const t = top3[seed % top3.length];
-        if (!(t.cpa7 && t.target && t.cpa7 <= t.target)) return null; // 목표 CPA 달성자만 노림
-        const rival = RIVALS[seed % RIVALS.length];
-        const offer = Math.round((t.budget || 0) * (1.25 + (seed % 3) * 0.15));
-        return (
-          <div style={{ background: "#0d0a12", border: `1px dashed ${C.purple}66`, borderRadius: 14,
-            padding: "10px 14px", marginBottom: 14, display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
-            <Px k="headhunter" s={44} style={{ border: `1px solid ${C.border}` }} />
-            <div style={{ flex: 1, minWidth: 200 }}>
-              <div style={{ fontSize: 11.5, fontWeight: 800, color: C.purple }}>
-                💼 수상한 헤드헌터 출몰 — {rival}에서 <span style={{ color: C.gold }}>{avatarOf(t.name)} {t.name}</span> 사원에게 접근 중!
-              </div>
-              <div style={{ fontSize: 11, fontStyle: "italic", color: C.mid, margin: "3px 0" }}>“{HH_LINES[seed % HH_LINES.length]}”</div>
-              <div style={{ fontSize: 10.5, color: C.mid }}>
-                제안 월급 <b style={{ color: C.gold }}>₩{fmt(offer)}/일</b> (현재 ₩{fmt(t.budget)})
-                · 7일 계약 {t.purchases7}건 CPA ₩{fmt(t.cpa7)} — 우리 회사의 보물입니다, 뺏기지 마세요 🛡
-              </div>
-            </div>
-          </div>
-        );
-      })()}
-
       {/* 💰 연봉 협상 시즌 — 성과 대비 저예산 사원의 증액 요구 (표시 전용, 결재는 책상에서) */}
       {tab === "work" && (() => {
         const asks = allSets.filter((s) => s.status === "ACTIVE" && s.cpa7 && s.target && s.cpa7 <= s.target * 0.85
@@ -851,18 +793,6 @@ export default function AdOfficeTycoon() {
           </div>
         );
       })()}
-
-      {/* 복도 — 산책하는 사원들 */}
-      {tab === "report" && (
-      <div style={{ position: "relative", height: 34, marginBottom: 6, overflow: "hidden" }} title="복도를 산책 중인 사원들">
-        {allSets.filter((x) => x.status === "ACTIVE").slice(0, 7).map((x, i) => (
-          <span key={x.id} className="walker" style={{ "--dur": `${14 + (i * 3.7) % 12}s`, "--delay": `-${(i * 5.3) % 14}s`, top: i % 2 ? 0 : 5 }}>
-            <img src={charOf(x.id)} alt="" style={{ width: 26, height: 26, borderRadius: 6, imageRendering: "pixelated", verticalAlign: "middle" }} />
-            {i % 3 === 0 ? "☕" : ""}
-          </span>
-        ))}
-      </div>
-      )}
 
       {/* ① 사장실 대시보드 */}
       {tab === "work" && (
@@ -979,7 +909,7 @@ export default function AdOfficeTycoon() {
         );
       })()}
 
-      {/* 👔 박이사님 이사실 + 🍜 회식 게이지 (표시 전용) */}
+      {/* 👔 박이사님 이사실 (표시 전용) */}
       {tab === "work" && (() => {
         const judged = logArr.filter((l) => l.verdict === "win" || l.verdict === "fail").length;
         const winRate = judged ? Math.round((wins / judged) * 100) : null;
@@ -987,9 +917,6 @@ export default function AdOfficeTycoon() {
         const tier = wr >= 3 || (winRate != null && winRate >= 70) ? "good" : wr >= 1.5 ? "mid" : "bad";
         const seed = Number(new Date(Date.now() + 9 * 3600 * 1000).toISOString().slice(0, 10).replace(/-/g, ""));
         const line = PARK_LINES[tier][seed % PARK_LINES[tier].length];
-        const goal = 3; // 주간 ROAS 목표 — 달성 시 회식각
-        const pct = Math.min(100, Math.round((wr / goal) * 100));
-        const full = pct >= 100;
         return (
           <div style={{ display: "flex", gap: 12, marginTop: 14, flexWrap: "wrap" }}>
             <div style={{ ...card, flex: "2 1 320px", display: "flex", gap: 14, alignItems: "center" }}>
@@ -1007,37 +934,13 @@ export default function AdOfficeTycoon() {
                 </div>
               </div>
             </div>
-            <div style={{ ...card, flex: "1 1 230px", position: "relative", overflow: "hidden",
-              borderColor: full ? C.gold + "77" : C.border }}>
-              {full && <div className="confetti" style={{ position: "absolute", inset: 0, pointerEvents: "none" }}>
-                {[..."🍜🍻🎉🍗🍻🎉🍜✨"].map((ch, i) =>
-                  <span key={i} style={{ "--i": i, animationIterationCount: "infinite", animationDuration: "2.4s" }}>{ch}</span>)}
-              </div>}
-              <div style={{ fontSize: 11.5, fontWeight: 800, color: full ? C.gold : C.ink }}>
-                🍜 회식 게이지 {full && "— 오늘 회식각!! 🍻"}
-              </div>
-              <div style={{ height: 10, background: "#0d0a12", borderRadius: 5, margin: "8px 0 5px", overflow: "hidden", border: `1px solid ${C.border}` }}>
-                <div className="hpbar" style={{ width: `${pct}%`, height: "100%", "--hp": full ? C.gold : C.neon,
-                  background: `repeating-linear-gradient(45deg, ${full ? C.gold : C.neon}, ${full ? C.gold : C.neon} 6px, ${(full ? C.gold : C.neon)}AA 6px, ${(full ? C.gold : C.neon)}AA 12px)`,
-                  boxShadow: full ? `0 0 10px ${C.gold}` : "none" }} />
-              </div>
-              <div style={{ fontSize: 10, color: C.mid }}>
-                주간 ROAS <b style={{ color: full ? C.gold : C.cyan }}>x{wr}</b> / 목표 x{goal} ({pct}%)
-                {!full && <span> — {pct >= 70 ? "삼겹살 냄새가 나기 시작…" : pct >= 40 ? "구내식당은 확보" : "당분간 편의점 도시락"}</span>}
-              </div>
-            </div>
           </div>
         );
       })()}
 
-      {/* 🍀 오늘의 운세 + 🕵 감사팀 실사 (표시 전용) */}
+      {/* 🕵 감사팀 실사 (표시 전용) */}
       {tab === "work" && (() => {
-        const seed = Number(new Date(Date.now() + 9 * 3600 * 1000).toISOString().slice(0, 10).replace(/-/g, ""));
         const act = allSets.filter((s) => s.status === "ACTIVE" && (s.spend7 || 0) > 0);
-        const goods = act.filter((s) => s.cpa7 && s.cpa3 && s.cpa3 <= s.cpa7);
-        const bads = act.filter((s) => s.cpa7 && s.cpa3 && s.cpa3 > s.cpa7 * 1.2);
-        const lucky = goods.length ? goods[seed % goods.length] : null;
-        const unlucky = bads.length ? bads[(seed + 3) % bads.length] : null;
         // 감사 조건 — 월 예산 한도 초과 페이스
         let audit = null;
         if ((data.targets?.monthCap || 0) > 0 && data.monthly?.cur) {
@@ -1046,29 +949,10 @@ export default function AdOfficeTycoon() {
           const proj = Math.round((data.monthly.cur.spend || 0) / now.getDate() * dim);
           if (proj > cap) audit = { cap, proj, tops: [...act].sort((a, b) => (b.spend7 || 0) - (a.spend7 || 0)).slice(0, 3) };
         }
-        if (!lucky && !unlucky && !audit) return null;
+        if (!audit) return null;
         return (
           <div style={{ display: "flex", gap: 12, marginTop: 14, flexWrap: "wrap" }}>
-            {(lucky || unlucky) && (
-              <div style={{ ...card, flex: "1 1 300px", display: "flex", gap: 12, alignItems: "center", borderColor: `${C.purple}44` }}>
-                <Px k="fortune" s={50} style={{ border: `1px solid ${C.border}`, borderRadius: 12 }} />
-                <div style={{ flex: 1, minWidth: 0, fontSize: 11 }}>
-                  <div style={{ fontSize: 11.5, fontWeight: 800, color: C.purple, marginBottom: 3 }}>🍀 광고상사 점집 — 오늘의 사원 운세</div>
-                  {lucky && <div style={{ marginBottom: 2 }}>
-                    <b style={{ color: C.gold }}>吉 {avatarOf(lucky.name)} {lucky.name}</b>
-                    <span style={{ display: "block", fontSize: 10, color: C.mid, fontStyle: "italic" }}>
-                      “{LUCK_GOOD[seed % LUCK_GOOD.length]}” — 3일 CPA ₩{fmt(lucky.cpa3)}로 상승세라 하네요</span>
-                  </div>}
-                  {unlucky && <div>
-                    <b style={{ color: "#5B9BFF" }}>凶 {avatarOf(unlucky.name)} {unlucky.name}</b>
-                    <span style={{ display: "block", fontSize: 10, color: C.mid, fontStyle: "italic" }}>
-                      “{LUCK_BAD[seed % LUCK_BAD.length]}” — CPA ₩{fmt(unlucky.cpa7)}→₩{fmt(unlucky.cpa3)} 기운이 탁합니다</span>
-                  </div>}
-                </div>
-              </div>
-            )}
-            {audit && (
-              <div className="siren" style={{ ...card, flex: "1 1 320px", display: "flex", gap: 12, alignItems: "center", borderColor: `${C.red}66` }}>
+            <div className="siren" style={{ ...card, flex: "1 1 320px", display: "flex", gap: 12, alignItems: "center", borderColor: `${C.red}66` }}>
                 <Px k="auditor" s={50} style={{ border: `1px solid ${C.border}`, borderRadius: 12 }} />
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: 11.5, fontWeight: 800, color: C.red }}>🕵 본사 감사팀 실사 — 예산 초과 페이스 적발</div>
@@ -1081,7 +965,6 @@ export default function AdOfficeTycoon() {
                   </div>
                 </div>
               </div>
-            )}
           </div>
         );
       })()}
@@ -1169,48 +1052,6 @@ export default function AdOfficeTycoon() {
                   padding: "2px 5px", flex: "none" }}>진단서</span>
               </div>
             ))}
-          </div>
-        );
-      })()}
-
-      {/* 🚬 옥상 휴게실 — 부진·중지 사원들의 한숨 (표시 전용) */}
-      {tab === "report" && (() => {
-        const seed = Number(new Date(Date.now() + 9 * 3600 * 1000).toISOString().slice(0, 10).replace(/-/g, ""));
-        const gloomy = withCamp.filter((s) =>
-          (s.status !== "ACTIVE" && (s.spend7 || 0) > 0) || // 최근까지 일하다 중지된 사원
-          (s.status === "ACTIVE" && (s.judge === "kill" || ((s.spend7 || 0) >= 30000 && !(s.purchases7 > 0))))
-        ).slice(0, 5);
-        if (!gloomy.length) return null;
-        return (
-          <div style={{ marginTop: 12, borderRadius: 14, border: `1px solid ${C.border}`, overflow: "hidden",
-            background: "#0B0E17", position: "relative" }}>
-            <img src={PX.rooftop} alt="" style={{ position: "absolute", inset: 0, width: "100%", height: "100%",
-              objectFit: "cover", imageRendering: "pixelated", opacity: 0.4 }} />
-            <div style={{ position: "relative", padding: "10px 14px 12px" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
-                <span style={px}>옥상</span>
-                <b style={{ fontSize: 12, color: "#9BA8C4" }}>🚬 옥상 휴게실 — 마음이 무거운 사원들</b>
-                <span style={{ fontSize: 10, color: C.mid }}>중지 or 부진 세트 · 클릭=책상 점프</span>
-              </div>
-              <div style={{ display: "flex", gap: 14, flexWrap: "wrap" }}>
-                {gloomy.map((s, i) => {
-                  const paused = s.status !== "ACTIVE";
-                  return (
-                    <div key={s.id} onClick={() => jumpToDesk(s)} style={{ cursor: "pointer", textAlign: "center", width: 118 }} title={s.name}>
-                      <img src={charOf(s.id)} alt="" className="empSad" style={{ width: 40, height: 40, borderRadius: 9,
-                        imageRendering: "pixelated", filter: "grayscale(0.85) brightness(0.7)", border: `1px solid ${C.border}` }} />
-                      <div style={{ fontSize: 10, fontWeight: 700, color: "#9BA8C4", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.name}</div>
-                      <div style={{ fontSize: 9, fontStyle: "italic", color: C.mid, wordBreak: "keep-all" }}>
-                        “{SIGH_LINES[(seed + i) % SIGH_LINES.length]}”
-                      </div>
-                      <div style={{ fontSize: 8.5, color: paused ? C.mid : C.red, marginTop: 2 }}>
-                        {paused ? "휴직 중 — 재개 결재 시 복귀" : s.cpa7 ? `CPA ₩${fmt(s.cpa7)} 회복 시 복귀` : "첫 계약 성사 시 복귀"}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
           </div>
         );
       })()}
@@ -2578,10 +2419,6 @@ function Shell({ children, onRefresh, fx, shake, mute, toggleMute }) {
         button:disabled { opacity: 0.5; cursor: wait; }
         @keyframes tickerMove { from { transform: translateX(0); } to { transform: translateX(-50%); } }
         .ticker span { display: inline-block; white-space: nowrap; padding-left: 20px; animation: tickerMove 36s linear infinite; }
-        @keyframes walkX { 0% { left: -5%; transform: scaleX(1); } 49% { left: 96%; transform: scaleX(1); }
-          50% { left: 96%; transform: scaleX(-1); } 99% { left: -5%; transform: scaleX(-1); } 100% { left: -5%; transform: scaleX(1); } }
-        @keyframes walkBob { 0%,100% { margin-top: 0; } 50% { margin-top: -3px; } }
-        .walker { position: absolute; font-size: 18px; animation: walkX var(--dur) linear infinite var(--delay), walkBob 0.5s ease-in-out infinite; opacity: 0.9; }
         @keyframes petUp { 0% { opacity: 0; transform: translateY(4px) scale(0.5); } 25% { opacity: 1; transform: scale(1.2); } 100% { opacity: 0; transform: translateY(-20px); } }
         .petHeart { animation: petUp 1.1s ease-out both; pointer-events: none; }
         .bbRow { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 4px; scrollbar-width: thin; }
