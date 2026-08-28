@@ -77,6 +77,8 @@ const TEAM = [
 const BOSS_IMG = SPRITE_BASE + "mtcov5no_hud_kyeongeun.png"; // 경은 사장님
 // 결재 서명자 → 캐릭터 사진 (인사기록부·결재서류에 이름과 함께 표시)
 const SIGNER_IMG = { 영서: TEAM[0].img, 소리: TEAM[1].img, 혜영: TEAM[2].img, 지원: TEAM[3].img, 경은: BOSS_IMG };
+// 🎖 직급 사다리 — 커리어 포인트(결재 1pt·성공판정 3pt) 기준. 웍스 인사발령 공고(nworks-ad-flash)와 동일해야 함
+const RANKS = [[0, "인턴"], [2, "사원"], [5, "주임"], [10, "대리"], [18, "과장"], [30, "차장"], [45, "부장"], [70, "상무"], [100, "전무"], [140, "부사장"]];
 // 픽셀 소품 스프라이트 (Comfy Cloud 나노바나나 생성, hudassets/px2_* + px3_*)
 const PX = Object.fromEntries([
   ...["trophy", "vault", "paper", "vs", "siren", "chick", "money", "cabinet", "medal", "sadplant"].map((k) => [k, SPRITE_BASE + `px2_${k}.png`]),
@@ -1781,26 +1783,34 @@ export default function AdOfficeTycoon() {
       {signer && (() => {
         const ow = data.owners || {};
         const mineC = data.campaigns.filter((c) => ow[c.id] === signer);
-        if (!mineC.length) return null;
         const sets = mineC.flatMap((c) => c.adsets).filter((s) => s.status === "ACTIVE" && (s.spend7 || 0) > 0);
         const sp = sets.reduce((a, s) => a + (s.spend7 || 0), 0);
         const buy = sets.reduce((a, s) => a + (s.purchases7 || 0), 0);
         const cpa = buy ? Math.round(sp / buy) : null;
         const bad = sets.filter((s) => s.judge === "kill" || s.judge === "watch").length;
         const up = sets.filter((s) => s.judge === "scale").length;
+        // 🎖 커리어 직급 — 결재 1pt·성공판정 3pt 누적 (서버 oa_ad_career_v1)
+        const pts = (data.career?.[signer]?.pts) || 0;
+        let rank = RANKS[0][1], next = null;
+        for (const [th, nm] of RANKS) { if (pts >= th) rank = nm; else { next = [th, nm]; break; } }
         return (
           <div style={{ ...card, marginBottom: 12, borderColor: `${C.cyan}55`, display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
             {SIGNER_IMG[signer] && <img src={SIGNER_IMG[signer]} alt="" style={{ width: 44, height: 44, borderRadius: 10, imageRendering: "pixelated", objectFit: "cover", border: `1px solid ${C.border}` }} />}
             <div style={{ flex: 1, minWidth: 200 }}>
-              <b style={{ fontSize: 12.5, color: C.cyan }}>📊 {signer} 부서장님 담당 실적</b>
+              <b style={{ fontSize: 12.5, color: C.cyan }}>📊 {signer} <span style={{ color: C.gold }}>{rank}</span>님 담당 실적</b>
               <div style={{ fontSize: 11, color: C.mid, marginTop: 3 }}>
-                담당 부서 {mineC.length}곳 · 사원 {sets.length}명 근무 · 7일 <b style={{ color: C.gold }}>₩{fmt(sp)}</b> · 계약 <b style={{ color: C.neon }}>{buy}</b>{cpa && <> · CPA <b style={{ color: C.cyan }}>₩{fmt(cpa)}</b></>}
+                {mineC.length
+                  ? <>담당 부서 {mineC.length}곳 · 사원 {sets.length}명 근무 · 7일 <b style={{ color: C.gold }}>₩{fmt(sp)}</b> · 계약 <b style={{ color: C.neon }}>{buy}</b>{cpa && <> · CPA <b style={{ color: C.cyan }}>₩{fmt(cpa)}</b></>}</>
+                  : <>아직 담당 부서가 없어요 — 아래 부서 이름 옆 <b style={{ color: C.cyan }}>담당 배지</b>를 눌러 맡아보세요 (아침 웍스 브리핑 대상)</>}
+              </div>
+              <div style={{ fontSize: 10, color: C.mid, marginTop: 3 }}>
+                🎖 커리어 {pts}pt{next ? <> — <b style={{ color: C.gold }}>{next[1]}</b> 승진까지 {next[0] - pts}pt (결재 1pt·성공 판정 3pt)</> : " — 최고 직급!"}
               </div>
             </div>
-            <div style={{ fontSize: 11, fontWeight: 700, display: "flex", gap: 10 }}>
+            {mineC.length > 0 && <div style={{ fontSize: 11, fontWeight: 700, display: "flex", gap: 10 }}>
               {up > 0 && <span style={{ color: C.neon }}>🚀 증액 후보 {up}</span>}
               {bad > 0 ? <span style={{ color: C.red }}>⚠️ 요주의 {bad} — 결재 필요</span> : <span style={{ color: C.neon }}>✅ 요주의 없음</span>}
-            </div>
+            </div>}
           </div>
         );
       })()}

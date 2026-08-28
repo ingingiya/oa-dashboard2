@@ -47,6 +47,16 @@ const GRAPH = "https://graph.facebook.com/v19.0";
 const PURCHASE_TYPES = ["omni_purchase", "purchase", "offsite_conversion.fb_pixel_purchase",
   "website_purchase", "web_in_store_purchase"];
 const LOG_KEY = "oa_ad_actions_log_v1";
+// 🎖 커리어 포인트 — 결재 1pt(+도장 1), 성공 판정 시 +3pt(GET에서 멱등 가산). 직급 승진의 근거
+const CAREER_KEY = "oa_ad_career_v1";
+async function careerAdd(s, name, pts, stamp = 0) {
+  if (!name) return;
+  const { data } = await s.from("settings").select("value").eq("key", CAREER_KEY).maybeSingle();
+  const map = { ...(data?.value || {}) };
+  const c = map[name] || {};
+  map[name] = { pts: (c.pts || 0) + pts, stamps: (c.stamps || 0) + stamp };
+  await s.from("settings").upsert({ key: CAREER_KEY, value: map }, { onConflict: "key" });
+}
 
 const sb = () => createClient(process.env.NEXT_PUBLIC_SUPABASE_URL,
   process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
@@ -346,7 +356,30 @@ export async function GET(req) {
       return { ...l, now: { cpa3: s.cpa3, spend3: s.spend3, target: s.target, status: s.status }, verdict };
     });
 
-    const payload = { ok: true, kpi, monthly, hall, campaigns, naver, gfa: gfaRow?.value || null, advoost: advRow?.value || null, log, targets: conf, owners: ownRow?.value || {} };
+    // 🎖 성공 판정 → 커리어 +3pt (1회만 — 원본 로그 아이템에 cc 마킹, fail은 미마킹=나중에 win 뒤집히면 가산)
+    let career = {};
+    try {
+      const rawItems = logRow?.value?.items || [];
+      const winPts = {};
+      let dirty = false;
+      log.forEach((l, i) => {
+        if (l.verdict === "win" && rawItems[i] && !rawItems[i].cc && l.by) {
+          rawItems[i].cc = 1; winPts[l.by] = (winPts[l.by] || 0) + 3; dirty = true;
+        }
+      });
+      const { data: carRow } = await sb().from("settings").select("value").eq("key", CAREER_KEY).maybeSingle();
+      career = { ...(carRow?.value || {}) };
+      if (dirty) {
+        for (const [nm, p] of Object.entries(winPts)) {
+          const c = career[nm] || {};
+          career[nm] = { pts: (c.pts || 0) + p, stamps: c.stamps || 0 };
+        }
+        await sb().from("settings").upsert({ key: CAREER_KEY, value: career }, { onConflict: "key" });
+        await sb().from("settings").upsert({ key: LOG_KEY, value: { items: rawItems } }, { onConflict: "key" });
+      }
+    } catch {}
+
+    const payload = { ok: true, kpi, monthly, hall, campaigns, naver, gfa: gfaRow?.value || null, advoost: advRow?.value || null, log, targets: conf, owners: ownRow?.value || {}, career };
     await sb().from("settings").upsert({ key: CACHE_KEY, value: { at: Date.now(), payload } }, { onConflict: "key" });
     return Response.json({ ...payload, cachedAt: Date.now() });
   } catch (e) {
@@ -427,6 +460,7 @@ export async function POST(req) {
       items0.unshift({ at: new Date().toISOString(), adsetId: adsetId || "", name: name || adId, by: signer,
         desc: action === "adPause" ? "소재 OFF" : "소재 ON", note: note || "", before: before || null });
       await s0.from("settings").upsert({ key: LOG_KEY, value: { items: items0.slice(0, 100) } }, { onConflict: "key" });
+      await careerAdd(s0, signer, 1, 1);
       return Response.json({ ok: true });
     }
     if (!adsetId) throw new Error("adsetId 필요");
@@ -467,6 +501,7 @@ export async function POST(req) {
     items.unshift({ at: new Date().toISOString(), adsetId, name: String(name || "").slice(0, 50), by: signer,
       desc, note: String(note || "").slice(0, 80), before: before || null });
     await s.from("settings").upsert({ key: LOG_KEY, value: { items: items.slice(0, 200) } }, { onConflict: "key" });
+    await careerAdd(s, signer, 1, 1);
     return Response.json({ ok: true, desc });
   } catch (e) {
     return Response.json({ ok: false, error: String(e.message || e) }, { status: 500 });
