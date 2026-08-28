@@ -55,6 +55,7 @@ export async function GET(req) {
       lines.push(`- ${(l.at || "").slice(5, 10)} ${l.name} ${l.desc || ""}${l.by ? ` [도장:${l.by}]` : ""}${l.verdict ? ` → ${l.verdict === "win" ? "성공" : "실패"}` : ""}`);
   }
 
+  const t0 = Date.now();
   const client = new Anthropic({ apiKey: key });
   const msg = await client.messages.create({
     model: "claude-sonnet-4-6", max_tokens: 1400,
@@ -82,5 +83,5 @@ JSON만 출력: {"headline":"...","lede":"...","best":"...","worst":"...","decis
   const value = { week: wk, at: Date.now(), winRate, headline: out.headline || "", lede: out.lede || "",
     best: out.best || "", worst: out.worst || "", decision: out.decision || "", strategy: out.strategy || "", quote: out.quote || "" };
   await s.from("settings").upsert({ key: KEY, value }, { onConflict: "key" });
-  return Response.json(value);
+  return Response.json({ ...value, gen: true, genMs: Date.now() - t0 });
 }
