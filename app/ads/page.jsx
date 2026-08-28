@@ -114,6 +114,7 @@ export default function AdOfficeTycoon() {
   const [boot, setBoot] = useState(true);
   const [mute, setMute] = useState(false);
   const [talkTick, setTalkTick] = useState(0);
+  const [spot, setSpot] = useState(null); // 전광판→책상 점프 스포트라이트
 
   useEffect(() => {
     try { const m = localStorage.getItem("oa_ads_mute") === "1"; setMute(m); sfxOn = !m; } catch {}
@@ -148,6 +149,12 @@ export default function AdOfficeTycoon() {
         SFX.bonus(); setFx({ emoji: "💰", text: `보너스 결재! +₩${fmt((extra.budget || 0) - s.budget)}`, kind: "bonus" });
       }
       setTimeout(() => setFx(null), 2200);
+      // 낙관적 반영 — 서버 새로고침 전에 즉시 화면에서 퇴근/복귀 처리
+      if (action === "pause" || action === "resume") {
+        const ns = action === "pause" ? "PAUSED" : "ACTIVE";
+        setData((d) => d && ({ ...d, campaigns: d.campaigns.map((c) => ({ ...c,
+          adsets: c.adsets.map((x) => x.id === s.id ? { ...x, status: ns, judge: action === "pause" ? null : x.judge } : x) })) }));
+      }
       await load(true);
     } catch (e) { alert("실패: " + e.message); } finally { setBusy(""); }
   }
@@ -184,6 +191,29 @@ export default function AdOfficeTycoon() {
     }
   }
 
+  // 전광판/전당 클릭 → 담당 직원 책상으로 점프 (부서 펼치고 스크롤 + 스포트라이트)
+  function jumpToDesk(s) {
+    SFX.click();
+    setOpenCamp((o) => ({ ...o, [s.campId]: true }));
+    setSpot(s.id);
+    setTimeout(() => document.getElementById("desk-" + s.id)?.scrollIntoView({ behavior: "smooth", block: "center" }), 80);
+    setTimeout(() => setSpot(null), 2600);
+  }
+
+  // 부서를 열면 성과 있는 직원의 소재 포트폴리오는 자동 펼침 — 메타 호출 보호로 최대 6명, 순차 로드
+  async function autoOpenAds(sets) {
+    const targets = sets.filter((s) => s.status === "ACTIVE" && (s.purchases7 || 0) >= 1).slice(0, 6);
+    if (!targets.length) return;
+    setAdsOpen((o) => ({ ...o, ...Object.fromEntries(targets.map((s) => [s.id, true])) }));
+    for (const s of targets) {
+      if (adsCache[s.id]) continue;
+      try {
+        const j = await fetch(`/api/ad-console?adset=${s.id}`).then((r) => r.json());
+        if (j.ok) setAdsCache((c) => ({ ...c, [s.id]: j.ads }));
+      } catch {}
+    }
+  }
+
   if (err) return <Shell mute={mute} toggleMute={toggleMute}><div style={{ color: C.red, padding: 40 }}>⚠️ {err}</div></Shell>;
   if (!data || boot) return <Shell mute={mute} toggleMute={toggleMute}>
     <div style={{ padding: 80, textAlign: "center" }}>
@@ -195,7 +225,7 @@ export default function AdOfficeTycoon() {
     </div>
   </Shell>;
 
-  const queue = data.campaigns.flatMap((c) => c.adsets.filter((s) => s.judge).map((s) => ({ ...s, camp: c.name })));
+  const queue = data.campaigns.flatMap((c) => c.adsets.filter((s) => s.judge && s.status === "ACTIVE").map((s) => ({ ...s, camp: c.name })));
   const roas = data.kpi.yesterday.roas || 0;
   const grade = data.metaDown ? ["?", C.mid, "메타 회선 점검 중"]
     : roas >= 4 ? ["S", C.gold, "전설의 광고상사"] : roas >= 2.5 ? ["A", C.neon, "잘나가는 사무실"]
@@ -206,6 +236,14 @@ export default function AdOfficeTycoon() {
   const allSets = data.campaigns.flatMap((c) => c.adsets);
   const mvp = allSets.filter((s) => s.cpa7 && s.cpa7 <= s.target).sort((a, b) => b.purchases7 - a.purchases7)[0];
   const top3 = [...allSets].sort((a, b) => (b.purchases7 || 0) - (a.purchases7 || 0)).slice(0, 3).filter((s) => s.purchases7 > 0);
+  // 전광판·전당용 — 캠페인 ID를 붙여 클릭 시 책상 점프 가능하게
+  const withCamp = data.campaigns.flatMap((c) => c.adsets.map((s) => ({ ...s, campId: c.id })));
+  const bill = withCamp.filter((s) => s.status === "ACTIVE" && s.thumb)
+    .sort((a, b) => (b.spend7 || 0) - (a.spend7 || 0)).slice(0, 12);
+  const fame = withCamp.filter((s) => s.status === "ACTIVE" && s.thumb && (s.purchases7 || 0) > 0)
+    .sort((a, b) => (b.purchases7 || 0) - (a.purchases7 || 0)).slice(0, 3);
+  const shame = withCamp.filter((s) => s.status === "ACTIVE" && s.thumb && (s.spend7 || 0) >= 30000 && !(s.purchases7 > 0))
+    .sort((a, b) => b.spend7 - a.spend7).slice(0, 3);
   // 사무실 레벨 — 30일 지출 규모 + 승진(성공 조치) XP
   const xp = Math.round((data.kpi.month?.spend || 0) / 10000) + wins * 120 + allSets.reduce((a, s) => a + (s.purchases7 || 0), 0) * 4;
   const level = Math.max(1, Math.floor(Math.sqrt(xp / 60)));
@@ -252,6 +290,33 @@ export default function AdOfficeTycoon() {
           </div>
         );
       })()}
+
+      {/* 🎬 전광판 월 — 지금 송출 중인 소재를 크게 */}
+      {bill.length > 0 && (
+        <div style={{ background: "#0d0a12", border: `1px solid ${C.border}`, borderRadius: 14, padding: "10px 12px 12px", marginBottom: 14 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+            <span style={px}>전광판</span>
+            <span style={{ fontSize: 11, color: C.mid }}>지금 송출 중인 소재 · 7일 지출순 — 클릭하면 담당 책상으로 점프</span>
+          </div>
+          <div className="bbRow">
+            {bill.map((s, i) => {
+              const hot = s.cpa7 && s.cpa7 <= s.target;
+              const cold = s.judge === "kill" || (s.spend7 >= 30000 && !(s.purchases7 > 0));
+              return (
+                <div key={s.id} className="bbCard" onClick={() => jumpToDesk(s)} title={s.name}
+                  style={{ border: `1.5px solid ${hot ? C.neon : cold ? C.red : C.border}`, boxShadow: hot ? `0 0 12px ${C.neon}44` : "none" }}>
+                  <img src={s.thumb} alt="" />
+                  <span className="bbRank">{i + 1}</span>
+                  {(hot || cold) && <span className="bbFlag">{hot ? "🔥" : "🥶"}</span>}
+                  <div className="bbCap">
+                    <b style={{ color: C.gold }}>₩{fmt(s.spend7)}</b> · 🛒{s.purchases7 || 0}{s.cpa7 ? ` · ₩${fmt(s.cpa7)}` : ""}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* 복도 — 산책하는 사원들 */}
       <div style={{ position: "relative", height: 34, marginBottom: 6, overflow: "hidden" }} title="복도를 산책 중인 사원들">
@@ -304,6 +369,39 @@ export default function AdOfficeTycoon() {
           {top3.length > 1 && <span style={{ marginLeft: "auto", fontSize: 12, color: "#3b2f00" }}>
             {["🥇", "🥈", "🥉"].map((m, i) => top3[i] ? `${m}${avatarOf(top3[i].name)}${top3[i].purchases7}` : "").join("  ")}
           </span>}
+        </div>
+      )}
+
+      {/* 🖼 명예의 전당 vs 반성의 구석 */}
+      {(fame.length > 0 || shame.length > 0) && (
+        <div style={{ display: "flex", gap: 12, marginTop: 12, flexWrap: "wrap" }}>
+          {fame.length > 0 && (
+            <div style={{ ...card, flex: "2 1 340px" }}>
+              <div style={{ fontSize: 11.5, color: C.gold, fontWeight: 800, marginBottom: 10 }}>🖼 명예의 전당 — 이번 주 벽에 걸린 소재</div>
+              <div style={{ display: "flex", gap: 14, flexWrap: "wrap" }}>
+                {fame.map((s, i) => (
+                  <div key={s.id} className="fameFrame" onClick={() => jumpToDesk(s)} title={s.name}>
+                    <img src={s.thumb} alt="" />
+                    <span className="fameMedal">{["🥇", "🥈", "🥉"][i]}</span>
+                    <div className="fameCap">🛒{s.purchases7}{s.cpa7 ? ` · ₩${fmt(s.cpa7)}` : ""}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+          {shame.length > 0 && (
+            <div style={{ ...card, flex: "1 1 240px", borderColor: `${C.red}44` }}>
+              <div style={{ fontSize: 11.5, color: C.red, fontWeight: 800, marginBottom: 10 }}>📌 반성의 구석 — 돈만 쓰는 소재</div>
+              <div style={{ display: "flex", gap: 14, flexWrap: "wrap" }}>
+                {shame.map((s) => (
+                  <div key={s.id} className="shamePoster" onClick={() => jumpToDesk(s)} title={s.name}>
+                    <img src={s.thumb} alt="" />
+                    <div className="fameCap" style={{ color: C.red }}>₩{fmt(s.spend7)} · 🛒0</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       )}
 
@@ -374,7 +472,7 @@ export default function AdOfficeTycoon() {
         const alive = c.adsets.filter((s) => s.status === "ACTIVE").length;
         return (
           <div key={c.id} style={{ background: C.panel, border: `1px solid ${C.border}`, borderRadius: 14, marginBottom: 12, overflow: "hidden" }}>
-            <button onClick={() => { SFX.click(); setOpenCamp((o) => ({ ...o, [c.id]: !o[c.id] })); }}
+            <button onClick={() => { SFX.click(); const opening = !openCamp[c.id]; setOpenCamp((o) => ({ ...o, [c.id]: !o[c.id] })); if (opening) autoOpenAds(c.adsets); }}
               style={{ width: "100%", textAlign: "left", padding: "13px 16px", background: "none", border: "none",
                 cursor: "pointer", display: "flex", justifyContent: "space-between", fontSize: 13.5, fontWeight: 800, color: C.ink, gap: 8, flexWrap: "wrap" }}>
               <span>🚪 {c.name}
@@ -392,7 +490,8 @@ export default function AdOfficeTycoon() {
                   <div className="officeFloor" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(315px,1fr))", gap: 12 }}>
                     {list.map((s) => (
                       <Desk key={s.id} s={s} busy={busy} act={act} adsOpen={adsOpen[s.id]} ads={adsCache[s.id]}
-                        toggleAds={toggleAds} isMvp={mvp && s.id === mvp.id} talkTick={talkTick} onAdStatus={adStatus} onDetail={openDetail} />
+                        toggleAds={toggleAds} isMvp={mvp && s.id === mvp.id} talkTick={talkTick} onAdStatus={adStatus} onDetail={openDetail}
+                        spot={spot === s.id} />
                     ))}
                   </div>
                   {off.length > 0 && (
@@ -674,9 +773,10 @@ function Stat({ label, v, prefix = "", suffix = "", color }) {
 }
 
 // ── 직원 책상 카드 ──────────────────────────────────────────────────────
-function Desk({ s, busy, act, adsOpen, ads, toggleAds, isMvp, talkTick, onAdStatus, onDetail }) {
+function Desk({ s, busy, act, adsOpen, ads, toggleAds, isMvp, talkTick, onAdStatus, onDetail, spot }) {
   const [eb, setEb] = useState(null);
   const [pet, setPet] = useState(0); // 쓰다듬기 하트 이펙트
+  const [showOffAds, setShowOffAds] = useState(false); // 꺼진 소재 표시 토글
   const morale = s.cpa7 == null ? (s.spend7 > 0 ? 20 : 60)
     : Math.max(5, Math.min(100, Math.round(100 - ((s.cpa7 / s.target) - 0.5) * 40)));
   const mColor = morale >= 70 ? C.neon : morale >= 40 ? C.gold : C.red;
@@ -686,7 +786,7 @@ function Desk({ s, busy, act, adsOpen, ads, toggleAds, isMvp, talkTick, onAdStat
   const rare = isMvp ? C.gold : s.judge === "scale" ? C.neon : s.judge === "kill" ? C.red : C.border;
   const earning = !dead && s.purchases7 >= 5; // 코인 이펙트 대상
   return (
-    <div className={isMvp ? "unitMvp" : "unit"} style={{ background: C.panel2, border: `1.5px solid ${dead ? C.border : rare}`,
+    <div id={"desk-" + s.id} className={(isMvp ? "unitMvp" : "unit") + (spot ? " deskSpot" : "")} style={{ background: C.panel2, border: `1.5px solid ${dead ? C.border : rare}`,
       borderRadius: 12, padding: "10px 12px", opacity: dead ? 0.55 : 1, position: "relative", overflow: "visible" }}>
       {isMvp && <span style={{ position: "absolute", top: -9, right: 10, fontSize: 8.5, fontFamily: "'Press Start 2P', monospace",
         background: C.gold, color: "#1a1a1a", padding: "2px 6px", borderRadius: 4 }}>이달의 사원</span>}
@@ -706,18 +806,21 @@ function Desk({ s, busy, act, adsOpen, ads, toggleAds, isMvp, talkTick, onAdStat
               border: `1.5px solid ${dead ? C.border : `${mColor}55`}`, boxShadow: dead ? "none" : `0 0 10px ${mColor}33`,
               filter: dead ? "grayscale(1) brightness(0.55)" : tier === "bad" ? "saturate(0.65)" : "none",
               cursor: dead ? "default" : "pointer" }} />
-          <div style={{ fontSize: 9, color: C.mid, marginTop: 2, fontWeight: 700 }}>{teamOf(s.id).name}{teamOf(s.id).still && !dead ? " 🐈" : ""}</div>
           {pet > 0 && <span className="petHeart" style={{ position: "absolute", top: -10, left: 8, fontSize: 15 }}>💖</span>}
           {earning && <span className="coinPop" style={{ position: "absolute", top: -6, right: -4, fontSize: 13 }}>🪙</span>}
           {tier === "bad" && !dead && <span style={{ position: "absolute", top: -2, right: 0, fontSize: 12 }}>💦</span>}
           {dead && <span style={{ position: "absolute", top: -4, right: 2, fontSize: 12 }}>💤</span>}
-          {s.thumb ? (
-            <div title="지금 돌고 있는 대표 소재" style={{ width: 44, height: 32, margin: "0 auto", borderRadius: 4, overflow: "hidden",
-              border: `1.5px solid ${C.border}`, boxShadow: "0 2px 0 #0d0a12", background: "#000" }}>
-              <img src={s.thumb} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", filter: dead ? "grayscale(1) brightness(0.6)" : "none" }} />
-            </div>
-          ) : <div style={{ fontSize: 13, marginTop: -3 }}>🖥️</div>}
         </div>
+        {/* 책상 모니터 — 지금 송출 중인 대표 소재를 크게 (클릭=포트폴리오) */}
+        {s.thumb && (
+          <div className="deskMon" onClick={() => toggleAds(s.id)} title="모니터 — 지금 송출 중인 소재 (클릭하면 포트폴리오)"
+            style={{ flex: "none", width: 104, borderRadius: 8, overflow: "hidden", cursor: "pointer", position: "relative",
+              border: `2px solid ${dead ? C.border : `${mColor}66`}`, boxShadow: dead ? "none" : `0 0 12px ${mColor}33`, background: "#000" }}>
+            <img src={s.thumb} alt="" style={{ width: "100%", height: 72, objectFit: "cover", display: "block", filter: dead ? "grayscale(1) brightness(0.6)" : "none" }} />
+            <div className="monScan" />
+            {tier === "great" && !dead && <span style={{ position: "absolute", top: 2, right: 4, fontSize: 11 }}>🔥</span>}
+          </div>
+        )}
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
             <button onClick={() => toggleAds(s.id)} title="작업물(소재) 포트폴리오 보기"
@@ -767,7 +870,7 @@ function Desk({ s, busy, act, adsOpen, ads, toggleAds, isMvp, talkTick, onAdStat
           {!ads ? <span style={{ fontSize: 11, color: C.mid }}>📁 포트폴리오 가져오는 중…</span>
             : ads.length === 0 ? <span style={{ fontSize: 11, color: C.mid }}>작업물 없음</span> : (
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-              {ads.map((a) => {
+              {ads.filter((a) => showOffAds || a.status === "ACTIVE").map((a) => {
                 const off = a.status !== "ACTIVE";
                 return (
                 <div key={a.id} style={{ width: 118, background: C.panel, border: `1px solid ${off ? C.border : C.border}`, borderRadius: 8, padding: 6, opacity: off ? 0.45 : 1, position: "relative" }}>
@@ -781,6 +884,12 @@ function Desk({ s, busy, act, adsOpen, ads, toggleAds, isMvp, talkTick, onAdStat
                 </div>
               ); })}
             </div>
+          )}
+          {ads && ads.some((a) => a.status !== "ACTIVE") && (
+            <button onClick={() => setShowOffAds((v) => !v)}
+              style={{ marginTop: 6, background: "none", border: "none", cursor: "pointer", fontSize: 10.5, color: C.mid, padding: 0 }}>
+              {showOffAds ? "🙈 꺼진 소재 숨기기" : `⏸ 꺼진 소재 ${ads.filter((a) => a.status !== "ACTIVE").length}개 보기`}
+            </button>
           )}
         </div>
       )}
@@ -887,6 +996,27 @@ function Shell({ children, onRefresh, fx, shake, mute, toggleMute }) {
         .walker { position: absolute; font-size: 18px; animation: walkX var(--dur) linear infinite var(--delay), walkBob 0.5s ease-in-out infinite; opacity: 0.9; }
         @keyframes petUp { 0% { opacity: 0; transform: translateY(4px) scale(0.5); } 25% { opacity: 1; transform: scale(1.2); } 100% { opacity: 0; transform: translateY(-20px); } }
         .petHeart { animation: petUp 1.1s ease-out both; pointer-events: none; }
+        .bbRow { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 4px; scrollbar-width: thin; }
+        .bbCard { position: relative; flex: none; width: 148px; border-radius: 10px; overflow: hidden; cursor: pointer; background: #000; transition: transform .15s; }
+        .bbCard:hover { transform: translateY(-3px) scale(1.02); }
+        .bbCard img { width: 100%; height: 104px; object-fit: cover; display: block; }
+        .bbRank { position: absolute; top: 4px; left: 4px; font-family: 'Press Start 2P', monospace; font-size: 9px; color: #fff; background: #0d0a12CC; padding: 3px 5px; border-radius: 5px; }
+        .bbFlag { position: absolute; top: 4px; right: 4px; font-size: 14px; filter: drop-shadow(0 0 4px #000); }
+        .bbCap { font-size: 10px; color: #CBBFE3; padding: 4px 6px; background: #0d0a12; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .fameFrame { position: relative; width: 128px; cursor: pointer; background: #0d0a12; padding: 5px; border: 3px solid #FFD166; border-radius: 6px; box-shadow: 0 0 14px #FFD16644, inset 0 0 0 1px #a8842e; transition: transform .15s; }
+        .fameFrame:hover { transform: translateY(-3px); }
+        .fameFrame img { width: 100%; height: 86px; object-fit: cover; display: block; border-radius: 3px; }
+        .fameMedal { position: absolute; top: -10px; left: -8px; font-size: 18px; filter: drop-shadow(0 1px 2px #000); }
+        .fameCap { font-size: 9.5px; color: #CBBFE3; margin-top: 4px; text-align: center; white-space: nowrap; overflow: hidden; }
+        .shamePoster { position: relative; width: 108px; cursor: pointer; padding: 4px; background: #1a1218; border: 1px dashed #FF6B8177; border-radius: 4px; transform: rotate(-2.5deg); transition: transform .15s; }
+        .shamePoster:nth-child(even) { transform: rotate(2deg); }
+        .shamePoster:hover { transform: rotate(0); }
+        .shamePoster img { width: 100%; height: 74px; object-fit: cover; display: block; filter: grayscale(0.85) brightness(0.75); border-radius: 2px; }
+        .shamePoster::before { content: "📌"; position: absolute; top: -9px; left: 50%; transform: translateX(-50%); font-size: 13px; z-index: 2; }
+        @keyframes spotFlash { 0%, 100% { box-shadow: 0 0 0 0 #FFD16600; } 25%, 60% { box-shadow: 0 0 0 3px #FFD166, 0 0 24px #FFD166AA; } }
+        .deskSpot { animation: spotFlash 2.4s ease both; }
+        @keyframes scanMove { to { background-position: 0 6px; } }
+        .monScan { position: absolute; inset: 0; pointer-events: none; background: repeating-linear-gradient(0deg, #0000 0 2px, #00000022 2px 3px); animation: scanMove 0.6s linear infinite; }
         @media (max-width: 640px) { .bubble { display: none; } }
       `}</style>
     </div>
