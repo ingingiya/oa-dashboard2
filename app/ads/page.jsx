@@ -387,6 +387,44 @@ export default function AdOfficeTycoon() {
         );
       })()}
 
+      {/* AD부스터 (ADVoost) — 오아 직영 */}
+      {data.advoost?.ok && data.advoost.boost?.length > 0 && (() => {
+        const bt = data.advoost.boost_tot;
+        const aR = bt.cost ? bt.rev / bt.cost : 0;
+        return (
+        <>
+          <h2 style={h2}><span style={px}>직영</span> 🚀 AD부스터 <span style={{ fontSize: 10.5, color: C.mid, fontWeight: 400 }}>{data.advoost.period} · 매일 아침 갱신</span></h2>
+          <div style={{ background: C.panel, border: `1px solid ${C.border}`, borderRadius: 14, padding: "14px 16px" }}>
+            <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 12 }}>
+              <Partner label="💸 7일 지출" v={`₩${fmt(Math.round(bt.cost))}`} color={C.gold} />
+              <Partner label="🛒 전환" v={fmt(bt.conv)} color={C.neon} />
+              <Partner label="📈 ROAS" v={`x${aR.toFixed(1)}`} color={aR >= 10 ? C.neon : aR >= 3 ? C.gold : C.red} big />
+              <Partner label="💰 매출" v={`₩${fmt(Math.round(bt.rev))}`} color={C.cyan} />
+            </div>
+            {data.advoost.boost.map((g, i) => {
+              const r = g.cost ? g.rev / g.cost : 0;
+              const cl = r >= 10 ? C.neon : r >= 3 ? C.gold : C.red;
+              const nm = `[${g.acct}] ` + g.name.replace("MO_오아_AD부스터_", "").split("#")[0];
+              return (
+                <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, padding: "6px 8px", fontSize: 12.5,
+                  background: i % 2 ? "transparent" : "#ffffff06", borderRadius: 8 }}>
+                  <span style={{ fontSize: 15 }}>{r >= 15 ? "🔥" : r >= 3 ? "🚀" : "🥶"}</span>
+                  <span style={{ width: 190, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontWeight: 600 }}>{nm}</span>
+                  <div style={{ flex: 1, height: 9, background: "#0d0a12", borderRadius: 5, overflow: "hidden", border: `1px solid ${C.border}` }}>
+                    <div className="hpbar" style={{ width: `${Math.min(100, r * 3.3)}%`, height: "100%", "--hp": cl,
+                      background: `repeating-linear-gradient(45deg, ${cl}, ${cl} 6px, ${cl}AA 6px, ${cl}AA 12px)`, boxShadow: `0 0 8px ${cl}` }} />
+                  </div>
+                  <span style={{ width: 90, textAlign: "right", color: C.mid }}>₩{fmt(Math.round(g.cost))}</span>
+                  <span style={{ width: 52, textAlign: "right", color: C.mid }}>🛒{g.conv}</span>
+                  <b style={{ width: 48, textAlign: "right", color: cl, fontSize: 13 }}>x{r.toFixed(1)}</b>
+                </div>
+              );
+            })}
+          </div>
+        </>
+        );
+      })()}
+
       {/* ⑤ 외주 파트너 — GFA */}
       {data.gfa && (() => {
         const gR = data.gfa.tot?.cost ? (data.gfa.tot.rev || 0) / data.gfa.tot.cost : 0;
