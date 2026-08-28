@@ -116,6 +116,16 @@ export async function GET(req) {
     }
 
     // ── 전체 트리 ──
+    // ★5분 KV 캐시 — 열 때마다 Graph API 풀호출하면 메타 사용자 호출 제한(User request limit)에 걸림 (08-28 실측)
+    //   순찰 버튼·조치 직후는 ?fresh=1로 강제 갱신
+    const CACHE_KEY = "oa_ad_console_cache_v1";
+    const fresh = url.searchParams.get("fresh") === "1";
+    if (!fresh) {
+      const { data: cRow } = await sb().from("settings").select("value").eq("key", CACHE_KEY).maybeSingle();
+      const c = cRow?.value;
+      if (c?.at && Date.now() - c.at < 5 * 60_000 && c.payload)
+        return Response.json({ ...c.payload, cachedAt: c.at });
+    }
     const conf = await targets();
     const KPI_FIELDS = "spend,actions,action_values,catalog_segment_actions,catalog_segment_value";
     const AW = JSON.stringify(["7d_click", "1d_view"]);
@@ -194,7 +204,9 @@ export async function GET(req) {
       return { ...l, now: { cpa3: s.cpa3, spend3: s.spend3, target: s.target, status: s.status }, verdict };
     });
 
-    return Response.json({ ok: true, kpi, campaigns, naver, gfa: gfaRow?.value || null, log, targets: conf });
+    const payload = { ok: true, kpi, campaigns, naver, gfa: gfaRow?.value || null, log, targets: conf };
+    await sb().from("settings").upsert({ key: CACHE_KEY, value: { at: Date.now(), payload } }, { onConflict: "key" });
+    return Response.json({ ...payload, cachedAt: Date.now() });
   } catch (e) {
     return Response.json({ ok: false, error: String(e.message || e) }, { status: 500 });
   }
@@ -215,8 +227,10 @@ export async function POST(req) {
       desc = action === "pause" ? "세트 OFF" : "세트 ON";
     } else throw new Error("지원하지 않는 액션");
 
-    // 로그
+    // 조치 성공 → 캐시 무효화
     const s = sb();
+    await s.from("settings").upsert({ key: "oa_ad_console_cache_v1", value: { at: 0 } }, { onConflict: "key" });
+    // 로그
     const { data } = await s.from("settings").select("value").eq("key", LOG_KEY).maybeSingle();
     const items = data?.value?.items || [];
     items.unshift({ at: new Date().toISOString(), adsetId, name: String(name || "").slice(0, 50),

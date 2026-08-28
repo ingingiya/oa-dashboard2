@@ -92,7 +92,8 @@ export default function AdOfficeTycoon() {
   }, []);
   const toggleMute = () => setMute((m) => { const n = !m; sfxOn = !n; try { localStorage.setItem("oa_ads_mute", n ? "1" : "0"); } catch {}; return n; });
 
-  const load = () => fetch("/api/ad-console").then((r) => r.json())
+  // 기본은 5분 서버 캐시(메타 호출 제한 보호) — 순찰·조치 직후만 fresh
+  const load = (fresh) => fetch("/api/ad-console" + (fresh ? "?fresh=1" : "")).then((r) => r.json())
     .then((j) => (j.ok ? setData(j) : setErr(j.error))).catch((e) => setErr(String(e)));
   useEffect(() => { load(); }, []);
 
@@ -116,7 +117,7 @@ export default function AdOfficeTycoon() {
         SFX.bonus(); setFx({ emoji: "💰", text: `보너스 결재! +₩${fmt((extra.budget || 0) - s.budget)}`, kind: "bonus" });
       }
       setTimeout(() => setFx(null), 2200);
-      await load();
+      await load(true);
     } catch (e) { alert("실패: " + e.message); } finally { setBusy(""); }
   }
 
@@ -158,7 +159,7 @@ export default function AdOfficeTycoon() {
   const xpPct = Math.min(100, Math.round(((xp - prevXp) / Math.max(1, nextXp - prevXp)) * 100));
 
   return (
-    <Shell onRefresh={() => { SFX.click(); load(); }} fx={fx} shake={shake} mute={mute} toggleMute={toggleMute}>
+    <Shell onRefresh={() => { SFX.click(); load(true); }} fx={fx} shake={shake} mute={mute} toggleMute={toggleMute}>
       {/* ① 사장실 대시보드 */}
       <div style={{ display: "flex", flexWrap: "wrap", gap: 12 }}>
         <div className="gradeCard" style={{ ...card, minWidth: 150, flex: "0 0 auto", textAlign: "center", borderColor: grade[1], "--glow": grade[1] }}>
@@ -166,6 +167,9 @@ export default function AdOfficeTycoon() {
           <div style={{ fontSize: 40, fontWeight: 900, color: grade[1], textShadow: `0 0 18px ${grade[1]}`, lineHeight: 1.1, fontFamily: "'Press Start 2P', monospace" }}>{grade[0]}</div>
           <div style={{ fontSize: 10, color: grade[1], marginTop: 3, fontWeight: 700 }}>{grade[2]}</div>
           <div style={{ fontSize: 10, color: C.mid }}>어제 ROAS {roas}</div>
+          {data.cachedAt && Date.now() - data.cachedAt > 60_000 && (
+            <div style={{ fontSize: 9, color: C.mid, marginTop: 2 }}>🕐 {Math.round((Date.now() - data.cachedAt) / 60_000)}분 전 · 🔄순찰=실시간</div>
+          )}
         </div>
         <Stat label="💸 어제 광고비" v={data.kpi.yesterday.spend} prefix="₩" color={C.gold} />
         <Stat label="🛒 어제 판매" v={data.kpi.yesterday.purchases} suffix={data.kpi.yesterday.views ? ` +👁${data.kpi.yesterday.views}` : ""} color={C.neon} />
@@ -445,7 +449,7 @@ function Shell({ children, onRefresh, fx, shake, mute, toggleMute }) {
           </h1>
           <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
             <button style={btn(C.mid)} onClick={toggleMute} title="효과음">{mute ? "🔇" : "🔊"}</button>
-            {onRefresh && <button className="btnGlow" style={btn(C.cyan)} onClick={onRefresh}>🔄 순찰</button>}
+            {onRefresh && <button className="btnGlow" style={btn(C.cyan)} onClick={onRefresh} title="캐시 무시하고 실시간 조회">🔄 순찰</button>}
             <a href="/" style={{ ...btn(C.purple), textDecoration: "none" }}>🏠 홈</a>
           </div>
         </div>
