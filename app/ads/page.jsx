@@ -68,16 +68,15 @@ function useCountUp(v, ms = 700) {
 
 // 픽셀아트 스프라이트 (나노바나나 생성, detail-assets 공개 스토리지)
 const SPRITE_BASE = "https://lugqeflqusqsyotdiaxg.supabase.co/storage/v1/object/public/detail-assets/hudassets/";
-// 팀원 캐릭터 — 영서·소리·혜영·지원. 사장 = 경은
+// 팀원 캐릭터 — 영서·소리·혜영. 사장 = 경은 (지원은 명단 제외 — 사용자 지시)
 const TEAM = [
   { name: "영서", img: SPRITE_BASE + "mtcov5hd_hud_yeongseo.png" },
   { name: "소리", img: SPRITE_BASE + "mtcov5kx_hud_sori.png" },
   { name: "혜영", img: SPRITE_BASE + "mtcovgjk_hud_hyeyeong.png" },
-  { name: "지원", img: SPRITE_BASE + "mtcov5ta_hud_jiwon.png", still: true },
 ];
-const BOSS_IMG = SPRITE_BASE + "mtcov5no_hud_kyeongeun.png"; // 경은 사장님
+const BOSS_IMG = SPRITE_BASE + "mtcov5no2_hud_kyeongeun.png"; // 경은 사장님 (왕관 제거판)
 // 결재 서명자 → 캐릭터 사진 (인사기록부·결재서류에 이름과 함께 표시)
-const SIGNER_IMG = { 영서: TEAM[0].img, 소리: TEAM[1].img, 혜영: TEAM[2].img, 지원: TEAM[3].img, 경은: BOSS_IMG };
+const SIGNER_IMG = { 영서: TEAM[0].img, 소리: TEAM[1].img, 혜영: TEAM[2].img, 경은: BOSS_IMG };
 // 🎖 직급 사다리(RANKS) — 커리어 포인트 기준, lib/ad-ranks.mjs 공유 모듈에서 import (봇들과 단일 소스)
 // 픽셀 소품 스프라이트 (Comfy Cloud 나노바나나 생성, hudassets/px2_* + px3_*)
 const PX = Object.fromEntries([
@@ -184,7 +183,7 @@ function calcAchievements(data) {
     { id: "rules", e: "📐", n: "룰대로 간다", d: "목표 CPA 룰 설정", done: (data.targets?.rules || []).length >= 1 },
     { id: "vault", e: "💳", n: "금고지기", d: "월 예산 한도 설정", done: (data.targets?.monthCap || 0) > 0 },
     { id: "sign3", e: "🖐", n: "결재 삼총사", d: "서명 도장 3명 이상 참여", done: signers.size >= 3 },
-    { id: "sign5", e: "🤝", n: "5인 완전체", d: "영서·경은·지원·소리·혜영 전원 서명", done: signers.size >= 5 },
+    { id: "sign5", e: "🤝", n: "4인 완전체", d: "영서·경은·소리·혜영 전원 서명", done: ["영서", "경은", "소리", "혜영"].every((n) => signers.has(n)) },
     { id: "clean", e: "🧹", n: "결재함 클리어", d: "대기 결재 0건 달성", done: log.length >= 1 && queueN === 0 },
     { id: "night", e: "🌙", n: "야근 수당", d: "밤 10시 이후 출근 도장", done: hh >= 22 || hh < 5 },
     { id: "weekend", e: "🏖", n: "주말 출근", d: "주말에도 사무실 점검", done: dw === 0 || dw === 6 },
@@ -619,7 +618,7 @@ export default function AdOfficeTycoon() {
               </div>
               <div style={{ fontSize: 11, color: "#555", marginBottom: 6, fontWeight: 800 }}>결재란 — 진행자 본인 도장을 찍어주세요</div>
               <div style={{ display: "flex", gap: 8, justifyContent: "center" }}>
-                {["영서", "경은", "지원", "소리", "혜영"].map((nm) => (
+                {["영서", "경은", "소리", "혜영"].map((nm) => (
                   <button key={nm} onClick={() => stamp(nm)} disabled={!!p.stamped}
                     style={{ width: 72, cursor: p.stamped ? "default" : "pointer", background: "#fff",
                       border: `1.5px solid ${signer === nm && !p.stamped ? "#B3392F" : "#00000025"}`, borderRadius: 4,
