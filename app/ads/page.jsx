@@ -439,6 +439,39 @@ export default function AdOfficeTycoon() {
         </div>
       </div>
 
+      {/* 💰 회사 손익 계좌 — 진짜 돈: 전환매출 − 광고비 (메타 기준, 마진 미반영) */}
+      {data.monthly?.cur && (() => {
+        const m = data.monthly;
+        const profit = (m.cur.rev || 0) - (m.cur.spend || 0);
+        const pProfit = (m.prev.rev || 0) - (m.prev.spend || 0);
+        const yRow = [...(m.days30 || [])].reverse().find((d) => d.d < new Date().toISOString().slice(0, 10) && (d.spend > 0 || d.rev > 0));
+        const yProfit = yRow ? (yRow.rev || 0) - yRow.spend : null;
+        const roasM = m.cur.spend > 0 ? +(m.cur.rev / m.cur.spend).toFixed(1) : 0;
+        const pc = profit >= 0 ? C.neon : C.red;
+        return (
+          <div style={{ ...card, marginTop: 14, borderColor: `${pc}44`, display: "flex", gap: 20, alignItems: "center", flexWrap: "wrap" }}>
+            <span style={px}>계좌</span>
+            <div>
+              <div style={{ fontSize: 10, color: C.mid }}>이번 달 광고 손익 (전환매출 − 광고비)</div>
+              <div style={{ fontSize: 22, fontWeight: 900, color: pc, textShadow: `0 0 12px ${pc}55` }}>
+                {profit >= 0 ? "+" : "−"}₩{fmt(Math.abs(profit))}
+              </div>
+            </div>
+            <div style={{ fontSize: 11.5, color: C.mid }}>
+              매출 <b style={{ color: C.cyan }}>₩{fmt(m.cur.rev)}</b> − 광고비 <b style={{ color: C.gold }}>₩{fmt(m.cur.spend)}</b> · ROAS x{roasM}
+            </div>
+            {yProfit != null && (
+              <div style={{ fontSize: 11.5, color: C.mid }}>
+                어제 하루 <b style={{ color: yProfit >= 0 ? C.neon : C.red }}>{yProfit >= 0 ? "+" : "−"}₩{fmt(Math.abs(yProfit))}</b>
+              </div>
+            )}
+            <div style={{ marginLeft: "auto", fontSize: 10.5, color: C.mid }}>
+              지난달 손익 {pProfit >= 0 ? "+" : "−"}₩{fmt(Math.abs(pProfit))} · 원가·수수료 미반영 참고치
+            </div>
+          </div>
+        );
+      })()}
+
       {/* 이달의 사원 */}
       {mvp && (
         <div className="mvp" style={{ marginTop: 14, borderRadius: 14, padding: "12px 18px", display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
@@ -567,6 +600,35 @@ export default function AdOfficeTycoon() {
               ))}
             </div>
             <div style={{ fontSize: 9.5, color: C.mid, opacity: 0.6, marginTop: 4 }}>최근 30일 일별 지출 (밝은 막대=이번 달, 하늘색=판매 발생일)</div>
+            {/* 💰 월급날 보너스 — 이번 달 ROAS 목표 달성 여부 */}
+            {(() => {
+              const r = cur.spend > 0 ? cur.rev / cur.spend : 0;
+              const hit = r >= 3;
+              return (
+                <div style={{ marginTop: 8, fontSize: 11.5, padding: "6px 10px", borderRadius: 8,
+                  background: hit ? `${C.gold}18` : "#ffffff06", border: `1px dashed ${hit ? C.gold : C.border}` }}>
+                  {hit
+                    ? <span style={{ color: C.gold, fontWeight: 800 }}>💰 월급날 보너스 조건 달성! 이번 달 ROAS x{r.toFixed(1)} (기준 x3.0) — 전 부서 보너스 풀 확보</span>
+                    : <span style={{ color: C.mid }}>💼 보너스 기준: 월 ROAS x3.0 이상 — 현재 x{r.toFixed(1)}, 조금 더 힘냅시다</span>}
+                </div>
+              );
+            })()}
+            {/* 🏆 주간 MVP 명예의전당 — 매주 자동 기록 */}
+            {data.hall?.length > 0 && (
+              <div style={{ marginTop: 8 }}>
+                <div style={{ fontSize: 10.5, color: C.mid, marginBottom: 4 }}>🏆 주간 MVP 명예의전당 (매주 자동 헌액)</div>
+                <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                  {data.hall.map((h, i) => (
+                    <div key={h.w} style={{ fontSize: 11, background: i === 0 ? `${C.gold}14` : "#ffffff06",
+                      border: `1px solid ${i === 0 ? C.gold + "55" : C.border}`, borderRadius: 8, padding: "4px 9px" }}
+                      title={`${h.w} 주 — 7일 판매 ${h.buy}건`}>
+                      <span style={{ color: C.mid }}>{h.w.slice(5)}주</span> {avatarOf(h.name)} <b>{(prodKeyOf(h.name) || h.name).slice(0, 12)}</b>
+                      <span style={{ color: C.neon }}> 🛒{h.buy}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         );
       })()}
@@ -667,6 +729,9 @@ export default function AdOfficeTycoon() {
               {s.judge === "kill" && s.created && Math.floor((Date.now() - new Date(s.created)) / 86400000) < 7 && (
                 <div style={{ fontSize: 10.5, color: C.gold }}>🐣 수습 기간(생성 7일 미만) — 학습 중이라 성급한 퇴근 주의</div>
               )}
+              {s.judge === "kill" && s.hr?.c >= 3 && (
+                <div style={{ fontSize: 10.5, color: C.red }}>⚠️ 경고 {s.hr.c}회 누적(14일) — 인사규정상 퇴근 대상입니다</div>
+              )}
             </div>
             {s.judge === "scale" && (
               <button className="btnGlow stampBtn" style={btn(C.neon)} disabled={busy === s.id}
@@ -684,6 +749,14 @@ export default function AdOfficeTycoon() {
 
       {/* ③ 사무실 층별(부서) → 직원 책상 */}
       <h2 style={h2}><span style={px}>사무실</span> 부서별 직원 현황</h2>
+      {/* 🏅 성과등급 규정표 — 보상·징계의 근거를 명문화 */}
+      <div style={{ fontSize: 10.5, color: C.mid, margin: "-4px 0 10px", display: "flex", gap: 12, flexWrap: "wrap" }}>
+        <span style={{ color: C.mid }}>인사규정:</span>
+        <span><b style={{ color: C.gold }}>S</b> 목표CPA 70%↓ = 🏅표창·증액 후보</span>
+        <span><b style={{ color: C.neon }}>A</b> 목표 이내 = 정상 근무</span>
+        <span><b style={{ color: C.cyan }}>B</b> 1.5배 이내 = 관찰</span>
+        <span><b style={{ color: C.red }}>C</b> 초과·무구매 = ⚠️경고 (14일 내 3회 누적 시 퇴근 심사)</span>
+      </div>
       {data.metaDown && <div style={{ fontSize: 12.5, color: C.mid, padding: "14px 16px", background: C.panel, border: `1px dashed ${C.border}`, borderRadius: 12, marginBottom: 12 }}>
         😴 메타 사원들은 회선 점검으로 잠시 자리 비움 — 아래 협력사·직영 현황은 정상 근무 중</div>}
       {data.campaigns.map((c) => {
@@ -1067,6 +1140,14 @@ function Desk({ s, busy, act, adsOpen, ads, toggleAds, isMvp, talkTick, onAdStat
               style={{ background: "none", border: "none", color: C.ink, fontSize: 12.5, fontWeight: 700, cursor: "pointer", textAlign: "left", padding: 0, flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
               {s.name.slice(0, 26)}
             </button>
+            {s.grade && (() => { // 🏅 성과등급 — 목표 CPA 대비 규정 (서버 판정)
+              const gc = { S: C.gold, A: C.neon, B: C.cyan, C: C.red }[s.grade];
+              return (
+                <span title={`성과등급 ${s.grade} — 규정: S=목표CPA 70%↓ 표창 / A=목표 이내 / B=1.5배 이내 / C=초과·무구매 경고`}
+                  style={{ fontSize: 10, fontWeight: 900, color: gc, border: `1px solid ${gc}88`, borderRadius: 4,
+                    padding: "1px 6px", flex: "none", textShadow: `0 0 6px ${gc}66` }}>{s.grade}</span>
+              );
+            })()}
             <span style={{ fontSize: 9.5, color: C.mid, border: `1px solid ${C.border}`, borderRadius: 4, padding: "1px 5px", flex: "none" }}>{s.goal}</span>
             {(() => { // 🐣 신입 온보딩 — 생성 7일 미만은 학습 기간
               const days = s.created ? Math.floor((Date.now() - new Date(s.created)) / 86400000) : null;
@@ -1084,7 +1165,13 @@ function Desk({ s, busy, act, adsOpen, ads, toggleAds, isMvp, talkTick, onAdStat
               boxShadow: `0 0 10px ${mColor}` }} />
           </div>
           <div style={{ fontSize: 11, color: C.mid, display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: 4 }}>
-            <span>사기 {morale} · 7일 <b style={{ color: C.gold }}>₩{fmt(s.spend7)}</b> · 🛒{s.purchases7}{s.view7 ? `+👁${s.view7}` : ""}</span>
+            <span>사기 {morale} · 7일 <b style={{ color: C.gold }}>₩{fmt(s.spend7)}</b> · 🛒{s.purchases7}{s.view7 ? `+👁${s.view7}` : ""}
+              {(s.hr?.s > 0 || s.hr?.c > 0) && (
+                <span title="14일 상벌 이력 — 🏅표창(S등급 일수) ⚠️경고(C등급 일수), 경고 3회 누적 시 퇴근 심사" style={{ marginLeft: 4 }}>
+                  {s.hr.s > 0 && <span style={{ color: C.gold }}> 🏅{s.hr.s}</span>}
+                  {s.hr.c > 0 && <span style={{ color: s.hr.c >= 3 ? C.red : C.mid }}> ⚠️{s.hr.c}</span>}
+                </span>
+              )}</span>
             <span>CPA <b style={{ color: mColor }}>{s.cpa7 ? `₩${fmt(s.cpa7)}` : "-"}</b></span>
           </div>
         </div>

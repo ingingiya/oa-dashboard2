@@ -221,7 +221,7 @@ export async function GET(req) {
     const monSum = (mon) => dailyRows.filter((x) => x.d.startsWith(mon))
       .reduce((a, x) => ({ spend: a.spend + x.spend, buy: a.buy + x.buy, rev: a.rev + x.rev }), { spend: 0, buy: 0, rev: 0 });
     const monthly = { cur: { mon: curMon, ...monSum(curMon) }, prev: { mon: prevMon, ...monSum(prevMon) },
-      days30: dailyRows.slice(-30).map(({ d, spend, buy }) => ({ d, spend, buy })) };
+      days30: dailyRows.slice(-30).map(({ d, spend, buy, rev }) => ({ d, spend, buy, rev: Math.round(rev) })) };
 
     // 세트 + 성과 (7일/3일) — 인사이트는 계정 단위 한 번에
     const [ins7, ins3] = await Promise.all(["last_7d", "last_3d"].map((p) =>
@@ -256,7 +256,13 @@ export async function GET(req) {
           else if ((sp7 >= tgt * 3 && pu7 === 0) || (cpa7 && cpa7 >= tgt * 3 && sp7 >= 100000)) judge = "kill";
           else if (cpa7 && cpa7 >= tgt * 2 && sp7 >= 100000) judge = "watch";
         }
-        return { id: s.id, name: s.name, status: effStatus, view7: viewOf(r7), thumb, created: (s.created_time || "").slice(0, 10),
+        // 🏅 성과등급 규정표 — 목표 CPA 대비: S=70%↓ / A=목표 이내 / B=1.5배 이내 / C=초과·무구매 과지출
+        let grade = null;
+        if (!isTraffic && effStatus === "ACTIVE" && sp7 > 0) {
+          if (cpa7 == null) grade = sp7 >= tgt * 2 ? "C" : "B";
+          else grade = cpa7 <= tgt * 0.7 ? "S" : cpa7 <= tgt ? "A" : cpa7 <= tgt * 1.5 ? "B" : "C";
+        }
+        return { id: s.id, name: s.name, status: effStatus, view7: viewOf(r7), thumb, created: (s.created_time || "").slice(0, 10), grade,
           budget: Number(s.daily_budget || 0), goal: isTraffic ? "트래픽" : "전환",
           spend7: Math.round(sp7), purchases7: purchasesOf(r7), cpa7: cpa7 ? Math.round(cpa7) : null,
           spend3: Math.round(sp3), cpa3: cpa3 ? Math.round(cpa3) : null,
@@ -266,6 +272,43 @@ export async function GET(req) {
       if (rows.length) campaigns.push({ id: c.id, name: c.name, target: tgt, adsets: rows });
     }
     campaigns.sort((a, b) => b.adsets.reduce((s, x) => s + x.spend7, 0) - a.adsets.reduce((s, x) => s + x.spend7, 0));
+
+    // 🏅 상벌 이력 — 등급 일일 기록 (S=표창, C=경고, 하루 1회 dedup), 14일 창 집계
+    let hall = [];
+    try {
+      const s1 = sb();
+      const { data: hrRow } = await s1.from("settings").select("value").eq("key", "oa_ads_hr_v1").maybeSingle();
+      const hrStore = hrRow?.value || {};
+      const cutoff = new Date(Date.now() - 30 * 864e5).toISOString().slice(0, 10);
+      const d14 = new Date(Date.now() - 14 * 864e5).toISOString().slice(0, 10);
+      for (const c of campaigns) for (const s of c.adsets) {
+        if (s.grade === "S" || s.grade === "C") {
+          const e = hrStore[s.id] || { recs: [] };
+          if (!e.recs.some((r) => r.d === dToday)) e.recs.push({ d: dToday, t: s.grade });
+          e.name = s.name;
+          e.recs = e.recs.filter((r) => r.d >= cutoff).slice(-30);
+          hrStore[s.id] = e;
+        }
+        const recs = hrStore[s.id]?.recs || [];
+        s.hr = { s: recs.filter((r) => r.t === "S" && r.d >= d14).length,
+          c: recs.filter((r) => r.t === "C" && r.d >= d14).length };
+      }
+      await s1.from("settings").upsert({ key: "oa_ads_hr_v1", value: hrStore }, { onConflict: "key" });
+
+      // 🏆 주간 MVP 명예의전당 — 주(월요일 기준)당 1명, 주중엔 계속 갱신
+      const { data: hallRow } = await s1.from("settings").select("value").eq("key", "oa_ads_hall_v1").maybeSingle();
+      const weeks = hallRow?.value?.weeks || [];
+      const mon = (() => { const d = new Date(); d.setDate(d.getDate() - (d.getDay() + 6) % 7); return d.toISOString().slice(0, 10); })();
+      const top = [...campaigns.flatMap((c) => c.adsets).filter((s) => s.status === "ACTIVE")]
+        .sort((a, b) => (b.purchases7 || 0) - (a.purchases7 || 0))[0];
+      if (top && top.purchases7 > 0) {
+        const rec = { w: mon, id: top.id, name: top.name, buy: top.purchases7, spend: top.spend7 };
+        const i = weeks.findIndex((h) => h.w === mon);
+        if (i >= 0) weeks[i] = rec; else weeks.push(rec);
+        await s1.from("settings").upsert({ key: "oa_ads_hall_v1", value: { weeks: weeks.slice(-12) } }, { onConflict: "key" });
+      }
+      hall = weeks.slice(-8).reverse();
+    } catch {}
 
     // 네이버 검색광고 — 라이브 (실패해도 나머지는 응답)
     let naver = null;
@@ -292,7 +335,7 @@ export async function GET(req) {
       return { ...l, now: { cpa3: s.cpa3, spend3: s.spend3, target: s.target, status: s.status }, verdict };
     });
 
-    const payload = { ok: true, kpi, monthly, campaigns, naver, gfa: gfaRow?.value || null, advoost: advRow?.value || null, log, targets: conf };
+    const payload = { ok: true, kpi, monthly, hall, campaigns, naver, gfa: gfaRow?.value || null, advoost: advRow?.value || null, log, targets: conf };
     await sb().from("settings").upsert({ key: CACHE_KEY, value: { at: Date.now(), payload } }, { onConflict: "key" });
     return Response.json({ ...payload, cachedAt: Date.now() });
   } catch (e) {
