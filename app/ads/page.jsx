@@ -221,7 +221,6 @@ export default function AdOfficeTycoon() {
   const [brief, setBrief] = useState(null); // AI 비서 브리핑 {items, mood, at}
   const [briefBusy, setBriefBusy] = useState(false);
   const [evt, setEvt] = useState(null); // 랜덤 사무실 이벤트 토스트
-  const [nego, setNego] = useState(null); // 💰 연봉 협상 {s} | "no"(이번 세션 무시)
   const [tab, setTab] = useState("work"); // 🗂 메인 탭 — work 오늘 업무 / report 리포트 / partner 협력사 / log 기록
   const [tgtEdit, setTgtEdit] = useState(null); // 🎯 목표 CPA 편집 {default, rules[], monthCap} | null
   const [paper, setPaper] = useState(null); // 🖊 결재서류 {action, s, extra, stamped} — 도장 찍어야 실행
@@ -282,13 +281,6 @@ export default function AdOfficeTycoon() {
     }, 40000);
     return () => clearInterval(iv);
   }, []);
-
-  // 💰 연봉 협상 — scale 판정(잘나가는) 사원 중 하나가 가끔 인상 요구 (세션당 1회)
-  useEffect(() => {
-    if (!data || nego) return;
-    const cands = data.campaigns.flatMap((c) => c.adsets.filter((s) => s.judge === "scale" && s.status === "ACTIVE"));
-    if (cands.length && Math.random() < 0.5) setNego({ s: cands[Math.floor(Math.random() * cands.length)] });
-  }, [data]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // 🏆 새 업적 언락 팡파레 (최초 방문 시엔 조용히 전부 저장)
   useEffect(() => {
@@ -402,9 +394,11 @@ export default function AdOfficeTycoon() {
   function jumpToDesk(s) {
     SFX.click();
     setTab("work"); // 책상은 오늘 업무 탭에 있음 — 리포트 탭에서 점프해도 도착하게
-    setOpenCamp((o) => ({ ...o, [s.campId]: true }));
+    // ★allSets 경유 호출은 campId가 없음 — 캠페인에서 역추적 (없으면 부서가 안 펼쳐져 스크롤 실패)
+    const campId = s.campId || data?.campaigns.find((c) => c.adsets.some((x) => x.id === s.id))?.id;
+    if (campId) setOpenCamp((o) => ({ ...o, [campId]: true }));
     setSpot(s.id);
-    setTimeout(() => document.getElementById("desk-" + s.id)?.scrollIntoView({ behavior: "smooth", block: "center" }), 80);
+    setTimeout(() => document.getElementById("desk-" + s.id)?.scrollIntoView({ behavior: "smooth", block: "center" }), 200);
     setTimeout(() => setSpot(null), 2600);
   }
 
@@ -652,16 +646,17 @@ export default function AdOfficeTycoon() {
           { icon: "🖊", t: "결재함 비우기", done: queue.length === 0, sub: queue.length ? `${queue.length}건 남음` : "완료!" },
           { icon: "🚨", t: "비상벨 전부 처리", done: alarms.length === 0, sub: alarms.length ? `${alarms.length}건 울리는 중` : "조용한 사무실" },
           { icon: "📋", t: "오늘 결재 도장 1건", done: stampedToday > 0, sub: stampedToday ? `오늘 ${stampedToday}건 결재` : "아직 도장 0건" },
+          { icon: "📈", t: "어제 ROAS 3.0 달성", done: roas >= 3, sub: `현재 x${roas}` },
         ];
-        const doneN = quests.filter((q) => q.done).length;
+        const doneN = quests.filter((q) => q.done).length, allQ = quests.length;
         return (
-          <div style={{ background: C.panel, border: `1px solid ${doneN === 3 ? C.gold + "66" : C.border}`, borderRadius: 14,
+          <div style={{ background: C.panel, border: `1px solid ${doneN === allQ ? C.gold + "66" : C.border}`, borderRadius: 14,
             padding: "10px 14px", marginBottom: 14 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 7 }}>
               <span style={px}>퀘스트</span>
-              <b style={{ fontSize: 12, color: doneN === 3 ? C.gold : C.ink }}>오늘의 퀘스트 {doneN}/3{doneN === 3 && " — 퍼펙트 데이! 🎉"}</b>
+              <b style={{ fontSize: 12, color: doneN === allQ ? C.gold : C.ink }}>오늘의 퀘스트 {doneN}/{allQ}{doneN === allQ && " — 퍼펙트 데이! 🎉"}</b>
               <div style={{ flex: 1, maxWidth: 140, height: 7, background: "#0d0a12", borderRadius: 4, overflow: "hidden", border: `1px solid ${C.border}` }}>
-                <div className="hpbar" style={{ width: `${(doneN / 3) * 100}%`, height: "100%", "--hp": C.gold,
+                <div className="hpbar" style={{ width: `${(doneN / allQ) * 100}%`, height: "100%", "--hp": C.gold,
                   background: `repeating-linear-gradient(45deg, ${C.gold}, ${C.gold} 6px, ${C.gold}AA 6px, ${C.gold}AA 12px)`, boxShadow: `0 0 8px ${C.gold}` }} />
               </div>
             </div>
@@ -701,8 +696,13 @@ export default function AdOfficeTycoon() {
                     “목표보다 <b style={{ color: C.neon }}>{disc}% 싸게</b>(CPA ₩{fmt(s.cpa7)}) 계약 {s.purchases7}건 따는데,
                     일당 ₩{fmt(s.budget)}에 예산이 매일 바닥납니다. 올려주시죠 사장님!”
                   </span>
-                  <button onClick={() => jumpToDesk(s)} style={{ background: C.neon, color: "#0d0a12", border: "none",
-                    borderRadius: 8, padding: "5px 10px", fontSize: 10.5, fontWeight: 900, cursor: "pointer" }}>협상 테이블로 →</button>
+                  <button className="stampBtn" disabled={busy === s.id}
+                    onClick={() => act("budget", s, { budget: Math.round(s.budget * 1.15 / 1000) * 1000, note: "연봉 협상 +15%" })}
+                    style={{ background: C.neon, color: "#0d0a12", border: "none",
+                      borderRadius: 8, padding: "5px 10px", fontSize: 10.5, fontWeight: 900, cursor: "pointer" }}>
+                    🖊 +15% 인상 결재 (₩{fmt(Math.round(s.budget * 1.15 / 1000) * 1000)})</button>
+                  <button onClick={() => jumpToDesk(s)} style={{ background: "transparent", color: C.mid, border: `1px solid ${C.border}`,
+                    borderRadius: 8, padding: "5px 10px", fontSize: 10.5, fontWeight: 700, cursor: "pointer" }}>책상 보기 →</button>
                 </div>
               );
             })}
@@ -1401,30 +1401,6 @@ export default function AdOfficeTycoon() {
         </div>
       )}
 
-      {/* 오늘의 미션 */}
-      {tab === "work" && (() => {
-        const todayStr = new Date().toISOString().slice(0, 10);
-        const actedToday = logArr.some((l) => (l.at || "").startsWith(todayStr));
-        const missions = [
-          { t: "결재함 비우기", done: queue.length === 0, hint: `${queue.length}건 남음` },
-          { t: "어제 ROAS 3.0 달성", done: roas >= 3, hint: `현재 ${roas}` },
-          { t: "오늘 조치 1건 이상", done: actedToday, hint: "결재·소재 정리 아무거나" },
-        ];
-        const all = missions.every((m) => m.done);
-        return (
-          <div style={{ marginTop: 12, background: C.panel, border: `1px solid ${all ? C.gold : C.border}`, borderRadius: 12, padding: "10px 16px",
-            display: "flex", gap: 16, alignItems: "center", flexWrap: "wrap", boxShadow: all ? `0 0 16px ${C.gold}44` : "none" }}>
-            <span style={{ fontFamily: "'Press Start 2P', monospace", fontSize: 9, color: C.purple }}>DAILY</span>
-            {missions.map((m) => (
-              <span key={m.t} style={{ fontSize: 12, color: m.done ? C.neon : C.mid, fontWeight: 700 }}>
-                {m.done ? "✅" : "⬜"} {m.t} <span style={{ fontWeight: 400, fontSize: 10.5 }}>({m.hint})</span>
-              </span>
-            ))}
-            {all && <span style={{ marginLeft: "auto", fontSize: 12, color: C.gold, fontWeight: 900 }}>🎉 퍼펙트 데이! 사장님 퇴근하셔도 됩니다</span>}
-          </div>
-        );
-      })()}
-
       {/* 🤵 AI 비서 브리핑 */}
       {tab === "work" && (
       <div style={{ ...card, marginTop: 12, borderColor: brief ? `${C.purple}55` : C.border }}>
@@ -1477,27 +1453,6 @@ export default function AdOfficeTycoon() {
           </div>
         )}
       </div>
-      )}
-
-      {/* 💰 연봉 협상 이벤트 */}
-      {tab === "work" && nego && nego !== "no" && nego.s && (
-        <div style={{ ...card, marginTop: 12, borderColor: `${C.gold}66`, boxShadow: `0 0 14px ${C.gold}22` }}>
-          <div style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
-            <span style={{ fontSize: 24 }}>{avatarOf(nego.s.name)}</span>
-            <div style={{ flex: 1, minWidth: 220 }}>
-              <div style={{ fontSize: 12.5, fontWeight: 800, color: C.gold }}>💰 연봉 협상 요청</div>
-              <div style={{ fontSize: 12, marginTop: 2 }}>
-                <b>{nego.s.name}</b><span style={{ color: C.mid }}> — "요즘 제 실적 보셨죠? 🛒{nego.s.purchases7}건에 CPA {nego.s.cpa7 ? `₩${fmt(nego.s.cpa7)}` : "-"}입니다. 연봉(예산) 15% 인상 요구합니다!"</span>
-              </div>
-              <div style={{ fontSize: 10.5, color: C.mid, marginTop: 2 }}>현재 일예산 ₩{fmt(nego.s.budget)} → 수락 시 ₩{fmt(Math.round(nego.s.budget * 1.15 / 1000) * 1000)}</div>
-            </div>
-            <button className="btnGlow" style={btn(C.neon)} disabled={busy === nego.s.id}
-              onClick={() => { const s = nego.s; setNego("no"); act("budget", s, { budget: Math.round(s.budget * 1.15 / 1000) * 1000, note: "연봉 협상 +15%" }); }}>
-              🖊 인상 수락</button>
-            <button style={btn(C.mid)} onClick={() => { setNego("no"); setEvt(["😤", `${(nego.s.name || "").slice(0, 14)}… "알겠습니다. 열심히 하겠습니다" (사기 -1)`]); setTimeout(() => setEvt(null), 4000); }}>
-              거절</button>
-          </div>
-        </div>
       )}
 
       {/* ② 결재 서류함 */}
