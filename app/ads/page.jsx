@@ -71,11 +71,27 @@ const TALK = {
 };
 const talkOf = (tier, seed) => TALK[tier][seed % TALK[tier].length];
 
+// 광고 스튜디오(소재 제작) 연결 — 세트명에서 제품 키워드 추출해 딥링크
+const PRODUCT_KEYS = ["소닉플로우", "에어리소닉", "클린이워터", "클린이스윙", "프리온", "오마컬", "듀얼포켓건", "아이스볼트", "퀵롤차저", "오아데이", "클린이"];
+const prodKeyOf = (name = "") => PRODUCT_KEYS.find((k) => name.includes(k))
+  || ((name.match(/[가-힣]{2,}/g) || []).sort((a, b) => b.length - a.length)[0] || "");
+const studioUrl = (name) => `https://oa-detail-gen.vercel.app/detail?tab=adtab&adq=${encodeURIComponent(prodKeyOf(name))}`;
+
+const BOSS_LINES = ["결재 밀린 거 없나? 🖊", "소재가 생명이다, 소재가.", "ROAS가 곧 인격이다.", "커피 한 잔 하고 하지 ☕",
+  "이번 달 S등급 가보자고.", "잘하는 사원엔 보너스, 화끈하게.", "부진하면… 알지? 🪑", "우리 회사 좋은 회사다 😎"];
+const officeHour = () => {
+  const h = new Date().getHours();
+  return h >= 9 && h < 12 ? "☀️ 오전 근무" : h >= 12 && h < 13 ? "🍜 점심시간" : h >= 13 && h < 18 ? "☕ 오후 근무"
+    : h >= 18 && h < 23 ? "🌙 야근 중" : "🌃 무인 경비 모드";
+};
+
 export default function AdOfficeTycoon() {
   const [data, setData] = useState(null);
   const [err, setErr] = useState("");
   const [busy, setBusy] = useState("");
   const [openCamp, setOpenCamp] = useState({});
+  const [showOff, setShowOff] = useState({}); // 부서별 퇴근자 표시 토글
+  const [bossSay, setBossSay] = useState(""); // 사장 한마디 (등급 카드 클릭)
   const [adsCache, setAdsCache] = useState({});
   const [adsOpen, setAdsOpen] = useState({});
   const [fx, setFx] = useState(null); // {emoji, text, kind}
@@ -121,6 +137,18 @@ export default function AdOfficeTycoon() {
     } catch (e) { alert("실패: " + e.message); } finally { setBusy(""); }
   }
 
+  // 개별 소재(광고) ON/OFF — 부진 소재만 끄는 "소재 교체" 절반
+  async function adStatus(sid, ad, turnOff) {
+    if (!confirm(turnOff ? `📉 소재 "${ad.name}"만 끌까요? (사원은 계속 근무)` : `소재 "${ad.name}"을 다시 켤까요?`)) return;
+    try {
+      const j = await fetch("/api/ad-console", { method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: turnOff ? "adPause" : "adResume", adId: ad.id, adsetId: sid, name: ad.name }) }).then((r) => r.json());
+      if (!j.ok) throw new Error(j.error);
+      SFX.stamp();
+      setAdsCache((cc) => ({ ...cc, [sid]: (cc[sid] || []).map((x) => x.id === ad.id ? { ...x, status: turnOff ? "PAUSED" : "ACTIVE" } : x) }));
+    } catch (e) { alert("실패: " + e.message); }
+  }
+
   async function toggleAds(sid) {
     SFX.click();
     setAdsOpen((o) => ({ ...o, [sid]: !o[sid] }));
@@ -160,9 +188,40 @@ export default function AdOfficeTycoon() {
 
   return (
     <Shell onRefresh={() => { SFX.click(); load(true); }} fx={fx} shake={shake} mute={mute} toggleMute={toggleMute}>
+      {/* 전광판 뉴스 티커 */}
+      {(() => {
+        const news = [];
+        if (top3[0]) news.push(`🏆 속보: ${prodKeyOf(top3[0].name) || top3[0].name} 사원, 7일 ${top3[0].purchases7}건 판매로 사내 1위!`);
+        if (queue.length) news.push(`🖊 인사부: 사장님 결재 대기 ${queue.length}건 — 결재함을 확인해 주세요`);
+        else news.push("✅ 인사부: 결재 대기 없음 — 사무실이 평화롭습니다");
+        if (data.naver?.tot?.spend) news.push(`🟢 협력사 네이버: 어제 ROAS x${(data.naver.tot.rev / data.naver.tot.spend).toFixed(1)} — ${data.naver.tot.rev / data.naver.tot.spend >= 3 ? "회식 각입니다" : "분발 요망"}`);
+        if (combo >= 2) news.push(`🔥 사장님 결재 ${combo}연속 성공 — 촉이 좋으십니다`);
+        if (roas >= 3) news.push(`📈 어제 ROAS ${roas} — 경영지원팀이 박수 치는 중`);
+        else if (roas < 1.5) news.push(`📉 어제 ROAS ${roas} — 전 직원 비상 근무 태세`);
+        const dead = allSets.filter((x) => x.status !== "ACTIVE").length;
+        if (dead) news.push(`🪑 총무부: 퇴근 처리된 사원 ${dead}명 (부서 카드에서 숨김 중)`);
+        const line = news.join("   ·   ");
+        return (
+          <div style={{ background: "#0d0a12", border: `1px solid ${C.border}`, borderRadius: 10, marginBottom: 14, overflow: "hidden", padding: "7px 0" }}>
+            <div className="ticker"><span style={{ fontSize: 11.5, color: C.gold, fontWeight: 700 }}>{line}   ·   {line}</span></div>
+          </div>
+        );
+      })()}
+
+      {/* 복도 — 산책하는 사원들 */}
+      <div style={{ position: "relative", height: 34, marginBottom: 6, overflow: "hidden" }} title="복도를 산책 중인 사원들">
+        {allSets.filter((x) => x.status === "ACTIVE").slice(0, 7).map((x, i) => (
+          <span key={x.id} className="walker" style={{ "--dur": `${14 + (i * 3.7) % 12}s`, "--delay": `-${(i * 5.3) % 14}s`, top: i % 2 ? 2 : 8 }}>
+            {avatarOf(x.name)}{i % 3 === 0 ? "☕" : ""}
+          </span>
+        ))}
+      </div>
+
       {/* ① 사장실 대시보드 */}
       <div style={{ display: "flex", flexWrap: "wrap", gap: 12 }}>
-        <div className="gradeCard" style={{ ...card, minWidth: 150, flex: "0 0 auto", textAlign: "center", borderColor: grade[1], "--glow": grade[1] }}>
+        <div className="gradeCard" onClick={() => { SFX.click(); setBossSay(BOSS_LINES[Math.floor(Math.random() * BOSS_LINES.length)]); setTimeout(() => setBossSay(""), 3200); }}
+          title="사장님(클릭하면 한마디)" style={{ ...card, minWidth: 150, flex: "0 0 auto", textAlign: "center", borderColor: grade[1], "--glow": grade[1], cursor: "pointer", position: "relative" }}>
+          {bossSay && <div className="bubble" style={{ top: -30, left: 10, right: -60, borderColor: `${grade[1]}66`, zIndex: 9 }}>👔 {bossSay}</div>}
           <div style={pxLabel}>🏢 사무실 등급</div>
           <div style={{ fontSize: 40, fontWeight: 900, color: grade[1], textShadow: `0 0 18px ${grade[1]}`, lineHeight: 1.1, fontFamily: "'Press Start 2P', monospace" }}>{grade[0]}</div>
           <div style={{ fontSize: 10, color: grade[1], marginTop: 3, fontWeight: 700 }}>{grade[2]}</div>
@@ -199,6 +258,30 @@ export default function AdOfficeTycoon() {
           </span>}
         </div>
       )}
+
+      {/* 오늘의 미션 */}
+      {(() => {
+        const todayStr = new Date().toISOString().slice(0, 10);
+        const actedToday = logArr.some((l) => (l.at || "").startsWith(todayStr));
+        const missions = [
+          { t: "결재함 비우기", done: queue.length === 0, hint: `${queue.length}건 남음` },
+          { t: "어제 ROAS 3.0 달성", done: roas >= 3, hint: `현재 ${roas}` },
+          { t: "오늘 조치 1건 이상", done: actedToday, hint: "결재·소재 정리 아무거나" },
+        ];
+        const all = missions.every((m) => m.done);
+        return (
+          <div style={{ marginTop: 12, background: C.panel, border: `1px solid ${all ? C.gold : C.border}`, borderRadius: 12, padding: "10px 16px",
+            display: "flex", gap: 16, alignItems: "center", flexWrap: "wrap", boxShadow: all ? `0 0 16px ${C.gold}44` : "none" }}>
+            <span style={{ fontFamily: "'Press Start 2P', monospace", fontSize: 9, color: C.purple }}>DAILY</span>
+            {missions.map((m) => (
+              <span key={m.t} style={{ fontSize: 12, color: m.done ? C.neon : C.mid, fontWeight: 700 }}>
+                {m.done ? "✅" : "⬜"} {m.t} <span style={{ fontWeight: 400, fontSize: 10.5 }}>({m.hint})</span>
+              </span>
+            ))}
+            {all && <span style={{ marginLeft: "auto", fontSize: 12, color: C.gold, fontWeight: 900 }}>🎉 퍼펙트 데이! 사장님 퇴근하셔도 됩니다</span>}
+          </div>
+        );
+      })()}
 
       {/* ② 결재 서류함 */}
       <h2 style={h2}><span style={px}>결재함</span> 사장님 결재 대기 {queue.length
@@ -243,60 +326,103 @@ export default function AdOfficeTycoon() {
               <span>🚪 {c.name} <span style={{ color: C.mid, fontWeight: 500, fontSize: 11 }}>목표 CPA ₩{fmt(c.target)} · 근무 {alive}/{c.adsets.length}명</span></span>
               <span style={{ color: C.gold }}>₩{fmt(tot)} {openCamp[c.id] ? "▲" : "▼"}</span>
             </button>
-            {openCamp[c.id] && (
-              <div className="officeFloor" style={{ padding: "6px 12px 14px", display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(315px,1fr))", gap: 12 }}>
-                {c.adsets.map((s) => (
-                  <Desk key={s.id} s={s} busy={busy} act={act} adsOpen={adsOpen[s.id]} ads={adsCache[s.id]}
-                    toggleAds={toggleAds} isMvp={mvp && s.id === mvp.id} talkTick={talkTick} />
-                ))}
-              </div>
-            )}
+            {openCamp[c.id] && (() => {
+              const working = c.adsets.filter((s) => s.status === "ACTIVE");
+              const off = c.adsets.filter((s) => s.status !== "ACTIVE");
+              const list = showOff[c.id] ? [...working, ...off] : working;
+              return (
+                <div style={{ padding: "6px 12px 14px" }}>
+                  <div className="officeFloor" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(315px,1fr))", gap: 12 }}>
+                    {list.map((s) => (
+                      <Desk key={s.id} s={s} busy={busy} act={act} adsOpen={adsOpen[s.id]} ads={adsCache[s.id]}
+                        toggleAds={toggleAds} isMvp={mvp && s.id === mvp.id} talkTick={talkTick} onAdStatus={adStatus} />
+                    ))}
+                  </div>
+                  {off.length > 0 && (
+                    <button onClick={() => setShowOff((o) => ({ ...o, [c.id]: !o[c.id] }))}
+                      style={{ ...btn(C.mid), marginTop: 10, fontSize: 11 }}>
+                      {showOff[c.id] ? "🙈 퇴근자 숨기기" : `🪑 퇴근한 사원 ${off.length}명 보기`}
+                    </button>
+                  )}
+                </div>
+              );
+            })()}
           </div>
         );
       })}
 
       {/* ④ 외주 파트너 — 네이버 */}
-      {data.naver && (
+      {data.naver && (() => {
+        const nR = data.naver.tot.spend ? data.naver.tot.rev / data.naver.tot.spend : 0;
+        return (
         <>
-          <h2 style={h2}><span style={px}>협력사</span> 🏬 네이버 검색광고 (외주) <span style={{ fontSize: 10.5, color: C.mid, fontWeight: 400 }}>{data.naver.date}</span></h2>
-          <div style={{ background: C.panel, border: `1px solid ${C.border}`, borderRadius: 14, padding: "12px 16px", fontSize: 13 }}>
-            <div style={{ fontWeight: 800, marginBottom: 8, color: C.neon }}>
-              청구서 합계 ₩{fmt(Math.round(data.naver.tot.spend))} · 전환 {data.naver.tot.conv} · ROAS {data.naver.tot.spend ? (data.naver.tot.rev / data.naver.tot.spend).toFixed(1) : "-"}
+          <h2 style={h2}><span style={px}>협력사</span> 🟢 네이버 검색광고 <span style={{ fontSize: 10.5, color: C.mid, fontWeight: 400 }}>어제 {data.naver.date}</span></h2>
+          <div style={{ background: C.panel, border: `1px solid ${C.border}`, borderRadius: 14, padding: "14px 16px" }}>
+            <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 12 }}>
+              <Partner label="💸 어제 지출" v={`₩${fmt(Math.round(data.naver.tot.spend))}`} color={C.gold} />
+              <Partner label="🛒 전환" v={fmt(data.naver.tot.conv)} color={C.neon} />
+              <Partner label="📈 ROAS" v={`x${nR.toFixed(1)}`} color={nR >= 3 ? C.neon : nR >= 1 ? C.gold : C.red} big />
+              <Partner label="💰 매출" v={`₩${fmt(Math.round(data.naver.tot.rev))}`} color={C.cyan} />
             </div>
-            {data.naver.camps.slice(0, 10).map((g, i) => {
+            {[...data.naver.camps].sort((a, b) => b.spend - a.spend).slice(0, 10).map((g, i) => {
               const r = g.spend ? g.rev / g.spend : 0;
-              const bar = Math.min(100, r * 5);
+              const cl = r >= 3 ? C.neon : r >= 1 ? C.gold : C.red;
               return (
-                <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, padding: "3px 0", fontSize: 12.5 }}>
-                  <span style={{ width: 140, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{g.name}</span>
-                  <div style={{ flex: 1, height: 6, background: "#0d0a12", borderRadius: 3, overflow: "hidden" }}>
-                    <div style={{ width: `${bar}%`, height: "100%", background: r >= 3 ? C.neon : r >= 1 ? C.gold : C.red, boxShadow: `0 0 6px ${r >= 3 ? C.neon : r >= 1 ? C.gold : C.red}` }} />
+                <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, padding: "6px 8px", fontSize: 12.5,
+                  background: i % 2 ? "transparent" : "#ffffff06", borderRadius: 8 }}>
+                  <span style={{ fontSize: 15 }}>{r >= 3 ? "🤝" : r >= 1 ? "🏪" : "🥶"}</span>
+                  <span style={{ width: 150, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontWeight: 600 }}>{g.name}</span>
+                  <div style={{ flex: 1, height: 9, background: "#0d0a12", borderRadius: 5, overflow: "hidden", border: `1px solid ${C.border}` }}>
+                    <div className="hpbar" style={{ width: `${Math.min(100, r * 5)}%`, height: "100%", "--hp": cl,
+                      background: `repeating-linear-gradient(45deg, ${cl}, ${cl} 6px, ${cl}AA 6px, ${cl}AA 12px)`, boxShadow: `0 0 8px ${cl}` }} />
                   </div>
-                  <span style={{ width: 170, textAlign: "right", color: C.mid }}>₩{fmt(Math.round(g.spend))} · {g.conv}전환 · <b style={{ color: r >= 3 ? C.neon : r >= 1 ? C.gold : C.red }}>x{r.toFixed(1)}</b></span>
+                  <span style={{ width: 90, textAlign: "right", color: C.mid }}>₩{fmt(Math.round(g.spend))}</span>
+                  <span style={{ width: 52, textAlign: "right", color: C.mid }}>🛒{g.conv}</span>
+                  <b style={{ width: 48, textAlign: "right", color: cl, fontSize: 13 }}>x{r.toFixed(1)}</b>
                 </div>
               );
             })}
           </div>
         </>
-      )}
+        );
+      })()}
 
       {/* ⑤ 외주 파트너 — GFA */}
-      {data.gfa && (
+      {data.gfa && (() => {
+        const gR = data.gfa.tot?.cost ? (data.gfa.tot.rev || 0) / data.gfa.tot.cost : 0;
+        return (
         <>
-          <h2 style={h2}><span style={px}>협력사</span> 🏬 GFA (외주) <span style={{ fontSize: 10.5, color: C.mid, fontWeight: 400 }}>{data.gfa.date || ""}</span></h2>
-          <div style={{ background: C.panel, border: `1px solid ${C.border}`, borderRadius: 14, padding: "12px 16px", fontSize: 12.5 }}>
-            <div style={{ fontWeight: 800, marginBottom: 6, color: C.cyan }}>
-              청구서 합계 ₩{fmt(Math.round(data.gfa.tot?.cost || 0))} · 구매 {data.gfa.tot?.buy} · ROAS {data.gfa.tot?.cost ? ((data.gfa.tot.rev || 0) / data.gfa.tot.cost).toFixed(1) : "-"}
+          <h2 style={h2}><span style={px}>협력사</span> 🟩 GFA 성과형 <span style={{ fontSize: 10.5, color: C.mid, fontWeight: 400 }}>{data.gfa.date || ""}</span></h2>
+          <div style={{ background: C.panel, border: `1px solid ${C.border}`, borderRadius: 14, padding: "14px 16px" }}>
+            <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 12 }}>
+              <Partner label="💸 지출" v={`₩${fmt(Math.round(data.gfa.tot?.cost || 0))}`} color={C.gold} />
+              <Partner label="🛒 구매" v={fmt(data.gfa.tot?.buy)} color={C.neon} />
+              <Partner label="📈 ROAS" v={`x${gR.toFixed(1)}`} color={gR >= 3 ? C.neon : gR >= 1 ? C.gold : C.red} big />
             </div>
-            {(data.gfa.camps || []).map((g, i) => {
+            {[...(data.gfa.camps || [])].sort((a, b) => (b.cost || 0) - (a.cost || 0)).map((g, i) => {
               const r = g.cost ? (g.rev || 0) / g.cost : 0;
               const danger = g.cost >= 30000 && r < 1;
-              return <div key={i} style={{ padding: "3px 0", color: danger ? C.red : C.ink }}>
-                {danger ? "🚨" : "·"} {g.name}: ₩{fmt(Math.round(g.cost))} · 구매 {g.buy} · x{r.toFixed(1)}</div>;
+              const cl = r >= 3 ? C.neon : r >= 1 ? C.gold : C.red;
+              return (
+                <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, padding: "6px 8px", fontSize: 12.5,
+                  background: danger ? "#FF6B8112" : i % 2 ? "transparent" : "#ffffff06", borderRadius: 8,
+                  border: danger ? `1px solid ${C.red}44` : "none" }}>
+                  <span style={{ fontSize: 15 }}>{danger ? "🚨" : r >= 3 ? "🤝" : "🏪"}</span>
+                  <span style={{ width: 150, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontWeight: 600 }}>{g.name}</span>
+                  <div style={{ flex: 1, height: 9, background: "#0d0a12", borderRadius: 5, overflow: "hidden", border: `1px solid ${C.border}` }}>
+                    <div className="hpbar" style={{ width: `${Math.min(100, r * 5)}%`, height: "100%", "--hp": cl,
+                      background: `repeating-linear-gradient(45deg, ${cl}, ${cl} 6px, ${cl}AA 6px, ${cl}AA 12px)`, boxShadow: `0 0 8px ${cl}` }} />
+                  </div>
+                  <span style={{ width: 90, textAlign: "right", color: C.mid }}>₩{fmt(Math.round(g.cost))}</span>
+                  <span style={{ width: 52, textAlign: "right", color: C.mid }}>🛒{g.buy}</span>
+                  <b style={{ width: 48, textAlign: "right", color: cl, fontSize: 13 }}>x{r.toFixed(1)}</b>
+                </div>
+              );
             })}
           </div>
         </>
-      )}
+        );
+      })()}
 
       {/* ⑥ 인사기록부 */}
       {logArr.length > 0 && (
@@ -318,6 +444,15 @@ export default function AdOfficeTycoon() {
   );
 }
 
+function Partner({ label, v, color, big }) {
+  return (
+    <div style={{ background: "#0d0a12", border: `1px solid ${C.border}`, borderRadius: 10, padding: "8px 14px", flex: "0 0 auto" }}>
+      <div style={{ fontSize: 9.5, color: C.mid }}>{label}</div>
+      <div style={{ fontSize: big ? 20 : 15, fontWeight: 900, color, textShadow: big ? `0 0 10px ${color}66` : "none" }}>{v}</div>
+    </div>
+  );
+}
+
 function Stat({ label, v, prefix = "", suffix = "", color }) {
   const x = useCountUp(v);
   return (
@@ -329,8 +464,9 @@ function Stat({ label, v, prefix = "", suffix = "", color }) {
 }
 
 // ── 직원 책상 카드 ──────────────────────────────────────────────────────
-function Desk({ s, busy, act, adsOpen, ads, toggleAds, isMvp, talkTick }) {
+function Desk({ s, busy, act, adsOpen, ads, toggleAds, isMvp, talkTick, onAdStatus }) {
   const [eb, setEb] = useState(null);
+  const [pet, setPet] = useState(0); // 쓰다듬기 하트 이펙트
   const morale = s.cpa7 == null ? (s.spend7 > 0 ? 20 : 60)
     : Math.max(5, Math.min(100, Math.round(100 - ((s.cpa7 / s.target) - 0.5) * 40)));
   const mColor = morale >= 70 ? C.neon : morale >= 40 ? C.gold : C.red;
@@ -354,13 +490,21 @@ function Desk({ s, busy, act, adsOpen, ads, toggleAds, isMvp, talkTick }) {
       <div style={{ display: "flex", alignItems: "flex-end", gap: 10 }}>
         <div style={{ position: "relative", width: 52, textAlign: "center", flex: "none" }}>
           <span className={dead ? "" : tier === "great" ? "empWork fast" : tier === "bad" ? "empSad" : "empWork"}
-            style={{ fontSize: 30, display: "inline-block", filter: dead ? "grayscale(1)" : "none" }}>
+            onClick={() => { if (dead) return; SFX.coin(); setPet((p) => p + 1); setTimeout(() => setPet((p) => Math.max(0, p - 1)), 1100); }}
+            title={dead ? "" : "쓰다듬기"}
+            style={{ fontSize: 30, display: "inline-block", filter: dead ? "grayscale(1)" : "none", cursor: dead ? "default" : "pointer" }}>
             {dead ? "🪑" : avatarOf(s.name)}
           </span>
+          {pet > 0 && <span className="petHeart" style={{ position: "absolute", top: -10, left: 8, fontSize: 15 }}>💖</span>}
           {earning && <span className="coinPop" style={{ position: "absolute", top: -6, right: -4, fontSize: 13 }}>🪙</span>}
           {tier === "bad" && !dead && <span style={{ position: "absolute", top: -2, right: 0, fontSize: 12 }}>💦</span>}
           {dead && <span style={{ position: "absolute", top: -4, right: 2, fontSize: 12 }}>💤</span>}
-          <div style={{ fontSize: 13, marginTop: -3 }}>🖥️</div>
+          {s.thumb ? (
+            <div title="지금 돌고 있는 대표 소재" style={{ width: 44, height: 32, margin: "0 auto", borderRadius: 4, overflow: "hidden",
+              border: `1.5px solid ${C.border}`, boxShadow: "0 2px 0 #0d0a12", background: "#000" }}>
+              <img src={s.thumb} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", filter: dead ? "grayscale(1) brightness(0.6)" : "none" }} />
+            </div>
+          ) : <div style={{ fontSize: 13, marginTop: -3 }}>🖥️</div>}
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
@@ -399,6 +543,8 @@ function Desk({ s, busy, act, adsOpen, ads, toggleAds, isMvp, talkTick }) {
         {!dead
           ? <button style={{ ...btn(C.red), padding: "4px 10px", fontSize: 11 }} disabled={busy === s.id} onClick={() => act("pause", s)} title="퇴근(OFF)">🪑 퇴근</button>
           : <button style={{ ...btn(C.neon), padding: "4px 10px", fontSize: 11 }} disabled={busy === s.id} onClick={() => act("resume", s)}>📢 재고용</button>}
+        <a href={studioUrl(s.name)} target="_blank" rel="noreferrer" title="광고 스튜디오에서 이 제품 새 소재 만들기 (제품 자동 검색)"
+          style={{ ...btn(C.pink), padding: "4px 10px", fontSize: 11, textDecoration: "none" }}>🎨 소재 의뢰</a>
         {s.ctr7 > 0 && <span style={{ fontSize: 10.5, color: C.mid }}>CTR {s.ctr7.toFixed(2)}%</span>}
       </div>
       {/* 작업물 포트폴리오 */}
@@ -407,13 +553,19 @@ function Desk({ s, busy, act, adsOpen, ads, toggleAds, isMvp, talkTick }) {
           {!ads ? <span style={{ fontSize: 11, color: C.mid }}>📁 포트폴리오 가져오는 중…</span>
             : ads.length === 0 ? <span style={{ fontSize: 11, color: C.mid }}>작업물 없음</span> : (
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-              {ads.map((a) => (
-                <div key={a.id} style={{ width: 118, background: C.panel, border: `1px solid ${C.border}`, borderRadius: 8, padding: 6 }}>
-                  {a.thumb && <img src={a.thumb} alt="" style={{ width: "100%", height: 64, objectFit: "cover", borderRadius: 5 }} />}
+              {ads.map((a) => {
+                const off = a.status !== "ACTIVE";
+                return (
+                <div key={a.id} style={{ width: 118, background: C.panel, border: `1px solid ${off ? C.border : C.border}`, borderRadius: 8, padding: 6, opacity: off ? 0.45 : 1, position: "relative" }}>
+                  {a.thumb && <img src={a.thumb} alt="" style={{ width: "100%", height: 64, objectFit: "cover", borderRadius: 5, filter: off ? "grayscale(1)" : "none" }} />}
                   <div style={{ fontSize: 9.5, marginTop: 4, color: C.ink, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={a.name}>{a.name}</div>
-                  <div style={{ fontSize: 9.5, color: C.mid }}>₩{fmt(a.spend)} · 🛒{a.purchases}{a.cpa ? ` · ₩${fmt(a.cpa)}` : ""}</div>
+                  <div style={{ fontSize: 9.5, color: C.mid, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <span>₩{fmt(a.spend)} · 🛒{a.purchases}{a.cpa ? ` · ₩${fmt(a.cpa)}` : ""}</span>
+                    <button onClick={() => onAdStatus(s.id, a, !off)} title={off ? "소재 다시 켜기" : "이 소재만 끄기"}
+                      style={{ background: "none", border: "none", cursor: "pointer", fontSize: 12, padding: 0 }}>{off ? "▶️" : "⏸"}</button>
+                  </div>
                 </div>
-              ))}
+              ); })}
             </div>
           )}
         </div>
@@ -447,7 +599,8 @@ function Shell({ children, onRefresh, fx, shake, mute, toggleMute }) {
       <div style={{ maxWidth: 1160, margin: "0 auto", padding: "26px 20px 80px", position: "relative", zIndex: 2 }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20, flexWrap: "wrap", gap: 10 }}>
           <h1 style={{ fontFamily: "'Press Start 2P', monospace", fontSize: 15, letterSpacing: 1, lineHeight: 1.6 }}>
-            <span className="titleNeon">OA 광고상사</span> <span style={{ color: C.pink, textShadow: `0 0 14px ${C.pink}`, fontSize: 11 }}>(주) AI사원 근무중</span>
+            <span className="titleNeon">OA 광고상사</span> <span style={{ color: C.pink, textShadow: `0 0 14px ${C.pink}`, fontSize: 11 }}>(주)</span>
+            <span style={{ fontSize: 10, color: C.mid, marginLeft: 10, fontFamily: "'Pretendard',sans-serif", fontWeight: 700 }}>{officeHour()}</span>
           </h1>
           <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
             <button style={btn(C.mid)} onClick={toggleMute} title="효과음">{mute ? "🔇" : "🔊"}</button>
@@ -512,6 +665,14 @@ function Shell({ children, onRefresh, fx, shake, mute, toggleMute }) {
         .bootDoor { display: inline-block; animation: doorOpen 1.4s ease-in-out infinite; }
         .bootType { animation: blink 1s step-end infinite; }
         button:disabled { opacity: 0.5; cursor: wait; }
+        @keyframes tickerMove { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+        .ticker span { display: inline-block; white-space: nowrap; padding-left: 20px; animation: tickerMove 36s linear infinite; }
+        @keyframes walkX { 0% { left: -5%; transform: scaleX(1); } 49% { left: 96%; transform: scaleX(1); }
+          50% { left: 96%; transform: scaleX(-1); } 99% { left: -5%; transform: scaleX(-1); } 100% { left: -5%; transform: scaleX(1); } }
+        @keyframes walkBob { 0%,100% { margin-top: 0; } 50% { margin-top: -3px; } }
+        .walker { position: absolute; font-size: 18px; animation: walkX var(--dur) linear infinite var(--delay), walkBob 0.5s ease-in-out infinite; opacity: 0.9; }
+        @keyframes petUp { 0% { opacity: 0; transform: translateY(4px) scale(0.5); } 25% { opacity: 1; transform: scale(1.2); } 100% { opacity: 0; transform: translateY(-20px); } }
+        .petHeart { animation: petUp 1.1s ease-out both; pointer-events: none; }
         @media (max-width: 640px) { .bubble { display: none; } }
       `}</style>
     </div>

@@ -155,13 +155,16 @@ export async function GET(req) {
     const campaigns = [];
     for (const c of active) {
       const sets = await g(`${c.id}/adsets`, {
-        fields: "id,name,daily_budget,effective_status,optimization_goal", limit: "100" });
+        fields: "id,name,daily_budget,effective_status,optimization_goal,ads.limit(3){effective_status,creative{image_url,thumbnail_url}}", limit: "100" });
       const tgt = targetFor(conf, c.name);
       const rows = (sets.data || []).filter((s) => s.effective_status !== "DELETED").map((s) => {
         const r7 = by7[s.id] || {}, r3 = by3[s.id] || {};
         const sp7 = Number(r7.spend || 0), pu7 = weightedOf(r7);
         const sp3 = Number(r3.spend || 0), pu3 = weightedOf(r3);
         const cpa7 = pu7 >= 1 ? sp7 / pu7 : null, cpa3 = pu3 >= 1 ? sp3 / pu3 : null;
+        const adsArr = s.ads?.data || [];
+        const bestAd = adsArr.find((a) => a.effective_status === "ACTIVE") || adsArr[0];
+        const thumb = bestAd?.creative?.image_url || bestAd?.creative?.thumbnail_url || "";
         const goal = (s.optimization_goal || "").toUpperCase();
         const isTraffic = /LANDING|LINK_CLICK|TRAFFIC/.test(goal);
         let judge = "";
@@ -170,7 +173,7 @@ export async function GET(req) {
           else if ((sp7 >= tgt * 3 && pu7 === 0) || (cpa7 && cpa7 >= tgt * 3 && sp7 >= 100000)) judge = "kill";
           else if (cpa7 && cpa7 >= tgt * 2 && sp7 >= 100000) judge = "watch";
         }
-        return { id: s.id, name: s.name, status: s.effective_status, view7: viewOf(r7),
+        return { id: s.id, name: s.name, status: s.effective_status, view7: viewOf(r7), thumb,
           budget: Number(s.daily_budget || 0), goal: isTraffic ? "트래픽" : "전환",
           spend7: Math.round(sp7), purchases7: purchasesOf(r7), cpa7: cpa7 ? Math.round(cpa7) : null,
           spend3: Math.round(sp3), cpa3: cpa3 ? Math.round(cpa3) : null,
@@ -187,6 +190,8 @@ export async function GET(req) {
 
     // GFA — 로컬 크론이 적재한 최신 스냅샷 (없으면 생략)
     const { data: gfaRow } = await sb().from("settings").select("value").eq("key", "oa_gfa_daily_v1").maybeSingle();
+    // AD부스터(ADVoost) — 아침 브리핑 크롤러가 적재 (7일)
+    const { data: advRow } = await sb().from("settings").select("value").eq("key", "oa_advoost_v1").maybeSingle();
 
     // 조치 로그 (최근 30) — "손댄 건 성공했나" 추적: 조치한 세트의 현재 3일 성과로 판정
     const { data: logRow } = await sb().from("settings").select("value").eq("key", LOG_KEY).maybeSingle();
@@ -226,7 +231,20 @@ export async function GET(req) {
 
 export async function POST(req) {
   try {
-    const { action, adsetId, budget, note, name } = await req.json();
+    const { action, adsetId, adId, budget, note, name } = await req.json();
+    // 개별 소재(광고) ON/OFF — 부진 소재만 끄는 "소재 교체" 절반
+    if (action === "adPause" || action === "adResume") {
+      if (!adId) throw new Error("adId 필요");
+      await g(adId, { status: action === "adPause" ? "PAUSED" : "ACTIVE" }, "POST");
+      const s0 = sb();
+      await s0.from("settings").upsert({ key: "oa_ad_console_cache_v1", value: { at: 0 } }, { onConflict: "key" });
+      const { data: d0 } = await s0.from("settings").select("value").eq("key", LOG_KEY).maybeSingle();
+      const items0 = d0?.value?.items || [];
+      items0.unshift({ at: new Date().toISOString(), adsetId: adsetId || "", name: name || adId,
+        desc: action === "adPause" ? "소재 OFF" : "소재 ON", note: note || "" });
+      await s0.from("settings").upsert({ key: LOG_KEY, value: { items: items0.slice(0, 100) } }, { onConflict: "key" });
+      return Response.json({ ok: true });
+    }
     if (!adsetId) throw new Error("adsetId 필요");
     let desc = "";
     if (action === "budget") {
