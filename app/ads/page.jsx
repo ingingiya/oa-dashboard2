@@ -1777,7 +1777,35 @@ export default function AdOfficeTycoon() {
       </div>
       {data.metaDown && <div style={{ fontSize: 12.5, color: C.mid, padding: "14px 16px", background: C.panel, border: `1px dashed ${C.border}`, borderRadius: 12, marginBottom: 12 }}>
         😴 메타 사원들은 회선 점검으로 잠시 자리 비움 — 아래 협력사·직영 현황은 정상 근무 중</div>}
-      {data.campaigns.map((c) => {
+      {/* 📊 내 담당 실적 — 한 회사 안에서 도장 이름 = 담당 부서장. 담당 부서 성과가 곧 내 실적, 나머지 부서는 협력 */}
+      {signer && (() => {
+        const ow = data.owners || {};
+        const mineC = data.campaigns.filter((c) => ow[c.id] === signer);
+        if (!mineC.length) return null;
+        const sets = mineC.flatMap((c) => c.adsets).filter((s) => s.status === "ACTIVE" && (s.spend7 || 0) > 0);
+        const sp = sets.reduce((a, s) => a + (s.spend7 || 0), 0);
+        const buy = sets.reduce((a, s) => a + (s.purchases7 || 0), 0);
+        const cpa = buy ? Math.round(sp / buy) : null;
+        const bad = sets.filter((s) => s.judge === "kill" || s.judge === "watch").length;
+        const up = sets.filter((s) => s.judge === "scale").length;
+        return (
+          <div style={{ ...card, marginBottom: 12, borderColor: `${C.cyan}55`, display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+            {SIGNER_IMG[signer] && <img src={SIGNER_IMG[signer]} alt="" style={{ width: 44, height: 44, borderRadius: 10, imageRendering: "pixelated", objectFit: "cover", border: `1px solid ${C.border}` }} />}
+            <div style={{ flex: 1, minWidth: 200 }}>
+              <b style={{ fontSize: 12.5, color: C.cyan }}>📊 {signer} 부서장님 담당 실적</b>
+              <div style={{ fontSize: 11, color: C.mid, marginTop: 3 }}>
+                담당 부서 {mineC.length}곳 · 사원 {sets.length}명 근무 · 7일 <b style={{ color: C.gold }}>₩{fmt(sp)}</b> · 계약 <b style={{ color: C.neon }}>{buy}</b>{cpa && <> · CPA <b style={{ color: C.cyan }}>₩{fmt(cpa)}</b></>}
+              </div>
+            </div>
+            <div style={{ fontSize: 11, fontWeight: 700, display: "flex", gap: 10 }}>
+              {up > 0 && <span style={{ color: C.neon }}>🚀 증액 후보 {up}</span>}
+              {bad > 0 ? <span style={{ color: C.red }}>⚠️ 요주의 {bad} — 결재 필요</span> : <span style={{ color: C.neon }}>✅ 요주의 없음</span>}
+            </div>
+          </div>
+        );
+      })()}
+      {[...data.campaigns].sort((a, b) =>
+        ((signer && (data.owners || {})[b.id] === signer) ? 1 : 0) - ((signer && (data.owners || {})[a.id] === signer) ? 1 : 0)).map((c) => {
         const tot = c.adsets.reduce((a, s) => a + s.spend7, 0);
         const buy = c.adsets.reduce((a, s) => a + (s.purchases7 || 0), 0);
         const vw = c.adsets.reduce((a, s) => a + (s.view7 || 0), 0);
@@ -1785,8 +1813,9 @@ export default function AdOfficeTycoon() {
         const cCpa = wsum >= 1 ? Math.round(tot / wsum) : null;
         const alive = c.adsets.filter((s) => s.status === "ACTIVE").length;
         if (!alive || (tot <= 0 && buy <= 0)) return null; // 전원 퇴근·7일 지출 0 부서는 통째로 숨김 ("운영 안하는 건 안 보이게")
+        const mine = !!signer && (data.owners || {})[c.id] === signer; // 내 담당 부서 = 내 실적
         return (
-          <div key={c.id} style={{ background: C.panel, border: `1px solid ${C.border}`, borderRadius: 14, marginBottom: 12, overflow: "hidden" }}>
+          <div key={c.id} style={{ background: C.panel, border: `1px solid ${mine ? `${C.cyan}55` : C.border}`, borderRadius: 14, marginBottom: 12, overflow: "hidden" }}>
             <button onClick={() => { SFX.click(); const opening = !openCamp[c.id]; setOpenCamp((o) => ({ ...o, [c.id]: !o[c.id] })); if (opening) autoOpenAds(c.adsets); }}
               style={{ width: "100%", textAlign: "left", padding: "13px 16px", background: "none", border: "none",
                 cursor: "pointer", display: "flex", justifyContent: "space-between", fontSize: 13.5, fontWeight: 800, color: C.ink, gap: 8, flexWrap: "wrap" }}>
@@ -1799,7 +1828,7 @@ export default function AdOfficeTycoon() {
                       border: `1px solid ${ow ? `${C.cyan}66` : C.border}`, color: ow ? C.cyan : C.mid, opacity: ow ? 1 : 0.6,
                       display: "inline-flex", alignItems: "center", gap: 4, verticalAlign: "middle" }}>
                     {ow && SIGNER_IMG[ow] && <img src={SIGNER_IMG[ow]} alt="" style={{ width: 14, height: 14, borderRadius: 99, imageRendering: "pixelated", objectFit: "cover" }} />}
-                    {ow ? `담당 ${ow}` : "담당 없음"}
+                    {mine ? `⭐ 내 담당` : ow ? `담당 ${ow}` : "담당 없음"}
                   </span>); })()}
                 <span style={{ color: C.mid, fontWeight: 500, fontSize: 11, marginLeft: 6 }}>목표 ₩{fmt(c.target)} · 근무 {alive}/{c.adsets.length}명</span></span>
               <span style={{ color: C.gold }}>₩{fmt(tot)} <span style={{ color: C.neon, fontSize: 11.5 }}>🛒{buy}{vw ? `+👁${vw}` : ""}</span>{cCpa && <span style={{ color: C.cyan, fontSize: 11.5 }}> CPA ₩{fmt(cCpa)}</span>} {openCamp[c.id] ? "▲" : "▼"}</span>
