@@ -226,7 +226,7 @@ export async function GET(req) {
     // 세트 + 성과 (7일/3일) — 인사이트는 계정 단위 한 번에
     const [ins7, ins3] = await Promise.all(["last_7d", "last_3d"].map((p) =>
       g(`act_${acct}/insights`, { level: "adset", date_preset: p, limit: "300",
-        fields: "adset_id,campaign_id,spend,ctr,actions,catalog_segment_actions",
+        fields: "adset_id,campaign_id,spend,ctr,cpm,actions,catalog_segment_actions",
         action_attribution_windows: JSON.stringify(["7d_click", "1d_view"]) })));
     const by7 = Object.fromEntries((ins7.data || []).map((r) => [r.adset_id, r]));
     const by3 = Object.fromEntries((ins3.data || []).map((r) => [r.adset_id, r]));
@@ -266,6 +266,7 @@ export async function GET(req) {
           budget: Number(s.daily_budget || 0), goal: isTraffic ? "트래픽" : "전환",
           spend7: Math.round(sp7), purchases7: purchasesOf(r7), cpa7: cpa7 ? Math.round(cpa7) : null,
           spend3: Math.round(sp3), cpa3: cpa3 ? Math.round(cpa3) : null,
+          cpm7: Math.round(Number(r7.cpm || 0)), cpm3: Math.round(Number(r3.cpm || 0)),
           ctr7: Number(r7.ctr || 0), judge, target: tgt };
       }).filter((s) => s.status === "ACTIVE" || s.spend7 > 0)
         .sort((a, b) => b.spend7 - a.spend7);
@@ -378,7 +379,19 @@ async function expireCache(s) {
 
 export async function POST(req) {
   try {
-    const { action, adsetId, adId, budget, note, name, before } = await req.json();
+    const { action, adsetId, adId, budget, note, name, before, targets: tgtBody } = await req.json();
+    // 🎯 목표 CPA 설정 저장 — 등급/판정/브리핑 전부 이 기준
+    if (action === "targets") {
+      const def = Math.round(Number(tgtBody?.default));
+      if (!def || def < 1000) throw new Error("기본 목표는 1,000원 이상");
+      const rules = (tgtBody?.rules || [])
+        .map((r) => ({ match: String(r.match || "").slice(0, 30), cpa: Math.round(Number(r.cpa)) }))
+        .filter((r) => r.match && r.cpa >= 1000).slice(0, 30);
+      const s0 = sb();
+      await s0.from("settings").upsert({ key: "oa_ad_targets_v1", value: { default: def, rules } }, { onConflict: "key" });
+      await expireCache(s0);
+      return Response.json({ ok: true });
+    }
     // 개별 소재(광고) ON/OFF — 부진 소재만 끄는 "소재 교체" 절반
     if (action === "adPause" || action === "adResume") {
       if (!adId) throw new Error("adId 필요");

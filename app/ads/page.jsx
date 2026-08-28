@@ -119,6 +119,8 @@ export default function AdOfficeTycoon() {
   const [briefBusy, setBriefBusy] = useState(false);
   const [evt, setEvt] = useState(null); // 랜덤 사무실 이벤트 토스트
   const [nego, setNego] = useState(null); // 💰 연봉 협상 {s} | "no"(이번 세션 무시)
+  const [tab, setTab] = useState("work"); // 🗂 메인 탭 — work 오늘 업무 / report 리포트 / partner 협력사 / log 기록
+  const [tgtEdit, setTgtEdit] = useState(null); // 🎯 목표 CPA 편집 {default, rules[]} | null
 
   useEffect(() => {
     try { const m = localStorage.getItem("oa_ads_mute") === "1"; setMute(m); sfxOn = !m; } catch {}
@@ -238,6 +240,7 @@ export default function AdOfficeTycoon() {
   // 전광판/전당 클릭 → 담당 직원 책상으로 점프 (부서 펼치고 스크롤 + 스포트라이트)
   function jumpToDesk(s) {
     SFX.click();
+    setTab("work"); // 책상은 오늘 업무 탭에 있음 — 리포트 탭에서 점프해도 도착하게
     setOpenCamp((o) => ({ ...o, [s.campId]: true }));
     setSpot(s.id);
     setTimeout(() => document.getElementById("desk-" + s.id)?.scrollIntoView({ behavior: "smooth", block: "center" }), 80);
@@ -292,8 +295,10 @@ export default function AdOfficeTycoon() {
   const alarms = withCamp.filter((s) => s.status === "ACTIVE" && (s.spend3 || 0) >= 30000).map((s) => {
     const cpaSpike = s.cpa7 && s.cpa3 && s.cpa3 >= s.cpa7 * 1.8;
     const spendSpike = s.spend7 > 0 && (s.spend3 / 3) > (s.spend7 / 7) * 2;
+    const cpmSpike = s.cpm7 > 0 && s.cpm3 >= s.cpm7 * 1.5; // 경매 과열 — 노출 단가 급등
     return cpaSpike ? { ...s, why: `CPA 급등 ₩${fmt(s.cpa7)}→₩${fmt(s.cpa3)}` }
-      : spendSpike ? { ...s, why: `지출 급증 일₩${fmt(Math.round(s.spend7 / 7))}→₩${fmt(Math.round(s.spend3 / 3))}` } : null;
+      : spendSpike ? { ...s, why: `지출 급증 일₩${fmt(Math.round(s.spend7 / 7))}→₩${fmt(Math.round(s.spend3 / 3))}` }
+      : cpmSpike ? { ...s, why: `CPM 급등(경매 과열) ₩${fmt(s.cpm7)}→₩${fmt(s.cpm3)} — 시장 임대료 상승` } : null;
   }).filter(Boolean).slice(0, 4);
   // 사무실 레벨 — 30일 지출 규모 + 승진(성공 조치) XP
   const xp = Math.round((data.kpi.month?.spend || 0) / 10000) + wins * 120 + allSets.reduce((a, s) => a + (s.purchases7 || 0), 0) * 4;
@@ -341,14 +346,29 @@ export default function AdOfficeTycoon() {
         );
       })()}
 
+      {/* 🗂 메인 탭 — 화면 정리: 매일 보는 것만 앞에, 나머지는 탭 뒤로 */}
+      <div style={{ display: "flex", gap: 6, marginBottom: 14, flexWrap: "wrap" }}>
+        {[["work", "📋 오늘 업무", queue.length + alarms.length], ["report", "📊 리포트", 0],
+          ["partner", "🤝 협력사·직영", 0], ["log", "🗂 기록", 0]].map(([k, label, n]) => (
+          <button key={k} onClick={() => { SFX.click(); setTab(k); }}
+            style={{ background: tab === k ? "#ffffff10" : "transparent", color: tab === k ? C.ink : C.mid,
+              border: `1px solid ${tab === k ? C.cyan + "66" : C.border}`, borderRadius: 9, padding: "7px 14px",
+              fontSize: 12, fontWeight: tab === k ? 800 : 500, cursor: "pointer",
+              boxShadow: tab === k ? `0 0 10px ${C.cyan}22` : "none" }}>
+            {label}{n > 0 && <span style={{ marginLeft: 5, background: C.red, color: "#fff", borderRadius: 8,
+              padding: "1px 6px", fontSize: 9.5, fontWeight: 900 }}>{n}</span>}
+          </button>
+        ))}
+      </div>
+
       {/* 🚨 비상벨 — 급변 감지 */}
-      {alarms.length > 0 && (
+      {tab === "work" && alarms.length > 0 && (
         <div className="siren" style={{ background: "#FF6B8112", border: `1.5px solid ${C.red}88`, borderRadius: 14,
           padding: "10px 14px", marginBottom: 14 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
             <span className="sirenLight" style={{ fontSize: 18 }}>🚨</span>
             <b style={{ fontSize: 12.5, color: C.red }}>비상벨 — 최근 3일 급변 감지 {alarms.length}건</b>
-            <span style={{ fontSize: 10.5, color: C.mid }}>7일 평균 대비 CPA 1.8배↑ 또는 지출 2배↑</span>
+            <span style={{ fontSize: 10.5, color: C.mid }}>7일 평균 대비 CPA 1.8배↑ · 지출 2배↑ · CPM 1.5배↑(경매 과열)</span>
           </div>
           {alarms.map((s) => (
             <div key={s.id} onClick={() => jumpToDesk(s)} style={{ display: "flex", gap: 10, alignItems: "center",
@@ -362,7 +382,7 @@ export default function AdOfficeTycoon() {
       )}
 
       {/* 🎬 전광판 월 — 지금 송출 중인 소재를 크게 */}
-      {bill.length > 0 && (
+      {tab === "report" && bill.length > 0 && (
         <div style={{ background: "#0d0a12", border: `1px solid ${C.border}`, borderRadius: 14, padding: "10px 12px 12px", marginBottom: 14 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
             <span style={px}>전광판</span>
@@ -389,6 +409,7 @@ export default function AdOfficeTycoon() {
       )}
 
       {/* 복도 — 산책하는 사원들 */}
+      {tab === "report" && (
       <div style={{ position: "relative", height: 34, marginBottom: 6, overflow: "hidden" }} title="복도를 산책 중인 사원들">
         {allSets.filter((x) => x.status === "ACTIVE").slice(0, 7).map((x, i) => (
           <span key={x.id} className="walker" style={{ "--dur": `${14 + (i * 3.7) % 12}s`, "--delay": `-${(i * 5.3) % 14}s`, top: i % 2 ? 0 : 5 }}>
@@ -397,8 +418,10 @@ export default function AdOfficeTycoon() {
           </span>
         ))}
       </div>
+      )}
 
       {/* ① 사장실 대시보드 */}
+      {tab === "work" && (
       <div style={{ display: "flex", flexWrap: "wrap", gap: 12 }}>
         <div className="gradeCard" onClick={() => { SFX.click(); setBossSay(BOSS_LINES[Math.floor(Math.random() * BOSS_LINES.length)]); setTimeout(() => setBossSay(""), 3200); }}
           title="사장님(클릭하면 한마디)" style={{ ...card, minWidth: 150, flex: "0 0 auto", textAlign: "center", borderColor: grade[1], "--glow": grade[1], cursor: "pointer", position: "relative" }}>
@@ -438,9 +461,10 @@ export default function AdOfficeTycoon() {
           </div>
         </div>
       </div>
+      )}
 
       {/* 💰 회사 손익 계좌 — 진짜 돈: 전환매출 − 광고비 (메타 기준, 마진 미반영) */}
-      {data.monthly?.cur && (() => {
+      {tab === "work" && data.monthly?.cur && (() => {
         const m = data.monthly;
         const profit = (m.cur.rev || 0) - (m.cur.spend || 0);
         const pProfit = (m.prev.rev || 0) - (m.prev.spend || 0);
@@ -473,7 +497,7 @@ export default function AdOfficeTycoon() {
       })()}
 
       {/* 이달의 사원 */}
-      {mvp && (
+      {tab === "report" && mvp && (
         <div className="mvp" style={{ marginTop: 14, borderRadius: 14, padding: "12px 18px", display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
           <img src={charOf(mvp.id)} alt="" className="empWork" style={{ width: 44, height: 44, borderRadius: 10, imageRendering: "pixelated", border: "2px solid #1a1a1a" }} />
           <span style={{ fontFamily: "'Press Start 2P', monospace", fontSize: 10, color: "#1a1a1a", background: "#fff8", padding: "4px 8px", borderRadius: 6 }}>이달의 사원</span>
@@ -486,7 +510,7 @@ export default function AdOfficeTycoon() {
       )}
 
       {/* 🖼 명예의 전당 vs 반성의 구석 */}
-      {(fame.length > 0 || shame.length > 0) && (
+      {tab === "report" && (fame.length > 0 || shame.length > 0) && (
         <div style={{ display: "flex", gap: 12, marginTop: 12, flexWrap: "wrap" }}>
           {fame.length > 0 && (
             <div style={{ ...card, flex: "2 1 340px" }}>
@@ -519,7 +543,7 @@ export default function AdOfficeTycoon() {
       )}
 
       {/* 🏁 부서 대항전 — 주간(7일) 판매 랭킹 */}
-      {data.campaigns.length > 1 && (() => {
+      {tab === "report" && data.campaigns.length > 1 && (() => {
         const depts = data.campaigns.map((c) => {
           const buy = c.adsets.reduce((a, s) => a + (s.purchases7 || 0), 0);
           const sp = c.adsets.reduce((a, s) => a + (s.spend7 || 0), 0);
@@ -561,7 +585,7 @@ export default function AdOfficeTycoon() {
       })()}
 
       {/* 📅 월말 결산 — 이번 달 vs 지난 달 + 30일 지출 차트 */}
-      {data.monthly?.days30?.length > 0 && (() => {
+      {tab === "report" && data.monthly?.days30?.length > 0 && (() => {
         const { cur, prev, days30 } = data.monthly;
         const roasOf = (m) => (m.spend > 0 ? Math.round((m.rev / m.spend) * 100) / 100 : 0);
         const rows = [
@@ -634,7 +658,7 @@ export default function AdOfficeTycoon() {
       })()}
 
       {/* 오늘의 미션 */}
-      {(() => {
+      {tab === "work" && (() => {
         const todayStr = new Date().toISOString().slice(0, 10);
         const actedToday = logArr.some((l) => (l.at || "").startsWith(todayStr));
         const missions = [
@@ -658,6 +682,7 @@ export default function AdOfficeTycoon() {
       })()}
 
       {/* 🤵 AI 비서 브리핑 */}
+      {tab === "work" && (
       <div style={{ ...card, marginTop: 12, borderColor: brief ? `${C.purple}55` : C.border }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
           <span style={px}>비서실</span>
@@ -671,15 +696,36 @@ export default function AdOfficeTycoon() {
             {brief.mood && <div style={{ fontSize: 12, color: C.gold, marginBottom: 8, fontStyle: "italic" }}>💬 "{brief.mood}"</div>}
             {(brief.items || []).map((it, i) => {
               const cl = /증액/.test(it.action) ? C.neon : /중지|OFF/.test(it.action) ? C.red : /교체/.test(it.action) ? C.pink : C.gold;
+              // 🖊 원클릭 결재 — 지시 대상 세트를 실데이터에서 찾아 즉시 실행 (돈은 결재 버튼으로만)
+              const tg = String(it.target || "");
+              const hit = allSets.find((x) => x.name === tg) ||
+                allSets.find((x) => tg && (x.name.includes(tg) || tg.includes(x.name)));
+              const canAct = hit && hit.status === "ACTIVE";
               return (
                 <div key={i} style={{ display: "flex", gap: 10, alignItems: "flex-start", padding: "6px 8px", fontSize: 12,
-                  background: "#ffffff06", borderRadius: 8, marginBottom: 5 }}>
+                  background: "#ffffff06", borderRadius: 8, marginBottom: 5, flexWrap: "wrap" }}>
                   <span style={{ fontSize: 10, fontWeight: 800, color: cl, border: `1px solid ${cl}66`, borderRadius: 5,
                     padding: "2px 7px", whiteSpace: "nowrap", marginTop: 1 }}>{it.action}</span>
-                  <div style={{ flex: 1 }}>
+                  <div style={{ flex: 1, minWidth: 200 }}>
                     <b style={{ color: C.ink }}>{it.target}</b>
                     <span style={{ color: C.mid }}> — {it.reason}</span>
                   </div>
+                  {canAct && /증액/.test(it.action) && (
+                    <button className="stampBtn" style={{ ...btn(C.neon), padding: "3px 10px", fontSize: 10.5 }} disabled={busy === hit.id}
+                      onClick={() => { if (!confirm(`${hit.name}\n일예산 ₩${fmt(hit.budget)} → ₩${fmt(Math.round(hit.budget * 1.25 / 1000) * 1000)} (+25%) 결재할까요?`)) return;
+                        SFX.stamp(); act("budget", hit, { budget: Math.round(hit.budget * 1.25 / 1000) * 1000, note: "비서 지시 증액" }); }}>
+                      🖊 결재 +25%</button>
+                  )}
+                  {canAct && /중지|OFF/.test(it.action) && (
+                    <button className="stampBtn" style={{ ...btn(C.red), padding: "3px 10px", fontSize: 10.5 }} disabled={busy === hit.id}
+                      onClick={() => { if (!confirm(`${hit.name}\n광고를 중지(퇴근)시킬까요?`)) return;
+                        SFX.stamp(); act("pause", hit, { note: "비서 지시 중지" }); }}>
+                      🖊 퇴근 결재</button>
+                  )}
+                  {canAct && /유지|관찰|교체/.test(it.action) && (
+                    <button style={{ ...btn(C.mid), padding: "3px 10px", fontSize: 10.5 }}
+                      onClick={() => jumpToDesk(hit)}>👀 책상 보기</button>
+                  )}
                 </div>
               );
             })}
@@ -689,9 +735,10 @@ export default function AdOfficeTycoon() {
           </div>
         )}
       </div>
+      )}
 
       {/* 💰 연봉 협상 이벤트 */}
-      {nego && nego !== "no" && nego.s && (
+      {tab === "work" && nego && nego !== "no" && nego.s && (
         <div style={{ ...card, marginTop: 12, borderColor: `${C.gold}66`, boxShadow: `0 0 14px ${C.gold}22` }}>
           <div style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
             <span style={{ fontSize: 24 }}>{avatarOf(nego.s.name)}</span>
@@ -712,6 +759,7 @@ export default function AdOfficeTycoon() {
       )}
 
       {/* ② 결재 서류함 */}
+      {tab === "work" && (<>
       <h2 style={h2}><span style={px}>결재함</span> 사장님 결재 대기 {queue.length
         ? <span style={{ color: C.gold }}>({queue.length}건)</span>
         : <span style={{ color: C.neon, fontSize: 12 }}>결재할 서류가 없습니다 ✅ 사무실이 평화롭다</span>}</h2>
@@ -748,7 +796,57 @@ export default function AdOfficeTycoon() {
       })}
 
       {/* ③ 사무실 층별(부서) → 직원 책상 */}
-      <h2 style={h2}><span style={px}>사무실</span> 부서별 직원 현황</h2>
+      <h2 style={h2}><span style={px}>사무실</span> 부서별 직원 현황
+        <button style={{ ...btn(C.mid), padding: "3px 10px", fontSize: 10.5, marginLeft: "auto" }}
+          onClick={() => { SFX.click(); setTgtEdit(tgtEdit ? null : {
+            default: data.targets?.default || 30000,
+            rules: (data.targets?.rules || []).map((r) => ({ ...r })) }); }}>
+          ⚙️ 목표 CPA {tgtEdit ? "닫기" : "관리"}</button>
+      </h2>
+      {/* 🎯 목표 CPA 편집 — 등급·판정·브리핑의 기준값 */}
+      {tgtEdit && (
+        <div style={{ ...card, marginBottom: 12, borderColor: `${C.cyan}55` }}>
+          <div style={{ fontSize: 11, color: C.mid, marginBottom: 8 }}>
+            🎯 목표 CPA 규정 — 캠페인 이름에 <b style={{ color: C.ink }}>키워드</b>가 포함되면 해당 목표 적용, 없으면 기본값. (등급 S/A/B/C·결재 판정·비서 브리핑이 모두 이 기준으로 계산됩니다)
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6, fontSize: 12 }}>
+            <span style={{ width: 130, color: C.mid }}>기본 목표</span>
+            <input type="number" step={1000} value={tgtEdit.default}
+              onChange={(e) => setTgtEdit({ ...tgtEdit, default: Number(e.target.value) })}
+              style={{ width: 110, background: "#0d0a12", border: `1px solid ${C.border}`, borderRadius: 7, color: C.ink, padding: "5px 8px", fontSize: 12 }} />
+            <span style={{ color: C.mid, fontSize: 10.5 }}>원</span>
+          </div>
+          {tgtEdit.rules.map((r, i) => (
+            <div key={i} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 5, fontSize: 12 }}>
+              <input placeholder="캠페인 키워드 (예: 소닉플로우)" value={r.match}
+                onChange={(e) => setTgtEdit({ ...tgtEdit, rules: tgtEdit.rules.map((x, j) => j === i ? { ...x, match: e.target.value } : x) })}
+                style={{ width: 200, background: "#0d0a12", border: `1px solid ${C.border}`, borderRadius: 7, color: C.ink, padding: "5px 8px", fontSize: 12 }} />
+              <input type="number" step={1000} value={r.cpa}
+                onChange={(e) => setTgtEdit({ ...tgtEdit, rules: tgtEdit.rules.map((x, j) => j === i ? { ...x, cpa: Number(e.target.value) } : x) })}
+                style={{ width: 110, background: "#0d0a12", border: `1px solid ${C.border}`, borderRadius: 7, color: C.ink, padding: "5px 8px", fontSize: 12 }} />
+              <span style={{ color: C.mid, fontSize: 10.5 }}>원</span>
+              <button style={{ ...btn(C.red), padding: "2px 8px", fontSize: 10 }}
+                onClick={() => setTgtEdit({ ...tgtEdit, rules: tgtEdit.rules.filter((_, j) => j !== i) })}>삭제</button>
+            </div>
+          ))}
+          <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+            <button style={{ ...btn(C.mid), padding: "4px 12px", fontSize: 11 }}
+              onClick={() => setTgtEdit({ ...tgtEdit, rules: [...tgtEdit.rules, { match: "", cpa: tgtEdit.default || 30000 }] })}>＋ 규칙 추가</button>
+            <button className="btnGlow" style={{ ...btn(C.cyan), padding: "4px 14px", fontSize: 11, marginLeft: "auto" }} disabled={busy === "__tgt"}
+              onClick={async () => {
+                SFX.click(); setBusy("__tgt");
+                try {
+                  const j = await fetch("/api/ad-console", { method: "POST", headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ action: "targets", targets: tgtEdit }) }).then((r) => r.json());
+                  if (!j.ok) throw new Error(j.error);
+                  setTgtEdit(null); setEvt(["🎯", "목표 CPA 규정 개정 완료 — 새 기준으로 재평가합니다"]); setTimeout(() => setEvt(null), 3500);
+                  load(true);
+                } catch (e) { alert("저장 실패: " + e.message); }
+                setBusy(null);
+              }}>🖊 규정 저장</button>
+          </div>
+        </div>
+      )}
       {/* 🏅 성과등급 규정표 — 보상·징계의 근거를 명문화 */}
       <div style={{ fontSize: 10.5, color: C.mid, margin: "-4px 0 10px", display: "flex", gap: 12, flexWrap: "wrap" }}>
         <span style={{ color: C.mid }}>인사규정:</span>
@@ -803,9 +901,10 @@ export default function AdOfficeTycoon() {
           </div>
         );
       })}
+      </>)}
 
       {/* ④ 외주 파트너 — 네이버 */}
-      {data.naver && (() => {
+      {tab === "partner" && data.naver && (() => {
         const nR = data.naver.tot.spend ? data.naver.tot.rev / data.naver.tot.spend : 0;
         return (
         <>
@@ -841,7 +940,7 @@ export default function AdOfficeTycoon() {
       })()}
 
       {/* AD부스터 (ADVoost) — 오아 직영 */}
-      {data.advoost?.ok && data.advoost.boost?.length > 0 && (() => {
+      {tab === "partner" && data.advoost?.ok && data.advoost.boost?.length > 0 && (() => {
         const bt = data.advoost.boost_tot;
         const aR = bt.cost ? bt.rev / bt.cost : 0;
         return (
@@ -879,7 +978,7 @@ export default function AdOfficeTycoon() {
       })()}
 
       {/* ⑤ 외주 파트너 — GFA */}
-      {data.gfa && (() => {
+      {tab === "partner" && data.gfa && (() => {
         const gR = data.gfa.tot?.cost ? (data.gfa.tot.rev || 0) / data.gfa.tot.cost : 0;
         return (
         <>
@@ -916,7 +1015,7 @@ export default function AdOfficeTycoon() {
       })()}
 
       {/* ⑥ 인사기록부 */}
-      {logArr.length > 0 && (
+      {tab === "log" && logArr.length > 0 && (
         <>
           <h2 style={h2}><span style={px}>인사부</span> 📇 인사 기록부 <span style={{ fontSize: 10.5, color: C.mid, fontWeight: 400 }}>결재 후 3일 실적으로 승진/반성 판정</span></h2>
           <div style={{ background: C.panel, border: `1px solid ${C.border}`, borderRadius: 14, padding: "10px 16px", fontSize: 12 }}>
@@ -937,6 +1036,11 @@ export default function AdOfficeTycoon() {
             ))}
           </div>
         </>
+      )}
+      {tab === "log" && logArr.length === 0 && (
+        <div style={{ fontSize: 12.5, color: C.mid, padding: "20px 16px", background: C.panel, border: `1px dashed ${C.border}`, borderRadius: 12 }}>
+          📇 아직 결재 기록이 없어요 — 결재함에서 첫 결재를 하면 여기에 남습니다
+        </div>
       )}
       {/* 📋 인사카드 모달 — 세트/캠페인 14일 상세 */}
       {detail && (
