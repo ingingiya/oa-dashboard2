@@ -95,6 +95,35 @@ export async function GET(req) {
     const acct = (process.env.META_AD_ACCOUNT_ID || "").replace("act_", "");
     const url = new URL(req.url);
 
+    // ── 인사카드(세트 상세) — 14일 일별 추이 + 누적 지표 ──
+    const detailId = url.searchParams.get("detail");
+    if (detailId) {
+      const AW0 = JSON.stringify(["7d_click", "1d_view"]);
+      const isCamp = url.searchParams.get("kind") === "camp";
+      const [meta, daily, tot] = await Promise.all([
+        g(detailId, { fields: isCamp ? "name,effective_status,created_time" : "name,daily_budget,effective_status,optimization_goal,created_time" }),
+        g(`${detailId}/insights`, { date_preset: "last_14d", time_increment: "1",
+          fields: "date_start,spend,impressions,clicks,actions,catalog_segment_actions",
+          action_attribution_windows: AW0, limit: "20" }),
+        g(`${detailId}/insights`, { date_preset: "last_14d",
+          fields: "spend,impressions,reach,clicks,ctr,cpc,frequency,actions,action_values,catalog_segment_actions,catalog_segment_value",
+          action_attribution_windows: AW0 }),
+      ]);
+      const t = tot.data?.[0] || {};
+      const sp = Number(t.spend || 0), pu = purchasesOf(t), vw = viewOf(t), rev = revenueOf(t);
+      const w = pu + 0.3 * vw;
+      return Response.json({ ok: true, detail: {
+        id: detailId, name: meta.name, status: meta.effective_status, budget: Number(meta.daily_budget || 0),
+        goal: meta.optimization_goal || "", created: (meta.created_time || "").slice(0, 10),
+        days: (daily.data || []).map((d) => ({ date: (d.date_start || "").slice(5), spend: Math.round(Number(d.spend || 0)),
+          purchases: purchasesOf(d), views: viewOf(d), clicks: Number(d.clicks || 0), impressions: Number(d.impressions || 0) })),
+        tot: { spend: Math.round(sp), impressions: Number(t.impressions || 0), reach: Number(t.reach || 0),
+          clicks: Number(t.clicks || 0), ctr: Number(t.ctr || 0), cpc: Math.round(Number(t.cpc || 0)),
+          freq: Number(t.frequency || 0), purchases: pu, views: vw, revenue: Math.round(rev),
+          roas: sp ? +(rev / sp).toFixed(2) : 0, cpa: w >= 1 ? Math.round(sp / w) : null },
+      } });
+    }
+
     // ── 소재 드릴다운 ──
     const adsetId = url.searchParams.get("adset");
     if (adsetId) {
@@ -253,8 +282,25 @@ export async function POST(req) {
       await g(adsetId, { daily_budget: String(b) }, "POST"); // KRW 제로데시멀
       desc = `예산 변경 → ₩${b.toLocaleString()}`;
     } else if (action === "pause" || action === "resume") {
-      await g(adsetId, { status: action === "pause" ? "PAUSED" : "ACTIVE" }, "POST");
-      desc = action === "pause" ? "세트 OFF" : "세트 ON";
+      const st = action === "pause" ? "PAUSED" : "ACTIVE";
+      try {
+        await g(adsetId, { status: st }, "POST");
+        desc = action === "pause" ? "세트 OFF" : "세트 ON";
+      } catch (e) {
+        // CPAS(카탈로그) 세트 — 파트너 소유 제품세트 검증에 걸려 세트 단위 변경 불가(subcode 1487831)
+        // → 안의 광고를 전부 끄고/켜서 같은 효과 (실측 검증 08-28)
+        if (!/1487831|제품 세트|product set|Invalid parameter/i.test(String(e.message || e))) throw e;
+        const ads = await g(`${adsetId}/ads`, { fields: "id,effective_status", limit: "50" });
+        const targets = (ads.data || []).filter((a) =>
+          action === "pause" ? a.effective_status === "ACTIVE" : a.effective_status !== "ACTIVE" && a.effective_status !== "DELETED");
+        if (!targets.length && action === "pause") { desc = "세트 OFF(이미 전 소재 꺼짐)"; }
+        else {
+          for (const a of targets) await g(a.id, { status: st }, "POST");
+          desc = action === "pause"
+            ? `세트 OFF — CPAS 세트라 소재 ${targets.length}개 전체 OFF로 처리`
+            : `세트 ON — 소재 ${targets.length}개 ON으로 처리`;
+        }
+      }
     } else throw new Error("지원하지 않는 액션");
 
     // 조치 성공 → 캐시 무효화

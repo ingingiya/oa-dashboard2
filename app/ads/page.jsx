@@ -92,6 +92,7 @@ export default function AdOfficeTycoon() {
   const [openCamp, setOpenCamp] = useState({});
   const [showOff, setShowOff] = useState({}); // 부서별 퇴근자 표시 토글
   const [bossSay, setBossSay] = useState(""); // 사장 한마디 (등급 카드 클릭)
+  const [detail, setDetail] = useState(null); // 인사카드 모달 {busy, kind, camp, data}
   const [adsCache, setAdsCache] = useState({});
   const [adsOpen, setAdsOpen] = useState({});
   const [fx, setFx] = useState(null); // {emoji, text, kind}
@@ -135,6 +136,17 @@ export default function AdOfficeTycoon() {
       setTimeout(() => setFx(null), 2200);
       await load(true);
     } catch (e) { alert("실패: " + e.message); } finally { setBusy(""); }
+  }
+
+  // 📋 인사카드 — 세트/캠페인 14일 상세
+  async function openDetail(id, kind, campName) {
+    SFX.click();
+    setDetail({ busy: true, kind, camp: campName });
+    try {
+      const j = await fetch(`/api/ad-console?detail=${id}&kind=${kind}`).then((r) => r.json());
+      if (!j.ok) throw new Error(j.error);
+      setDetail({ busy: false, kind, camp: campName, data: j.detail });
+    } catch (e) { alert("상세 조회 실패: " + e.message); setDetail(null); }
   }
 
   // 개별 소재(광고) ON/OFF — 부진 소재만 끄는 "소재 교체" 절반
@@ -317,14 +329,21 @@ export default function AdOfficeTycoon() {
       <h2 style={h2}><span style={px}>사무실</span> 부서별 직원 현황</h2>
       {data.campaigns.map((c) => {
         const tot = c.adsets.reduce((a, s) => a + s.spend7, 0);
+        const buy = c.adsets.reduce((a, s) => a + (s.purchases7 || 0), 0);
+        const vw = c.adsets.reduce((a, s) => a + (s.view7 || 0), 0);
+        const wsum = buy + vw * 0.3;
+        const cCpa = wsum >= 1 ? Math.round(tot / wsum) : null;
         const alive = c.adsets.filter((s) => s.status === "ACTIVE").length;
         return (
           <div key={c.id} style={{ background: C.panel, border: `1px solid ${C.border}`, borderRadius: 14, marginBottom: 12, overflow: "hidden" }}>
             <button onClick={() => { SFX.click(); setOpenCamp((o) => ({ ...o, [c.id]: !o[c.id] })); }}
               style={{ width: "100%", textAlign: "left", padding: "13px 16px", background: "none", border: "none",
-                cursor: "pointer", display: "flex", justifyContent: "space-between", fontSize: 13.5, fontWeight: 800, color: C.ink }}>
-              <span>🚪 {c.name} <span style={{ color: C.mid, fontWeight: 500, fontSize: 11 }}>목표 CPA ₩{fmt(c.target)} · 근무 {alive}/{c.adsets.length}명</span></span>
-              <span style={{ color: C.gold }}>₩{fmt(tot)} {openCamp[c.id] ? "▲" : "▼"}</span>
+                cursor: "pointer", display: "flex", justifyContent: "space-between", fontSize: 13.5, fontWeight: 800, color: C.ink, gap: 8, flexWrap: "wrap" }}>
+              <span>🚪 {c.name}
+                <span onClick={(e) => { e.stopPropagation(); openDetail(c.id, "camp", c.name); }} title="캠페인 14일 상세"
+                  style={{ marginLeft: 8, fontSize: 12, cursor: "pointer" }}>📋</span>
+                <span style={{ color: C.mid, fontWeight: 500, fontSize: 11, marginLeft: 6 }}>목표 ₩{fmt(c.target)} · 근무 {alive}/{c.adsets.length}명</span></span>
+              <span style={{ color: C.gold }}>₩{fmt(tot)} <span style={{ color: C.neon, fontSize: 11.5 }}>🛒{buy}{vw ? `+👁${vw}` : ""}</span>{cCpa && <span style={{ color: C.cyan, fontSize: 11.5 }}> CPA ₩{fmt(cCpa)}</span>} {openCamp[c.id] ? "▲" : "▼"}</span>
             </button>
             {openCamp[c.id] && (() => {
               const working = c.adsets.filter((s) => s.status === "ACTIVE");
@@ -335,7 +354,7 @@ export default function AdOfficeTycoon() {
                   <div className="officeFloor" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(315px,1fr))", gap: 12 }}>
                     {list.map((s) => (
                       <Desk key={s.id} s={s} busy={busy} act={act} adsOpen={adsOpen[s.id]} ads={adsCache[s.id]}
-                        toggleAds={toggleAds} isMvp={mvp && s.id === mvp.id} talkTick={talkTick} onAdStatus={adStatus} />
+                        toggleAds={toggleAds} isMvp={mvp && s.id === mvp.id} talkTick={talkTick} onAdStatus={adStatus} onDetail={openDetail} />
                     ))}
                   </div>
                   {off.length > 0 && (
@@ -478,6 +497,69 @@ export default function AdOfficeTycoon() {
           </div>
         </>
       )}
+      {/* 📋 인사카드 모달 — 세트/캠페인 14일 상세 */}
+      {detail && (
+        <div onClick={() => setDetail(null)} style={{ position: "fixed", inset: 0, zIndex: 60, background: "#000A", display: "flex",
+          alignItems: "center", justifyContent: "center", padding: 20 }}>
+          <div onClick={(e) => e.stopPropagation()} style={{ background: C.panel, border: `1px solid ${C.border}`, borderRadius: 16,
+            padding: "18px 20px", width: "min(680px, 94vw)", maxHeight: "86vh", overflowY: "auto" }}>
+            {detail.busy || !detail.data ? (
+              <div style={{ padding: 40, textAlign: "center", color: C.cyan, fontSize: 13 }}>📇 인사 기록 열람 중…</div>
+            ) : (() => {
+              const d = detail.data;
+              const mx = Math.max(1, ...d.days.map((x) => x.spend));
+              return (
+                <>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", marginBottom: 4 }}>
+                    <span style={{ fontSize: 24 }}>{detail.kind === "camp" ? "🚪" : avatarOf(d.name)}</span>
+                    <div style={{ flex: 1, minWidth: 200 }}>
+                      <div style={{ fontSize: 14.5, fontWeight: 800 }}>{d.name}</div>
+                      <div style={{ fontSize: 11, color: C.mid }}>
+                        {detail.kind === "camp" ? "캠페인" : `세트 · ${detail.camp || ""}`} · {d.status === "ACTIVE" ? "🟢 근무 중" : "🪑 퇴근"}
+                        {d.budget ? ` · 월급 ₩${fmt(d.budget)}` : ""}{d.created ? ` · 입사 ${d.created}` : ""}
+                      </div>
+                    </div>
+                    <button onClick={() => setDetail(null)} style={{ ...btn(C.mid), padding: "4px 10px" }}>✕</button>
+                  </div>
+                  <div style={{ fontSize: 10.5, color: C.mid, margin: "10px 0 4px" }}>최근 14일 일별 지출 (🛒 = 그날 판매)</div>
+                  <div style={{ display: "flex", alignItems: "flex-end", gap: 4, height: 110, padding: "0 2px", borderBottom: `1px solid ${C.border}` }}>
+                    {d.days.map((x) => {
+                      const h = Math.max(4, Math.round((x.spend / mx) * 88));
+                      const good = x.purchases > 0;
+                      return (
+                        <div key={x.date} title={`${x.date} · ₩${fmt(x.spend)} · 🛒${x.purchases}${x.views ? `+👁${x.views}` : ""} · 클릭 ${fmt(x.clicks)}`}
+                          style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 2 }}>
+                          {good && <span style={{ fontSize: 9, color: C.neon, fontWeight: 800 }}>{x.purchases}</span>}
+                          <div style={{ width: "78%", height: h, borderRadius: "3px 3px 0 0",
+                            background: good ? `linear-gradient(${C.neon}, ${C.neon}55)` : `linear-gradient(${C.purple}88, ${C.purple}33)`,
+                            boxShadow: good ? `0 0 8px ${C.neon}55` : "none" }} />
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <div style={{ display: "flex", gap: 3, padding: "3px 2px 0", marginBottom: 12 }}>
+                    {d.days.map((x) => <span key={x.date} style={{ flex: 1, textAlign: "center", fontSize: 8, color: C.mid }}>{x.date.slice(3)}</span>)}
+                  </div>
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(105px,1fr))", gap: 8 }}>
+                    {[["💸 14일 지출", `₩${fmt(d.tot.spend)}`, C.gold], ["🛒 판매(가중)", `${d.tot.purchases}${d.tot.views ? `+👁${d.tot.views}` : ""}`, C.neon],
+                      ["🎯 CPA", d.tot.cpa ? `₩${fmt(d.tot.cpa)}` : "-", C.cyan], ["📈 ROAS", `x${d.tot.roas}`, d.tot.roas >= 3 ? C.neon : d.tot.roas >= 1 ? C.gold : C.red],
+                      ["💰 매출", `₩${fmt(d.tot.revenue)}`, C.pink], ["👀 노출", fmt(d.tot.impressions), C.purple],
+                      ["🙋 도달", fmt(d.tot.reach), C.purple], ["👆 클릭", fmt(d.tot.clicks), C.cyan],
+                      ["CTR", `${d.tot.ctr.toFixed(2)}%`, C.mid], ["CPC", `₩${fmt(d.tot.cpc)}`, C.mid],
+                      ["빈도", d.tot.freq.toFixed(1), d.tot.freq >= 4 ? C.red : C.mid]].map(([l, v, cl]) => (
+                      <div key={l} style={{ background: "#0d0a12", border: `1px solid ${C.border}`, borderRadius: 9, padding: "7px 10px" }}>
+                        <div style={{ fontSize: 9, color: C.mid }}>{l}</div>
+                        <div style={{ fontSize: 13.5, fontWeight: 800, color: cl }}>{v}</div>
+                      </div>
+                    ))}
+                  </div>
+                  {d.tot.freq >= 4 && <div style={{ marginTop: 8, fontSize: 11, color: C.red }}>⚠️ 빈도 {d.tot.freq.toFixed(1)} — 같은 사람에게 너무 자주 노출 중, 소재 교체 시점</div>}
+                </>
+              );
+            })()}
+          </div>
+        </div>
+      )}
     </Shell>
   );
 }
@@ -502,7 +584,7 @@ function Stat({ label, v, prefix = "", suffix = "", color }) {
 }
 
 // ── 직원 책상 카드 ──────────────────────────────────────────────────────
-function Desk({ s, busy, act, adsOpen, ads, toggleAds, isMvp, talkTick, onAdStatus }) {
+function Desk({ s, busy, act, adsOpen, ads, toggleAds, isMvp, talkTick, onAdStatus, onDetail }) {
   const [eb, setEb] = useState(null);
   const [pet, setPet] = useState(0); // 쓰다듬기 하트 이펙트
   const morale = s.cpa7 == null ? (s.spend7 > 0 ? 20 : 60)
@@ -581,6 +663,8 @@ function Desk({ s, busy, act, adsOpen, ads, toggleAds, isMvp, talkTick, onAdStat
         {!dead
           ? <button style={{ ...btn(C.red), padding: "4px 10px", fontSize: 11 }} disabled={busy === s.id} onClick={() => act("pause", s)} title="퇴근(OFF)">🪑 퇴근</button>
           : <button style={{ ...btn(C.neon), padding: "4px 10px", fontSize: 11 }} disabled={busy === s.id} onClick={() => act("resume", s)}>📢 재고용</button>}
+        <button style={{ ...btn(C.purple), padding: "4px 9px", fontSize: 11 }} title="14일 상세(인사카드)"
+          onClick={() => onDetail(s.id, "set", s.name)}>📋</button>
         <a href={studioUrl(s.name)} target="_blank" rel="noreferrer" title="광고 스튜디오에서 이 제품 새 소재 만들기 (제품 자동 검색)"
           style={{ ...btn(C.pink), padding: "4px 10px", fontSize: 11, textDecoration: "none" }}>🎨 소재 의뢰</a>
         {s.ctr7 > 0 && <span style={{ fontSize: 10.5, color: C.mid }}>CTR {s.ctr7.toFixed(2)}%</span>}
