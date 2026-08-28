@@ -286,10 +286,22 @@ export async function GET(req) {
         return Response.json({ ...c.payload, cachedAt: c.at, stale: true,
           staleReason: /request limit/i.test(msg) ? "메타 호출 제한 — 잠시 후 자동 회복" : msg });
     } catch {}
-    return Response.json({ ok: false,
-      error: /request limit/i.test(msg)
-        ? "메타 API 호출 제한 — 보통 1시간 내 자동 해제돼요. 잠시 후 다시 열어주세요 (해제되면 캐시가 쌓여 재발 안 함)"
-        : msg }, { status: 500 });
+    // 스냅샷조차 없으면 — 메타만 빼고 부분 렌더 (네이버 라이브·GFA·AD부스터·기록은 산다)
+    try {
+      let naver = null; try { naver = await naverYesterday(); } catch {}
+      const s2 = sb();
+      const [gfaRow, advRow, logRow] = await Promise.all([
+        s2.from("settings").select("value").eq("key", "oa_gfa_daily_v1").maybeSingle(),
+        s2.from("settings").select("value").eq("key", "oa_advoost_v1").maybeSingle(),
+        s2.from("settings").select("value").eq("key", LOG_KEY).maybeSingle(),
+      ]);
+      return Response.json({ ok: true, metaDown: true,
+        metaDownReason: /request limit/i.test(msg) ? "메타 호출 제한 (1시간 내 자동 해제)" : msg,
+        kpi: { yesterday: {}, week: {}, month: {} }, campaigns: [],
+        naver, gfa: gfaRow.data?.value || null, advoost: advRow.data?.value || null,
+        log: (logRow.data?.value?.items || []).slice(0, 30), targets: null });
+    } catch {}
+    return Response.json({ ok: false, error: msg }, { status: 500 });
   }
 }
 

@@ -183,7 +183,8 @@ export default function AdOfficeTycoon() {
 
   const queue = data.campaigns.flatMap((c) => c.adsets.filter((s) => s.judge).map((s) => ({ ...s, camp: c.name })));
   const roas = data.kpi.yesterday.roas || 0;
-  const grade = roas >= 4 ? ["S", C.gold, "전설의 광고상사"] : roas >= 2.5 ? ["A", C.neon, "잘나가는 사무실"]
+  const grade = data.metaDown ? ["?", C.mid, "메타 회선 점검 중"]
+    : roas >= 4 ? ["S", C.gold, "전설의 광고상사"] : roas >= 2.5 ? ["A", C.neon, "잘나가는 사무실"]
     : roas >= 1.5 ? ["B", C.cyan, "성실한 중소상사"] : roas >= 1 ? ["C", C.purple, "버티는 스타트업"] : ["D", C.red, "폐업 위기…"];
   const logArr = data.log || [];
   const wins = logArr.filter((l) => l.verdict === "win").length;
@@ -200,6 +201,14 @@ export default function AdOfficeTycoon() {
 
   return (
     <Shell onRefresh={() => { SFX.click(); load(true); }} fx={fx} shake={shake} mute={mute} toggleMute={toggleMute}>
+      {/* 메타 회선 불통 배너 */}
+      {data.metaDown && (
+        <div style={{ background: "#FF6B8115", border: `1px solid ${C.red}55`, borderRadius: 12, padding: "10px 16px",
+          marginBottom: 14, fontSize: 12.5, color: C.red, fontWeight: 700 }}>
+          📠 메타 본사 회선 불통 — {data.metaDownReason || "일시 오류"}. 협력사(네이버·GFA)·직영(AD부스터)·인사기록만 표시 중이에요. 회복되면 자동으로 전체가 돌아옵니다.
+        </div>
+      )}
+
       {/* 전광판 뉴스 티커 */}
       {(() => {
         const news = [];
@@ -327,6 +336,8 @@ export default function AdOfficeTycoon() {
 
       {/* ③ 사무실 층별(부서) → 직원 책상 */}
       <h2 style={h2}><span style={px}>사무실</span> 부서별 직원 현황</h2>
+      {data.metaDown && <div style={{ fontSize: 12.5, color: C.mid, padding: "14px 16px", background: C.panel, border: `1px dashed ${C.border}`, borderRadius: 12, marginBottom: 12 }}>
+        😴 메타 사원들은 회선 점검으로 잠시 자리 비움 — 아래 협력사·직영 현황은 정상 근무 중</div>}
       {data.campaigns.map((c) => {
         const tot = c.adsets.reduce((a, s) => a + s.spend7, 0);
         const buy = c.adsets.reduce((a, s) => a + (s.purchases7 || 0), 0);
