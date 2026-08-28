@@ -228,10 +228,12 @@ export default function AdOfficeTycoon() {
   const [weekly, setWeekly] = useState(null); // 📜 주간 경영 리포트 (신문)
   const [weeklyBusy, setWeeklyBusy] = useState(false);
   const [realloc, setRealloc] = useState(null); // 💸 회수 예산 재배치 제안 {freed, from}
+  const [bet, setBet] = useState(null); // 🎲 사장의 베팅 {date, pickId, pickName, map, streak, best, last} — 표시 전용
 
   useEffect(() => {
     try { const m = localStorage.getItem("oa_ads_mute") === "1"; setMute(m); sfxOn = !m; } catch {}
     try { setSigner(localStorage.getItem("oa_ads_signer_v1") || ""); } catch {}
+    try { setBet(JSON.parse(localStorage.getItem("oa_ads_bet_v1") || "null")); } catch {}
     const t = setTimeout(() => setBoot(false), 1500);
     const talk = setInterval(() => setTalkTick((x) => x + 1), 6000); // 말풍선 로테이션
     const auto = setInterval(() => load(false), 5 * 60_000); // 🔄 5분 자동 새로고침 (서버 캐시 내 — 메타 호출 없음)
@@ -259,6 +261,42 @@ export default function AdOfficeTycoon() {
       }
       localStorage.setItem("oa_ads_todaybuy_v1", JSON.stringify({ date: today, map }));
     } catch {}
+  }, [data]);
+
+  // 🎲 사장의 베팅 — 오늘 계약 스냅샷 갱신 + 날짜 바뀌면 판정 (표시 전용, 돈 안 움직임)
+  useEffect(() => {
+    if (!data?.campaigns) return;
+    const today = new Date(Date.now() + 9 * 3600 * 1000).toISOString().slice(0, 10); // KST
+    let b = null;
+    try { b = JSON.parse(localStorage.getItem("oa_ads_bet_v1") || "null"); } catch {}
+    if (!b?.pickId || !b.date) return;
+    const sets = data.campaigns.flatMap((c) => c.adsets);
+    if (b.date === today) {
+      // 오늘 계약 수 스냅샷 계속 갱신 — 내일 아침 판정 재료 (마지막 방문 시점 기준)
+      const map = {};
+      for (const s of sets) if ((s.buyToday || 0) > 0) map[String(s.id)] = { n: s.buyToday, name: s.name };
+      const nb = { ...b, map };
+      try { localStorage.setItem("oa_ads_bet_v1", JSON.stringify(nb)); } catch {}
+      setBet(nb);
+    } else if (b.date < today) {
+      // 지난 베팅 판정 — 그날 마지막 스냅샷의 계약왕과 비교
+      const entries = Object.entries(b.map || {});
+      const maxN = entries.reduce((a, [, v]) => Math.max(a, v.n || 0), 0);
+      const winners = entries.filter(([, v]) => (v.n || 0) === maxN && maxN > 0);
+      const win = maxN > 0 ? winners.some(([id]) => id === String(b.pickId)) : null; // 계약 0건이면 무승부(연속 유지)
+      const streak = win === true ? (b.streak || 0) + 1 : win === false ? 0 : (b.streak || 0);
+      const nb = { date: "", pickId: null, pickName: "", map: {}, streak, best: Math.max(b.best || 0, streak),
+        last: { date: b.date, win, pickName: b.pickName, winName: winners[0]?.[1]?.name || "", winBuy: maxN } };
+      try { localStorage.setItem("oa_ads_bet_v1", JSON.stringify(nb)); } catch {}
+      setBet(nb);
+      if (win != null) {
+        if (win) SFX.bonus(); else SFX.click();
+        setFx({ emoji: win ? "🎯" : "😅", kind: win ? "bonus" : "fire",
+          text: win ? `베팅 적중! ${prodKeyOf(b.pickName) || b.pickName} 계약왕 등극 (🔥${streak}연속)`
+            : `베팅 빗나감 — 계약왕은 ${prodKeyOf(nb.last.winName) || nb.last.winName} (${maxN}건)` });
+        setTimeout(() => setFx(null), 3200);
+      }
+    }
   }, [data]);
 
   // 🎲 랜덤 사무실 이벤트 — 40초마다 20% 확률, 4초 토스트 (업무 방해 없음)
@@ -391,12 +429,16 @@ export default function AdOfficeTycoon() {
   }
 
   // 전광판/전당 클릭 → 담당 직원 책상으로 점프 (부서 펼치고 스크롤 + 스포트라이트)
-  function jumpToDesk(s) {
+  function jumpToDesk(s, openAds = false) {
     SFX.click();
     setTab("work"); // 책상은 오늘 업무 탭에 있음 — 리포트 탭에서 점프해도 도착하게
     // ★allSets 경유 호출은 campId가 없음 — 캠페인에서 역추적 (없으면 부서가 안 펼쳐져 스크롤 실패)
     const campId = s.campId || data?.campaigns.find((c) => c.adsets.some((x) => x.id === s.id))?.id;
     if (campId) setOpenCamp((o) => ({ ...o, [campId]: true }));
+    if (openAds) { // 🎨 소재 교체 경로 — 포트폴리오까지 바로 펼쳐서 ⏸/🎨 즉시 가능하게
+      setAdsOpen((o) => ({ ...o, [s.id]: true }));
+      if (!adsCache[s.id]) jfetch(`/api/ad-console?adset=${s.id}`).then((j) => { if (j.ok) setAdsCache((c) => ({ ...c, [s.id]: j.ads })); }).catch(() => {});
+    }
     setSpot(s.id);
     setTimeout(() => document.getElementById("desk-" + s.id)?.scrollIntoView({ behavior: "smooth", block: "center" }), 200);
     setTimeout(() => setSpot(null), 2600);
@@ -673,6 +715,72 @@ export default function AdOfficeTycoon() {
                 </div>
               ))}
             </div>
+          </div>
+        );
+      })()}
+
+      {/* 🎲 사장의 베팅 — 오늘의 계약왕 맞히기 (표시 전용, 돈 안 움직임) */}
+      {tab === "work" && (() => {
+        const today = new Date(Date.now() + 9 * 3600 * 1000).toISOString().slice(0, 10); // KST
+        const cands = allSets.filter((s) => s.status === "ACTIVE" && (s.spend7 || 0) > 0)
+          .sort((a, b) => (b.purchases7 || 0) - (a.purchases7 || 0)).slice(0, 4);
+        if (cands.length < 2) return null;
+        const placed = bet?.date === today && bet.pickId;
+        const streak = bet?.streak || 0, best = bet?.best || 0;
+        const last = bet?.last;
+        // 오늘 라이브 순위 — buyToday 기준
+        const liveMax = Math.max(...allSets.map((s) => s.buyToday || 0), 0);
+        const leader = liveMax > 0 ? allSets.find((s) => (s.buyToday || 0) === liveMax) : null;
+        const myPick = placed ? allSets.find((s) => String(s.id) === String(bet.pickId)) : null;
+        const placeBet = (s) => {
+          SFX.stamp();
+          const nb = { date: today, pickId: String(s.id), pickName: s.name, map: {},
+            streak, best, last: bet?.last || null };
+          try { localStorage.setItem("oa_ads_bet_v1", JSON.stringify(nb)); } catch {}
+          setBet(nb);
+          setFx({ emoji: "🎲", text: `${prodKeyOf(s.name) || s.name} 사원에게 베팅! 내일 아침 판정`, kind: "bonus" });
+          setTimeout(() => setFx(null), 2400);
+        };
+        return (
+          <div style={{ background: `${C.purple}0A`, border: `1px solid ${placed ? C.purple + "66" : C.border}`, borderRadius: 14,
+            padding: "10px 14px", marginBottom: 14 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginBottom: placed || cands.length ? 7 : 0 }}>
+              <span style={px}>베팅</span>
+              <b style={{ fontSize: 12, color: C.purple }}>🎲 사장의 베팅 — 오늘 계약왕은 누구?</b>
+              {streak > 0 && <span style={{ fontSize: 10.5, color: C.gold, fontWeight: 800 }}>🔥 {streak}연속 적중</span>}
+              {best > 1 && <span style={{ fontSize: 9.5, color: C.mid }}>최고 기록 {best}연속</span>}
+              {last && last.win != null && (
+                <span style={{ fontSize: 9.5, color: last.win ? C.neon : C.red, marginLeft: "auto" }}>
+                  지난 판정: {last.win ? "🎯 적중" : "😅 빗나감"} — 계약왕 {prodKeyOf(last.winName) || last.winName || "-"} ({last.winBuy}건)
+                </span>
+              )}
+            </div>
+            {!placed ? (
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                {cands.map((s) => (
+                  <button key={s.id} onClick={() => placeBet(s)}
+                    style={{ display: "flex", alignItems: "center", gap: 7, background: "#0d0a1266", border: `1px solid ${C.border}`,
+                      borderRadius: 10, padding: "6px 10px", cursor: "pointer", color: C.ink, fontSize: 11 }}>
+                    <img src={charOf(s.id)} alt="" style={{ width: 26, height: 26, borderRadius: 6, imageRendering: "pixelated" }} />
+                    <span style={{ textAlign: "left" }}>
+                      <b style={{ display: "block", maxWidth: 130, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{prodKeyOf(s.name) || s.name}</b>
+                      <span style={{ fontSize: 9, color: C.mid }}>7일 🛒{s.purchases7 || 0} · 오늘 🛒{s.buyToday || 0}</span>
+                    </span>
+                  </button>
+                ))}
+                <span style={{ fontSize: 9.5, color: C.mid, alignSelf: "center" }}>한 명 지명 → 내일 첫 출근 때 판정 (실데이터)</span>
+              </div>
+            ) : (
+              <div style={{ display: "flex", gap: 10, alignItems: "center", fontSize: 11.5, flexWrap: "wrap" }}>
+                <img src={charOf(bet.pickId)} alt="" style={{ width: 30, height: 30, borderRadius: 7, imageRendering: "pixelated", border: `1px solid ${C.purple}66` }} />
+                <span>
+                  오늘의 지명: <b style={{ color: C.purple }}>{prodKeyOf(bet.pickName) || bet.pickName}</b>
+                  <span style={{ color: C.mid }}> · 현재 🛒{myPick?.buyToday || 0}건</span>
+                  {leader && <span style={{ color: C.mid }}> · 현재 1위 {prodKeyOf(leader.name) || leader.name} ({liveMax}건)</span>}
+                </span>
+                <span style={{ fontSize: 9.5, color: C.mid, marginLeft: "auto" }}>내일 아침 판정 · 하루 1회</span>
+              </div>
+            )}
           </div>
         );
       })()}
@@ -1440,7 +1548,11 @@ export default function AdOfficeTycoon() {
                       onClick={() => act("pause", hit, { note: "비서 지시 중지" })}>
                       🖊 퇴근 결재</button>
                   )}
-                  {canAct && /유지|관찰|교체/.test(it.action) && (
+                  {canAct && /교체/.test(it.action) && (
+                    <button style={{ ...btn(C.pink), padding: "3px 10px", fontSize: 10.5 }}
+                      onClick={() => jumpToDesk(hit, true)}>🎨 소재 보러 가기</button>
+                  )}
+                  {canAct && /유지|관찰/.test(it.action) && (
                     <button style={{ ...btn(C.mid), padding: "3px 10px", fontSize: 10.5 }}
                       onClick={() => jumpToDesk(hit)}>👀 책상 보기</button>
                   )}
@@ -2211,7 +2323,15 @@ function Desk({ s, busy, act, adsOpen, ads, toggleAds, isMvp, talkTick, onAdStat
                 </div>
                 <div style={{ fontSize: 10, color: C.mid, marginTop: 6 }}>
                   판정: <b style={{ color: C.gold }}>{W.name.slice(0, 24)}</b> 승 —
-                  패자 <b style={{ color: C.red }}>{L.name.slice(0, 24)}</b>는 <b style={{ color: C.red }}>교체 후보</b> (아래 ⏸로 끄고 🎨 소재 의뢰)
+                  패자 <b style={{ color: C.red }}>{L.name.slice(0, 24)}</b>는 <b style={{ color: C.red }}>교체 후보</b>
+                </div>
+                <div style={{ display: "flex", gap: 6, marginTop: 5, flexWrap: "wrap" }}>
+                  <button onClick={() => onAdStatus(s.id, L, true)}
+                    style={{ background: `${C.red}1E`, color: C.red, border: `1px solid ${C.red}66`, borderRadius: 7,
+                      padding: "3px 10px", fontSize: 10, fontWeight: 800, cursor: "pointer" }}>⏸ 패자 소재 바로 끄기</button>
+                  <a href={studioUrl(s.name)} target="_blank" rel="noreferrer" title="광고 스튜디오에서 교체용 새 소재 만들기"
+                    style={{ background: `${C.pink}16`, color: C.pink, border: `1px solid ${C.pink}55`, borderRadius: 7,
+                      padding: "3px 10px", fontSize: 10, fontWeight: 800, textDecoration: "none" }}>🎨 새 소재 의뢰</a>
                 </div>
               </div>
             );
