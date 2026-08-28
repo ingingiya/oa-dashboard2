@@ -86,7 +86,7 @@ const Px = ({ k, s = 20, style }) => (
   <img src={PX[k]} alt="" style={{ width: s, height: s, borderRadius: Math.max(4, Math.round(s / 6)),
     imageRendering: "pixelated", verticalAlign: "middle", flex: "none", ...style }} />
 );
-const BANNER_IMG = SPRITE_BASE + "px3_officebg.png"; // 🌃 야간 사무실 배경 (Comfy Cloud 21:9, 구 배너 mtcop9ce_hud_banner.png)
+const BANNER_IMG = SPRITE_BASE + "mtcop9ce_hud_banner.png"; // 구 배너 복원 (px3_officebg는 사용자 반려 — 스토리지 보존)
 // 책상 소품 — 세트 id 시드로 사원마다 다른 소품 하나씩
 const DESK_PROPS = ["coffee", "plant", "lamp", "clock"];
 const propOf = (id = "") => DESK_PROPS[[...String(id)].reduce((a, ch) => a + ch.charCodeAt(0), 0) % DESK_PROPS.length];
@@ -549,7 +549,7 @@ export default function AdOfficeTycoon() {
 
       {/* 픽셀 사무실 배너 */}
       <div style={{ position: "relative", borderRadius: 16, overflow: "hidden", marginBottom: 14, border: `1px solid ${C.border}` }}>
-        <img src={BANNER_IMG} alt="" style={{ width: "100%", height: 170, objectFit: "cover", objectPosition: "center 62%", display: "block", imageRendering: "pixelated" }} />
+        <img src={BANNER_IMG} alt="" style={{ width: "100%", height: 150, objectFit: "cover", display: "block", imageRendering: "pixelated" }} />
         <div style={{ position: "absolute", inset: 0, background: "linear-gradient(90deg, #141019EE 0%, #14101966 40%, transparent 70%)" }} />
         <div style={{ position: "absolute", left: 18, bottom: 14 }}>
           <div style={{ fontFamily: "'Press Start 2P', monospace", fontSize: 13, color: "#4ADE80", textShadow: "0 0 12px #4ADE80AA" }}>OA 광고상사</div>
