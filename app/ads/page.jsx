@@ -83,6 +83,7 @@ const PX = Object.fromEntries([
   ...["officebg", "deskset", "coffee", "plant", "lamp", "fax", "clock", "rep_naver", "rep_boost", "rep_gfa"].map((k) => [k, SPRITE_BASE + `px3_${k}.png`]),
   ...["bld1", "bld2", "bld3", "bld4", "bld5", "rep_park"].map((k) => [k, SPRITE_BASE + `px4_${k}.png`]),
   ...["rooftop", "headhunter"].map((k) => [k, SPRITE_BASE + `px5_${k}.png`]),
+  ...["nurse", "auditor", "fortune"].map((k) => [k, SPRITE_BASE + `px6_${k}.png`]),
 ]);
 const Px = ({ k, s = 20, style }) => (
   <img src={PX[k]} alt="" style={{ width: s, height: s, borderRadius: Math.max(4, Math.round(s / 6)),
@@ -140,6 +141,19 @@ const RIVALS = ["대박기획", "황금손애드", "클릭왕상사", "전환의
 const HH_LINES = ["조용히 얘기 좀… 연봉은 부르는 대로 드립니다.", "이런 인재가 왜 여기 있습니까?", "명함 한 장 두고 갑니다. 생각 있으면 연락 주세요.", "우리 회사엔 야근이 없습니다. 어떻습니까?"];
 // 🚬 옥상 휴게실 — 부진·중지 사원들의 한숨 (표시 전용)
 const SIGH_LINES = ["하… 담배는 안 피우는데 그냥 올라왔어요", "내 CPA가 왜 이럴까…", "바람이나 쐬려고요…", "자판기 커피가 제일 싸고 맛있네요", "내일은 터지겠지… 내일은…", "사장님이 절 잊으신 건 아니겠죠"];
+
+// 🏥 의무실 — 세트 상태를 병명으로 진단 (표시 전용)
+function diagnose(s) {
+  const ills = [];
+  if (s.cpa7 && s.cpa3 && s.cpa3 >= s.cpa7 * 1.5) ills.push({ ill: "과로 증후군", why: `CPA ₩${fmt(s.cpa7)}→₩${fmt(s.cpa3)} 악화`, rx: "소재 교체 or 휴식(중지) 검토" });
+  if (s.cpm7 > 0 && s.cpm3 >= s.cpm7 * 1.3) ills.push({ ill: "고혈압(경매 과열)", why: `CPM ₩${fmt(s.cpm7)}→₩${fmt(s.cpm3)}`, rx: "타겟 넓히기 or 입찰 점검" });
+  if ((s.ctr7 || 0) > 0 && s.ctr7 < 1) ills.push({ ill: "시력 저하", why: `CTR ${s.ctr7}% — 소재가 눈에 안 띔`, rx: "썸네일·훅 교체" });
+  if ((s.spend7 || 0) >= 30000 && !(s.purchases7 > 0)) ills.push({ ill: "식욕부진(무전환)", why: `₩${fmt(s.spend7)} 쓰고 계약 0건`, rx: "랜딩·오퍼 정밀 검진" });
+  return ills;
+}
+// 🍀 오늘의 운세 문구 풀 (날짜 시드)
+const LUCK_GOOD = ["금전운 대통 — 오늘 들어오는 계약은 놓치지 마세요", "귀인(고효율 타겟)이 서쪽에서 옵니다", "숫자가 웃는 날 — 증액 결재에 길함", "오전에 맺은 계약이 오후에 두 배로"];
+const LUCK_BAD = ["지출수 조심 — 오늘은 큰 결재를 삼가세요", "경매장에 살(煞)이 끼었으니 입찰 과열 주의", "서두르면 CPA가 달아나는 날", "오늘은 관망이 상책 — 내일 다시 보세요"];
 
 // 🏆 업적 컬렉션 — 전부 실데이터에서 파생 (표시 전용, 돈과 무관)
 function calcAchievements(data) {
@@ -726,6 +740,34 @@ export default function AdOfficeTycoon() {
         );
       })()}
 
+      {/* 💰 연봉 협상 시즌 — 성과 대비 저예산 사원의 증액 요구 (표시 전용, 결재는 책상에서) */}
+      {tab === "work" && (() => {
+        const asks = allSets.filter((s) => s.status === "ACTIVE" && s.cpa7 && s.target && s.cpa7 <= s.target * 0.85
+          && (s.spend7 || 0) / 7 >= (s.budget || 0) * 0.7 && (s.purchases7 || 0) >= 2)
+          .sort((a, b) => (b.purchases7 || 0) - (a.purchases7 || 0)).slice(0, 2);
+        if (!asks.length) return null;
+        return (
+          <div style={{ background: `${C.neon}08`, border: `1px solid ${C.neon}44`, borderRadius: 14, padding: "10px 14px", marginBottom: 14 }}>
+            <div style={{ fontSize: 11.5, fontWeight: 800, color: C.neon, marginBottom: 6 }}>💰 연봉 협상 테이블 — 증액을 요구하는 사원들</div>
+            {asks.map((s) => {
+              const disc = Math.round((1 - s.cpa7 / s.target) * 100);
+              return (
+                <div key={s.id} style={{ display: "flex", gap: 10, alignItems: "center", padding: "4px 0", fontSize: 11.5, flexWrap: "wrap" }}>
+                  <img src={charOf(s.id)} alt="" style={{ width: 28, height: 28, borderRadius: 7, imageRendering: "pixelated", border: `1px solid ${C.border}` }} />
+                  <b style={{ maxWidth: 220, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.name}</b>
+                  <span style={{ fontStyle: "italic", color: C.mid, flex: 1, minWidth: 200 }}>
+                    “목표보다 <b style={{ color: C.neon }}>{disc}% 싸게</b>(CPA ₩{fmt(s.cpa7)}) 계약 {s.purchases7}건 따는데,
+                    일당 ₩{fmt(s.budget)}에 예산이 매일 바닥납니다. 올려주시죠 사장님!”
+                  </span>
+                  <button onClick={() => jumpToDesk(s)} style={{ background: C.neon, color: "#0d0a12", border: "none",
+                    borderRadius: 8, padding: "5px 10px", fontSize: 10.5, fontWeight: 900, cursor: "pointer" }}>협상 테이블로 →</button>
+                </div>
+              );
+            })}
+          </div>
+        );
+      })()}
+
       {/* 🚨 비상벨 — 급변 감지 */}
       {tab === "work" && alarms.length > 0 && (
         <div className="siren" style={{ background: "#FF6B8112", border: `1.5px solid ${C.red}88`, borderRadius: 14,
@@ -988,6 +1030,62 @@ export default function AdOfficeTycoon() {
         );
       })()}
 
+      {/* 🍀 오늘의 운세 + 🕵 감사팀 실사 (표시 전용) */}
+      {tab === "work" && (() => {
+        const seed = Number(new Date(Date.now() + 9 * 3600 * 1000).toISOString().slice(0, 10).replace(/-/g, ""));
+        const act = allSets.filter((s) => s.status === "ACTIVE" && (s.spend7 || 0) > 0);
+        const goods = act.filter((s) => s.cpa7 && s.cpa3 && s.cpa3 <= s.cpa7);
+        const bads = act.filter((s) => s.cpa7 && s.cpa3 && s.cpa3 > s.cpa7 * 1.2);
+        const lucky = goods.length ? goods[seed % goods.length] : null;
+        const unlucky = bads.length ? bads[(seed + 3) % bads.length] : null;
+        // 감사 조건 — 월 예산 한도 초과 페이스
+        let audit = null;
+        if ((data.targets?.monthCap || 0) > 0 && data.monthly?.cur) {
+          const cap = data.targets.monthCap, now = new Date();
+          const dim = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+          const proj = Math.round((data.monthly.cur.spend || 0) / now.getDate() * dim);
+          if (proj > cap) audit = { cap, proj, tops: [...act].sort((a, b) => (b.spend7 || 0) - (a.spend7 || 0)).slice(0, 3) };
+        }
+        if (!lucky && !unlucky && !audit) return null;
+        return (
+          <div style={{ display: "flex", gap: 12, marginTop: 14, flexWrap: "wrap" }}>
+            {(lucky || unlucky) && (
+              <div style={{ ...card, flex: "1 1 300px", display: "flex", gap: 12, alignItems: "center", borderColor: `${C.purple}44` }}>
+                <Px k="fortune" s={50} style={{ border: `1px solid ${C.border}`, borderRadius: 12 }} />
+                <div style={{ flex: 1, minWidth: 0, fontSize: 11 }}>
+                  <div style={{ fontSize: 11.5, fontWeight: 800, color: C.purple, marginBottom: 3 }}>🍀 광고상사 점집 — 오늘의 사원 운세</div>
+                  {lucky && <div style={{ marginBottom: 2 }}>
+                    <b style={{ color: C.gold }}>吉 {avatarOf(lucky.name)} {lucky.name}</b>
+                    <span style={{ display: "block", fontSize: 10, color: C.mid, fontStyle: "italic" }}>
+                      “{LUCK_GOOD[seed % LUCK_GOOD.length]}” — 3일 CPA ₩{fmt(lucky.cpa3)}로 상승세라 하네요</span>
+                  </div>}
+                  {unlucky && <div>
+                    <b style={{ color: "#5B9BFF" }}>凶 {avatarOf(unlucky.name)} {unlucky.name}</b>
+                    <span style={{ display: "block", fontSize: 10, color: C.mid, fontStyle: "italic" }}>
+                      “{LUCK_BAD[seed % LUCK_BAD.length]}” — CPA ₩{fmt(unlucky.cpa7)}→₩{fmt(unlucky.cpa3)} 기운이 탁합니다</span>
+                  </div>}
+                </div>
+              </div>
+            )}
+            {audit && (
+              <div className="siren" style={{ ...card, flex: "1 1 320px", display: "flex", gap: 12, alignItems: "center", borderColor: `${C.red}66` }}>
+                <Px k="auditor" s={50} style={{ border: `1px solid ${C.border}`, borderRadius: 12 }} />
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 11.5, fontWeight: 800, color: C.red }}>🕵 본사 감사팀 실사 — 예산 초과 페이스 적발</div>
+                  <div style={{ fontSize: 10.5, color: C.mid, margin: "3px 0" }}>
+                    이 페이스면 월말 <b style={{ color: C.red }}>₩{fmt(audit.proj)}</b> — 한도 ₩{fmt(audit.cap)} 초과.
+                    “장부 좀 봅시다. 큰손이 누굽니까?”
+                  </div>
+                  <div style={{ fontSize: 10, color: C.mid }}>
+                    지목: {audit.tops.map((s) => `${avatarOf(s.name)}₩${fmt(s.spend7)}`).join(" · ")} — 지출 상위 3인 소명 요망 📋
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        );
+      })()}
+
       {/* 이달의 사원 */}
       {tab === "report" && mvp && (
         <div className="mvp" style={{ marginTop: 14, borderRadius: 14, padding: "12px 18px", display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
@@ -1035,6 +1133,45 @@ export default function AdOfficeTycoon() {
           )}
         </div>
       )}
+
+      {/* 🏥 의무실 — 세트 건강검진 (표시 전용) */}
+      {tab === "report" && (() => {
+        const act = withCamp.filter((s) => s.status === "ACTIVE" && (s.spend7 || 0) > 0);
+        const patients = act.map((s) => ({ s, ills: diagnose(s) })).filter((p) => p.ills.length)
+          .sort((a, b) => b.ills.length - a.ills.length).slice(0, 4);
+        const healthy = act.length - patients.length;
+        if (!act.length) return null;
+        return (
+          <div style={{ ...card, marginTop: 12, borderColor: patients.length ? "#FF9FB050" : `${C.neon}44` }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: patients.length ? 8 : 0 }}>
+              <Px k="nurse" s={44} style={{ border: `1px solid ${C.border}`, borderRadius: 10 }} />
+              <div>
+                <b style={{ fontSize: 12, color: "#FF9FB0" }}>🏥 의무실 — 정기 건강검진 결과</b>
+                <div style={{ fontSize: 10, color: C.mid }}>
+                  진료 대상 {act.length}명 중 <b style={{ color: C.neon }}>{healthy}명 건강</b>
+                  {patients.length ? <> · <b style={{ color: C.red }}>{patients.length}명 요주의</b> — 클릭=책상 점프</> : " — 전원 이상 무! 💪"}
+                </div>
+              </div>
+            </div>
+            {patients.map(({ s, ills }) => (
+              <div key={s.id} onClick={() => jumpToDesk(s)} style={{ display: "flex", gap: 10, alignItems: "flex-start", cursor: "pointer",
+                padding: "6px 9px", borderRadius: 9, background: "#0d0a1266", marginBottom: 5, fontSize: 11 }} title={s.name}>
+                <span style={{ fontSize: 15 }}>{avatarOf(s.name)}</span>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <b style={{ display: "block", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.name}</b>
+                  {ills.map((x) => (
+                    <div key={x.ill} style={{ fontSize: 10, color: C.mid }}>
+                      <b style={{ color: "#FF9FB0" }}>{x.ill}</b> — {x.why} · <span style={{ color: C.cyan }}>처방: {x.rx}</span>
+                    </div>
+                  ))}
+                </div>
+                <span style={{ fontSize: 9, fontWeight: 900, color: "#0d0a12", background: "#FF9FB0", borderRadius: 4,
+                  padding: "2px 5px", flex: "none" }}>진단서</span>
+              </div>
+            ))}
+          </div>
+        );
+      })()}
 
       {/* 🚬 옥상 휴게실 — 부진·중지 사원들의 한숨 (표시 전용) */}
       {tab === "report" && (() => {
