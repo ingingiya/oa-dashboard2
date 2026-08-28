@@ -232,7 +232,6 @@ export default function AdOfficeTycoon() {
   const [realloc, setRealloc] = useState(null); // 💸 회수 예산 재배치 제안 {freed, from}
   const [bet, setBet] = useState(null); // 🎲 사장의 베팅 {date, pickId, pickName, map, streak, best, last} — 표시 전용
   const [daily, setDaily] = useState(null); // 📅 출근부 — 하루 첫 접속 어제 정산 모달
-  const [planOpen, setPlanOpen] = useState(false); // 📝 채용 기획서 폼 토글
   const [planForm, setPlanForm] = useState({ product: "", concept: "", target: "", usp: "", ref: "" });
   const [planDrafts, setPlanDrafts] = useState(null); // 🤖 AI 초안 3안
   const [planBusy, setPlanBusy] = useState(false);
@@ -1903,7 +1902,7 @@ export default function AdOfficeTycoon() {
       {tab === "plan" && (() => {
         const plans = data.plans || [];
         const pending = plans.filter((p) => p.status === "pending");
-        const decided = plans.filter((p) => p.status !== "pending").slice(0, 4);
+        const decided = plans.filter((p) => p.status !== "pending").slice(0, 10);
         const setF = (k) => (e) => setPlanForm((f) => ({ ...f, [k]: e.target.value }));
         const submitPlan = async () => {
           if (!signer) return alert("먼저 우측 상단에서 도장 이름을 설정하세요");
@@ -1940,80 +1939,145 @@ export default function AdOfficeTycoon() {
             setPlanDrafts(j.drafts || []);
           } catch (e) { alert("초안 실패: " + e.message); } finally { setPlanBusy(false); }
         };
+        const approvedN = plans.filter((p) => p.status === "approved").length;
+        const decidedN = plans.filter((p) => p.status !== "pending").length;
+        const inpS = { fontSize: 11.5, background: "#0d0a12", color: C.ink, border: `1px solid ${C.border}`, borderRadius: 8, padding: "8px 10px" };
+        const lbl = (t) => <span style={{ fontSize: 9, color: C.mid, letterSpacing: 1, fontWeight: 700 }}>{t}</span>;
         return (
-          <div style={{ ...card, marginBottom: 12 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-              <b style={{ fontSize: 12, color: C.ink }}>📝 신규 채용 기획서 <span style={{ color: C.mid, fontWeight: 400, fontSize: 10.5 }}>— 새 광고는 여기서 태어나요 (제출 1pt · 채택 3pt)</span></b>
-              {pending.length > 0 && <span style={{ fontSize: 10, fontWeight: 800, color: C.gold, border: `1px solid ${C.gold}66`, borderRadius: 99, padding: "1px 7px" }}>결재 대기 {pending.length}</span>}
-              <span style={{ flex: 1 }} />
-              <button style={{ ...btn(C.cyan), padding: "3px 10px", fontSize: 11 }} onClick={() => { SFX.click(); setPlanOpen((o) => !o); }}>
-                {planOpen ? "✕ 닫기" : "＋ 기획서 쓰기"}</button>
+          <div>
+            {/* ── 기획실 히어로 ── */}
+            <div style={{ position: "relative", overflow: "hidden", borderRadius: 14, marginBottom: 12, padding: "18px 20px",
+              background: `linear-gradient(120deg, #241B31 0%, #1A2236 60%, #16283A 100%)`, border: `1px solid ${C.cyan}44` }}>
+              <div style={{ position: "absolute", right: -6, top: -18, fontSize: 92, opacity: 0.1, transform: "rotate(12deg)" }}>📝</div>
+              <div style={{ position: "absolute", left: 0, top: 0, right: 0, height: 3,
+                background: `linear-gradient(90deg, ${C.cyan}, ${C.purple}, ${C.pink})` }} />
+              <div style={{ ...px, marginBottom: 7 }}>PLANNING DEPT.</div>
+              <div style={{ fontSize: 19, fontWeight: 900, color: C.ink }}>기획실
+                <span style={{ color: C.mid, fontWeight: 400, fontSize: 12, marginLeft: 8 }}>새 광고는 여기서 태어난다</span></div>
+              <div style={{ display: "flex", gap: 6, marginTop: 10, flexWrap: "wrap" }}>
+                {[[`📚 누적 기획 ${plans.length}건`, C.cyan], [`✅ 채택 ${approvedN}건`, C.neon],
+                  [`📈 채택률 ${decidedN ? Math.round((approvedN / decidedN) * 100) : 0}%`, C.purple],
+                  ...(pending.length ? [[`🖊 결재 대기 ${pending.length}건`, C.gold]] : [])].map(([t, col], i) => (
+                  <span key={i} style={{ fontSize: 10.5, fontWeight: 800, color: col, background: `${col}14`,
+                    border: `1px solid ${col}55`, borderRadius: 99, padding: "3px 10px" }}>{t}</span>
+                ))}
+              </div>
             </div>
-            {planOpen && (
-              <div style={{ marginTop: 10, display: "flex", flexDirection: "column", gap: 6 }}>
-                <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-                  <input placeholder="제품명 *" value={planForm.product} onChange={setF("product")}
-                    style={{ flex: "1 1 160px", fontSize: 11.5, background: "#0d0a12", color: C.ink, border: `1px solid ${C.border}`, borderRadius: 7, padding: "6px 9px" }} />
-                  <input placeholder="타겟 (예: 3040 여성, 여름 출퇴근족)" value={planForm.target} onChange={setF("target")}
-                    style={{ flex: "2 1 220px", fontSize: 11.5, background: "#0d0a12", color: C.ink, border: `1px solid ${C.border}`, borderRadius: 7, padding: "6px 9px" }} />
+
+            {/* ── 3단계 안내 ── */}
+            <div style={{ display: "flex", gap: 8, marginBottom: 14, flexWrap: "wrap", alignItems: "stretch" }}>
+              {[["01", "📝 기획서 제출", "제품·컨셉만 있으면 OK", "커리어 +1pt", C.cyan],
+                ["02", "🖊 사장 결재", "채택되면 전사 속보", "기획자 +3pt", C.gold],
+                ["03", "🎨 소재 제작", "스튜디오 바로 연결", "내 광고 탄생", C.neon]].map(([n, t, d, pt, col], i) => (
+                <div key={i} style={{ flex: "1 1 150px", position: "relative", background: C.panel, border: `1px solid ${col}33`,
+                  borderRadius: 12, padding: "10px 12px" }}>
+                  <span style={{ ...px, fontSize: 8, color: col, opacity: 0.9 }}>STEP {n}</span>
+                  <div style={{ fontSize: 12.5, fontWeight: 800, color: C.ink, marginTop: 5 }}>{t}</div>
+                  <div style={{ fontSize: 10, color: C.mid, marginTop: 2 }}>{d}</div>
+                  <div style={{ fontSize: 9.5, fontWeight: 800, color: col, marginTop: 4 }}>▸ {pt}</div>
                 </div>
-                <textarea placeholder="소재 컨셉 * — 어떤 그림/이야기로 팔 건지 2~3문장" value={planForm.concept} onChange={setF("concept")} rows={2}
-                  style={{ fontSize: 11.5, background: "#0d0a12", color: C.ink, border: `1px solid ${C.border}`, borderRadius: 7, padding: "6px 9px", resize: "vertical" }} />
-                <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-                  <input placeholder="핵심 소구점 (예: 3초 냉각, 세척 간편)" value={planForm.usp} onChange={setF("usp")}
-                    style={{ flex: "2 1 220px", fontSize: 11.5, background: "#0d0a12", color: C.ink, border: `1px solid ${C.border}`, borderRadius: 7, padding: "6px 9px" }} />
-                  <input placeholder="참고 링크 (선택)" value={planForm.ref} onChange={setF("ref")}
-                    style={{ flex: "1 1 160px", fontSize: 11.5, background: "#0d0a12", color: C.ink, border: `1px solid ${C.border}`, borderRadius: 7, padding: "6px 9px" }} />
+              ))}
+            </div>
+
+            {/* ── 기획서 용지 (폼 상시 오픈) ── */}
+            <div style={{ position: "relative", background: C.panel, border: `1px dashed ${C.cyan}55`, borderRadius: 14,
+              padding: "14px 16px", marginBottom: 16 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+                <b style={{ fontSize: 12.5, color: C.ink }}>📄 신규 채용 기획서</b>
+                <span style={{ fontSize: 9.5, color: C.mid }}>— 이 사원(광고)을 채용해야 하는 이유를 쓰세요</span>
+                <span style={{ flex: 1 }} />
+                {SIGNER_IMG[signer] && <img src={SIGNER_IMG[signer]} alt="" style={{ width: 20, height: 20, borderRadius: 6, imageRendering: "pixelated" }} />}
+                <span style={{ fontSize: 10, color: C.cyan, fontWeight: 700 }}>{signer ? `기획자 ${signer}` : "도장 이름 미설정"}</span>
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                  <label style={{ flex: "1 1 160px", display: "flex", flexDirection: "column", gap: 3 }}>{lbl("제품 *")}
+                    <input placeholder="예: 아이스볼트맥스" value={planForm.product} onChange={setF("product")} style={inpS} /></label>
+                  <label style={{ flex: "2 1 220px", display: "flex", flexDirection: "column", gap: 3 }}>{lbl("타겟")}
+                    <input placeholder="예: 3040 여성, 여름 출퇴근족" value={planForm.target} onChange={setF("target")} style={inpS} /></label>
                 </div>
-                <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-                  <button style={{ ...btn(C.neon), padding: "4px 12px", fontSize: 11 }} disabled={planBusy} onClick={submitPlan}>🖊 기획서 제출</button>
-                  <button style={{ background: "transparent", color: C.cyan, border: `1px solid ${C.cyan}55`, borderRadius: 7, padding: "4px 10px", fontSize: 11, cursor: "pointer" }}
-                    disabled={planBusy} onClick={askAI}>{planBusy ? "생각 중…" : "🤖 초안 비서 (실데이터 기반 3안)"}</button>
-                  <span style={{ fontSize: 9.5, color: C.mid }}>제품명 넣고 누르면 그 제품 맞춤 초안</span>
+                <label style={{ display: "flex", flexDirection: "column", gap: 3 }}>{lbl("소재 컨셉 *")}
+                  <textarea placeholder="어떤 그림/이야기로 팔 건지 2~3문장" value={planForm.concept} onChange={setF("concept")} rows={2}
+                    style={{ ...inpS, resize: "vertical" }} /></label>
+                <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                  <label style={{ flex: "2 1 220px", display: "flex", flexDirection: "column", gap: 3 }}>{lbl("핵심 소구점")}
+                    <input placeholder="예: 3초 냉각, 세척 간편" value={planForm.usp} onChange={setF("usp")} style={inpS} /></label>
+                  <label style={{ flex: "1 1 160px", display: "flex", flexDirection: "column", gap: 3 }}>{lbl("참고 링크")}
+                    <input placeholder="(선택)" value={planForm.ref} onChange={setF("ref")} style={inpS} /></label>
+                </div>
+                <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", marginTop: 2 }}>
+                  <button style={{ ...btn(C.neon), padding: "7px 16px", fontSize: 11.5, fontWeight: 800 }} disabled={planBusy} onClick={submitPlan}>🖊 기획서 제출 (+1pt)</button>
+                  <button style={{ background: `${C.cyan}10`, color: C.cyan, border: `1px solid ${C.cyan}55`, borderRadius: 8, padding: "7px 13px", fontSize: 11, cursor: "pointer", fontWeight: 700 }}
+                    disabled={planBusy} onClick={askAI}>{planBusy ? "🤖 생각 중…" : "🤖 AI 초안 비서 — 실데이터 3안"}</button>
+                  <span style={{ fontSize: 9.5, color: C.mid }}>제품명 넣고 누르면 잘나가는 부서 패턴으로 맞춤 초안</span>
                 </div>
                 {planDrafts && (
-                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 2 }}>
+                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 4 }}>
                     {planDrafts.map((d, i) => (
                       <div key={i} onClick={() => { SFX.click(); setPlanForm((f) => ({ ...f, concept: `${d.concept} (훅: ${d.hook})`, target: d.target || f.target, usp: d.usp || f.usp })); }}
-                        style={{ flex: "1 1 200px", cursor: "pointer", background: "#0d0a1266", border: `1px solid ${C.cyan}44`, borderRadius: 9, padding: "8px 10px", fontSize: 10.5 }}>
-                        <b style={{ color: C.cyan }}>💡 {d.title}</b>
-                        <div style={{ color: C.mid, marginTop: 3 }}>{d.concept}</div>
-                        <div style={{ marginTop: 3 }}>🎯 {d.target} · ✨ {d.usp}</div>
-                        <div style={{ color: C.gold, marginTop: 3 }}>훅: "{d.hook}"</div>
-                        <div style={{ color: C.mid, marginTop: 3, fontSize: 9 }}>클릭하면 폼에 채워져요</div>
+                        style={{ flex: "1 1 200px", cursor: "pointer", background: "#0d0a1299", border: `1px solid ${C.cyan}44`,
+                          borderRadius: 11, padding: "10px 12px", fontSize: 10.5 }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                          <span style={{ ...px, fontSize: 7.5, color: C.purple }}>DRAFT {String(i + 1).padStart(2, "0")}</span>
+                          <b style={{ color: C.cyan, fontSize: 11 }}>💡 {d.title}</b>
+                        </div>
+                        <div style={{ color: C.mid, marginTop: 4 }}>{d.concept}</div>
+                        <div style={{ marginTop: 4 }}>🎯 {d.target} · ✨ {d.usp}</div>
+                        <div style={{ color: C.gold, marginTop: 4 }}>훅: "{d.hook}"</div>
+                        <div style={{ color: C.cyan, marginTop: 5, fontSize: 9, fontWeight: 700 }}>👆 클릭하면 기획서에 채워져요</div>
                       </div>
                     ))}
                   </div>
                 )}
               </div>
-            )}
-            {(pending.length > 0 || decided.length > 0) && (
-              <div style={{ marginTop: planOpen ? 10 : 8, display: "flex", flexDirection: "column", gap: 5 }}>
+            </div>
+
+            {/* ── 사장 결재 대기 ── */}
+            {pending.length > 0 && (<>
+              <h2 style={{ ...h2, marginTop: 20 }}><span style={px}>결재대기</span> 🖊 사장님 도장을 기다리는 기획 <span style={{ color: C.gold }}>({pending.length}건)</span></h2>
+              <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
                 {pending.map((p) => (
-                  <div key={p.id} style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", fontSize: 11,
-                    background: "#0d0a1266", border: `1px solid ${C.gold}44`, borderRadius: 9, padding: "6px 10px" }}>
-                    {SIGNER_IMG[p.by] && <img src={SIGNER_IMG[p.by]} alt="" style={{ width: 18, height: 18, borderRadius: 5, imageRendering: "pixelated", flex: "none" }} />}
-                    <span style={{ flex: 1, minWidth: 160 }}>
-                      <b>[{p.product}]</b> {p.concept}
-                      <span style={{ display: "block", fontSize: 9.5, color: C.mid }}>{p.by} · {(p.at || "").slice(5, 10)}{p.target && ` · 🎯 ${p.target}`}{p.usp && ` · ✨ ${p.usp}`}</span>
+                  <div key={p.id} style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap", fontSize: 11.5,
+                    background: C.panel, borderLeft: `3px solid ${C.gold}`, border: `1px solid ${C.gold}33`,
+                    borderRadius: 11, padding: "9px 13px" }}>
+                    {SIGNER_IMG[p.by] && <img src={SIGNER_IMG[p.by]} alt="" style={{ width: 26, height: 26, borderRadius: 7, imageRendering: "pixelated", flex: "none" }} />}
+                    <span style={{ flex: 1, minWidth: 180 }}>
+                      <b style={{ color: C.gold }}>[{p.product}]</b> {p.concept}
+                      <span style={{ display: "block", fontSize: 9.5, color: C.mid, marginTop: 2 }}>{p.by} · {(p.at || "").slice(5, 10)}{p.target && ` · 🎯 ${p.target}`}{p.usp && ` · ✨ ${p.usp}`}</span>
                     </span>
-                    <button style={{ ...btn(C.neon), padding: "3px 9px", fontSize: 10.5 }} onClick={() => decide(p, "approved")}>🖊 채택</button>
-                    <button style={{ background: "transparent", color: C.mid, border: `1px solid ${C.border}`, borderRadius: 7, padding: "3px 9px", fontSize: 10.5, cursor: "pointer" }}
+                    <button style={{ ...btn(C.neon), padding: "5px 12px", fontSize: 11, fontWeight: 800 }} onClick={() => decide(p, "approved")}>🖊 채택 (+3pt)</button>
+                    <button style={{ background: "transparent", color: C.mid, border: `1px solid ${C.border}`, borderRadius: 8, padding: "5px 11px", fontSize: 10.5, cursor: "pointer" }}
                       onClick={() => decide(p, "rejected")}>반려</button>
                   </div>
                 ))}
+              </div>
+            </>)}
+
+            {/* ── 기획 보관함 ── */}
+            {decided.length > 0 && (<>
+              <h2 style={{ ...h2, marginTop: 20 }}><span style={px}>보관함</span> 🗂 결재 완료된 기획</h2>
+              <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
                 {decided.map((p) => (
-                  <div key={p.id} style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", fontSize: 10.5, opacity: 0.85,
-                    borderRadius: 9, padding: "4px 10px", background: p.status === "approved" ? `${C.neon}0A` : "transparent" }}>
-                    <span style={{ flex: "none" }}>{p.status === "approved" ? "✅" : "🗑"}</span>
+                  <div key={p.id} style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", fontSize: 10.5,
+                    borderRadius: 10, padding: "6px 11px", border: `1px solid ${p.status === "approved" ? `${C.neon}33` : C.border}`,
+                    background: p.status === "approved" ? `${C.neon}0A` : "transparent", opacity: p.status === "approved" ? 1 : 0.7 }}>
+                    <span style={{ flex: "none", fontSize: 13 }}>{p.status === "approved" ? "✅" : "🗑"}</span>
                     <span style={{ flex: 1, minWidth: 140, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", color: C.mid }}>
                       <b style={{ color: p.status === "approved" ? C.neon : C.mid }}>[{p.product}]</b> {p.concept} — {p.by}
                     </span>
                     {p.status === "approved" && (
-                      <a href={studioUrl(p.product)} target="_blank" rel="noreferrer" style={{ ...btn(C.cyan), padding: "3px 9px", fontSize: 10.5, textDecoration: "none" }}>🎨 소재 제작</a>
+                      <a href={studioUrl(p.product)} target="_blank" rel="noreferrer" style={{ ...btn(C.cyan), padding: "4px 11px", fontSize: 10.5, textDecoration: "none", fontWeight: 800 }}>🎨 소재 제작</a>
                     )}
                   </div>
                 ))}
+              </div>
+            </>)}
+
+            {/* ── 빈 상태 ── */}
+            {plans.length === 0 && (
+              <div style={{ border: `1px dashed ${C.border}`, borderRadius: 14, padding: "26px 16px", textAlign: "center", color: C.mid, fontSize: 11.5 }}>
+                <div style={{ fontSize: 30, marginBottom: 6 }}>🪑</div>
+                아직 제출된 기획서가 없어요 — 위 기획서 용지에 첫 기획을 올려 <b style={{ color: C.cyan }}>기획실 1호 사원</b>의 주인이 되어보세요
               </div>
             )}
           </div>
