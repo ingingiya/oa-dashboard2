@@ -109,19 +109,23 @@ def main():
             urllib.request.urlopen(urllib.request.Request(
                 f"{SB_URL}/storage/v1/object/detail-assets/{path}", data=ob.getvalue(),
                 headers={**SB_H, "Content-Type": "image/jpeg", "x-upsert": "true"}, method="POST"))
-            kvg = jreq(f"{SB_URL}/rest/v1/settings?select=value&key=eq.oa_ad_gallery_v1", headers=SB_H)
-            items = (kvg[0]["value"] or {}).get("items", []) if kvg else []
-            items.insert(0, {"id": iid, "url": f"{BASE}/{path}", "title": title[:40],
-                             "teamId": BOOSTERS, "team": "부스터즈",
-                             "at": datetime.datetime.now(datetime.timezone.utc).isoformat()})
-            urllib.request.urlopen(urllib.request.Request(
-                f"{SB_URL}/rest/v1/settings?on_conflict=key",
-                data=json.dumps({"key": "oa_ad_gallery_v1", "value": {"items": items}}).encode(),
-                headers={**SB_H, "Content-Type": "application/json",
-                         "Prefer": "resolution=merge-duplicates"}, method="POST"))
+            # ★KV는 원자 RPC로 (읽고-쓰기는 앱의 동시 저장/삭제와 충돌 — 08-31 유령 항목 사고)
+            urllib.request.urlopen(urllib.request.Request(  # void RPC — 응답 본문 없음(204)
+                f"{SB_URL}/rest/v1/rpc/ad_gallery_add",
+                data=json.dumps({"p_item": {
+                    "id": iid, "url": f"{BASE}/{path}", "title": title[:40],
+                    "teamId": BOOSTERS, "team": "부스터즈",
+                    "at": datetime.datetime.now(datetime.timezone.utc).isoformat()}}).encode(),
+                headers={**SB_H, "Content-Type": "application/json"}, method="POST"), timeout=60)
             made.append(title)
+
+            # ★레퍼런스 갤러리용 사본은 별도 경로 — 보관함에서 지워도 갤러리가 안 깨지게
+            ref_path = f"adrefs/refs/auto_{iid}.jpg"
+            urllib.request.urlopen(urllib.request.Request(
+                f"{SB_URL}/storage/v1/object/detail-assets/{ref_path}", data=ob.getvalue(),
+                headers={**SB_H, "Content-Type": "image/jpeg", "x-upsert": "true"}, method="POST"))
             gallery_refs.append({"id": f"auto_{iid}", "title": f"[자동] {ref['title'].replace('[학습] ', '').split(' — ')[0]} × {prod['name']}"[:40],
-                                 "url": f"{BASE}/{path}", "copies": {"generic": spec}, "productKeys": []})
+                                 "url": f"{BASE}/{ref_path}", "copies": {"generic": spec}, "productKeys": []})
             print("✅", title)
         except Exception as e:
             failed.append(f"{title}: {str(e)[:60]}")
@@ -132,7 +136,17 @@ def main():
     if gallery_refs:
         try:
             cur = jreq(f"{BASE}/adrefs/adrefs.json")
+            old_auto = [r for r in cur["refs"] if r["id"].startswith("auto_")]
             cur["refs"] = gallery_refs + [r for r in cur["refs"] if not r["id"].startswith("auto_")]
+            # 지난주 자동 사본 파일 정리 (스토리지 누적 방지)
+            if old_auto:
+                try:
+                    urllib.request.urlopen(urllib.request.Request(
+                        f"{SB_URL}/storage/v1/object/detail-assets",
+                        data=json.dumps({"prefixes": [f"adrefs/refs/{r['id']}.jpg" for r in old_auto]}).encode(),
+                        headers={**SB_H, "Content-Type": "application/json"}, method="DELETE"), timeout=60)
+                except Exception:
+                    pass
             urllib.request.urlopen(urllib.request.Request(
                 f"{SB_URL}/storage/v1/object/detail-assets/adrefs/adrefs.json",
                 data=json.dumps(cur, ensure_ascii=False).encode(),
