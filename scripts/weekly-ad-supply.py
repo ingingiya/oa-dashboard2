@@ -133,33 +133,50 @@ def main():
         time.sleep(5)
 
     # 레퍼런스 갤러리에도 등록 — 지난주 [자동] 분은 교체 (갤러리 비대 방지)
+    # ★adrefs.json은 다른 세션(학습 등록)도 읽고-쓰기라 덮어쓰기 충돌이 남 → 쓴 뒤 검증·재시도
     if gallery_refs:
-        try:
-            cur = jreq(f"{BASE}/adrefs/adrefs.json")
-            old_auto = [r for r in cur["refs"] if r["id"].startswith("auto_")]
-            cur["refs"] = gallery_refs + [r for r in cur["refs"] if not r["id"].startswith("auto_")]
-            # 지난주 자동 사본 파일 정리 (스토리지 누적 방지)
-            if old_auto:
-                try:
-                    urllib.request.urlopen(urllib.request.Request(
-                        f"{SB_URL}/storage/v1/object/detail-assets",
-                        data=json.dumps({"prefixes": [f"adrefs/refs/{r['id']}.jpg" for r in old_auto]}).encode(),
-                        headers={**SB_H, "Content-Type": "application/json"}, method="DELETE"), timeout=60)
-                except Exception:
-                    pass
-            urllib.request.urlopen(urllib.request.Request(
-                f"{SB_URL}/storage/v1/object/detail-assets/adrefs/adrefs.json",
-                data=json.dumps(cur, ensure_ascii=False).encode(),
-                headers={**SB_H, "Content-Type": "application/json", "x-upsert": "true"}, method="POST"))
-            print(f"레퍼런스 갤러리 등록 {len(gallery_refs)}건 (지난주 자동분 교체)")
-        except Exception as e:
-            print("갤러리 등록 실패:", e)
+        for attempt in range(4):
+            try:
+                register_refs(gallery_refs)
+                print(f"레퍼런스 갤러리 등록 {len(gallery_refs)}건")
+                break
+            except Exception as e:
+                print(f"갤러리 등록 재시도 {attempt + 1}/4:", str(e)[:70])
+                time.sleep(5)
 
     msg = f"🗂 주간 소재 공급 완료 ({week}주차)\n제품: {prod['name']}\n생성 {len(made)}/{len(refs)}장 → 보관함 + 레퍼런스 갤러리 맨 앞 [자동]\n"
     msg += "\n".join("· " + m.replace("[자동] ", "") for m in made)
     if failed:
         msg += "\n⚠️ 실패:\n" + "\n".join(failed)
     tg(msg)
+
+
+def register_refs(gallery_refs):
+    """adrefs.json에 [자동] 항목 반영 후 재조회로 검증 (실패 시 예외 → 호출부가 재시도)."""
+    cur = jreq(f"{BASE}/adrefs/adrefs.json")
+    old_auto = [r for r in cur["refs"] if r["id"].startswith("auto_")]
+    keep_ids = {g["id"] for g in gallery_refs}
+    cur["refs"] = gallery_refs + [r for r in cur["refs"] if not r["id"].startswith("auto_")]
+    urllib.request.urlopen(urllib.request.Request(
+        f"{SB_URL}/storage/v1/object/detail-assets/adrefs/adrefs.json",
+        data=json.dumps(cur, ensure_ascii=False).encode(),
+        headers={**SB_H, "Content-Type": "application/json", "x-upsert": "true"}, method="POST"), timeout=60)
+    # 검증 — 다른 세션이 덮어썼으면 예외
+    time.sleep(2)
+    after = {r["id"] for r in jreq(f"{BASE}/adrefs/adrefs.json")["refs"]}
+    if not keep_ids.issubset(after):
+        raise RuntimeError("다른 세션이 adrefs.json을 덮어씀")
+    # 지난주 자동 사본 파일 정리 (스토리지 누적 방지)
+    drop = [r["id"] for r in old_auto if r["id"] not in keep_ids]
+    if drop:
+        try:
+            urllib.request.urlopen(urllib.request.Request(
+                f"{SB_URL}/storage/v1/object/detail-assets",
+                data=json.dumps({"prefixes": [f"adrefs/refs/{i}.jpg" for i in drop]}).encode(),
+                headers={**SB_H, "Content-Type": "application/json"}, method="DELETE"), timeout=60)
+        except Exception:
+            pass
+
 
 if __name__ == "__main__":
     main()
