@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """주간 자동 소재 공급 — 매주 월요일 아침, 학습 레퍼런스 × 주력 제품 조합으로
-광고 소재를 자동 생성해 부스터즈 팀 보관함에 채워놓는다.
+광고 소재를 자동 생성해 광고 스튜디오 레퍼런스 갤러리에 채워놓는다.
 
 로직: adrefs.json의 [학습] 레퍼런스를 주차별로 로테이션(6개) × 제품도 주차 로테이션 1개
 → 관리자 로그인(크레딧 무차감) → adcopy로 카피 변환 → PIL로 콤보 합성 → refad 생성
-→ 보관함(부스터즈) 직접 저장 → 텔레그램 요약.
+→ adrefs/refs 사본 저장 + adrefs.json 등록 → 텔레그램 요약.
 
 크론: 30 8 * * 1  (월요일 08:30)
 """
@@ -14,7 +14,6 @@ from PIL import Image
 
 APP = "https://oa-detail-gen.vercel.app"
 BASE = "https://lugqeflqusqsyotdiaxg.supabase.co/storage/v1/object/public/detail-assets"
-BOOSTERS = "g_9fb17e41-0bcd-41a5-b1e3-80e6f5527fb1"
 N_PER_WEEK = int(sys.argv[1]) if len(sys.argv) > 1 else 6
 
 env = (Path.home() / "oa-detail-app" / ".env.local").read_text()
@@ -100,26 +99,12 @@ def main():
             raw = (urllib.request.urlopen(out, timeout=120).read() if out.startswith("http")
                    else base64.b64decode(out.split(",")[1]))
 
-            # 보관함 직접 저장 (부스터즈 팀)
+            # ★레퍼런스 갤러리에만 등록 (팀 보관함에는 넣지 않음 — 사용자 지시 08-31)
             iid = format(int(time.time() * 1000), "x") + "auto"
-            path = f"adgallery/{BOOSTERS}/{iid}.jpg"
             im = Image.open(io.BytesIO(raw)).convert("RGB")
             im.thumbnail((1080, 1080))
             ob = io.BytesIO(); im.save(ob, "JPEG", quality=88)
-            urllib.request.urlopen(urllib.request.Request(
-                f"{SB_URL}/storage/v1/object/detail-assets/{path}", data=ob.getvalue(),
-                headers={**SB_H, "Content-Type": "image/jpeg", "x-upsert": "true"}, method="POST"))
-            # ★KV는 원자 RPC로 (읽고-쓰기는 앱의 동시 저장/삭제와 충돌 — 08-31 유령 항목 사고)
-            urllib.request.urlopen(urllib.request.Request(  # void RPC — 응답 본문 없음(204)
-                f"{SB_URL}/rest/v1/rpc/ad_gallery_add",
-                data=json.dumps({"p_item": {
-                    "id": iid, "url": f"{BASE}/{path}", "title": title[:40],
-                    "teamId": BOOSTERS, "team": "부스터즈",
-                    "at": datetime.datetime.now(datetime.timezone.utc).isoformat()}}).encode(),
-                headers={**SB_H, "Content-Type": "application/json"}, method="POST"), timeout=60)
             made.append(title)
-
-            # ★레퍼런스 갤러리용 사본은 별도 경로 — 보관함에서 지워도 갤러리가 안 깨지게
             ref_path = f"adrefs/refs/auto_{iid}.jpg"
             urllib.request.urlopen(urllib.request.Request(
                 f"{SB_URL}/storage/v1/object/detail-assets/{ref_path}", data=ob.getvalue(),
@@ -144,7 +129,7 @@ def main():
                 print(f"갤러리 등록 재시도 {attempt + 1}/4:", str(e)[:70])
                 time.sleep(5)
 
-    msg = f"🗂 주간 소재 공급 완료 ({week}주차)\n제품: {prod['name']}\n생성 {len(made)}/{len(refs)}장 → 보관함 + 레퍼런스 갤러리 맨 앞 [자동]\n"
+    msg = f"🗂 주간 소재 공급 완료 ({week}주차)\n제품: {prod['name']}\n생성 {len(made)}/{len(refs)}장 → 광고 스튜디오 레퍼런스 갤러리 맨 앞 [자동]\n"
     msg += "\n".join("· " + m.replace("[자동] ", "") for m in made)
     if failed:
         msg += "\n⚠️ 실패:\n" + "\n".join(failed)
