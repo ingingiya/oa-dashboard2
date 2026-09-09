@@ -1,0 +1,77 @@
+{
+ "campaignName": "260909_뷰티팀_카카오선물하기_트래픽",
+ "pageId": "393616720847763",
+ "dailyBudget": 20000,
+ "ageMin": 18,
+ "ageMax": 49,
+ "optimization": "LINK_CLICKS",
+ "bidCap": 0,
+ "cta": "SHOP_NOW",
+ "products": [
+  {
+   "name": "히트스팟S",
+   "url": "https://gift.kakao.com/product/12115860",
+   "headline": "온열+EMS 손목 마사지기 · 추석 선물",
+   "message": "손목이 먼저 알아채는 선물 🎁\n온열 + EMS 저주파로 하루 종일 혹사당한 손목을 풀어주는 오아 히트스팟S.\n지금 카카오 선물하기에서 스타벅스 아메리카노 100% 증정 중 ☕",
+   "images": [
+    {
+     "label": "meme",
+     "url": "https://lugqeflqusqsyotdiaxg.supabase.co/storage/v1/object/public/detail-assets/xads/260908/v2/p1_meme_1x1.png"
+    },
+    {
+     "label": "talk",
+     "url": "https://lugqeflqusqsyotdiaxg.supabase.co/storage/v1/object/public/detail-assets/xads/260908/v2/p1_talk_1x1.png"
+    }
+   ]
+  },
+  {
+   "name": "눈편한세상",
+   "url": "https://gift.kakao.com/product/12894860",
+   "headline": "온열 공기압 눈 마사지기 · 추석 선물",
+   "message": "눈 감고 10분, 하루가 리셋 👀\n온열 + 공기압으로 눈가 피로를 풀어주는 오아 눈편한세상.\n전용 파우치 증정, 카카오 선물하기에서 바로 보내세요.",
+   "images": [
+    {
+     "label": "meme",
+     "url": "https://lugqeflqusqsyotdiaxg.supabase.co/storage/v1/object/public/detail-assets/xads/260908/v2/p2_meme_1x1.png"
+    },
+    {
+     "label": "talk",
+     "url": "https://lugqeflqusqsyotdiaxg.supabase.co/storage/v1/object/public/detail-assets/xads/260908/v2/p2_talk_1x1.png"
+    }
+   ]
+  },
+  {
+   "name": "넥스트레쳐",
+   "url": "https://gift.kakao.com/product/7595952",
+   "headline": "온열·스트레칭 목 마사지기 · 직장인 선물",
+   "message": "거북목에게 보내는 휴식 🧘\n온열 · 스트레칭 · 저주파 3중 케어, 오아 넥스트레쳐.\n야근 많은 그 사람에게 카카오 선물하기로 툭.",
+   "images": [
+    {
+     "label": "meme",
+     "url": "https://lugqeflqusqsyotdiaxg.supabase.co/storage/v1/object/public/detail-assets/xads/260908/v2/p3_meme_1x1.png"
+    },
+    {
+     "label": "talk",
+     "url": "https://lugqeflqusqsyotdiaxg.supabase.co/storage/v1/object/public/detail-assets/xads/260908/v2/p3_talk_1x1.png"
+    }
+   ]
+  },
+  {
+   "name": "듀얼포켓건",
+   "url": "https://gift.kakao.com/product/13984577",
+   "headline": "172g 초경량 미니 마사지건 · 파우치 증정",
+   "message": "172g, 주머니 속 마사지건 💪\n승모근·어깨·목 어디든, 무선으로 가볍게. 오아 듀얼 포켓건.\n단독 파우치 증정 중, 카카오 선물하기에서 확인하세요.",
+   "images": [
+    {
+     "label": "meme",
+     "url": "https://lugqeflqusqsyotdiaxg.supabase.co/storage/v1/object/public/detail-assets/xads/260908/v2/p4_meme_1x1.png"
+    },
+    {
+     "label": "talk",
+     "url": "https://lugqeflqusqsyotdiaxg.supabase.co/storage/v1/object/public/detail-assets/xads/260908/v2/p4_talk_1x1.png"
+    }
+   ]
+  }
+ ],
+ "campaignId": "120250292461400633"
+}
