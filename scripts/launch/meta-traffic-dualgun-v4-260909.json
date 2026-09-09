@@ -1,0 +1,46 @@
+{
+ "campaignName": "260909_뷰티팀_카카오선물하기_트래픽",
+ "campaignId": "120250292461400633",
+ "pageId": "393616720847763",
+ "dailyBudget": 20000,
+ "ageMin": 18,
+ "ageMax": 49,
+ "optimization": "LINK_CLICKS",
+ "bidCap": 0,
+ "cta": "SHOP_NOW",
+ "products": [
+  {
+   "name": "듀얼포켓건",
+   "url": "https://gift.kakao.com/product/13984577",
+   "headline": "172g 초경량 미니 마사지건 · 파우치 증정",
+   "message": "돌덩이 승모근, 주머니에서 꺼낸다고?\n172g 무선 듀얼 헤드 포켓 마사지건, 오아 듀얼 포켓건.\n단독 파우치 증정 중, 카카오 선물하기에서 확인하세요.",
+   "images": [
+    {
+     "label": "v4_kakao",
+     "url": "https://lugqeflqusqsyotdiaxg.supabase.co/storage/v1/object/public/detail-assets/xads/260908/v4/p4_kakao_1x1.png",
+     "message": "어깨 또 뭉쳤네? 목도 뻐근해.. 해결법은 172g 주머니 마사지건 💪\n무선 듀얼 헤드로 승모근·어깨·목 어디든. 오아 듀얼 포켓건.\n단독 파우치 증정 중, 카카오 선물하기에서 확인하세요."
+    },
+    {
+     "label": "v4_hook",
+     "url": "https://lugqeflqusqsyotdiaxg.supabase.co/storage/v1/object/public/detail-assets/xads/260908/v4/p4_hook_1x1.png",
+     "message": "돌덩이 승모근, 주머니에서 꺼낸다고?\n172g 무선 듀얼 헤드 포켓 마사지건, 오아 듀얼 포켓건.\n단독 파우치 증정 중, 카카오 선물하기에서 확인하세요."
+    },
+    {
+     "label": "v4_hand",
+     "url": "https://lugqeflqusqsyotdiaxg.supabase.co/storage/v1/object/public/detail-assets/xads/260908/v4/p4_hand_1x1.png",
+     "message": "이게 마사지건이라고? 손바닥 위 172g 초경량 💪\n주머니에 쏙, 무선 듀얼 헤드. 오아 듀얼 포켓건.\n추석 선물 정답, 단독 파우치 증정 중."
+    },
+    {
+     "label": "v4_cat",
+     "url": "https://lugqeflqusqsyotdiaxg.supabase.co/storage/v1/object/public/detail-assets/xads/260908/v4/p4_cat_1x1.png",
+     "message": "어깨·목 뭉쳐서 잔뜩 찡그린 나 → 오아 듀얼 포켓건에 사르르 녹아버린 나 🐱\n172g 주머니 속 마사지숍. 단독 파우치 증정, 카카오 추석 선물 눌러서 확인."
+    },
+    {
+     "label": "v4_qa",
+     "url": "https://lugqeflqusqsyotdiaxg.supabase.co/storage/v1/object/public/detail-assets/xads/260908/v4/p4_qa_1x1.png",
+     "message": "퇴근하면 어깨가 돌덩이? 포켓건? 됩니다.\n주머니에 쏙 172g 초경량, 선 없이 어디서나 듀얼 헤드 케어. 오아 듀얼 포켓건.\n단독 파우치 증정 중, 카카오 선물하기에서 확인하세요."
+    }
+   ]
+  }
+ ]
+}
