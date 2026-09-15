@@ -16,7 +16,7 @@ export async function POST(req) {
   const items = await load(); const now = new Date().toISOString(); let seq = items.reduce((m, i) => Math.max(m, i.id || 0), 0);
   for (const a of add) {
     if (!a.to_email || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(a.to_email)) continue;
-    items.push({ id: ++seq, created_at: now, media_name: String(a.media_name || "").slice(0, 120), to_email: a.to_email.trim(), cc_email: String(a.cc_email || "").slice(0, 200), product: String(a.product || "").slice(0, 120), subject: String(a.subject || "").slice(0, 200), body: String(a.body || "").slice(0, 6000), sender_name: String(a.sender_name || "").slice(0, 60), sender_email: String(a.sender_email || "").slice(0, 120), status: "pending", sent_at: null, error: null });
+    items.push({ id: ++seq, created_at: now, media_name: String(a.media_name || "").slice(0, 120), to_email: a.to_email.trim(), cc_email: String(a.cc_email || "").slice(0, 200), product: String(a.product || "").slice(0, 120), subject: String(a.subject || "").slice(0, 200), body: String(a.body || "").slice(0, 6000), sender_name: String(a.sender_name || "").slice(0, 60), sender_email: String(a.sender_email || "").slice(0, 120), status: ["pending", "opened"].includes(a.status) ? a.status : "pending", sent_at: null, error: null });
   }
   await save(items); return Response.json({ ok: true, count: items.length }, { headers: CORS });
 }
