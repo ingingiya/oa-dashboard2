@@ -1,0 +1,429 @@
+<title>매체별 광고 단가 지도</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+  :root{
+    --ground:#FAF9F6; --paper:#FFFFFF; --ink:#1C1B19; --muted:#6D6862; --line:#E4E0D8; --soft:#F1EEE7;
+    --accent:#F26A1B; --accent-ink:#B84A08; --accent-soft:#FDEBDD;
+    --tag-real:#1F6F5C; --tag-real-soft:#DFF0EA; --tag-bench:#6B5B95; --tag-bench-soft:#ECE7F5;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --ground:#171614; --paper:#1F1D1A; --ink:#EDE9E2; --muted:#A39D94; --line:#332F2A; --soft:#26231F;
+      --accent:#FF7A2E; --accent-ink:#FFA36E; --accent-soft:#3A2415;
+      --tag-real:#7FD0B8; --tag-real-soft:#173029; --tag-bench:#C1B1EA; --tag-bench-soft:#2A2440;
+    }
+  }
+  :root[data-theme="dark"]{
+    --ground:#171614; --paper:#1F1D1A; --ink:#EDE9E2; --muted:#A39D94; --line:#332F2A; --soft:#26231F;
+    --accent:#FF7A2E; --accent-ink:#FFA36E; --accent-soft:#3A2415;
+    --tag-real:#7FD0B8; --tag-real-soft:#173029; --tag-bench:#C1B1EA; --tag-bench-soft:#2A2440;
+  }
+  body{background:var(--ground);color:var(--ink);font-family:"IBM Plex Sans KR","Pretendard","Apple SD Gothic Neo",sans-serif;font-size:15px;line-height:1.6;margin:0}
+  .wrap{max-width:960px;margin:0 auto;padding:48px 24px 80px}
+  header{border-bottom:2px solid var(--ink);padding-bottom:20px;margin-bottom:36px;display:flex;justify-content:space-between;align-items:flex-end;gap:24px;flex-wrap:wrap}
+  h1{font-size:30px;font-weight:700;letter-spacing:-0.02em;margin:0 0 6px;text-wrap:balance}
+  .sub{color:var(--muted);margin:0;max-width:60ch}
+  .meta{font-family:"IBM Plex Mono",monospace;font-size:12px;color:var(--muted);text-align:right;line-height:1.7}
+  h2{font-size:18px;font-weight:600;margin:44px 0 6px;letter-spacing:-0.01em}
+  h2 + p{margin:0 0 16px;color:var(--muted);max-width:70ch}
+  .tag{display:inline-block;font-size:11px;font-weight:600;letter-spacing:.06em;padding:2px 8px;border-radius:3px;vertical-align:middle;margin-left:8px}
+  .tag.real{color:var(--tag-real);background:var(--tag-real-soft)} .tag.bench{color:var(--tag-bench);background:var(--tag-bench-soft)}
+  .tablewrap{overflow-x:auto;background:var(--paper);border:1px solid var(--line);border-radius:6px}
+  table{border-collapse:collapse;width:100%;min-width:640px}
+  th,td{padding:11px 14px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+  th{font-size:12px;font-weight:600;color:var(--muted);letter-spacing:.04em;background:var(--soft)}
+  tr:last-child td{border-bottom:0}
+  td.num,th.num{text-align:right;font-variant-numeric:tabular-nums;font-family:"IBM Plex Mono",monospace;font-size:14px;white-space:nowrap}
+  td.key{font-weight:600}
+  td.hi{color:var(--accent-ink);font-weight:600}
+  td.note{color:var(--muted);font-size:13.5px;max-width:34ch}
+  .chart{background:var(--paper);border:1px solid var(--line);border-radius:6px;padding:20px 20px 12px;margin-top:18px}
+  .chart h3{font-size:13px;font-weight:600;color:var(--muted);margin:0 0 14px;letter-spacing:.04em}
+  .bar{display:grid;grid-template-columns:150px 1fr 70px;align-items:center;gap:12px;margin:7px 0;font-size:13.5px}
+  .bar .track{height:14px;background:var(--soft);border-radius:2px;overflow:hidden}
+  .bar .fill{height:100%;background:var(--accent);border-radius:2px}
+  .bar .fill.bench{background:var(--tag-bench)}
+  .bar .v{font-family:"IBM Plex Mono",monospace;text-align:right;font-variant-numeric:tabular-nums}
+  .bar .label{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .legend{font-size:12px;color:var(--muted);margin-top:12px}
+  .legend i{display:inline-block;width:10px;height:10px;border-radius:2px;vertical-align:-1px;margin-right:5px}
+  .callout{border-left:3px solid var(--accent);background:var(--accent-soft);padding:14px 18px;border-radius:0 6px 6px 0;margin:18px 0 0}
+  .callout p{margin:0 0 8px} .callout p:last-child{margin:0}
+  ol,ul{padding-left:20px;margin:8px 0} li{margin:5px 0}
+  .sources{font-size:13px;color:var(--muted)} .sources a{color:var(--accent-ink);text-decoration:none;border-bottom:1px solid var(--line)} .sources a:hover{border-color:var(--accent-ink)}
+  footer{margin-top:48px;padding-top:16px;border-top:1px solid var(--line);font-size:12px;color:var(--muted);font-family:"IBM Plex Mono",monospace}
+
+  .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin:22px 0 6px}
+  .kpi{background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:16px 18px}
+  .kpi .l{font-size:12px;color:var(--muted);letter-spacing:.04em;margin-bottom:6px}
+  .kpi .v{font-size:26px;font-weight:700;font-family:"IBM Plex Mono",monospace;font-variant-numeric:tabular-nums;letter-spacing:-0.02em}
+  .kpi .s{font-size:12.5px;color:var(--muted);margin-top:4px}
+  .kpi.good .v{color:var(--tag-real)} .kpi.bad .v{color:#B84A08}
+  .rank{background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:18px 20px 10px;margin-top:14px}
+  .rank h3{font-size:14px;font-weight:600;margin:0 0 4px}
+  .rank p.h{font-size:12.5px;color:var(--muted);margin:0 0 12px}
+  .rrow{display:grid;grid-template-columns:200px 1fr 64px 64px;align-items:center;gap:12px;margin:6px 0;font-size:14px}
+  .rrow .track{height:18px;background:var(--soft);border-radius:3px;overflow:hidden}
+  .rrow .fill{height:100%;border-radius:3px;background:var(--accent)}
+  .rrow .fill.g{background:var(--tag-real)} .rrow .fill.w{background:#C9A227} .rrow .fill.b{background:#B84A08}
+  .rrow .n{font-family:"IBM Plex Mono",monospace;text-align:right;font-variant-numeric:tabular-nums}
+  .rrow .roas{font-family:"IBM Plex Mono",monospace;text-align:right;font-size:13px;color:var(--muted)}
+  .rhead{display:grid;grid-template-columns:200px 1fr 64px 64px;gap:12px;font-size:11px;color:var(--muted);letter-spacing:.04em;margin-bottom:4px}
+  .rhead span:nth-child(3),.rhead span:nth-child(4){text-align:right}
+  .actions{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px;margin-top:14px}
+  .act{background:var(--paper);border:1px solid var(--line);border-left:4px solid var(--accent);border-radius:6px;padding:14px 16px}
+  .act b{display:block;font-size:15px;margin-bottom:4px} .act span{font-size:13.5px;color:var(--muted)}
+  .act.g{border-left-color:var(--tag-real)} .act.b{border-left-color:#B84A08}
+  details{border:1px solid var(--line);border-radius:6px;background:var(--paper);margin-top:12px}
+  details summary{cursor:pointer;padding:12px 16px;font-weight:600;font-size:15px;list-style:none;display:flex;justify-content:space-between;align-items:center}
+  details summary::after{content:"펼치기";font-size:12px;color:var(--muted);font-weight:500}
+  details[open] summary::after{content:"접기"}
+  details .inner{padding:0 16px 16px}
+  details .inner h2{margin-top:22px;font-size:16px} details .inner h2:first-child{margin-top:4px}
+  details .tablewrap{border:0;border-top:1px solid var(--line);border-radius:0}
+  .legend2{font-size:12px;color:var(--muted);margin-top:10px}
+  .legend2 i{display:inline-block;width:10px;height:10px;border-radius:2px;vertical-align:-1px;margin-right:5px}
+
+  .cover{background:var(--ink);color:#fff;border-radius:8px;padding:28px 32px;margin-bottom:28px;display:grid;grid-template-columns:1fr auto;gap:20px;align-items:end}
+  .cover h1{color:#fff;font-size:28px;margin:0 0 8px} .cover .sub{color:#CFCAC2;margin:0;max-width:64ch}
+  .cover .meta{color:#CFCAC2;text-align:right;font-size:12px;line-height:1.8}
+  .cover .meta b{color:#fff;font-weight:600}
+  .toc{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin:0 0 30px}
+  .toc a{display:block;padding:10px 12px;border:1px solid var(--line);border-radius:6px;background:var(--paper);text-decoration:none;color:var(--ink);font-size:13.5px}
+  .toc a span{display:block;font-size:11px;color:var(--muted);letter-spacing:.06em;margin-bottom:2px}
+  .sec{margin-top:26px;background:var(--paper);border:1px solid var(--line);border-radius:8px;overflow:hidden}
+  .secbar{background:var(--ink);color:#fff;padding:10px 16px;font-size:13.5px;font-weight:600;display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}
+  .secbar .tot{font-family:"IBM Plex Mono",monospace;font-weight:500;color:#F4B27A;font-size:12.5px}
+  .sec .tablewrap{border:0;border-radius:0}
+  h2.num{font-size:20px;margin:56px 0 4px;padding-top:18px;border-top:2px solid var(--ink)}
+  h2.num small{display:block;font-size:11px;color:var(--muted);letter-spacing:.1em;font-weight:600;margin-bottom:4px}
+  .lead{color:var(--muted);margin:0 0 14px;max-width:72ch}
+  .fn{font-size:12px;color:var(--muted);margin-top:8px}
+  td.num.hi{color:var(--accent-ink)}
+  .kpis{margin-top:14px}
+  details{margin-top:12px}
+  @media print{.toc,details summary::after{display:none} details{border:0} .wrap{padding:20px}}
+</style>
+
+<div class="wrap">
+<div class="cover">
+  <div>
+    <h1>매체별 광고 단가 지도</h1>
+    <p class="sub">클릭 하나를 어디서 얼마에 사고, 그 돈이 얼마로 돌아오는지. 오아 광고 계정 실측을 기준으로 국내 집행 가능 매체 40여 종을 한 표에 정리했습니다.</p>
+  </div>
+  <div class="meta"><b>OA 뷰티 · 부스터즈팀</b><br>기준일 2026-09-15 · 매주 월 09:40 자동 갱신<br>실측: 메타·GFA·에이블리·X 30일, AD부스터·파워클릭 7일<br>단위 원(KRW) · 부가세 별도 · ROAS = 매출 ÷ 광고비</div>
+</div>
+<div class="toc">
+  <a href="#s1"><span>SECTION 1</span>요약과 결론</a>
+  <a href="#s2"><span>SECTION 2</span>매체별 실측</a>
+  <a href="#s3"><span>SECTION 3</span>제품 카테고리별</a>
+  <a href="#s4"><span>SECTION 4</span>리테일 미디어 단가표</a>
+  <a href="#s5"><span>SECTION 5</span>미집행 매체 벤치마크</a>
+  <a href="#s6"><span>SECTION 6</span>권고와 방법론</a>
+</div>
+
+<h2 class="num" id="s1" style="margin-top:0;border-top:0;padding-top:0"><small>SECTION 1</small>요약과 결론</h2>
+<div class="kpis">
+  <div class="kpi"><div class="l">집계 광고비 (표본 기간 합)</div><div class="v">7,918만</div><div class="s">클릭 177,488회 · 평균 CPC 446원</div></div>
+  <div class="kpi good"><div class="l">가장 싼 클릭</div><div class="v">125원</div><div class="s">에이블리 · ROAS 12.3배</div></div>
+  <div class="kpi good"><div class="l">가장 잘 버는 매체</div><div class="v">19.7배</div><div class="s">네이버 디스플레이 전환 · CPC 658원</div></div>
+  <div class="kpi bad"><div class="l">손해 구간</div><div class="v">0.3배</div><div class="s">메타 전환 · CPC 491원</div></div>
+</div><div class="rank"><h3>클릭 단가 순위 (낮을수록 좋음)</h3><p class="h">막대 색 = 광고수익률(ROAS). 초록 8배 이상 · 노랑 3~8배 · 갈색 3배 미만. 메타 ROAS는 픽셀 구매 추적값이라 실제보다 낮게 잡힘(참고용)</p>
+<div class="rhead"><span>매체</span><span></span><span>CPC</span><span>ROAS</span></div><div class="rrow"><span>에이블리</span><div class="track"><div class="fill g" style="width:13%"></div></div><span class="n">125</span><span class="roas">12.3배</span></div><div class="rrow"><span>메타 트래픽</span><div class="track"><div class="fill " style="width:19%"></div></div><span class="n">186</span><span class="roas">측정불가</span></div><div class="rrow"><span>X (트위터) 트래픽</span><div class="track"><div class="fill " style="width:20%"></div></div><span class="n">198</span><span class="roas">측정불가</span></div><div class="rrow"><span>메타 전환</span><div class="track"><div class="fill b" style="width:50%"></div></div><span class="n">491</span><span class="roas">0.3배</span></div><div class="rrow"><span>GFA</span><div class="track"><div class="fill b" style="width:63%"></div></div><span class="n">613</span><span class="roas">1.6배</span></div><div class="rrow"><span>네이버 디스플레이 전환</span><div class="track"><div class="fill g" style="width:68%"></div></div><span class="n">658</span><span class="roas">19.7배</span></div><div class="rrow"><span>네이버 파워링크</span><div class="track"><div class="fill g" style="width:68%"></div></div><span class="n">667</span><span class="roas">12.2배</span></div><div class="rrow"><span>G마켓 광고센터</span><div class="track"><div class="fill w" style="width:70%"></div></div><span class="n">682</span><span class="roas">6.9배</span></div><div class="rrow"><span>파워클릭 (G+A)</span><div class="track"><div class="fill b" style="width:71%"></div></div><span class="n">693</span><span class="roas">2.8배</span></div><div class="rrow"><span>네이버 쇼핑검색</span><div class="track"><div class="fill g" style="width:81%"></div></div><span class="n">787</span><span class="roas">13.9배</span></div><div class="rrow"><span>네이버 AD부스터 쇼핑</span><div class="track"><div class="fill g" style="width:100%"></div></div><span class="n">974</span><span class="roas">15.8배</span></div>
+<div class="legend2"><i style="background:var(--tag-real)"></i>8배↑ <i style="background:#C9A227"></i>3~8배 <i style="background:#B84A08"></i>3배↓ <i style="background:var(--accent)"></i>측정불가</div></div><div class="sec"><div class="secbar"><span>카카오 선물하기 트래픽 캠페인 · 제품별 (메타 30일 · X 30일)</span><span class="tot">메타 1,223,104원  X 241,831원</span></div>
+<div class="tablewrap"><table><thead><tr><th>제품</th><th>매체</th><th class="num">광고비</th><th class="num">노출</th><th class="num">클릭</th><th class="num">CPC</th><th class="num">CPM</th></tr></thead><tbody><tr><td class="key">듀얼포켓건</td><td>메타</td><td class="num">396,274</td><td class="num">81,758</td><td class="num">2,198</td><td class="num hi">180</td><td class="num">4,847</td></tr><tr><td class="key">듀얼포켓건</td><td>X</td><td class="num">239,279</td><td class="num">463,997</td><td class="num">1,213</td><td class="num hi">197</td><td class="num">516</td></tr><tr><td class="key">프리온</td><td>메타</td><td class="num">227,155</td><td class="num">50,859</td><td class="num">1,102</td><td class="num hi">206</td><td class="num">4,466</td></tr><tr><td class="key">퀵터보</td><td>메타</td><td class="num">153,159</td><td class="num">40,774</td><td class="num">948</td><td class="num hi">162</td><td class="num">3,756</td></tr><tr><td class="key">바디스팟 Knee</td><td>메타</td><td class="num">150,345</td><td class="num">24,261</td><td class="num">738</td><td class="num hi">204</td><td class="num">6,197</td></tr><tr><td class="key">롤링스팟</td><td>메타</td><td class="num">140,328</td><td class="num">21,626</td><td class="num">631</td><td class="num hi">222</td><td class="num">6,489</td></tr><tr><td class="key">플렌티플렛</td><td>메타</td><td class="num">139,751</td><td class="num">29,377</td><td class="num">579</td><td class="num hi">241</td><td class="num">4,757</td></tr></tbody></table></div></div><h3 style="font-size:15px;margin:26px 0 4px">이번 달 결론 3가지</h3>
+<div class="actions">
+  <div class="act g"><b>1. 에이블리 예산 늘리기</b><span>클릭 125원, ROAS 12배로 전 매체 최고 효율. 캠페인 대부분이 일 1만 원 균등이라 늘릴 여지가 큼. 주력 고데기·봉고데기 캠페인부터 2배.</span></div>
+  <div class="act b"><b>2. 구강가전 GFA 줄이기</b><span>GFA는 ROAS 1.6, 구강가전만 보면 0.7로 손해. 같은 돈을 네이버 검색(ROAS 14배)으로 옮기는 게 맞음.</span></div>
+  <div class="act"><b>3. 새 매체는 스레드·카카오 카탈로그부터</b><span>스레드는 메타 캠페인에 지면만 추가하면 비용 0. 카카오 커머스 카탈로그는 선물하기 안에서 노출돼 랭킹 목적에 직접적. 각 1주 테스트.</span></div>
+</div>
+<p style="font-size:12.5px;color:var(--muted);margin-top:10px">※ 메타 ROAS는 픽셀 구매 추적값(전환 캠페인만)이라 실제보다 낮게 잡힙니다. 트래픽 캠페인은 랜딩이 외부(카카오·무신사)라 구매가 안 잡힙니다. 지마켓 k2ci00과 네이버 AD부스터는 7일 표본, 나머지는 30일 표본입니다.</p>
+
+
+<h2 class="num" id="s2"><small>SECTION 2</small>매체별 실측</h2>
+<p class="lead">광고 계정 API와 광고센터 리포트에서 자동 수집한 값입니다. CPC는 링크 클릭 기준, CPM은 노출 1,000회당 비용, ROAS는 각 매체 자체 전환 집계 기준입니다.</p>
+<div class="tablewrap"><table><thead><tr><th>매체 · 목표</th><th class='num'>지출</th><th class='num'>클릭</th><th class='num'>CPC</th><th class='num'>CPM</th><th>기간</th></tr></thead><tbody><tr><td class="key">지마켓·옥션 · 파워클릭 G+A (7일)</td><td class="num">1,917,168</td><td class="num">2,767</td><td class="num hi">693</td><td class="num">1,496</td><td class="note">2026-08-16~2026-09-14 · ROAS 2.8</td></tr><tr><td class="key">지마켓·옥션 · G마켓광고센터 k2ci00 (7일 9/8~14)</td><td class="num">1,032,911</td><td class="num">1,514</td><td class="num hi">682</td><td class="num">10,772</td><td class="note">2026-08-16~2026-09-14 · ROAS 6.9</td></tr><tr><td class="key">지마켓·옥션 · G마켓광고센터 k2ci01 (30일)</td><td class="num">225,819</td><td class="num">300</td><td class="num hi">753</td><td class="num">8,189</td><td class="note">2026-08-16~2026-09-14 · ROAS 1.1</td></tr><tr><td class="key">에이블리 · 에이블리</td><td class="num">2,738,122</td><td class="num">21,859</td><td class="num hi">125</td><td class="num">2,870</td><td class="note">2026-08-16~2026-09-14 · ROAS 12.3</td></tr><tr><td class="key">X (트위터) · X 트래픽 (카카오 랜딩)</td><td class="num">241,831</td><td class="num">1,223</td><td class="num hi">198</td><td class="num">516</td><td class="note">최근 30일</td></tr><tr><td class="key">메타 · 전환</td><td class="num">22,649,446</td><td class="num">46,103</td><td class="num hi">491</td><td class="num">4,701</td><td class="note">최근 30일 · ROAS 0.3</td></tr><tr><td class="key">메타 · 트래픽</td><td class="num">7,969,222</td><td class="num">42,898</td><td class="num hi">186</td><td class="num">5,082</td><td class="note">최근 30일</td></tr><tr><td class="key">네이버 AD부스터 · 검색광고 · 쇼핑검색</td><td class="num">15,800,609</td><td class="num">20,079</td><td class="num hi">787</td><td class="num">5,071</td><td class="note">2026.09.08~2026.09.14 · ROAS 13.9</td></tr><tr><td class="key">네이버 AD부스터 · 디스플레이 광고 · ADVoost 쇼핑</td><td class="num">5,867,466</td><td class="num">6,023</td><td class="num hi">974</td><td class="num">5,155</td><td class="note">2026.09.08~2026.09.14 · ROAS 15.8</td></tr><tr><td class="key">네이버 AD부스터 · 디스플레이 광고 · 웹사이트 전환</td><td class="num">3,315,301</td><td class="num">5,037</td><td class="num hi">658</td><td class="num">6,495</td><td class="note">2026.09.08~2026.09.14 · ROAS 19.7</td></tr><tr><td class="key">네이버 AD부스터 · 디스플레이 광고 · 인지도 및 트래픽</td><td class="num">1,513,303</td><td class="num">3,896</td><td class="num hi">388</td><td class="num">1,973</td><td class="note">2026.09.08~2026.09.14 · ROAS 2.6</td></tr><tr><td class="key">네이버 AD부스터 · 검색광고 · 파워링크</td><td class="num">1,400,540</td><td class="num">2,099</td><td class="num hi">667</td><td class="num">7,488</td><td class="note">2026.09.08~2026.09.14 · ROAS 12.2</td></tr><tr><td class="key">네이버 GFA · GFA</td><td class="num">14,510,786</td><td class="num">23,690</td><td class="num hi">613</td><td class="num">2,942</td><td class="note">최근 30일 · ROAS 1.6</td></tr></tbody></table></div>
+<p class="fn">메타 ROAS는 픽셀 구매 추적값이라 실제보다 낮게 잡힙니다. 트래픽 캠페인은 외부(카카오·무신사) 랜딩이라 구매가 잡히지 않습니다. 지마켓 k2ci00과 네이버 AD부스터는 7일 표본입니다.</p>
+
+<h2 class="num" id="s3"><small>SECTION 3</small>제품 카테고리별 실측</h2>
+<p class="lead">같은 매체라도 카테고리에 따라 클릭 단가가 2~3배 벌어집니다. 캠페인·광고세트 이름의 제품 키워드로 자동 분류했습니다.</p>
+
+
+<h3 style="font-size:14px;color:var(--muted);margin:18px 0 8px">메타 (트래픽 = 링크 클릭 최적화, 전환 = 구매 최적화)</h3>
+<div class="tablewrap"><table><thead><tr><th>카테고리</th><th>목표</th><th class='num'>지출</th><th class='num'>클릭</th><th class='num'>CPC</th><th class='num'>CPM</th><th class='num'>ROAS</th></tr></thead><tbody><tr><td class="key">뷰티가전 · 드라이기</td><td>전환</td><td class="num">11,428,287</td><td class="num">17,048</td><td class="num hi">670</td><td class="num">6,206</td><td class="num">0.4</td></tr><tr><td class="key">구강가전</td><td>전환</td><td class="num">10,576,615</td><td class="num">27,043</td><td class="num hi">391</td><td class="num">3,668</td><td class="num">0.2</td></tr><tr><td class="key">뷰티가전 · 드라이기</td><td>트래픽</td><td class="num">2,573,981</td><td class="num">17,855</td><td class="num hi">144</td><td class="num">7,467</td><td class="num">-</td></tr><tr><td class="key">구강가전</td><td>트래픽</td><td class="num">2,150,942</td><td class="num">6,699</td><td class="num hi">321</td><td class="num">4,022</td><td class="num">-</td></tr><tr><td class="key">욕실</td><td>트래픽</td><td class="num">1,208,511</td><td class="num">4,554</td><td class="num hi">265</td><td class="num">5,657</td><td class="num">-</td></tr><tr><td class="key">뷰티가전 · 고데기</td><td>트래픽</td><td class="num">943,214</td><td class="num">7,795</td><td class="num hi">121</td><td class="num">3,638</td><td class="num">-</td></tr><tr><td class="key">마사지기</td><td>트래픽</td><td class="num">686,947</td><td class="num">3,567</td><td class="num hi">193</td><td class="num">5,382</td><td class="num">-</td></tr><tr><td class="key">뷰티가전 · 고데기</td><td>전환</td><td class="num">644,544</td><td class="num">2,012</td><td class="num hi">320</td><td class="num">6,937</td><td class="num">0.4</td></tr><tr><td class="key">충전</td><td>트래픽</td><td class="num">169,251</td><td class="num">1,014</td><td class="num hi">167</td><td class="num">3,816</td><td class="num">-</td></tr><tr><td class="key">가습기 · 인테리어</td><td>트래픽</td><td class="num">139,751</td><td class="num">579</td><td class="num hi">241</td><td class="num">4,757</td><td class="num">-</td></tr><tr><td class="key">기타</td><td>트래픽</td><td class="num">96,625</td><td class="num">835</td><td class="num hi">116</td><td class="num">6,819</td><td class="num">-</td></tr></tbody></table></div>
+
+<h3 style="font-size:14px;color:var(--muted);margin:18px 0 8px">네이버 AD부스터 (7일 · 쇼핑검색 상품형 기준, 전환은 네이버 자체 집계)</h3>
+<div class="tablewrap"><table><thead><tr><th>카테고리</th><th>목표</th><th class='num'>지출</th><th class='num'>클릭</th><th class='num'>CPC</th><th class='num'>CPM</th><th class='num'>ROAS</th></tr></thead><tbody><tr><td class="key">욕실</td><td>검색광고 · 쇼핑검색</td><td class="num">4,015,158</td><td class="num">3,669</td><td class="num hi">1,094</td><td class="num">3,738</td><td class="num">16.2</td></tr><tr><td class="key">계절가전</td><td>검색광고 · 쇼핑검색</td><td class="num">3,629,373</td><td class="num">2,960</td><td class="num hi">1,226</td><td class="num">16,634</td><td class="num">7.5</td></tr><tr><td class="key">기타</td><td>검색광고 · 쇼핑검색</td><td class="num">3,044,913</td><td class="num">5,406</td><td class="num hi">563</td><td class="num">2,790</td><td class="num">21.5</td></tr><tr><td class="key">마사지기</td><td>검색광고 · 쇼핑검색</td><td class="num">2,758,401</td><td class="num">3,631</td><td class="num hi">760</td><td class="num">15,202</td><td class="num">10.3</td></tr><tr><td class="key">뷰티가전 · 드라이기</td><td>디스플레이 광고 · 웹사이트 전환</td><td class="num">2,131,389</td><td class="num">3,779</td><td class="num hi">564</td><td class="num">5,714</td><td class="num">26.6</td></tr><tr><td class="key">기타</td><td>디스플레이 광고 · ADVoost 쇼핑</td><td class="num">1,900,443</td><td class="num">3,071</td><td class="num hi">619</td><td class="num">4,772</td><td class="num">24.7</td></tr><tr><td class="key">기타</td><td>디스플레이 광고 · 인지도 및 트래픽</td><td class="num">1,513,303</td><td class="num">3,896</td><td class="num hi">388</td><td class="num">1,973</td><td class="num">2.6</td></tr><tr><td class="key">계절가전</td><td>디스플레이 광고 · ADVoost 쇼핑</td><td class="num">1,413,865</td><td class="num">814</td><td class="num hi">1,737</td><td class="num">4,750</td><td class="num">4.4</td></tr><tr><td class="key">충전</td><td>검색광고 · 쇼핑검색</td><td class="num">1,056,702</td><td class="num">1,948</td><td class="num hi">542</td><td class="num">3,559</td><td class="num">14.2</td></tr><tr><td class="key">가습기 · 인테리어</td><td>검색광고 · 쇼핑검색</td><td class="num">1,046,482</td><td class="num">1,946</td><td class="num hi">538</td><td class="num">10,343</td><td class="num">15.1</td></tr><tr><td class="key">마사지기</td><td>디스플레이 광고 · ADVoost 쇼핑</td><td class="num">959,965</td><td class="num">996</td><td class="num hi">964</td><td class="num">5,618</td><td class="num">10.1</td></tr><tr><td class="key">욕실</td><td>디스플레이 광고 · ADVoost 쇼핑</td><td class="num">959,328</td><td class="num">687</td><td class="num hi">1,396</td><td class="num">4,410</td><td class="num">26.8</td></tr><tr><td class="key">충전</td><td>디스플레이 광고 · ADVoost 쇼핑</td><td class="num">633,865</td><td class="num">455</td><td class="num hi">1,393</td><td class="num">11,781</td><td class="num">6.4</td></tr><tr><td class="key">구강가전</td><td>디스플레이 광고 · 웹사이트 전환</td><td class="num">605,360</td><td class="num">668</td><td class="num hi">906</td><td class="num">5,067</td><td class="num">4.8</td></tr><tr><td class="key">생활가전</td><td>디스플레이 광고 · 웹사이트 전환</td><td class="num">578,552</td><td class="num">590</td><td class="num hi">981</td><td class="num">32,271</td><td class="num">10.1</td></tr><tr><td class="key">마사지기</td><td>검색광고 · 파워링크</td><td class="num">538,309</td><td class="num">550</td><td class="num hi">979</td><td class="num">12,295</td><td class="num">4.8</td></tr><tr><td class="key">기타</td><td>검색광고 · 파워링크</td><td class="num">477,777</td><td class="num">881</td><td class="num hi">542</td><td class="num">8,500</td><td class="num">18.5</td></tr><tr><td class="key">생활가전</td><td>검색광고 · 쇼핑검색</td><td class="num">249,580</td><td class="num">519</td><td class="num hi">481</td><td class="num">1,637</td><td class="num">11.0</td></tr><tr><td class="key">욕실</td><td>검색광고 · 파워링크</td><td class="num">228,561</td><td class="num">316</td><td class="num hi">723</td><td class="num">5,693</td><td class="num">13.0</td></tr><tr><td class="key">가습기 · 인테리어</td><td>검색광고 · 파워링크</td><td class="num">78,201</td><td class="num">170</td><td class="num hi">460</td><td class="num">3,588</td><td class="num">12.0</td></tr></tbody></table></div>
+
+<h3 style="font-size:14px;color:var(--muted);margin:18px 0 8px">네이버 GFA (30일 · 구매는 네이버 전환 집계)</h3>
+<div class="tablewrap"><table><thead><tr><th>카테고리</th><th>목표</th><th class='num'>지출</th><th class='num'>클릭</th><th class='num'>CPC</th><th class='num'>CPM</th><th class='num'>ROAS</th></tr></thead><tbody><tr><td class="key">뷰티가전 · 드라이기</td><td>GFA</td><td class="num">9,270,622</td><td class="num">17,507</td><td class="num hi">530</td><td class="num">3,450</td><td class="num">1.7</td></tr><tr><td class="key">구강가전</td><td>GFA</td><td class="num">5,240,164</td><td class="num">6,183</td><td class="num hi">848</td><td class="num">2,334</td><td class="num">0.7</td></tr></tbody></table></div>
+
+<h3 style="font-size:14px;color:var(--muted);margin:18px 0 8px">에이블리 (30일 · 캠페인별, 에이블리 자체 전환 집계)</h3>
+<div class="tablewrap"><table><thead><tr><th>카테고리</th><th>목표</th><th class='num'>지출</th><th class='num'>클릭</th><th class='num'>CPC</th><th class='num'>CPM</th><th class='num'>ROAS</th></tr></thead><tbody><tr><td class="key">뷰티가전 · 고데기</td><td>에이블리</td><td class="num">1,475,151</td><td class="num">11,658</td><td class="num hi">127</td><td class="num">3,144</td><td class="num">13.7</td></tr><tr><td class="key">기타</td><td>에이블리</td><td class="num">888,691</td><td class="num">7,563</td><td class="num hi">118</td><td class="num">2,663</td><td class="num">11.4</td></tr><tr><td class="key">뷰티가전 · 드라이기</td><td>에이블리</td><td class="num">374,280</td><td class="num">2,638</td><td class="num hi">142</td><td class="num">2,478</td><td class="num">8.5</td></tr></tbody></table></div>
+
+<div class="callout">
+  <p><strong>카테고리별로 잘 맞는 매체</strong>가 다릅니다. 뷰티가전(드라이기·고데기)은 메타 트래픽 90~220원으로 전 매체 최저이고, 네이버 검색 ROAS도 22배로 최고입니다. 구강가전은 메타 트래픽 270~340원, GFA에서는 ROAS 1 미만이라 GFA 예산을 네이버 검색으로 돌리는 게 맞습니다.</p>
+  <p><strong>마사지기·충전기·가습기</strong>(이번 카카오 5종)는 메타 트래픽 150~290원으로 뷰티가전보다 비싸지만 구강보다는 쌉니다. 네이버 건강 카테고리는 CPC 800원이라 검색보다 메타가 유리합니다.</p>
+  <p><strong>선풍기류</strong>는 9월이라 CPC 1,000~1,600원까지 올랐습니다. 시즌 끝난 카테고리는 광고를 접는 게 맞습니다.</p>
+</div>
+
+
+
+
+<h2 class="num" id="s4"><small>SECTION 4</small>리테일 미디어 단가표</h2>
+<p class="lead">각 플랫폼 광고센터·상품소개서·대행 판매가에서 확인한 값입니다. "비공개"는 소개서에도 숫자가 없고 파트너 어드민 안에서만 노출되는 경우입니다.</p>
+<div class="sec"><div class="secbar"><span>플랫폼별 광고 상품 · 과금 · 단가</span><span class="tot">수집일 2026-09-15</span></div>
+<div class="tablewrap"><table>
+<thead><tr><th>플랫폼</th><th>상품</th><th>과금</th><th class="num">단가 / 최소</th><th>비고</th><th>우리 실측</th></tr></thead>
+<tbody>
+<tr><td class="key">에이블리</td><td>상품 광고(AI 추천)</td><td>oCPM 선충전</td><td class="num">캠페인 일 10,000원부터</td><td class="note">노출 기준 과금, 실제 CPC는 결과값</td><td class="note">30일 CPC 125 · ROAS 12.3 (실측)</td></tr>
+<tr><td class="key">에이블리</td><td>디스플레이(스플래시·전면·혜택탭 등 9종)</td><td>CPD 구좌 정액</td><td class="num">1,000,000~10,000,000 /일·주</td><td class="note">스플래시 500만/일, 프리미엄 전면 1,000만/일, 혜택탭 Top 100~120만/일, 검색·마이페이지 250만/주</td><td class="note">미집행</td></tr>
+<tr><td class="key">지그재그</td><td>상품형·배너형(멀티보드·TOP보드)·스토어형·메시지형</td><td>oCPM 변동</td><td class="num">일 예산 최소 30,000원</td><td class="note">노출 위치별 유동 단가, 충전금 소진까지</td><td class="note">7월 407만 집행, 파트너센터 이메일 계정 필요</td></tr>
+<tr><td class="key">무신사 · 29CM</td><td>상품 광고(노출형·회귀추천형·네이티브형)</td><td>CPC(최대 클릭비용 설정)</td><td class="num">단가 비공개 · 무상 포인트 10~50만/월</td><td class="note">전월-2 판매수수료 0.5%를 비즈 포인트로 환급. 협력광고(배너·기획전)는 별도 협의</td><td class="note">7월 104만 집행, 어드민 비밀번호 초기화 상태</td></tr>
+<tr><td class="key">쿠팡</td><td>매출최적화 · 수동 CPC · AI 스마트</td><td>CPC</td><td class="num">클릭 100~800원 (통상 200~300) · 일 1,000원부터</td><td class="note">뷰티·가전은 경쟁 심해 500원↑ 흔함. 광고비 매출의 10~20% 권장</td><td class="note">5월 이미용 1,138만 집행, 클릭 미기록</td></tr>
+<tr><td class="key">11번가</td><td>포커스클릭</td><td>CPC</td><td class="num">최저 90원, 10원 단위</td><td class="note">AI검색·AI추천 입찰 분리</td><td class="note">7월 298만 집행, 로그인 캡차로 미수집</td></tr>
+<tr><td class="key">지마켓 · 옥션</td><td>파워클릭 · AI매출업 · 노출보장형</td><td>CPC / 목표ROAS 자동 / CPT</td><td class="num">파워클릭 실측 CPC 682~753</td><td class="note">노출보장형은 구좌 정액</td><td class="note">G마켓 7일 CPC 682 · ROAS 6.9 (실측)</td></tr>
+<tr><td class="key">롯데ON</td><td>클릭광고</td><td>CPC 차순위+10원</td><td class="num">최소 입찰 90원</td><td class="note">검색 상단 8개·상세 상단 1개·오늘ON 10개</td><td class="note">미집행</td></tr>
+<tr><td class="key">롯데ON</td><td>리스팅광고 / 리스팅UP</td><td>CPT 정액</td><td class="num">1일 500 / 700 · 30일 10,000 / 14,700</td><td class="note">검색결과 랭킹순 노출, 7일 3,000/4,000·90일 22,500/31,500</td><td class="note">미집행</td></tr>
+<tr><td class="key">SSG닷컴</td><td>검색광고 · 검색배너 · 전시배너</td><td>CPC 입찰 + 배너 CPM</td><td class="num">월 1,000,000원부터</td><td class="note">지면별 CPM 상이, 대행 경유</td><td class="note">미집행</td></tr>
+<tr><td class="key">올리브영</td><td>부킹형 온사이트 · 성과형 온사이트 · 인스토어 미디어</td><td>정액 / 성과형 / 사이니지</td><td class="num">파트너오피스 신청 후 공개</td><td class="note">입점 브랜드 전용. 2026 협력광고 플레이북 배포</td><td class="note">미입점</td></tr>
+<tr><td class="key">컬리</td><td>컬리 광고센터(1k-dsp)</td><td>DSP</td><td class="num">비공개</td><td class="note">입점 셀러 전용</td><td class="note">미집행</td></tr>
+<tr><td class="key">오늘의집</td><td>오하우스애즈 · 배너광고</td><td>성과형 / 정액</td><td class="num">소개서 내 공개(오하우스애즈 운영 가이드)</td><td class="note">키워드 타겟팅, 과금방식 개편 이력</td><td class="note">4~5월 소액 집행 이력</td></tr>
+<tr><td class="key">토스</td><td>CPC 배너</td><td>CPC 자동입찰</td><td class="num">최소 3,000,000원(대행 기준)</td><td class="note">토스 사례: 자동입찰 시 CPC -65%</td><td class="note">4월 200만 집행, 클릭 미기록</td></tr>
+<tr><td class="key">네이버 보장형 DA</td><td>스마트채널 · 롤링보드 · 브랜딩DA</td><td>CPM 정액</td><td class="num">CPM 3,000 · 3,200 · 6,000</td><td class="note">2026.06 상품소개서. 메인 피드 1st 시간당 1,000만</td><td class="note">미집행</td></tr>
+<tr><td class="key">배달의민족</td><td>우리가게클릭</td><td>CPC</td><td class="num">200~600원 · 5만~300만</td><td class="note">음식점 전용(참고)</td><td class="note">해당 없음</td></tr>
+</tbody></table></div></div>
+<p class="fn">에이블리 디스플레이 단가는 애즈순·에이블리DA 소개 페이지의 프로모션 단가(VAT 별도). 쿠팡 CPC는 셀러 커뮤니티 공개 범위. 롯데ON은 셀러오피스 광고 상품 가이드 PDF.</p>
+
+
+<h2 class="num" id="s5"><small>SECTION 5</small>미집행 매체 벤치마크</h2>
+<p class="lead">아직 안 쓰거나 실측이 없는 매체 41종. 공개 자료 기준이라 범위로 적었고, 국내 평균이 없는 매체는 소액 테스트로 직접 재야 합니다.</p>
+<details><summary>5-1. 주요 디지털 매체 7종 (카카오모먼트·틱톡·유튜브·구글·토스·X)</summary><div class="inner">
+<p>공개 자료 기준이라 범위로 적었습니다. 국내 평균이 공개되지 않은 매체는 소액 테스트로 직접 재야 합니다.</p>
+<div class="tablewrap">
+<table>
+  <thead><tr><th>매체</th><th>과금</th><th class="num">참고 단가</th><th>근거</th><th>우리 상태</th></tr></thead>
+  <tbody>
+    <tr><td class="key">카카오모먼트 비즈보드</td><td>CPC · CPM 실시간 입찰</td><td class="num">CPC 수백 원대</td><td class="note">공식 최저 입찰 10원, 공개 평균치 없음</td><td class="note">7월 카카오플친 170만 원 집행, 클릭 미기록</td></tr>
+    <tr><td class="key">틱톡</td><td>CPC · CPM</td><td class="num">CPC 700~1,400 · CPM 6,500~13,000</td><td class="note">글로벌 커머스 벤치마크 환산. 국내 트래픽 목표는 더 낮게 나오는 편</td><td class="note">광고 계정 있음(오아주식회사0307), 결제·사업자 정보 미완</td></tr>
+    <tr><td class="key">유튜브 쇼츠</td><td>CPV</td><td class="num">조회당 5~15</td><td class="note">국내 대행사 2026 자료. 클릭이 아니라 조회 기준</td><td class="note">미집행</td></tr>
+    <tr><td class="key">유튜브 인스트림 · 디맨드젠</td><td>CPV · CPC</td><td class="num">CPV 30~50 · 배너 클릭 300~500</td><td class="note">국내 대행사 자료</td><td class="note">미집행</td></tr>
+    <tr><td class="key">구글 검색 · 쇼핑</td><td>CPC</td><td class="num">국내 공개치 없음</td><td class="note">미국 기준 약 4,000원이라 참고 불가</td><td class="note">미집행</td></tr>
+    <tr><td class="key">토스 광고</td><td>CPC 자동입찰</td><td class="num">공개 단가 없음</td><td class="note">토스 자체 사례 "자동입찰 시 CPC -65%"</td><td class="note">4월 토스 CPC 200만 원대 집행, 클릭 미기록</td></tr>
+    <tr><td class="key">X (트위터)</td><td>프로모션 포스트 · CPC/CPM/CPE</td><td class="num">국내 CPC 100~200 (틈새 타겟) · 글로벌 평균 약 1,000</td><td class="note">2024년 9월 한국 광고주 직접 개설 가능. 광고주가 적어 CPC가 낮은 편. 웹사이트 카드 800×418. 자동입찰 7일 후 수동 상한 권장</td><td class="note">계정 있음(18ce55spa1p). 카카오 4종 캠페인 초안 PAUSED(입찰 상한 30원), 소재 등록 미완</td></tr>
+  </tbody>
+</table>
+</div>
+
+<div class="chart">
+  <h3>클릭 1회 단가 비교 (원)</h3>
+  <div class="bar"><span class="label">메타 트래픽</span><div class="track"><div class="fill" style="width:13%"></div></div><span class="v">181</span></div>
+  <div class="bar"><span class="label">메타 전환</span><div class="track"><div class="fill" style="width:35%"></div></div><span class="v">489</span></div>
+  <div class="bar"><span class="label">네이버 검색</span><div class="track"><div class="fill" style="width:38%"></div></div><span class="v">537</span></div>
+  <div class="bar"><span class="label">네이버 GFA</span><div class="track"><div class="fill" style="width:43%"></div></div><span class="v">603</span></div>
+  <div class="bar"><span class="label">네이버 디스플레이</span><div class="track"><div class="fill" style="width:60%"></div></div><span class="v">843</span></div>
+  <div class="bar"><span class="label">유튜브 배너 클릭</span><div class="track"><div class="fill bench" style="width:29%"></div></div><span class="v">300~500</span></div>
+  <div class="bar"><span class="label">X 트위터 (국내)</span><div class="track"><div class="fill bench" style="width:11%"></div></div><span class="v">100~200</span></div>
+  <div class="bar"><span class="label">틱톡 (글로벌)</span><div class="track"><div class="fill bench" style="width:75%"></div></div><span class="v">700~1,400</span></div>
+  <div class="legend"><i style="background:var(--accent)"></i>우리 실측 &nbsp; <i style="background:var(--tag-bench)"></i>공개 벤치마크(범위 중앙값으로 표시)</div>
+</div>
+
+
+</div></details>
+<details><summary>5-2. 커머스·SNS·시딩 9종 (스레드·당근·쿠팡·숏클립·리테일·DSP·인플루언서)</summary><div class="inner">
+<p>위 표에 없던 매체를 더 훑었습니다. 회사 광고비표(4~7월)에 이미 집행 이력이 있는 것은 "집행 중"으로 표시했고, 클릭 단가가 기록돼 있지 않아 실측은 비었습니다.</p>
+<div class="tablewrap">
+<table>
+  <thead><tr><th>매체</th><th>유형</th><th class="num">참고 단가</th><th>메모</th><th>우리 상태</th></tr></thead>
+  <tbody>
+    <tr><td class="key">스레드 (Threads)</td><td>피드 광고 · CPM/CPC</td><td class="num">CPM 인스타 대비 30~40% 저렴</td><td class="note">2026년 1월 한국 정식 출시. 메타 광고 관리자에서 게재 위치만 추가하면 됨. 동영상 상반기 지원</td><td class="note">미집행. 기존 메타 캠페인에 지면 추가로 바로 테스트 가능</td></tr>
+    <tr><td class="key">당근 광고</td><td>동네 피드 · CPC</td><td class="num">최소 100 · 서울경기 300~600</td><td class="note">전문가모드 일 1만 원부터. 지역 반경 타겟이라 전국 브랜드엔 도달 제한</td><td class="note">미집행. 명절 선물 같은 시즌 소재로 소액 테스트 후보</td></tr>
+    <tr><td class="key">쿠팡 광고</td><td>매출최적화 · 수동 CPC</td><td class="num">공개치 없음 (전년 대비 15~20% 상승)</td><td class="note">뷰티 카테고리 15초 숏폼 광고 도입. 광고비는 매출의 10~20% 권장</td><td class="note">집행 중. 5월 이미용가전 1,138만 원, 클릭 미기록</td></tr>
+    <tr><td class="key">네이버 쇼핑검색 · 브랜드검색 · 신제품검색</td><td>검색 · CPC/정액</td><td class="num">공개 평균 없음</td><td class="note">신제품검색광고는 정액 상품. 브랜드검색은 월 정액</td><td class="note">집행 중. 7월 이미용 신제품 558만 · 파워링크 225만 · 브랜드형 13만</td></tr>
+    <tr><td class="key">네이버 쇼핑라이브 숏클립 · 클립</td><td>숏폼 · 무료 노출</td><td class="num">0 (콘텐츠 제작비만)</td><td class="note">10초~2분 영상을 스마트스토어 상품에 연결. 광고 과금 없이 쇼핑탭·클립 지면 노출</td><td class="note">미집행. 릴스 소재 그대로 재활용 가능</td></tr>
+    <tr><td class="key">리테일 미디어 (에이블리 · 지그재그 · 무신사 · 오늘의집)</td><td>앱 내 배너 · CPC/정액</td><td class="num">플랫폼별 비공개</td><td class="note">각 플랫폼 광고센터에서만 단가 확인 가능</td><td class="note">집행 중. 7월 에이블리 703만 · 지그재그 407만 · 무신사 104만</td></tr>
+    <tr><td class="key">리타겟팅 DSP (모비온 · 크리테오)</td><td>사이트 방문자 재노출 · CPC</td><td class="num">모비온 고정 CPC (광고주 설정)</td><td class="note">모비온은 지면 입찰 없이 고정 단가, 크리테오는 AI 풀퍼널. 자사몰 픽셀 필요</td><td class="note">미집행. 자사몰 트래픽이 있을 때 효율</td></tr>
+    <tr><td class="key">인플루언서 시딩</td><td>제품 협찬 · 건당</td><td class="num">마이크로 10만~50만/건</td><td class="note">팔로워 1~2만 크리에이터 5명 영상 1회 약 300만 원 패키지. 참여율 3~7%</td><td class="note">집행 중. 광고비표 "마케팅비용" 항목(5월 이미용 6,000만)</td></tr>
+    <tr><td class="key">OTT · DOOH</td><td>쿠팡플레이 · 티빙 · 디지털 옥외</td><td class="num">브랜딩 단가 (CPM 수만 원대)</td><td class="note">2026 트렌드 리포트에서 커머스 연결형으로 부상. 클릭 구매는 어려움</td><td class="note">미집행. 트래픽 목적엔 부적합</td></tr>
+  </tbody>
+</table>
+</div>
+<div class="callout">
+  <p><strong>바로 켤 수 있는 것</strong>은 스레드(메타 관리자에서 지면 추가)와 네이버 숏클립(무료)입니다. 둘 다 이미 만든 릴스 소재를 그대로 씁니다.</p>
+  <p><strong>단가를 모르는데 이미 쓰고 있는 것</strong>이 쿠팡·리테일 미디어·네이버 쇼핑검색입니다. 광고비표에 금액만 있고 클릭이 없어서, 각 광고센터에서 클릭 수만 뽑으면 이 표가 실측으로 바뀝니다.</p>
+</div>
+
+
+</div></details>
+<details><summary>5-3. 메시징·오픈마켓·리워드·커뮤니티·체험단 10종</summary><div class="inner">
+<p>메시징·오픈마켓·리워드·커뮤니티·체험단까지 포함했습니다. 클릭 과금이 아닌 것은 과금 단위를 따로 적었습니다.</p>
+<div class="tablewrap">
+<table>
+  <thead><tr><th>매체</th><th>과금 단위</th><th class="num">참고 단가</th><th>메모</th><th>우리 상태</th></tr></thead>
+  <tbody>
+    <tr><td class="key">카카오 커머스 카탈로그 광고</td><td>선물하기·톡딜 지면 · CPC</td><td class="num">모먼트 입찰 (공개 평균 없음)</td><td class="note">2026년 6월 출시. 선물하기 등록 상품 정보로 소재 없이 바로 집행. 8월부터 '받은 선물' 최상단 지면 추가</td><td class="note">미집행. 카카오 선물하기 랭킹 올리는 목적이면 가장 직접적인 매체</td></tr>
+    <tr><td class="key">카카오톡 브랜드메시지</td><td>발송 건당</td><td class="num">23~25 /건</td><td class="note">친구톡 후속(2026년 1월 전환). 채널 친구에게만 발송, 사전 승인 없음</td><td class="note">집행 이력 있음(카카오플친 5~6월 100~170만)</td></tr>
+    <tr><td class="key">11번가 포커스클릭</td><td>검색 · CPC</td><td class="num">최저 90</td><td class="note">AI검색·AI추천 입찰가 분리</td><td class="note">집행 중. 7월 이미용 197만, 클릭 미기록</td></tr>
+    <tr><td class="key">지마켓·옥션 파워클릭 · AI매출업</td><td>검색 · CPC / 목표 ROAS 자동</td><td class="num">공개 평균 없음</td><td class="note">AI캠페인은 목표 ROAS 기준 자동 입찰</td><td class="note">집행 중. 7월 지마켓 CPC 129만 + AI 56만, 옥션 CPC 35만</td></tr>
+    <tr><td class="key">네이버 밴드</td><td>피드 배너 · CPM/CPC/CPV</td><td class="num">최저 CPM 1,000 · CPC 10</td><td class="note">실시간 입찰. 40~60대 도달에 강함</td><td class="note">미집행. 부모님 선물(무릎·손목 마사지기)에 맞는 지면</td></tr>
+    <tr><td class="key">핀터레스트</td><td>핀 광고 · CPC/CPM</td><td class="num">CPC 약 700~1,000 · CPM 4,000~11,000</td><td class="note">글로벌 커머스 벤치마크. 메타 대비 30~50% 낮다는 자료. 국내 볼륨 작음</td><td class="note">미집행</td></tr>
+    <tr><td class="key">스포티파이 오디오</td><td>CPM</td><td class="num">CPM 약 20,000~34,000</td><td class="note">최소 캠페인 약 34만 원. 브랜딩용</td><td class="note">미집행. 트래픽엔 부적합</td></tr>
+    <tr><td class="key">리워드 광고 (캐시워크 · 애디슨 오퍼월 · 버즈빌)</td><td>CPA/CPC/CPI</td><td class="num">캐시워크 회원가입 CPA 1,000~1,200</td><td class="note">유저가 포인트 받고 행동. 클릭은 싸지만 구매 의도 낮음</td><td class="note">미집행. 랭킹 트래픽 목적이면 후보</td></tr>
+    <tr><td class="key">커뮤니티 배너·바이럴 (뽐뿌·에펨코리아·더쿠·디시)</td><td>정액 / 건당</td><td class="num">배너 월 30만 원~, 바이럴 건당 협의</td><td class="note">핫딜·바이럴 대행사 경유가 일반적. 단가 비공개</td><td class="note">미집행</td></tr>
+    <tr><td class="key">블로그·릴스 체험단 (레뷰·리뷰노트·블로그차트)</td><td>건당</td><td class="num">블로그 2만~5만/건, 릴스 체험단 별도</td><td class="note">20~50명 대량 운영 가능. 검색 노출·후기 확보용</td><td class="note">쿠팡 체험단 이력 있음(5월 1,231만)</td></tr>
+  </tbody>
+</table>
+</div>
+
+</div></details><details><summary>추천 순서 (신규 매체 테스트)</summary><div class="inner">
+</div></details>
+<details><summary>5-4. 포털 보장형·애드네트워크·잠금화면·배달·TV·OTT 15종</summary><div class="inner">
+<p>포털 보장형 지면, 애드네트워크, 잠금화면·리워드, 배달·중고 앱, 버티컬 커머스, TV까지 남김없이 훑었습니다. 우리 제품(뷰티·헬스 소형가전)에 맞는지 마지막 열에 적었습니다.</p>
+<div class="tablewrap">
+<table>
+  <thead><tr><th>매체</th><th>과금</th><th class="num">참고 단가</th><th>메모</th><th>우리와 맞는가</th></tr></thead>
+  <tbody>
+    <tr><td class="key">네이버 보장형 DA · 스마트채널</td><td>CPM 정액</td><td class="num">CPM 3,000 (확장형 +10%)</td><td class="note">네이버 앱 상단 띠배너. 2026.06 상품소개서 기준</td><td class="note">중. 브랜딩+트래픽 겸용, 최소 집행액 상담 필요</td></tr>
+    <tr><td class="key">네이버 보장형 DA · 롤링보드</td><td>CPM 정액</td><td class="num">CPM 3,200 (일 3구좌)</td><td class="note">PC 메인 롤링 배너</td><td class="note">낮음. PC 중심</td></tr>
+    <tr><td class="key">네이버 보장형 DA · 메인 브랜딩DA</td><td>CPM 정액</td><td class="num">CPM 6,000 (동영상 6,500)</td><td class="note">모바일 메인 대형 배너</td><td class="note">낮음. 신제품 런칭 브랜딩용</td></tr>
+    <tr><td class="key">네이버 메인 피드 1st · 풀스크린DA</td><td>시간·구좌 정액</td><td class="num">1시간 1,000만 · 풀스크린 1구좌 2,000만</td><td class="note">전국 도달 브랜딩 상품</td><td class="note">해당 없음. 예산 규모 불일치</td></tr>
+    <tr><td class="key">네이버 클립 이미지 피드 광고</td><td>GFA 지면 · CPC/CPM</td><td class="num">GFA 입찰 (우리 GFA CPC 613)</td><td class="note">클립 숏폼 지면에 1200×1200 이미지 광고 신규 노출. 기존 GFA 캠페인에서 지면 선택</td><td class="note">높음. 비용 없이 지면만 추가</td></tr>
+    <tr><td class="key">카카오톡 채널 검색광고 · 다음쇼핑</td><td>고정 단가</td><td class="num">카카오 영업 상담</td><td class="note">모먼트 안에서 고정가로만 구매되는 상품군</td><td class="note">중. 선물하기 시즌 상품 노출용</td></tr>
+    <tr><td class="key">애드네트워크 DA (GDN · 모비온 · ADN · 크리테오 · 타게팅게이츠 · 카울리 · 애드픽)</td><td>CPC/CPM 입찰</td><td class="num">모비온 고정 CPC, GDN 공개 평균 없음</td><td class="note">GDN은 유튜브·지메일 지면, 모비온은 스마트스토어 리타겟팅 지원, ADN은 온사이트 이탈 방지</td><td class="note">중. 자사몰·스마트스토어 방문자 리타겟팅에 적합</td></tr>
+    <tr><td class="key">잠금화면 · 리워드 (캐시슬라이드 · 허니스크린 · 버즈빌)</td><td>CPH/CPI/CPE/CPC</td><td class="num">허니스크린 과거 기준 CPH 15 · CPI 250 · CPE 350</td><td class="note">가입자 2,500만(캐시슬라이드). 유저가 포인트 받고 반응</td><td class="note">낮음. 구매 의도 낮은 트래픽</td></tr>
+    <tr><td class="key">배달의민족 우리가게클릭</td><td>CPC</td><td class="num">200~600</td><td class="note">최소 5만~300만. 오픈리스트 점주만 신청 가능</td><td class="note">해당 없음. 음식점 전용</td></tr>
+    <tr><td class="key">번개장터 · 중고나라 광고</td><td>배너 · 제휴</td><td class="num">파트너 문의</td><td class="note">번개장터는 광고 제휴 페이지 운영(ads-partner.bunjang.co.kr)</td><td class="note">낮음. 중고 거래 맥락</td></tr>
+    <tr><td class="key">지그재그 광고 (카카오스타일)</td><td>상품형·배너형 · CPC</td><td class="num">비공개 (집행 중)</td><td class="note">AI 추천 기반 여성 쇼핑앱. 7월 407만 원 집행, 클릭 미기록</td><td class="note">높음. 이미 주력 매체 — 파트너센터 로그인만 되면 실측 가능</td></tr>
+    <tr><td class="key">무신사 브랜드 광고</td><td>배너·기획전 · 정액/CPC</td><td class="num">비공개 (집행 중)</td><td class="note">7월 104만 원. 파트너 어드민 비밀번호 초기화 상태</td><td class="note">중. 비밀번호 재설정 후 실측</td></tr>
+    <tr><td class="key">올리브영 · 29CM · 크림</td><td>입점 후 MD 협의 광고</td><td class="num">비공개</td><td class="note">올리브영은 '올영신상' 신제품 전용관 등 입점 브랜드 노출 프로그램. 광고보다 입점·기획전 협의가 우선</td><td class="note">중. 뷰티가전은 올리브영 입점 검토 가치</td></tr>
+    <tr><td class="key">삼성 애즈 (스마트TV 홈화면) · LG 채널 광고</td><td>CPM · 프로그래매틱</td><td class="num">국내 공개치 없음</td><td class="note">TV 홈 화면 배너, 프로그래매틱 구매 가능</td><td class="note">낮음. 브랜딩</td></tr>
+    <tr><td class="key">유튜브 프리미엄 외 OTT (웨이브 · 왓챠 · 디즈니+)</td><td>CPM</td><td class="num">비공개</td><td class="note">점유율: 넷플릭스 37.8 · 쿠팡플레이 24.4 · 티빙 17.8 · 디즈니 6.7 · 웨이브 6.1</td><td class="note">낮음. 브랜딩</td></tr>
+  </tbody>
+</table>
+</div>
+<div class="callout">
+  <p><strong>이 중 바로 쓸 것</strong>: 네이버 클립 이미지 피드(기존 GFA 캠페인에 지면 추가, 비용 0). <strong>실측만 남은 것</strong>: 지그재그·무신사(로그인 해결 시 자동 수집). <strong>검토할 것</strong>: 올리브영 입점, 네이버 스마트채널 CPM 3,000원(우리 메타 CPM 5,000원보다 낮음).</p>
+</div>
+
+<h2>5. 추천 순서</h2>
+<p>클릭을 싸게 사서 카카오 선물하기 랭킹을 올리는 목적, 이미 만든 릴스 소재를 재활용한다는 조건으로 골랐습니다.</p>
+<div class="tablewrap">
+<table>
+  <thead><tr><th>순위</th><th>매체</th><th>왜</th><th class="num">테스트 예산</th><th>기대 CPC</th></tr></thead>
+  <tbody>
+    <tr><td class="key">1</td><td class="key">스레드 지면 추가</td><td class="note">지금 도는 메타 트래픽 캠페인에 게재 위치만 켜면 끝. 소재·랜딩 그대로. CPM이 인스타보다 30~40% 낮다는 자료</td><td class="num">0 (기존 예산 분배)</td><td class="note">100~150원 기대</td></tr>
+    <tr><td class="key">2</td><td class="key">카카오 커머스 카탈로그</td><td class="note">선물하기 안에서 노출되므로 외부 유입 랭킹 반영 여부를 고민할 필요가 없음. 소재 제작 없이 상품 정보로 집행</td><td class="num">1주 50만</td><td class="note">모먼트 입찰이라 실측 필요</td></tr>
+    <tr><td class="key">3</td><td class="key">네이버 숏클립 · 클립</td><td class="note">무료. 5종 릴스 영상을 스마트스토어 상품에 연결만 하면 쇼핑탭에 노출. 실패해도 비용 0</td><td class="num">0</td><td class="note">과금 없음</td></tr>
+    <tr><td class="key">4</td><td class="key">틱톡 트래픽</td><td class="note">이사님 배분안(틱톡5:메타4:X1)의 절반이 틱톡인데 아직 계정 결제 미완. 릴스 소재 그대로 올릴 수 있음</td><td class="num">1주 70만</td><td class="note">국내 트래픽 목표 100~300원 예상</td></tr>
+    <tr><td class="key">5</td><td class="key">네이버 밴드</td><td class="note">무릎·손목·발 마사지기는 40~60대 구매자가 많음. 최저 입찰이 낮아 소액 테스트 부담 없음</td><td class="num">1주 30만</td><td class="note">실측 필요</td></tr>
+  </tbody>
+</table>
+</div>
+<div class="callout">
+  <p><strong>뒤로 미룰 것</strong>: 스포티파이·OTT·DOOH(브랜딩용, 클릭 안 나옴), 핀터레스트(국내 볼륨 작음), 리워드 광고(클릭은 싸지만 랭킹 반영 트래픽으로 인정되는지 먼저 확인 필요).</p>
+  <p><strong>먼저 정리할 것</strong>: 쿠팡·지마켓·11번가·에이블리·지그재그는 매달 합쳐 1,000만 원 넘게 쓰면서 클릭 수를 안 남기고 있음. 각 광고센터에서 월 클릭만 뽑으면 이 지도의 절반이 실측으로 바뀜.</p>
+</div>
+
+
+</div></details>
+<details><summary>5-5. 콘텐츠 협찬·라이브커머스·AI 검색·옥외 9종</summary><div class="inner">
+<p>콘텐츠 협찬, 라이브커머스, OTT·스트리밍, AI 검색, 옥외까지 마저 봤습니다. 클릭 과금이 아닌 것이 대부분이라 "우리 목적(선물하기 트래픽)에 맞는가"를 마지막 열에 적었습니다.</p>
+<div class="tablewrap">
+<table>
+  <thead><tr><th>매체</th><th>과금 단위</th><th class="num">참고 단가</th><th>메모</th><th>트래픽 적합도</th></tr></thead>
+  <tbody>
+    <tr><td class="key">유튜브 PPL · 브랜디드</td><td>편당</td><td class="num">구독자 5~10만 240~270만 · 10~50만 뷰티테크 약 1,600만</td><td class="note">단가로 1,344채널 집계(2026). PPL은 브랜디드의 50~70%. 유튜브 쇼핑 제휴로 링크 연결 가능</td><td class="note">중. 리뷰 유튜버 1편으로 검색량까지 같이 오름</td></tr>
+    <tr><td class="key">라이브커머스 (네이버 쇼핑라이브 · 그립 · 카카오 쇼핑라이브)</td><td>진행비 + 수수료</td><td class="num">자체 진행 0 · 호스트 섭외 별도</td><td class="note">그립 2026 상반기 1인당 구매액 47.6만. 카카오 쇼핑라이브는 선물·F&amp;B에 추천되는 편</td><td class="note">중. 카카오 쇼핑라이브는 선물하기 생태계 안</td></tr>
+    <tr><td class="key">쿠팡플레이 · 티빙 · 넷플릭스 광고요금제</td><td>CPM</td><td class="num">비공개 (상품소개서 기준 CPM 수만 원대)</td><td class="note">쿠팡플레이 2026년 7월 프리미엄 패스 출시로 광고 지면 본격화. 스포츠 독점 중계</td><td class="note">낮음. 브랜딩</td></tr>
+    <tr><td class="key">치지직 · SOOP 스트리밍</td><td>배너 · 스트리머 협찬</td><td class="num">비공개</td><td class="note">국내 스트리밍 양강. 20~30대 남성 도달</td><td class="note">낮음. 제품 타깃과 거리</td></tr>
+    <tr><td class="key">AI 검색 (ChatGPT 광고)</td><td>CPM</td><td class="num">약 81,000 (60달러)</td><td class="note">2026년 2월 파일럿, 6개국. 한국 미포함. 퍼플렉시티는 광고 철회</td><td class="note">아직 불가</td></tr>
+    <tr><td class="key">네이버 AI 브리핑 · 통합 플랫폼</td><td>기존 검색광고 연동</td><td class="num">별도 단가 없음</td><td class="note">2026년 3월 검색·디스플레이 통합, 6월 브랜드검색 개편(9월 30일까지 할인). 별도 매체가 아니라 기존 캠페인 노출 확장</td><td class="note">이미 집행 중인 검색광고에 포함</td></tr>
+    <tr><td class="key">엘리베이터 TV (포커스미디어 · KT타운보드)</td><td>모니터 대당 월</td><td class="num">대당 월 12,000~15,000 · 최소 30만</td><td class="note">아파트 단지 타겟. 15초 영상</td><td class="note">낮음. 클릭 없음</td></tr>
+    <tr><td class="key">지하철 · 버스 · 디지털 버스쉘터</td><td>기간 정액 + 제작·설치비</td><td class="num">매체·노선별 견적</td><td class="note">2026 옥외광고는 게재료+제작비+설치철거비 구조</td><td class="note">낮음. 브랜딩</td></tr>
+    <tr><td class="key">삼성 애즈 · 갤럭시 스토어 · 애플 검색광고</td><td>CPM · CPT</td><td class="num">국내 공개치 없음</td><td class="note">앱 설치·TV 광고 중심. 커머스 트래픽 상품 아님</td><td class="note">해당 없음</td></tr>
+  </tbody>
+</table>
+</div>
+<div class="callout">
+  <p><strong>여기서 건질 것</strong>은 두 가지입니다. 리뷰 유튜버 PPL(구독자 5~10만, 편당 250만 원 내외)은 영상 하나로 검색량과 후기를 같이 만들고, 카카오 쇼핑라이브는 선물하기 안에서 노출돼 랭킹 목적과 맞습니다.</p>
+  <p><strong>나머지</strong>(OTT·스트리밍·옥외·AI 검색)는 클릭 과금이 아니거나 한국에 아직 없어서 이번 목적엔 제외합니다. 이것으로 국내에서 집행 가능한 매체는 사실상 다 훑었습니다. 33개.</p>
+</div>
+
+</div></details>
+
+<h2 class="num" id="s6"><small>SECTION 6</small>권고와 방법론</h2>
+<h3 style="font-size:15px;margin:8px 0 4px">6-1. 신규 매체 테스트 순서</h3>
+<p>클릭을 싸게 사서 카카오 선물하기 랭킹을 올리는 목적, 이미 만든 릴스 소재를 재활용한다는 조건으로 골랐습니다.</p>
+<div class="tablewrap">
+<table>
+  <thead><tr><th>순위</th><th>매체</th><th>왜</th><th class="num">테스트 예산</th><th>기대 CPC</th></tr></thead>
+  <tbody>
+    <tr><td class="key">1</td><td class="key">스레드 지면 추가</td><td class="note">지금 도는 메타 트래픽 캠페인에 게재 위치만 켜면 끝. 소재·랜딩 그대로. CPM이 인스타보다 30~40% 낮다는 자료</td><td class="num">0 (기존 예산 분배)</td><td class="note">100~150원 기대</td></tr>
+    <tr><td class="key">2</td><td class="key">카카오 커머스 카탈로그</td><td class="note">선물하기 안에서 노출되므로 외부 유입 랭킹 반영 여부를 고민할 필요가 없음. 소재 제작 없이 상품 정보로 집행</td><td class="num">1주 50만</td><td class="note">모먼트 입찰이라 실측 필요</td></tr>
+    <tr><td class="key">3</td><td class="key">네이버 숏클립 · 클립</td><td class="note">무료. 5종 릴스 영상을 스마트스토어 상품에 연결만 하면 쇼핑탭에 노출. 실패해도 비용 0</td><td class="num">0</td><td class="note">과금 없음</td></tr>
+    <tr><td class="key">4</td><td class="key">틱톡 트래픽</td><td class="note">이사님 배분안(틱톡5:메타4:X1)의 절반이 틱톡인데 아직 계정 결제 미완. 릴스 소재 그대로 올릴 수 있음</td><td class="num">1주 70만</td><td class="note">국내 트래픽 목표 100~300원 예상</td></tr>
+    <tr><td class="key">5</td><td class="key">네이버 밴드</td><td class="note">무릎·손목·발 마사지기는 40~60대 구매자가 많음. 최저 입찰이 낮아 소액 테스트 부담 없음</td><td class="num">1주 30만</td><td class="note">실측 필요</td></tr>
+  </tbody>
+</table>
+</div>
+<div class="callout">
+  <p><strong>뒤로 미룰 것</strong>: 스포티파이·OTT·DOOH(브랜딩용, 클릭 안 나옴), 핀터레스트(국내 볼륨 작음), 리워드 광고(클릭은 싸지만 랭킹 반영 트래픽으로 인정되는지 먼저 확인 필요).</p>
+  <p><strong>먼저 정리할 것</strong>: 쿠팡·지마켓·11번가·에이블리·지그재그는 매달 합쳐 1,000만 원 넘게 쓰면서 클릭 수를 안 남기고 있음. 각 광고센터에서 월 클릭만 뽑으면 이 지도의 절반이 실측으로 바뀜.</p>
+</div>
+
+
+
+<h3 style="font-size:15px;margin:24px 0 4px">6-2. 수집 방법</h3>
+<ul>
+<li><b>메타</b> Graph API v21 광고세트 인사이트(30일). 링크 클릭·노출·구매 액션값.</li>
+<li><b>네이버 AD부스터</b> 통합광고주센터 전체 캠페인 xlsx 자동 다운로드(7일). 검색·디스플레이 캠페인별 노출·클릭·전환·매출.</li>
+<li><b>네이버 GFA</b> 광고주센터 리포트 API(30일). 캠페인별 비용·노출·클릭·구매.</li>
+<li><b>지마켓·옥션</b> ESM 광고센터 요약 리포트(지난 30일)와 파워클릭 일별 리포트(7일).</li>
+<li><b>에이블리</b> 셀러 어드민 통계 API(30일). 캠페인별 노출·클릭·비용·주문금액.</li>
+<li><b>X</b> 광고관리자 내부 통계(30일). 카카오 트래픽 캠페인만 필터.</li>
+<li>매주 월요일 09:40 자동 실행, 결과는 <code>docs/ad-cost-map.json</code>에 주별 누적. 새 제품은 스크립트의 카테고리 키워드에 추가.</li>
+</ul>
+<h3 style="font-size:15px;margin:24px 0 4px">6-3. 읽는 법</h3>
+<div class="callout">
+  <p><strong>싼 클릭 순서</strong>는 메타 트래픽(100~200원) → 네이버 검색(500원대) → GFA·네이버 디스플레이(600~800원)입니다. 유튜브 쇼츠는 10원대지만 조회 과금이라 클릭과 같은 줄에 놓을 수 없습니다.</p>
+  <p><strong>메타 150원대</strong>는 뷰티가전 소재가 잘 붙을 때 값입니다. 카테고리가 바뀌면 구강가전처럼 2배까지 뜁니다.</p>
+  <p><strong>카카오모먼트 · 틱톡 · 토스</strong>는 국내 평균이 공개돼 있지 않습니다. 각 30만 원씩 1주 테스트하면 CPC가 나옵니다.</p>
+</div>
+
+
+<h3 style="font-size:15px;margin:24px 0 4px">6-4. 출처</h3>
+<ul class="sources">
+  <li>메타 · 네이버 AD부스터 · GFA 실측: 광고 계정 API, AD부스터 캠페인 다운로드, GFA 리포트 스크립트 (2026-09-14)</li>
+  <li>카카오모먼트: <a href="https://cs.kakao.com/helps_html/1073189610?locale=ko">카카오 고객센터 입찰 기준</a>, <a href="https://kakaobusiness.gitbook.io/main/ad/moment">카카오 비즈니스 가이드</a></li>
+  <li>GFA 업종별 CPC: <a href="https://connectree.net/post74/?bmode=view&idx=17755393">커넥트리 GFA 비용 가이드</a></li>
+  <li>유튜브: <a href="https://pnamarketing.co.kr/insights/youtube-ad-types-cost-expert-guide-2026">피앤에이컴퍼니 2026 유튜브 광고 비용</a>, <a href="https://inmarketing.kr/google-ads/%EC%9C%A0%ED%8A%9C%EB%B8%8C-%EA%B4%91%EA%B3%A0%EC%9D%98-%EC%A2%85%EB%A5%98%EC%99%80-%EB%B9%84%EC%9A%A9/">아이엔마케팅</a></li>
+  <li>틱톡: <a href="https://www.stackmatix.com/blog/tiktok-cpc-benchmarks-2026">Stackmatix TikTok CPC 2026</a>, <a href="https://lebesgue.io/tiktok-ads/tiktok-ads-benchmarks-for-ctr-cr-and-cpm">Lebesgue TikTok 벤치마크</a></li>
+  <li>X: <a href="https://1point.kr/blog/insights/x-twitter-ads/">원포인트 X 광고 가이드</a>, <a href="https://inside.ampm.co.kr/insight/11829">마케팅인사이드 X 광고</a>, 내부 문서 refs/X_ADS_GUIDE.md</li>
+  <li>토스: <a href="https://tossads.toss.im/insights/max-click">토스애즈 CPC 자동입찰 사례</a>, <a href="https://inside.ampm.co.kr/insight/14355">토스 광고 가이드</a></li>
+  <li>스레드: <a href="https://about.fb.com/ko/news/2025/01/introducing-ads-in-threads/">Meta 공식 발표</a>, <a href="https://1point.kr/blog/insights/threads-ad-guide-small-brands/">원포인트 스레드 광고 가이드</a></li>
+  <li>당근: <a href="https://diad.co.kr/Etc/BlogDetail/5204">가비아CNS 당근 광고 운영 가이드 2026</a>, <a href="https://blog.admarketip.com/danggn-lower-cpc/">당근 CPC 낮추기</a></li>
+  <li>쿠팡: <a href="https://oscsnm.com/coupang-ads-guide-2026/">OSC 쿠팡 광고 가이드 2026</a></li>
+  <li>네이버 숏클립: <a href="https://openads.co.kr/content/contentDetail?contsId=9312">오픈애즈 숏클립 이용 방법</a></li>
+  <li>리타겟팅 DSP: <a href="https://marketing-help.nhn-commerce.com/insight/etc/6">NHN커머스 리타게팅 매체 비교</a></li>
+  <li>인플루언서: <a href="https://blog.rooters.co.kr/%EC%9D%B8%ED%94%8C%EB%A3%A8%EC%96%B8%EC%84%9C%EB%A7%88%EC%BC%80%ED%8C%85%EB%B9%84%EC%9A%A9">루터스 인플루언서 비용 2026</a>, <a href="https://www.syncly.kr/blog/instagram-reels-influencer-seeding-strategy-2026">싱클리 릴스 시딩 2026</a></li>
+  <li>카카오 카탈로그·브랜드메시지: <a href="https://www.kakaocorp.com/page/detail/12069">카카오 커머스 카탈로그 광고 출시</a>, <a href="https://today-marketing.com/news/view.php?no=706">받은 선물 지면 추가</a>, <a href="https://www.omago.ai/ko/blog/kakaotalk-brand-message-2026">브랜드메시지 2026</a></li>
+  <li>오픈마켓: <a href="https://ads.11st.co.kr/contents/guide/read?pageNum=1&catg=1&keyword=&bbsNo=373">11번가 포커스클릭 가이드</a>, <a href="https://marketinghub.esmplus.com/ad-guide/power-click/introduction.html">지마켓 파워클릭</a></li>
+  <li>밴드: <a href="https://ssl.pstatic.net/cmstatic/ad_guide/native_catalog/ko/native_catalog_6.6.pdf">BAND 광고 상품 소개서</a></li>
+  <li>핀터레스트·스포티파이: <a href="https://aiadvantageagency.com/pinterest-ads-cost-for-ecommerce/">Pinterest 커머스 벤치마크 2026</a>, <a href="https://www.stackmatix.com/blog/how-much-do-spotify-ads-cost">Spotify Ads 비용 2026</a></li>
+  <li>리워드·체험단: <a href="https://inside.ampm.co.kr/insight/58932">리워드 광고 2026</a>, <a href="https://cashwalk.com/business">캐시워크 for Business</a>, <a href="https://1point.kr/blog/business-insights/blog-review-vs-influencer-marketing/">블로그 체험단 vs 인플루언서</a></li>
+  <li>유튜브 PPL: <a href="https://dangaro.com/blog/youtube-ppl-cost-guide">단가로 유튜브 PPL 비용 2026</a>, <a href="https://dangaro.com/blog/youtube-influencer-pricing-by-category">카테고리별 단가</a></li>
+  <li>라이브커머스: <a href="https://platum.kr/archives/290133">그립 2026 상반기 리포트</a>, <a href="https://1point.kr/blog/insights/live-commerce-platform-comparison-guide/">플랫폼 비교 2026</a></li>
+  <li>OTT: <a href="https://www.fnnews.com/news/202607061827332356">쿠팡플레이 프리미엄 패스</a>, <a href="https://www.nasmedia.co.kr/wp-content/uploads/2021/07/%EC%BF%A0%ED%8C%A1%ED%94%8C%EB%A0%88%EC%9D%B4_%EA%B4%91%EA%B3%A0_%EC%83%81%ED%92%88_%EC%86%8C%EA%B0%9C%EC%84%9C_2025_4Q.pdf">쿠팡플레이 광고 상품소개서</a></li>
+  <li>AI 검색: <a href="https://www.digitalapplied.com/blog/ai-search-advertising-chatgpt-google-perplexity-2026">AI Search Advertising 2026</a></li>
+  <li>네이버 개편: <a href="https://blog.nasmedia.co.kr/entry/2603adissue">나스미디어 2026년 3월 매체 이슈</a>, <a href="https://www.i-boss.co.kr/ab-6141-70520">브랜드검색 통합 개편</a></li>
+  <li>옥외: <a href="https://tkad.co.kr/ko/guides/ooh-price-guide">싱커드 2026 옥외광고 단가 가이드</a>, <a href="https://www.i-boss.co.kr/ab-2987-201453">엘리베이터TV 대당 단가</a></li>
+  <li>네이버 보장형 DA: <a href="https://www.inobean.com/blog/post.php?slug=%EB%84%A4%EC%9D%B4%EB%B2%84-%EB%B3%B4%EC%9E%A5%ED%98%95-%EB%94%94%EC%8A%A4%ED%94%8C%EB%A0%88%EC%9D%B4-%EA%B4%91%EA%B3%A0-%EC%99%84%EC%A0%84%EC%A0%95%EB%B3%B5-%ED%83%80%EC%9E%84%EB%B3%B4%EB%93%9C-%EC%8A%A4%ED%8E%98%EC%85%9Cda-%EC%8A%A4%EB%A7%88%ED%8A%B8%EC%B1%84%EB%84%90-%EB%8B%A8%EA%B0%80-%EC%A0%84%EB%9E%B5">이노빈 타임보드·스페셜DA 단가</a>, <a href="https://www.dmktnews.com/news/11433">클립 이미지 피드 광고 추가</a></li>
+  <li>애드네트워크·리워드·배달: <a href="https://ampm.co.kr/inside/insight/31482">네트워크 배너 매체 가이드</a>, <a href="https://www.slideshare.net/ounjeong/ss-31967069">허니스크린 매체소개서</a>, <a href="https://www.koreaittimes.com/news/articleView.html?idxno=112537">배민 클릭광고</a>, <a href="https://ads-partner.bunjang.co.kr/">번개장터 광고 제휴</a></li>
+  <li>OTT 점유율: <a href="https://www.newsspace.kr/news/article.html?no=14459">랭킹연구소 2026.05</a></li>
+  <li>트렌드: <a href="https://www.k-trendynews.com/news/articleView.html?idxno=202817">2026 대한민국 광고시장</a>, <a href="https://cdn.cjmezzomedia.com/attach-file/insight-m/2026_DigitalMedia_Milestone_20260126152225.pdf">CJ메조미디어 Digital Media Milestone 2026</a></li>
+</ul>
+
+
+
+<footer>OA 뷰티 · 부스터즈팀 내부 자료 · 벤치마크 환산 환율 1,350원/USD · 자동 생성 문서, 손편집 구간은 결론 3가지와 리테일 미디어 단가표.</footer>
+</div>
