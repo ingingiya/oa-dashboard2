@@ -245,6 +245,10 @@ export default function AdOfficeTycoon() {
   const [paper, setPaper] = useState(null); // 🖊 결재서류 {action, s, extra, stamped} — 도장 찍어야 실행
   const [signer, setSigner] = useState(""); // 결재 도장 이름 (마지막 사용 기억)
   const [weekly, setWeekly] = useState(null); // 📜 주간 경영 리포트 (신문)
+  const [props, setProps] = useState(null); // 📨 매체 제안 비교 (settings.oa_media_proposals_v1)
+  const [propBusy, setPropBusy] = useState(false);
+  useEffect(() => { if (tab === "props" && !props) jfetch("/api/ad-proposals").then((j) => setProps(j?.items ? j : { items: [] })).catch(() => setProps({ items: [] })); }, [tab]); // eslint-disable-line react-hooks/exhaustive-deps
+  const patchProp = async (id, body) => { setPropBusy(true); try { const j = await jfetch("/api/ad-proposals", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id, ...body }) }); if (j?.item) setProps((p) => ({ ...p, items: p.items.map((i) => (i.id === id ? j.item : i)) })); } finally { setPropBusy(false); } };
   const [weeklyBusy, setWeeklyBusy] = useState(false);
   const [realloc, setRealloc] = useState(null); // 💸 회수 예산 재배치 제안 {freed, from}
   const [bet, setBet] = useState(null); // 🎲 사장의 베팅 {date, pickId, pickName, map, streak, best, last} — 표시 전용
@@ -900,7 +904,7 @@ export default function AdOfficeTycoon() {
         {[["work", "📋 오늘 업무", queue.length + alarms.length],
           ["plan", "📝 기획실", (data.plans || []).filter((p) => p.status === "pending").length],
           ["report", "📊 리포트", 0],
-          ["partner", "🤝 협력사·직영", 0], ["log", "🗂 기록", 0]].map(([k, label, n]) => (
+          ["partner", "🤝 협력사·직영", 0], ["props", "📨 매체 제안", 0], ["log", "🗂 기록", 0]].map(([k, label, n]) => (
           <button key={k} onClick={() => { SFX.click(); setTab(k); }}
             style={{ background: tab === k ? "#ffffff10" : "transparent", color: tab === k ? C.ink : C.mid,
               border: `1px solid ${tab === k ? C.cyan + "66" : C.border}`, borderRadius: 9, padding: "7px 14px",
@@ -2559,6 +2563,71 @@ export default function AdOfficeTycoon() {
       })()}
 
       {/* ⑥ 인사기록부 */}
+      {tab === "props" && (() => {
+        const items = props?.items || [];
+        const fmtd = (d) => (d || "").slice(5).replace("-", "/");
+        const stColor = (st = "") => /확정|부킹 완료|집행/.test(st) ? C.neon : /대기/.test(st) ? C.gold : /보류|제외/.test(st) ? C.red : C.cyan;
+        return (
+          <>
+            <h2 style={h2}><span style={px}>매체 제안</span> 📨 광고 매체 제안 비교
+              <span style={{ fontSize: 10.5, color: C.mid, fontWeight: 400 }}> 언제 문의했고 · 언제 제안서를 받았고 · 지금 어디까지 왔는지 {props?.updated && `· 갱신 ${props.updated.slice(0, 16).replace("T", " ")}`}</span></h2>
+            {!props && <div style={{ color: C.mid, fontSize: 12, padding: 16 }}>불러오는 중…</div>}
+            {props && items.length === 0 && <div style={{ color: C.mid, fontSize: 12, padding: 16 }}>등록된 제안이 없습니다.</div>}
+            {items.length > 0 && (
+              <div style={{ overflowX: "auto", background: C.panel, border: `1px solid ${C.border}`, borderRadius: 14, padding: "6px 10px 10px", marginBottom: 14 }}>
+                <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 11.5, minWidth: 980 }}>
+                  <thead><tr style={{ color: C.mid, textAlign: "left" }}>
+                    {["매체", "타깃·규모", "핵심 상품·조건", "예상 CPC", "예산 계획", "상태", "다음 할 일"].map((h) => <th key={h} style={{ padding: "8px 6px", borderBottom: `1px solid ${C.border}`, fontWeight: 600, whiteSpace: "nowrap" }}>{h}</th>)}
+                  </tr></thead>
+                  <tbody>
+                    {[...items].sort((a, b) => (a.cpc_est || 9e9) - (b.cpc_est || 9e9)).map((it) => (
+                      <tr key={it.id} style={{ borderBottom: `1px solid ${C.border}55`, verticalAlign: "top" }}>
+                        <td style={{ padding: "9px 6px", whiteSpace: "nowrap" }}><b style={{ color: C.ink, fontSize: 12.5 }}>{it.media}</b><div style={{ color: C.mid, fontSize: 10.5 }}>{it.company}</div><div style={{ color: C.mid, fontSize: 10.5 }}>{it.contact}</div></td>
+                        <td style={{ padding: "9px 6px", color: C.mid, maxWidth: 220 }}>{it.audience}<div style={{ color: C.purple, marginTop: 3 }}>{it.product}</div></td>
+                        <td style={{ padding: "9px 6px", color: C.ink, maxWidth: 260 }}>{it.core_offer}<div style={{ color: C.mid, fontSize: 10.5, marginTop: 3 }}>{it.landing}</div></td>
+                        <td style={{ padding: "9px 6px", whiteSpace: "nowrap" }}><b style={{ color: it.cpc_est <= 300 ? C.neon : it.cpc_est <= 700 ? C.gold : C.red, fontSize: 14 }}>₩{fmt(it.cpc_est)}</b><div style={{ color: C.mid, fontSize: 10, maxWidth: 200, whiteSpace: "normal" }}>{it.cpc_note}</div></td>
+                        <td style={{ padding: "9px 6px", color: C.mid, maxWidth: 180 }}>{it.budget_plan}</td>
+                        <td style={{ padding: "9px 6px", whiteSpace: "nowrap" }}>
+                          <select value={it.status} disabled={propBusy} onChange={(e) => patchProp(it.id, { status: e.target.value })}
+                            style={{ background: "transparent", color: stColor(it.status), border: `1px solid ${stColor(it.status)}66`, borderRadius: 8, padding: "3px 6px", fontSize: 11, fontWeight: 700 }}>
+                            {[it.status, "문의 발송", "제안서 수신", "믹스 수신", "회신 대기", "부킹 대기", "부킹 완료", "집행 중", "집행 완료", "보류", "제외"].filter((v, i, a) => v && a.indexOf(v) === i).map((v) => <option key={v} value={v} style={{ color: "#000" }}>{v}</option>)}
+                          </select>
+                          <div style={{ color: C.cyan, fontSize: 10.5, marginTop: 4, maxWidth: 170, whiteSpace: "normal" }}>{it.decision}</div>
+                        </td>
+                        <td style={{ padding: "9px 6px", color: C.ink, maxWidth: 200 }}>{it.next_action}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                <div style={{ color: C.mid, fontSize: 10.5, marginTop: 6 }}>비교 기준: 우리 메타 트래픽 실측 CPC 191원(플렌티플렛 214원) · CPC는 소개서 CTR로 환산한 예상치 · 상태는 바로 바꿀 수 있습니다</div>
+              </div>
+            )}
+            {items.map((it) => (
+              <div key={it.id} style={{ background: C.panel2, border: `1px solid ${C.border}`, borderRadius: 12, padding: "10px 14px", marginBottom: 10 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", flexWrap: "wrap", gap: 8 }}>
+                  <b style={{ color: C.ink, fontSize: 12.5 }}>🗓 {it.media} 진행 기록</b>
+                  <span style={{ color: stColor(it.status), fontSize: 11, fontWeight: 700 }}>{it.status}</span>
+                </div>
+                <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 8 }}>
+                  {(it.timeline || []).map((t, i) => (
+                    <div key={i} style={{ border: `1px solid ${t.dir === "out" ? C.cyan : C.gold}55`, borderLeft: `3px solid ${t.dir === "out" ? C.cyan : C.gold}`, borderRadius: 8, padding: "6px 10px", fontSize: 11, minWidth: 180, maxWidth: 300 }}>
+                      <div style={{ color: t.dir === "out" ? C.cyan : C.gold, fontWeight: 800, fontSize: 10.5 }}>{fmtd(t.date)} · {t.dir === "out" ? "→ 우리가 보냄" : "← 매체가 보냄"}</div>
+                      <div style={{ color: C.ink, marginTop: 2 }}>{t.what}</div>
+                    </div>
+                  ))}
+                  <button disabled={propBusy} style={{ ...btn(C.purple), padding: "4px 10px", fontSize: 10.5, alignSelf: "center" }}
+                    onClick={() => { const what = window.prompt(`${it.media} 기록 추가 — 내용`); if (!what) return; const dir = window.confirm("우리가 보낸 것이면 확인, 매체에서 받은 것이면 취소") ? "out" : "in"; patchProp(it.id, { timeline_add: [{ date: new Date().toISOString().slice(0, 10), what, dir }] }); }}>＋ 기록</button>
+                </div>
+                <div style={{ color: C.mid, fontSize: 11, marginTop: 8 }}>📝 {it.memo}
+                  <button disabled={propBusy} style={{ ...btn(C.mid), padding: "1px 8px", fontSize: 10, marginLeft: 8 }}
+                    onClick={() => { const m = window.prompt(`${it.media} 메모`, it.memo || ""); if (m !== null) patchProp(it.id, { memo: m }); }}>수정</button>
+                </div>
+              </div>
+            ))}
+          </>
+        );
+      })()}
+
       {tab === "log" && logArr.length > 0 && (
         <>
           <h2 style={h2}><span style={px}>인사부</span> 📇 인사 기록부 <span style={{ fontSize: 10.5, color: C.mid, fontWeight: 400 }}>결재 후 3일 실적으로 승진/반성 판정</span></h2>
