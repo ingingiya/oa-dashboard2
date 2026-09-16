@@ -24,6 +24,7 @@ export async function GET(req) { const same = !new URL(req.url).searchParams.has
 export async function PATCH(req) {
   const b = await req.json(); const v = await load();
   if ((new URL(req.url).searchParams.has("k") || req.headers.get("x-adcost-key")) && !auth(req)) return Response.json({ error: "unauthorized" }, { status: 401, headers: CORS });
+  if (b.comment !== undefined && !b.id) { v.comment = String(b.comment).slice(0, 6000); await save(v); return Response.json({ ok: true, comment: v.comment }, { headers: CORS }); }
   const it = v.items.find((i) => i.id === b.id); if (!it) return Response.json({ error: "no item" }, { status: 404, headers: CORS });
   for (const k of ["status", "memo", "decision", "next_action", "budget_plan"]) if (b[k] !== undefined) it[k] = String(b[k]).slice(0, 2000);
   if (Array.isArray(b.products)) it.products = b.products.slice(0, 40).map((r) => ({ name: String(r.name || "").slice(0, 60), price: String(r.price || "").slice(0, 60), ctr: String(r.ctr || "").slice(0, 40), cpc: r.cpc == null ? null : Number(r.cpc), note: String(r.note || "").slice(0, 120), pick: !!r.pick }));
