@@ -22,6 +22,7 @@ export async function PATCH(req) {
   const b = await req.json(); const v = await load();
   const it = v.items.find((i) => i.id === b.id); if (!it) return Response.json({ error: "no item" }, { status: 404 });
   for (const k of ["status", "memo", "decision", "next_action", "budget_plan"]) if (b[k] !== undefined) it[k] = String(b[k]).slice(0, 2000);
+  if (Array.isArray(b.products)) it.products = b.products.slice(0, 40).map((r) => ({ name: String(r.name || "").slice(0, 60), price: String(r.price || "").slice(0, 60), ctr: String(r.ctr || "").slice(0, 40), cpc: r.cpc == null ? null : Number(r.cpc), note: String(r.note || "").slice(0, 120), pick: !!r.pick }));
   if (Array.isArray(b.timeline_add)) for (const t of b.timeline_add) it.timeline.push({ date: String(t.date).slice(0, 10), what: String(t.what).slice(0, 200), dir: t.dir === "in" ? "in" : "out" });
   await save(v); return Response.json({ ok: true, item: it });
 }

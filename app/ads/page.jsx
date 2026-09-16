@@ -2618,6 +2618,21 @@ export default function AdOfficeTycoon() {
                   <button disabled={propBusy} style={{ ...btn(C.purple), padding: "4px 10px", fontSize: 10.5, alignSelf: "center" }}
                     onClick={() => { const what = window.prompt(`${it.media} 기록 추가 — 내용`); if (!what) return; const dir = window.confirm("우리가 보낸 것이면 확인, 매체에서 받은 것이면 취소") ? "out" : "in"; patchProp(it.id, { timeline_add: [{ date: new Date().toISOString().slice(0, 10), what, dir }] }); }}>＋ 기록</button>
                 </div>
+                {(it.products || []).length > 0 && (
+                  <div style={{ overflowX: "auto", marginTop: 10 }}>
+                    <table style={{ borderCollapse: "collapse", fontSize: 11, minWidth: 620 }}>
+                      <thead><tr style={{ color: C.mid, textAlign: "left" }}>{["상품", "단가", "CTR(소개서/실측)", "환산 CPC", "비고"].map((h) => <th key={h} style={{ padding: "4px 8px", borderBottom: `1px solid ${C.border}`, fontWeight: 600 }}>{h}</th>)}</tr></thead>
+                      <tbody>{it.products.map((r, i) => (
+                        <tr key={i} style={{ background: r.pick ? C.neon + "12" : "transparent" }}>
+                          <td style={{ padding: "4px 8px", color: C.ink, fontWeight: r.pick ? 800 : 400 }}>{r.pick && "★ "}{r.name}</td>
+                          <td style={{ padding: "4px 8px", color: C.mid }}>{r.price}</td>
+                          <td style={{ padding: "4px 8px", color: C.mid }}>{r.ctr}</td>
+                          <td style={{ padding: "4px 8px", fontWeight: 800, color: r.cpc == null ? C.mid : r.cpc <= 300 ? C.neon : r.cpc <= 700 ? C.gold : C.red }}>{r.cpc == null ? "-" : `₩${fmt(r.cpc)}`}</td>
+                          <td style={{ padding: "4px 8px", color: C.mid }}>{r.note}</td>
+                        </tr>))}</tbody>
+                    </table>
+                  </div>
+                )}
                 <div style={{ color: C.mid, fontSize: 11, marginTop: 8 }}>📝 {it.memo}
                   <button disabled={propBusy} style={{ ...btn(C.mid), padding: "1px 8px", fontSize: 10, marginLeft: 8 }}
                     onClick={() => { const m = window.prompt(`${it.media} 메모`, it.memo || ""); if (m !== null) patchProp(it.id, { memo: m }); }}>수정</button>
