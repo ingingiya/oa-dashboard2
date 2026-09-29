@@ -2,12 +2,12 @@ export const dynamic = 'force-dynamic';
 
 const SCHEDULE_DB_ID = "32964cd9-cb02-81a5-82ce-f06d2b2fe959";
 
-const MEMBERS = ["소리", "영서", "경은", "지수"];
+const MEMBERS = ["소리", "영서", "경은", "혜영"];
 const MEMBER_COLORS = {
   "소리": "#f472b6",
   "영서": "#60a5fa",
   "경은": "#34d399",
-  "지수": "#a78bfa",
+  "혜영": "#a78bfa",
 };
 
 function parseProps(props) {

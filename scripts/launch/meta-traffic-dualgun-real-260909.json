@@ -1,0 +1,46 @@
+{
+ "campaignName": "260909_뷰티팀_카카오선물하기_트래픽",
+ "campaignId": "120250292461400633",
+ "pageId": "393616720847763",
+ "dailyBudget": 20000,
+ "ageMin": 18,
+ "ageMax": 49,
+ "optimization": "LINK_CLICKS",
+ "bidCap": 0,
+ "cta": "SHOP_NOW",
+ "products": [
+  {
+   "name": "듀얼포켓건",
+   "url": "https://gift.kakao.com/product/13984577",
+   "headline": "172g 무선 듀얼 헤드 마사지건 · 파우치 증정",
+   "message": "돌덩이 승모근, 주머니에서 꺼낸다고?\n172g 무선 듀얼 헤드 포켓 마사지건, 오아 듀얼 포켓건.\n단독 파우치 증정 중, 카카오 선물하기에서 확인하세요.",
+   "images": [
+    {
+     "label": "real_chair",
+     "url": "https://lugqeflqusqsyotdiaxg.supabase.co/storage/v1/object/public/detail-assets/xads/260908/real/ad_chair_1x1.png",
+     "message": "안마의자 대신, 주머니에.\n172g 무선 듀얼 헤드 마사지건 오아 듀얼 포켓건. 승모근·목·턱선·종아리 어디든 3분.\n카카오 선물하기 단독 파우치 증정, 지금 확인하세요."
+    },
+    {
+     "label": "real_day",
+     "url": "https://lugqeflqusqsyotdiaxg.supabase.co/storage/v1/object/public/detail-assets/xads/260908/real/ad_day_1x1.png",
+     "message": "승모근이 뭉치면 하루가 뭉칩니다.\n퇴근길에 꺼내는 3분, 172g 무선 듀얼 헤드 오아 듀얼 포켓건.\n카카오 선물하기 단독 파우치 증정 중."
+    },
+    {
+     "label": "real_cup",
+     "url": "https://lugqeflqusqsyotdiaxg.supabase.co/storage/v1/object/public/detail-assets/xads/260908/real/ad_cup_1x1.png",
+     "message": "물 한 컵보다 가벼운 마사지건, 172g.\n종이컵 한 잔이 200g. 손목에 부담 없이 한 손으로 승모근까지.\n카카오 선물하기 단독 파우치 증정 중."
+    },
+    {
+     "label": "real_face",
+     "url": "https://lugqeflqusqsyotdiaxg.supabase.co/storage/v1/object/public/detail-assets/xads/260908/real/ad_face_1x1.png",
+     "message": "턱선까지, 셀프 경락.\n1단 저속으로 얼굴 라인, 3단 고속으로 승모근. 172g 무선 듀얼 헤드 오아 듀얼 포켓건.\n카카오 선물하기 단독 파우치 증정 중."
+    },
+    {
+     "label": "real_bag",
+     "url": "https://lugqeflqusqsyotdiaxg.supabase.co/storage/v1/object/public/detail-assets/xads/260908/real/ad_bag_1x1.png",
+     "message": "가방에서 꺼내는 마사지숍.\n무선 · 172g · 주머니 크기, 오아 듀얼 포켓건.\n카카오 선물하기 단독 파우치 증정 중."
+    }
+   ]
+  }
+ ]
+}

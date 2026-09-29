@@ -1,0 +1,11 @@
+# 배포 업로드 경량화 (09-21): 런타임에 필요한 건 app/·components/·lib/·public/·middleware.js·docs/media-proposals.seed.json 뿐
+scripts/
+docs/mediakits/
+docs/iboss-brochures/
+docs/**/*.pdf
+docs/**/*.png
+docs/**/*.jpg
+docs/**/*.html
+docs/*.log
+*.log
+.oa-*/

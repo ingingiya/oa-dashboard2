@@ -17,3 +17,14 @@ refs/**/*.webp
 scripts/adboost/.env
 scripts/adboost/.adboost_profile/
 scripts/adboost/*.png
+scripts/xads/.xads_profile/
+
+# 대용량 미디어킷·다운로드는 깃 제외 (09-29: 3.5GB 푸시 실패 사고) — 배포에도 .vercelignore로 제외됨
+docs/mediakits/**/*.pdf
+docs/mediakits/wepick/
+docs/mediakits/adssoon/
+docs/adssoon-products.json
+scripts/coupang/downloads/
+scripts/adboost/downloads/
+scripts/*.log
+scripts/**/*.log

@@ -1,0 +1,53 @@
+            2
+1
+
+    3   4
+     VOID FULL LED            DID      2층    43,000   30,000   22,000     공용       5
+        Giant LED             DID     외부     30,000   22,000   15,000     공용       5
+   B1F 에스컬레이터 DID             DID     B1층    12,000    9,000    6,000     공용       5
+  Digital screen hanging      DID     외부      3,000    2,200    1,500     공용       4
+ 멤버쉽 데스크 대기 공간 DID            DID     외부      3,000    2,400    1,400     공용       3
+ King size TP+주차장 Logo        TP      외부     40,000   30,000   20,000     공용       1   * 제작비 별도
+      Parking lot TP          TP      외부     24,000   18,000   12,000     공용       1   * 제작비 별도
+  Parking Tower banner      Banner    외부     30,000   22,000   15,000     공용       1   * 제작비 별도 / 각 기 당 단가 (Left or Right)
+        Gate zone            HPP      외부     36,000   36,000   36,000     공용       1   * 제작비 별도
+1F LOBBY HPP(ENTRANCE)       HPP       1층    53,000   53,000   53,000     공용       1   * 제작비 별도 / '24년 판매 완료
+   1F LOBBY HPP(VOID)        HPP       1층    53,000   53,000   53,000     공용       1   * 제작비 별도
+  Digital Ceiling banner      DID      2층    13,000    9,000    7,000     C&P      6   * 제작비 별도 / Rolling
+      Ceiling banner        Banner     2층    13,000    9,000    7,000     C&P      1   * 제작비 별도 / Fixed
+       Rooftop TP             TP      중2층     3,500    2,800    1,300     공용       1   * 제작비 별도
+      Stair LCD 1~5           DID     중2층     2,200    2,200    2,200   Perfume    1   * 총 5기 / 각 기 당 단가
+      Brand LCD 1~2           DID     중2층     1,500    1,500    1,500   Perfume    4   * 총 2기 / 각 기 당 단가
+     2MF 계단 TP 1~5            TP      중2층     1,500    1,500    1,500   Perfume    1   * 제작비 별도 / 총 5기 / 각 기 당 단가
+         End Cap              TP      중2층     3,000    3,000    3,000   Perfume    1   * 제작비 별도
+     SPP (TP + Pillar)       SPP      중2층     3,000    3,000    3,000   Perfume    1   * 제작비 별도
+       B1F 기둥 LFD             DID     지하1층   별도 문의         -        -   공용 / C&P   5   * 총 8기 (D27만 공용)
+       Sub Façade           Mapping   지하2층   26,000   20,000   13,000     공용       1   * 제작비 별도
+Entrance/Hallway/Wall PKG    PKG      지하2층   별도 문의         -        -     공용           * 제작비 별도
+  Giant Banner      Banner   1층   24,000   20,000   15,000   공용    1   * 제작비 별도
+Main Entrance 1~3    TP      1층   12,000    9,000    6,000   공용    1   * 제작비 별도 / 각 기 당 단가
+ Main Entrance 4     TP      1층   18,000   14,000   10,000   공용    1   * 제작비 별도
+    VIP Room         DID     4층    1,200    1,200    1,200   공용    3
+ 2F East TP 1~3      TP      2층    6,000    4,500    3,000   공용    1   * 제작비 별도 / 각 기 당 단가
+ 3F East TP 1~4      TP      3층    6,000    4,500    3,000   C&P   1   * 제작비 별도 / 각 기 당 단가
+HPP + LCD Screen     HPP     3층   44,000   44,000   44,000   공용    1
+    Twin LCD         DID     3층    8,000    8,000    8,000   공용    5
+ Canopy Digital      DID     3층    7,000    7,000    7,000   공용    5
+   Canopy TP         TP      3층    7,000    7,000    7,000   공용    1   * 제작비 별도
+    -
+    -
+
+
+    -
+
+
+    -
+
+
+
+
+件
+                          김신라
+♠ 푸쉬 수신고객 한정 ♠
+(광고) Estee Lauder 특별 혜택
+

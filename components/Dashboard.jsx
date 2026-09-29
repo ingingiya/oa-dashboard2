@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef, Fragment } from "react";
 import { getSetting, setSetting, getAdImages, saveAdImagesMeta, uploadAdImage, uploadSettleFile, getBeautyRealSales } from "../lib/useSupabase";
+import TrafficAdsSection from "./TrafficAdsSection"; // 광고관리(트래픽) — 카카오 선물하기 유입 캠페인 운영표 (09-21)
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // Supabase 동기화 훅 — 팀 전체 공유 (localStorage 대체)
@@ -70,7 +71,7 @@ const C = {
 };
 
 // 팀원 (담당자 지정용)
-const TEAM_MEMBERS = ["지원","경은","지수","소리","영서"];
+const TEAM_MEMBERS = ["지원","경은","혜영","소리","영서"];
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // Material Symbol Icon helper
@@ -756,7 +757,7 @@ function InfluencerArchiveSection() {
 
   const items = Array.isArray(archive) ? archive : [];
 
-  const assignees = ["전체","지원","경은","소리","지수","영서"];
+  const assignees = ["전체","지원","경은","소리","혜영","영서"];
 
   const filtered = items.filter(p => {
     if (catFilter !== "전체" && !(p.categories||[]).includes(catFilter)) return false;
@@ -1432,7 +1433,7 @@ function InfluencerArchiveSection() {
               <div>
                 <div style={{fontSize:12,color:C.inkMid,marginBottom:4,fontWeight:700}}>담당자</div>
                 <div style={{display:"flex",gap:4,flexWrap:"wrap"}}>
-                  {["지원","경은","소리","지수","영서","행사"].map(a=>(
+                  {["지원","경은","소리","혜영","영서","행사"].map(a=>(
                     <button key={a} onClick={()=>setForm(f=>({...f,assignee:f.assignee===a?"":a}))} style={{padding:"4px 10px",borderRadius:20,border:"none",background:form.assignee===a?"#374151":"#e5e7eb",color:form.assignee===a?"#fff":C.inkMid,fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>{a}</button>
                   ))}
                 </div>
@@ -2326,6 +2327,225 @@ const CardTitle=({title,sub,action})=>(
     {action}
   </div>
 );
+
+// ── 홈: 광고 효율 요약 카드 (oa-adcost 관제판 data.json → /api/ad-efficiency, 최근 30일 채널×카테고리 평균 CPC/CPM/ROAS) ──
+// ★HomeSection은 부모 컴포넌트 안에서 매 렌더마다 새로 정의되어 자식이 리마운트됨 → 카드 상태가 초기화돼 "떴다 안 떴다" (09-21).
+//   해결: 받아온 데이터를 모듈 변수에 캐시하고 마운트 시 캐시로 즉시 그림. 10분 지나면 백그라운드 재조회.
+let AD_EFF_CACHE={t:0,data:null}; let AD_EFF_UI={view:"channel",mult:{},k:0.25}; // 리마운트에도 탭·시뮬레이터 입력 유지
+const AdEfficiencyCard=()=>{
+  const [d,setD]=useState(AD_EFF_CACHE.data); const [err,setErr]=useState(null); const [view,setViewRaw]=useState(AD_EFF_UI.view); const setView=(v)=>{AD_EFF_UI.view=v;setViewRaw(v);}; const [tries,setTries]=useState(0);
+  useEffect(()=>{ if(AD_EFF_CACHE.data&&Date.now()-AD_EFF_CACHE.t<10*60*1000) return; let alive=true;
+    const run=(n)=>fetch("/api/ad-efficiency?r="+n).then(r=>r.json()).then(j=>{ if(!alive) return; if(j.ok){ AD_EFF_CACHE={t:Date.now(),data:j}; setD(j); setErr(null); } else if(n<2) setTimeout(()=>run(n+1),2500); else if(!AD_EFF_CACHE.data) setErr(j.error||"불러오기 실패"); }).catch(e=>{ if(!alive) return; if(n<2) setTimeout(()=>run(n+1),2500); else if(!AD_EFF_CACHE.data) setErr(String(e)); });
+    run(0); return ()=>{alive=false}; },[tries]);
+  const won=(n)=>n==null?"-":Math.round(n).toLocaleString()+"원";
+  const man=(n)=>n==null?"-":(n>=1e8?(n/1e8).toFixed(1)+"억":Math.round(n/1e4).toLocaleString()+"만");
+  const roasCol=(r)=>r==null?{bg:"#F2F2F7",fg:"#8E8E93",t:"매출 미추적"}:r>=5?{bg:"#E8F8EE",fg:"#1E7B3C",t:r+"배"}:r>=2?{bg:"#FFF6E0",fg:"#9A5B00",t:r+"배"}:{bg:"#FDECEC",fg:"#B02A2A",t:r+"배"};
+  const th={fontSize:11,fontWeight:700,color:"#8E8E93",textAlign:"left",padding:"6px 8px",borderBottom:"1px solid rgba(0,0,0,.06)",whiteSpace:"nowrap"};
+  const td={fontSize:12.5,padding:"7px 8px",borderBottom:"1px solid rgba(0,0,0,.05)",whiteSpace:"nowrap",fontVariantNumeric:"tabular-nums"};
+  const Pill=({r})=>{const c=roasCol(r);return <span style={{display:"inline-block",padding:"2px 9px",borderRadius:999,fontSize:11.5,fontWeight:700,background:c.bg,color:c.fg}}>{c.t}</span>;};
+  const links=d?.links||{board:"https://oa-adcost.vercel.app/",report:"https://oa-adcost.vercel.app/report.html",proposals:"https://oa-adcost.vercel.app/proposals.html"};
+  const lk={fontSize:11.5,fontWeight:700,color:"#0071E3",textDecoration:"none",padding:"5px 10px",borderRadius:8,background:"#EAF3FF"};
+  return (
+    <>
+    <Card>
+      <CardTitle title="광고 효율 요약 · 우리 평균 CPC / CPM / ROAS" sub={d?`최근 30일 · 관제판 갱신 ${d.updated} · 채널 ${d.byChannel.filter(c=>c.total).length}곳`:"관제판 데이터 불러오는 중"}
+        action={<div style={{display:"flex",gap:6,flexWrap:"wrap",justifyContent:"flex-end"}}>
+          <a href={links.board} target="_blank" rel="noopener" style={lk}>광고비 전체 현황판 ↗</a>
+          <a href={links.report} target="_blank" rel="noopener" style={lk}>매체 단가 지도 ↗</a>
+          <a href={links.proposals} target="_blank" rel="noopener" style={lk}>매체 제안 진행 ↗</a></div>}/>
+      {err&&<div style={{fontSize:12,color:"#B02A2A",display:"flex",gap:10,alignItems:"center"}}>불러오기 실패: {err}<button onClick={()=>{setErr(null);setTries(t=>t+1);}} style={{fontSize:11.5,fontWeight:700,border:"1px solid #B02A2A55",background:"#fff",color:"#B02A2A",borderRadius:8,padding:"3px 10px",cursor:"pointer",fontFamily:"inherit"}}>다시 불러오기</button></div>}
+      {!d&&!err&&<div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(130px,1fr))",gap:10}}>{[0,1,2,3,4].map(i=><div key={i} style={{height:58,borderRadius:12,background:"linear-gradient(90deg,#F2F2F7,#FAFAFC,#F2F2F7)"}}/>)}</div>}
+      {d&&(()=>{const a=d.all;return(<>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(130px,1fr))",gap:10,marginBottom:14}}>
+          {[["총 광고비",man(a.spend)+"원"],["평균 CPC",won(a.cpc)],["평균 CPM",won(a.cpm)],["ROAS(매출 추적분)",a.roas!=null?a.roas+"배":"-"],["클릭",Math.round(a.clicks).toLocaleString()]].map(([k,v])=>(
+            <div key={k} style={{background:"#F7F7F9",borderRadius:12,padding:"10px 12px"}}><div style={{fontSize:11,color:"#8E8E93",fontWeight:700}}>{k}</div><div style={{fontSize:18,fontWeight:800,letterSpacing:"-0.02em",marginTop:2}}>{v}</div></div>))}
+        </div>
+        {/* 지금 어디서 효율이 나는지 */}
+        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(220px,1fr))",gap:10,marginBottom:14}}>
+          {[["🟢 ROAS 최고",d.highlights.bestRoas,(g)=>`${g.channel} · ${g.goal} — ROAS ${g.roas}배 (CPC ${won(g.cpc)})`,"#E8F8EE"],
+            ["🔵 클릭 단가 최저 (트래픽·랜딩)",d.highlights.cheapestClick,(g)=>`${g.channel} · ${g.goal} — CPC ${won(g.cpc)} · CPM ${won(g.cpm)}`,"#EAF3FF"],
+            ["🔴 손해 나는 곳 (ROAS 2 미만)",d.highlights.worstRoas,(g)=>`${g.channel} · ${g.goal} — ROAS ${g.roas}배 · 광고비 ${man(g.spend)}`,"#FDECEC"]].map(([t,arr,fmt,bg])=>(
+            <div key={t} style={{background:bg,borderRadius:12,padding:"10px 12px"}}><div style={{fontSize:12,fontWeight:800,marginBottom:6}}>{t}</div>
+              {arr.length?arr.map((g,i)=><div key={i} style={{fontSize:12,lineHeight:1.5}}>{fmt(g)}</div>):<div style={{fontSize:12,color:"#8E8E93"}}>해당 없음</div>}</div>))}
+        </div>
+        {d.actions?.length>0&&<div style={{background:"#1D1D1F",color:"#fff",borderRadius:12,padding:"12px 14px",marginBottom:14}}>
+          <div style={{fontSize:11,fontWeight:700,color:"#8E8E93",letterSpacing:"0.1em",marginBottom:6}}>이번 달 결론</div>
+          {d.actions.map((x,i)=><div key={i} style={{fontSize:12.5,lineHeight:1.55,marginBottom:4}}><b style={{color:x.tone==="good"?"#30D158":x.tone==="bad"?"#FF453A":"#FFD60A"}}>{x.title}</b> — {x.body}</div>)}</div>}
+        <div style={{display:"flex",gap:6,marginBottom:8}}>
+          {[["channel","채널별"],["category","제품 카테고리별"]].map(([k,l])=><button key={k} onClick={()=>setView(k)} style={{padding:"5px 12px",borderRadius:999,fontSize:12,fontWeight:700,cursor:"pointer",border:"1px solid rgba(0,0,0,.08)",background:view===k?"#1D1D1F":"#fff",color:view===k?"#fff":"#1D1D1F",fontFamily:"inherit"}}>{l}</button>)}
+        </div>
+        <div style={{overflowX:"auto"}}>
+        {view==="channel"?(
+          <table style={{width:"100%",borderCollapse:"collapse"}}><thead><tr><th style={th}>채널 · 목표</th><th style={{...th,textAlign:"right"}}>광고비</th><th style={{...th,textAlign:"right"}}>CPC</th><th style={{...th,textAlign:"right"}}>CPM</th><th style={th}>ROAS</th><th style={th}>기간</th></tr></thead><tbody>
+            {d.byChannel.map(c=>(<Fragment key={c.id}>
+              <tr style={{background:"#FAFAFC"}}><td style={{...td,fontWeight:800}}>{c.channel}{c.error&&<span style={{marginLeft:6,fontSize:11,color:"#B02A2A",fontWeight:600}}>⚠ {c.error}</span>}</td>
+                <td style={{...td,textAlign:"right",fontWeight:800}}>{c.total?man(c.total.spend):"-"}</td><td style={{...td,textAlign:"right",fontWeight:800}}>{c.total?won(c.total.cpc):"-"}</td><td style={{...td,textAlign:"right",fontWeight:800}}>{c.total?won(c.total.cpm):"-"}</td><td style={td}>{c.total&&<Pill r={c.total.roas}/>}</td><td style={{...td,color:"#8E8E93",fontSize:11}}>{c.period||""}</td></tr>
+              {c.goals.length>1&&c.goals.map(g=>(<tr key={g.goal}><td style={{...td,paddingLeft:22,color:"#3A3A3C"}}>└ {g.goal}</td><td style={{...td,textAlign:"right"}}>{man(g.spend)}</td><td style={{...td,textAlign:"right"}}>{won(g.cpc)}</td><td style={{...td,textAlign:"right"}}>{won(g.cpm)}</td><td style={td}><Pill r={g.roas}/></td><td style={td}></td></tr>))}
+            </Fragment>))}
+          </tbody></table>
+        ):(
+          <table style={{width:"100%",borderCollapse:"collapse"}}><thead><tr><th style={th}>카테고리</th><th style={{...th,textAlign:"right"}}>광고비</th><th style={{...th,textAlign:"right"}}>CPC</th><th style={{...th,textAlign:"right"}}>CPM</th><th style={th}>ROAS</th><th style={th}>가장 효율 좋은 채널</th></tr></thead><tbody>
+            {d.byCategory.map(c=>{const best=c.rows.filter(r=>r.roas!=null).sort((a,b)=>b.roas-a.roas)[0]||c.rows.sort((a,b)=>a.cpc-b.cpc)[0];return(<Fragment key={c.cat}>
+              <tr style={{background:"#FAFAFC"}}><td style={{...td,fontWeight:800}}>{c.cat}</td><td style={{...td,textAlign:"right",fontWeight:800}}>{man(c.total.spend)}</td><td style={{...td,textAlign:"right",fontWeight:800}}>{won(c.total.cpc)}</td><td style={{...td,textAlign:"right",fontWeight:800}}>{won(c.total.cpm)}</td><td style={td}><Pill r={c.total.roas}/></td><td style={{...td,fontSize:12}}>{best?`${best.channel} · ${best.goal} (${best.roas!=null?"ROAS "+best.roas+"배":"CPC "+won(best.cpc)})`:"-"}</td></tr>
+              {c.rows.map((r,i)=>(<tr key={i}><td style={{...td,paddingLeft:22,color:"#3A3A3C"}}>└ {r.channel} · {r.goal}</td><td style={{...td,textAlign:"right"}}>{man(r.spend)}</td><td style={{...td,textAlign:"right"}}>{won(r.cpc)}</td><td style={{...td,textAlign:"right"}}>{won(r.cpm)}</td><td style={td}><Pill r={r.roas}/></td><td style={td}></td></tr>))}
+            </Fragment>);})}
+          </tbody></table>
+        )}
+        </div>
+        <div style={{fontSize:11,color:"#8E8E93",marginTop:8}}>ROAS 색: 5배 이상 초록 · 2~5배 노랑 · 2배 미만 빨강 · 회색은 매출 추적이 안 되는 트래픽 캠페인. 원본과 일별 추이는 「광고비 전체 현황판」에서.</div>
+      </>);})()}
+    </Card>
+    {d&&<BudgetSimCard eff={d}/>}
+    </>
+  );
+};
+
+
+// ── 홈: 다가오는 플랫폼 대형 행사 (oa_events_v1 — 메타 행사 탭과 같은 데이터. 메모의 "확정/추정/미발표" 태그 표시) ──
+const UpcomingEventsCard=({events,onOpen})=>{
+  const today=new Date(); const t0=new Date(today.toISOString().slice(0,10)+"T00:00:00");
+  const days=(d)=>Math.round((new Date(d+"T00:00:00")-t0)/86400000);
+  const list=(events||[]).filter(e=>e.start&&e.end&&days(e.end)>=0).sort((a,b)=>a.start.localeCompare(b.start)).slice(0,12);
+  const tag=(m="")=>/미발표/.test(m)?["미발표","#8E8E93","#F2F2F7"]:/추정/.test(m)?["추정","#9A5B00","#FFF6E0"]:/확정/.test(m)?["확정","#1E7B3C","#E8F8EE"]:["등록","#0071E3","#EAF3FF"];
+  return (
+    <Card>
+      <CardTitle title="다가오는 대형 행사 · 플랫폼 일정" sub="빅스마일데이·직잭팟·넾다세일·블프 등. 추정 일정은 공식 발표 시 날짜를 고쳐 주세요"
+        action={<button onClick={onOpen} style={{fontSize:11.5,fontWeight:700,color:"#0071E3",background:"#EAF3FF",border:"none",borderRadius:8,padding:"5px 10px",cursor:"pointer",fontFamily:"inherit"}}>행사 탭에서 편집 →</button>}/>
+      {!list.length&&<div style={{fontSize:12,color:"#8E8E93"}}>등록된 행사가 없습니다.</div>}
+      <div style={{display:"flex",flexDirection:"column",gap:6}}>
+        {list.map(e=>{const ds=days(e.start), de=days(e.end); const live=ds<=0&&de>=0; const [tl,tc,tb]=tag(e.memo);
+          return (<div key={e.id} style={{display:"grid",gridTemplateColumns:"84px 1fr auto",gap:10,alignItems:"center",padding:"8px 10px",borderRadius:10,background:live?"#FFF1F2":"#F7F7F9"}}>
+            <div style={{fontSize:13,fontWeight:800,color:live?"#B02A2A":ds<=7?"#9A5B00":"#1D1D1F"}}>{live?`진행중 D+${-ds}`:`D-${ds}`}</div>
+            <div style={{minWidth:0}}><div style={{fontSize:13,fontWeight:700,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{e.name}</div>
+              <div style={{fontSize:11.5,color:"#6E6E73",marginTop:2}}>{e.start.slice(5).replace("-","/")} ~ {e.end.slice(5).replace("-","/")}{e.product?` · ${e.product}`:""}{e.memo?` · ${e.memo.replace(/^(확정|추정|미발표)[^·]*·\s*/,"").slice(0,60)}`:""}</div></div>
+            <span style={{fontSize:11,fontWeight:700,color:tc,background:tb,borderRadius:999,padding:"2px 8px"}}>{tl}</span>
+          </div>);})}
+      </div>
+    </Card>
+  );
+};
+
+
+// ── 홈: 광고비 확장 시뮬레이터 — 채널별 현재 30일 실측(CPC·ROAS)에 예산을 바꿔 넣으면 예상 클릭·매출·ROAS 계산 ──
+//   체감(수확 감소): 예산 배율 s>1 이면 실효 CPC = CPC × s^k, ROAS = ROAS / s^k (k=체감률, 기본 0.25 → 2배 증액 시 효율 약 16% 하락). k는 슬라이더로 조정.
+const BudgetSimCard=({eff})=>{
+  const chans=(eff?.byChannel||[]).filter(c=>c.total&&c.total.spend>0);
+  const [mult,setMultRaw]=useState(AD_EFF_UI.mult); const [k,setKRaw]=useState(AD_EFF_UI.k);
+  const setMult=(f)=>setMultRaw(p=>{const v=typeof f==="function"?f(p):f; AD_EFF_UI.mult=v; return v;}); const setK=(v)=>{AD_EFF_UI.k=v;setKRaw(v);};
+  const won=(n)=>n==null||!isFinite(n)?"-":Math.round(n).toLocaleString()+"원";
+  const man=(n)=>n==null||!isFinite(n)?"-":(Math.abs(n)>=1e8?(n/1e8).toFixed(2)+"억":Math.round(n/1e4).toLocaleString()+"만");
+  const rows=chans.map(c=>{const m=mult[c.id]??1; const s=Math.max(m,0.01); const dim=s>1?Math.pow(s,k):1; const spend=c.total.spend*s; const cpc=c.total.cpc?c.total.cpc*dim:null; const clicks=cpc?spend/cpc:null; const roas=c.total.roas!=null?c.total.roas/dim:null; const rev=roas!=null?spend*roas:null; return {...c,m,spend,cpc,clicks,roas,rev,base:c.total};});
+  const sum=(f)=>rows.reduce((a,r)=>a+(f(r)||0),0);
+  const T={spend:sum(r=>r.spend),clicks:sum(r=>r.clicks),rev:sum(r=>r.rev),bspend:sum(r=>r.base.spend),bclicks:sum(r=>r.base.clicks),brev:sum(r=>r.base.rev)};
+  const th={fontSize:11,fontWeight:700,color:"#8E8E93",textAlign:"left",padding:"6px 8px",borderBottom:"1px solid rgba(0,0,0,.06)",whiteSpace:"nowrap"};
+  const td={fontSize:12.5,padding:"6px 8px",borderBottom:"1px solid rgba(0,0,0,.05)",whiteSpace:"nowrap",fontVariantNumeric:"tabular-nums"};
+  const diff=(a,b,fmt)=>{const d=a-b; if(!isFinite(d)||Math.abs(d)<1) return null; return <span style={{fontSize:11,color:d>0?"#1E7B3C":"#B02A2A",marginLeft:4}}>{d>0?"+":""}{fmt(d)}</span>;};
+  if(!eff) return null;
+  return (
+    <Card>
+      <CardTitle title="광고비 확장 시뮬레이터" sub="채널별 예산을 바꾸면 최근 30일 실측 CPC·ROAS로 예상 클릭·매출을 계산합니다. 증액분엔 체감률이 적용됩니다"
+        action={<div style={{display:"flex",gap:6}}>{[["전체 1.5배",1.5],["전체 2배",2],["초기화",1]].map(([l,v])=><button key={l} onClick={()=>setMult(Object.fromEntries(chans.map(c=>[c.id,v])))} style={{fontSize:11.5,fontWeight:700,border:"1px solid rgba(0,0,0,.08)",background:"#fff",borderRadius:8,padding:"4px 10px",cursor:"pointer",fontFamily:"inherit"}}>{l}</button>)}</div>}/>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(150px,1fr))",gap:10,marginBottom:12}}>
+        {[["총 광고비",man(T.spend)+"원",diff(T.spend,T.bspend,man)],["예상 클릭",Math.round(T.clicks).toLocaleString(),diff(T.clicks,T.bclicks,n=>Math.round(n).toLocaleString())],["예상 매출(추적분)",man(T.rev)+"원",diff(T.rev,T.brev,man)],["전체 ROAS",T.spend?(T.rev/T.spend).toFixed(1)+"배":"-",null]].map(([kk,v,dd])=>(
+          <div key={kk} style={{background:"#F7F7F9",borderRadius:12,padding:"10px 12px"}}><div style={{fontSize:11,color:"#8E8E93",fontWeight:700}}>{kk}</div><div style={{fontSize:18,fontWeight:800,letterSpacing:"-0.02em",marginTop:2}}>{v}{dd}</div></div>))}
+      </div>
+      <div style={{overflowX:"auto"}}><table style={{width:"100%",borderCollapse:"collapse"}}><thead><tr><th style={th}>채널</th><th style={{...th,textAlign:"right"}}>현재 30일</th><th style={th}>예산 배율</th><th style={{...th,textAlign:"right"}}>새 광고비</th><th style={{...th,textAlign:"right"}}>예상 CPC</th><th style={{...th,textAlign:"right"}}>예상 클릭</th><th style={{...th,textAlign:"right"}}>예상 ROAS</th><th style={{...th,textAlign:"right"}}>예상 매출</th></tr></thead><tbody>
+        {rows.map(r=>(<tr key={r.id}>
+          <td style={{...td,fontWeight:700}}>{r.channel}</td><td style={{...td,textAlign:"right",color:"#6E6E73"}}>{man(r.base.spend)}</td>
+          <td style={td}><div style={{display:"flex",alignItems:"center",gap:6}}><input type="range" min="0" max="3" step="0.1" value={r.m} onChange={e=>setMult(p=>({...p,[r.id]:+e.target.value}))} style={{width:110}}/><input type="number" min="0" step="0.1" value={r.m} onChange={e=>setMult(p=>({...p,[r.id]:+e.target.value}))} style={{width:52,padding:"3px 6px",border:"1px solid rgba(0,0,0,.1)",borderRadius:6,fontFamily:"inherit",fontSize:12}}/>×</div></td>
+          <td style={{...td,textAlign:"right",fontWeight:700}}>{man(r.spend)}{diff(r.spend,r.base.spend,man)}</td>
+          <td style={{...td,textAlign:"right"}}>{won(r.cpc)}</td><td style={{...td,textAlign:"right"}}>{r.clicks!=null?Math.round(r.clicks).toLocaleString():"-"}{r.clicks!=null&&diff(r.clicks,r.base.clicks,n=>Math.round(n).toLocaleString())}</td>
+          <td style={{...td,textAlign:"right"}}>{r.roas!=null?r.roas.toFixed(1)+"배":<span style={{color:"#8E8E93"}}>미추적</span>}</td><td style={{...td,textAlign:"right"}}>{r.rev!=null?man(r.rev):"-"}{r.rev!=null&&diff(r.rev,r.base.rev,man)}</td>
+        </tr>))}
+      </tbody></table></div>
+      <div style={{display:"flex",alignItems:"center",gap:10,marginTop:10,fontSize:11.5,color:"#6E6E73",flexWrap:"wrap"}}>
+        <span>체감률 k = <b>{k}</b></span><input type="range" min="0" max="0.6" step="0.05" value={k} onChange={e=>setK(+e.target.value)} style={{width:140}}/>
+        <span>0 = 증액해도 효율 그대로 · 0.25(기본) = 2배 증액 시 CPC +19%·ROAS −16% · 0.5 = 2배 시 ROAS −29%. 30일 실측이 기준이라 매출 미추적(트래픽) 채널은 클릭만 계산합니다.</span>
+      </div>
+    </Card>
+  );
+};
+
+
+// ── 소재: 타사 광고 모니터 (메타 광고 라이브러리 스크랩 → /api/ad-monitor). 검색어별 게재 중 광고, 소재 이미지·광고주·문구·랜딩·게재 시작 ──
+let AD_MON_CACHE={t:0,data:null,term:null};
+const AdMonitorCard=()=>{
+  const [d,setD]=useState(AD_MON_CACHE.data); const [err,setErr]=useState(null); const [term,setTermRaw]=useState(AD_MON_CACHE.term); const setTerm=(v)=>{AD_MON_CACHE.term=v;setTermRaw(v);}; const [big,setBig]=useState(null);
+  useEffect(()=>{ if(AD_MON_CACHE.data&&Date.now()-AD_MON_CACHE.t<10*60*1000) return; let alive=true;
+    fetch("/api/ad-monitor").then(r=>r.json()).then(j=>{ if(!alive) return; if(j.ok){ AD_MON_CACHE={...AD_MON_CACHE,t:Date.now(),data:j}; setD(j); } else setErr(j.error); }).catch(e=>alive&&setErr(String(e))); return ()=>{alive=false}; },[]);
+  const fmt=(s)=>s?s.slice(0,10):"-"; const week=Date.now()-7*86400e3;
+  const cur=d?(d.terms.find(t=>t.term===term)||d.terms[0]):null;
+  return (
+    <Card>
+      <CardTitle title="타사 광고 모니터 · 지금 메타에 게재 중인 경쟁 광고" sub={d?`게재 중 ${d.total}개 · 이번 주 신규 ${d.newThisWeek}개 · 수집 ${fmt(d.updated)} (매일 10:00 자동)`:"불러오는 중"}
+        action={<span style={{fontSize:11,color:"#8E8E93"}}>소재를 누르면 크게 · 라이브러리 ID로 원본 확인</span>}/>
+      {err&&<div style={{fontSize:12,color:"#B02A2A"}}>불러오기 실패: {err}</div>}
+      {d&&<>
+        <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:12}}>
+          {d.terms.map(t=><button key={t.term} onClick={()=>setTerm(t.term)} style={{padding:"5px 11px",borderRadius:999,fontSize:12,fontWeight:700,cursor:"pointer",border:"1px solid rgba(0,0,0,.08)",background:cur&&cur.term===t.term?"#1D1D1F":"#fff",color:cur&&cur.term===t.term?"#fff":"#1D1D1F",fontFamily:"inherit"}}>{t.term} <span style={{opacity:.6}}>{t.count}</span>{t.newCount>0&&<span style={{marginLeft:4,fontSize:10,background:"#FF453A",color:"#fff",borderRadius:999,padding:"1px 5px"}}>+{t.newCount}</span>}</button>)}
+        </div>
+        {cur&&<div style={{fontSize:12,color:"#6E6E73",marginBottom:10}}>광고주: {cur.advertisers.join(" · ")}</div>}
+        {cur&&<div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(210px,1fr))",gap:12}}>
+          {cur.ads.map(a=>{const isNew=new Date(a.first_seen)>week;return(
+            <div key={a.id} style={{border:"1px solid rgba(0,0,0,.07)",borderRadius:14,overflow:"hidden",background:"#fff",display:"flex",flexDirection:"column"}}>
+              <div onClick={()=>a.snapshot_url&&setBig(a)} style={{height:210,background:"#F2F2F7",display:"flex",alignItems:"center",justifyContent:"center",cursor:a.snapshot_url?"zoom-in":"default",position:"relative"}}>
+                {a.snapshot_url?<img src={a.snapshot_url} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>:<span style={{fontSize:12,color:"#8E8E93"}}>이미지 없음</span>}
+                {isNew&&<span style={{position:"absolute",top:8,left:8,fontSize:10,fontWeight:800,background:"#FF453A",color:"#fff",borderRadius:999,padding:"2px 7px"}}>NEW</span>}
+              </div>
+              <div style={{padding:"10px 12px",display:"flex",flexDirection:"column",gap:4,flex:1}}>
+                <div style={{fontSize:13,fontWeight:800,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{a.page_name}</div>
+                <div style={{fontSize:12,color:"#1D1D1F",lineHeight:1.4,display:"-webkit-box",WebkitLineClamp:3,WebkitBoxOrient:"vertical",overflow:"hidden"}}>{a.creative_body||a.link_title||"(문구 없음)"}</div>
+                <div style={{fontSize:11,color:"#8E8E93",marginTop:"auto"}}>{a.link_url||""}{a.link_url?" · ":""}게재 {fmt(a.started_at)}</div>
+                <a href={`https://www.facebook.com/ads/library/?id=${a.id}`} target="_blank" rel="noopener" style={{fontSize:11,fontWeight:700,color:"#0071E3",textDecoration:"none"}}>라이브러리에서 보기 ↗</a>
+              </div>
+            </div>);})}
+        </div>}
+        {big&&<div onClick={()=>setBig(null)} style={{position:"fixed",inset:0,background:"rgba(0,0,0,.75)",zIndex:3000,display:"flex",alignItems:"center",justifyContent:"center",cursor:"zoom-out"}}>
+          <div style={{maxWidth:"min(92vw,900px)",maxHeight:"92vh",background:"#fff",borderRadius:14,overflow:"auto"}} onClick={e=>e.stopPropagation()}>
+            <img src={big.snapshot_url} alt="" style={{width:"100%",display:"block"}}/>
+            <div style={{padding:14,fontSize:13}}><b>{big.page_name}</b> · {big.search_term} · 게재 {fmt(big.started_at)}<br/>{big.creative_body}<br/><span style={{color:"#8E8E93"}}>{big.link_url}</span></div>
+          </div></div>}
+      </>}
+    </Card>
+  );
+};
+
+
+// ── 홈: 카카오 선물하기 실시간 배지 모니터 (/api/kakao-live ← settings.oa_kakao_live_v1, 10분 폴링·카카오톡 인앱 UA) ──
+let KL_CACHE={t:0,data:null};
+const KakaoLiveCard=()=>{
+  const [d,setD]=useState(KL_CACHE.data); const [err,setErr]=useState(null); const [big,setBig]=useState(null); // big = 확대 캡처 {name,url,t,hl}
+  useEffect(()=>{ if(KL_CACHE.data&&Date.now()-KL_CACHE.t<5*60*1000) return; let alive=true;
+    fetch("/api/kakao-live").then(r=>r.json()).then(j=>{ if(!alive) return; if(j.ok){ KL_CACHE={t:Date.now(),data:j}; setD(j); } else setErr(j.error); }).catch(e=>alive&&setErr(String(e))); return ()=>{alive=false}; },[]);
+  const hm=(s)=>s?s.slice(11,16):"-"; const md=(s)=>s?s.slice(5,10).replace("-","/")+" "+s.slice(11,16):"-";
+  return (
+    <Card>
+      <CardTitle title="카카오 선물하기 실시간 배지 모니터" sub={d?`10분마다 랭킹 목록의 배지(fomoBadge)를 카카오톡 인앱 기준으로 조회 · 마지막 ${md(d.updated)} · 누적 ${d.total}회`:"불러오는 중"}
+        action={<span style={{fontSize:11,color:"#8E8E93"}}>"N명이 최근 구매" · "최근 위시 N" · "N명이 보는 중" 배지가 켜지면 초록 · 24시간 시간대별 켜짐 횟수</span>}/>
+      {err&&<div style={{fontSize:12,color:"#B02A2A"}}>{err}</div>}
+      {d&&<div style={{overflowX:"auto"}}><table style={{width:"100%",borderCollapse:"collapse"}}><thead><tr>
+        {["화면","상품","지금","24h 켜짐","마지막 켜짐","시간대별(0→23시)"].map((h,i)=><th key={h} style={{fontSize:11,fontWeight:700,color:"#8E8E93",textAlign:i>=3&&i<5?"right":"left",padding:"6px 8px",borderBottom:"1px solid rgba(0,0,0,.06)",whiteSpace:"nowrap"}}>{h}</th>)}</tr></thead><tbody>
+        {d.products.map(p=>{const on=!!p.now&&!p.now.startsWith("ERR"); const mx=Math.max(1,...p.byHour); return(
+          <tr key={p.id}>
+            <td style={{padding:"5px 8px",borderBottom:"1px solid rgba(0,0,0,.05)"}}>{p.shot?<img src={p.shot.url} alt="" title={`모바일 화면 캡처 ${md(p.shot.t)} · 클릭하면 크게`} onClick={()=>setBig({name:p.name,url:p.shot.url,t:p.shot.t,hl:p.now})} style={{width:40,height:78,objectFit:"cover",objectPosition:"top",borderRadius:5,border:`2px solid ${on?"#1E7B3C":"#E5E5EA"}`,cursor:"zoom-in",display:"block"}}/>:<div style={{width:40,height:78,borderRadius:5,background:"#F2F2F7"}}/>}</td>
+            <td style={{fontSize:12.5,fontWeight:700,padding:"7px 8px",borderBottom:"1px solid rgba(0,0,0,.05)",whiteSpace:"nowrap"}}>{p.name}{p.onShots?.length?<div style={{fontSize:10.5,fontWeight:500,color:"#1E7B3C",cursor:"pointer"}} onClick={()=>setBig({name:p.name,url:p.onShots[0].url,t:p.onShots[0].t,hl:p.onShots[0].hl})}>켜짐 캡처 {p.onShots.length}장 보기</div>:null}</td>
+            <td style={{padding:"7px 8px",borderBottom:"1px solid rgba(0,0,0,.05)",whiteSpace:"nowrap"}}><span style={{display:"inline-block",padding:"2px 9px",borderRadius:999,fontSize:11.5,fontWeight:700,background:on?"#E8F8EE":"#F2F2F7",color:on?"#1E7B3C":"#8E8E93"}}>{on?"● "+p.now.slice(0,40):"배지 없음"}</span></td>
+            <td style={{fontSize:12.5,padding:"7px 8px",textAlign:"right",borderBottom:"1px solid rgba(0,0,0,.05)",fontVariantNumeric:"tabular-nums"}}>{p.on24}<span style={{color:"#8E8E93"}}>/{p.samples24}</span></td>
+            <td style={{fontSize:12,padding:"7px 8px",textAlign:"right",borderBottom:"1px solid rgba(0,0,0,.05)",color:"#6E6E73",whiteSpace:"nowrap"}}>{p.lastOn?md(p.lastOn.t):"-"}</td>
+            <td style={{padding:"7px 8px",borderBottom:"1px solid rgba(0,0,0,.05)"}}><div style={{display:"flex",gap:2,alignItems:"flex-end",height:22}}>{p.byHour.map((v,h)=><div key={h} title={`${h}시 ${v}회`} style={{width:7,height:Math.max(3,Math.round(v/mx*22)),background:v?"#1E7B3C":"#E5E5EA",borderRadius:2}}/>)}</div></td>
+          </tr>);})}
+      </tbody></table></div>}
+      {big&&<div onClick={()=>setBig(null)} style={{position:"fixed",inset:0,background:"rgba(0,0,0,.55)",zIndex:9999,display:"flex",alignItems:"center",justifyContent:"center",cursor:"zoom-out"}}>
+        <div onClick={e=>e.stopPropagation()} style={{background:"#fff",borderRadius:14,padding:12,maxHeight:"92vh",overflow:"auto",boxShadow:"0 20px 60px rgba(0,0,0,.35)"}}>
+          <div style={{fontSize:13,fontWeight:800,marginBottom:6}}>{big.name} <span style={{fontWeight:500,color:"#8E8E93"}}>· 모바일(카카오톡 인앱 UA) 화면 · {md(big.t)}</span>{big.hl?<span style={{marginLeft:8,padding:"2px 8px",borderRadius:999,background:"#E8F8EE",color:"#1E7B3C",fontSize:11.5,fontWeight:700}}>● {big.hl.slice(0,60)}</span>:<span style={{marginLeft:8,color:"#8E8E93",fontSize:11.5}}>배지 없음</span>}</div>
+          <img src={big.url} alt="" style={{width:390,maxWidth:"80vw",display:"block",borderRadius:8,border:"1px solid #E5E5EA"}}/>
+          <div style={{fontSize:11,color:"#8E8E93",marginTop:6}}>닫기: 바깥 클릭</div>
+        </div></div>}
+      <div style={{fontSize:11,color:"#8E8E93",marginTop:8}}>화면은 10분마다 다시 찍힙니다. 배지가 켜진 순간의 화면은 따로 보관돼 상품명 아래 "켜짐 캡처"로 볼 수 있습니다. 배지는 카카오가 최근 구매·위시·조회가 일정 수 이상 몰릴 때 자동으로 붙이는 소셜프루프라 광고로 살 수 없습니다. 분산 유입(캐시슬라이드)엔 잘 안 켜지고 퀴즈·푸시처럼 몰리는 유입에서 켜집니다. 켜진 시간과 매체 집행 시간을 대조하면 유효 트래픽 여부가 판정됩니다.</div>
+    </Card>
+  );
+};
+
 // 포트폴리오 탭 숫자 입력 — 모듈 레벨 (섹션 IIFE 안에 정의하면 리렌더마다 remount되어 입력이 초기화됨)
 const PfNumIn=({val,onCommit,w=76})=>(
   <input key={String(val)} defaultValue={val||""} inputMode="numeric"
@@ -2537,7 +2757,7 @@ function SchModalComp({mode, initial, onSave, onClose}){
         <FR label="시작일 *"><Inp type="date" value={f.date} onChange={v=>set("date",v)}/></FR>
         <FR label="종료일"><Inp type="date" value={f.endDate} onChange={v=>set("endDate",v)}/></FR>
       </div>
-      <FR label="담당자"><Sel value={f.assignee||""} onChange={v=>set("assignee",v)} options={["","지원","경은","소리","지수","영서","행사"]}/></FR>
+      <FR label="담당자"><Sel value={f.assignee||""} onChange={v=>set("assignee",v)} options={["","지원","경은","소리","혜영","영서","행사"]}/></FR>
       <FR label="메모">
         <textarea value={f.note||""} onChange={e=>set("note",e.target.value)} placeholder="한도 수량, 할인율, 주의사항 등 자유롭게 입력"
           style={{width:"100%",padding:"9px 12px",border:`1px solid ${C.border}`,borderRadius:9,
@@ -4103,7 +4323,7 @@ function ProjectSection() {
   const STATUS_MAP = {planning:{label:"기획중",color:"#6366f1",bg:"#eef2ff"},in_progress:{label:"진행중",color:"#2563eb",bg:"#eff6ff"},done:{label:"완료",color:"#16a34a",bg:"#f0fdf4"},paused:{label:"보류",color:"#a1a1aa",bg:"#f4f4f5"}};
   const PRIORITY_MAP = {urgent:{label:"긴급",color:"#dc2626",bg:"#fef2f2",icon:"priority_high"},high:{label:"높음",color:"#ea580c",bg:"#fff7ed",icon:"arrow_upward"},normal:{label:"보통",color:"#2563eb",bg:"#eff6ff",icon:"remove"},low:{label:"낮음",color:"#a1a1aa",bg:"#f4f4f5",icon:"arrow_downward"}};
   const TAG_COLORS = ["#2563eb","#6366f1","#16a34a","#ea580c","#dc2626","#0891b2","#7c3aed","#c026d3"];
-  const ASSIGNEES = ["지원","경은","소리","지수","영서"];
+  const ASSIGNEES = ["지원","경은","소리","혜영","영서"];
 
   const load = () => {
     setLoading(true);
@@ -6104,7 +6324,7 @@ export default function OaDashboard(){
     }).catch(()=>{});
   },[]);
 
-  const NOTION_ASSIGNEE_COLORS = {"지원":"#fb923c","경은":"#34d399","소리":"#f472b6","지수":"#a78bfa","영서":"#60a5fa","행사":"#f97316"};
+  const NOTION_ASSIGNEE_COLORS = {"지원":"#fb923c","경은":"#34d399","소리":"#f472b6","혜영":"#a78bfa","영서":"#60a5fa","행사":"#f97316"};
 
   // ── Notion CSV 내보내기 파일 파싱 ──────────────────────────────
   function parseNotionCSV(text) {
@@ -6157,7 +6377,7 @@ export default function OaDashboard(){
       const assigneeMatch = rawName.match(/^\(([^)]+)\)\s*/);
       if (assigneeMatch) {
         const candidate = assigneeMatch[1];
-        if (["지원","경은","소리","지수","영서"].includes(candidate)) {
+        if (["지원","경은","소리","혜영","영서"].includes(candidate)) {
           assignee = candidate;
           title = rawName.slice(assigneeMatch[0].length);
         }
@@ -6331,7 +6551,7 @@ export default function OaDashboard(){
   const [noticeReads, setNoticeReads]   = useSyncState("oa_notice_reads_v1", {});
   const [noticeEditMode, setNoticeEditMode] = useState(false);
   const [noticeInput, setNoticeInput]   = useState("");
-  const NOTICE_MEMBERS = ["소리","영서","경은","지수"];
+  const NOTICE_MEMBERS = ["소리","영서","경은","혜영"];
 
   // 목표 메모 (Supabase 팀 공유)
   const [metaGoal, setMetaGoal]         = useSyncState("oa_meta_goal_v7", "");
@@ -9183,6 +9403,7 @@ export default function OaDashboard(){
     {id:"portfolio", icon:"donut_small",    label:"포트폴리오"},
     {id:"priority",  icon:"local_fire_department", label:"우선순위"},
     {id:"warroom",   icon:"sports_esports", label:"광고 관제", href:"/ads"},
+    {id:"traffic",   icon:"route",          label:"광고관리(트래픽)"},
     {id:"naver",     icon:"ads_click",      label:"네이버광고"},
     {id:"meta",      icon:"campaign",       label:"메타광고"},
     {id:"gfa",       icon:"insights",       label:"GFA"},
@@ -9315,6 +9536,15 @@ export default function OaDashboard(){
           </div>
         )}
       </div>
+
+      {/* ── 카카오 선물하기 실시간 배지 모니터 ── */}
+      <KakaoLiveCard/>
+
+      {/* ── 다가오는 플랫폼 대형 행사 (D-day) ── */}
+      <UpcomingEventsCard events={promoEvents} onOpen={()=>{setSec("meta");setMetaTab("events");}}/>
+
+      {/* ── 광고 효율 요약 (채널·카테고리별 평균 CPC/CPM/ROAS, 관제판 연동) ── */}
+      <AdEfficiencyCard/>
 
       {/* ── 팀 예산 페이싱 요약 (포트폴리오 미니뷰) ── */}
       {(pfTeams||[]).length>0&&(()=>{
@@ -12762,7 +12992,7 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
     const [calMonth, setCalMonth] = useState(()=>{const n=new Date();return{y:n.getFullYear(),m:n.getMonth()};});
     const [selDay, setSelDay] = useState(null);
     const [schFilter, setSchFilter] = useState("미완료"); // 미완료 | 전체
-    const [assigneeFilter, setAssigneeFilter] = useState("전체"); // 전체 | 소리 | 영서 | 경은 | 지수
+    const [assigneeFilter, setAssigneeFilter] = useState("전체"); // 전체 | 소리 | 영서 | 경은 | 혜영
     const [clModal, setClModal] = useState(false);
     const [clForm, setClForm] = useState({title:"",cycle:"weekly",weekDay:1,monthDay:1,assignee:""});
     const [dragOverDay, setDragOverDay] = useState(null);
@@ -12830,7 +13060,7 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
     });
 
     // 반복 체크리스트 → 달력에 자동 표시
-    const ASSIGNEE_COLORS={"소리":"#f472b6","영서":"#60a5fa","경은":"#34d399","지수":"#a78bfa","행사":"#f97316"};
+    const ASSIGNEE_COLORS={"소리":"#f472b6","영서":"#60a5fa","경은":"#34d399","혜영":"#a78bfa","행사":"#f97316"};
     (checkItems||[]).forEach(ci=>{
       const daysInCal = new Date(calMonth.y, calMonth.m+1, 0).getDate();
       for(let day=1; day<=daysInCal; day++){
@@ -12894,7 +13124,7 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
         <div style={{overflowX:"auto",WebkitOverflowScrolling:"touch",paddingBottom:2}}>
           <div style={{display:"flex",gap:4,whiteSpace:"nowrap",minWidth:"max-content"}}>
             {/* 담당자 필터 */}
-            {[{n:"전체",c:C.inkMid},{n:"소리",c:"#f472b6"},{n:"영서",c:"#60a5fa"},{n:"경은",c:"#34d399"},{n:"지수",c:"#a78bfa"},{n:"행사",c:"#f97316"}].map(({n:a,c:col})=>{
+            {[{n:"전체",c:C.inkMid},{n:"소리",c:"#f472b6"},{n:"영서",c:"#60a5fa"},{n:"경은",c:"#34d399"},{n:"혜영",c:"#a78bfa"},{n:"행사",c:"#f97316"}].map(({n:a,c:col})=>{
               const active=assigneeFilter===a;
               return(
                 <button key={a} onClick={()=>setAssigneeFilter(a)} style={{fontSize:12,padding:"4px 12px",borderRadius:20,
@@ -13282,7 +13512,7 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
                 <div>
                   <div style={{fontSize:12,fontWeight:700,color:C.inkMid,marginBottom:4}}>담당자</div>
                   <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
-                    {["","소리","영서","경은","지수"].map(m=>(
+                    {["","소리","영서","경은","혜영"].map(m=>(
                       <button key={m} onClick={()=>setClForm(p=>({...p,assignee:m}))} style={{fontSize:12,padding:"4px 12px",borderRadius:20,
                         border:`1px solid ${clForm.assignee===m?C.rose:C.border}`,background:clForm.assignee===m?C.rose:C.white,
                         color:clForm.assignee===m?C.white:C.inkMid,cursor:"pointer",fontFamily:"inherit",fontWeight:700}}>{m||"미지정"}</button>
@@ -13536,6 +13766,9 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
 
     return(
     <div style={{display:"flex",flexDirection:"column",gap:14}}>
+      {/* 🕵️ 타사 광고 모니터 */}
+      <AdMonitorCard/>
+
       {/* 재제작 요청 모달 */}
       {reqPopoverAd&&(
         <div style={{position:"fixed",inset:0,zIndex:1000,background:"rgba(0,0,0,0.4)",display:"flex",alignItems:"center",justifyContent:"center"}}
@@ -13546,7 +13779,7 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
             <div style={{fontSize:12,color:C.inkMid,marginBottom:14,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{reqPopoverAd.adName}</div>
             <div style={{fontSize:12,fontWeight:700,color:C.inkMid,marginBottom:6}}>담당자</div>
             <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:12}}>
-              {["","소리","영서","경은","지수"].map(a=>(
+              {["","소리","영서","경은","혜영"].map(a=>(
                 <span key={a} onClick={()=>setReqAssignee(a)}
                   style={{fontSize:12,padding:"4px 12px",borderRadius:20,cursor:"pointer",fontWeight:700,
                     background:reqAssignee===a?"#8b5cf6":"#f5f3ff",
@@ -14108,7 +14341,7 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
   })();
 
   const ReviewSection=(()=>{
-    const MEMBERS=["소리","영서","경은","지수"];
+    const MEMBERS=["소리","영서","경은","혜영"];
     const PLATFORMS={instagram:{label:"인스타그램",icon:"photo_camera",color:"#e1306c",bg:"#fff0f5"},twitter:{label:"트위터",icon:"flutter_dash",color:"#1da1f2",bg:"#f0f9ff"}};
     const EMPTY_FORM={title:"",platform:"instagram",link:"",postedAt:"",views:"",likes:"",comments:"",saves:"",isAd:false,adSpend:"",adRoas:"",adCtr:"",adCpc:"",adCpa:"",adPurchases:"",isManyChat:false,assignee:"",note:""};
     const EMPTY_IG={month:"",views:"",reach:"",interactions:"",follows:"",unfollows:""};
@@ -14125,16 +14358,16 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
     // Notion 데이터 1회 시딩
     useEffect(()=>{
       const SEED=[
-        {title:"왓츠인마이백 컨텐츠 제작",platform:"instagram",postedAt:"2026-01-29",assignee:"지수"},
+        {title:"왓츠인마이백 컨텐츠 제작",platform:"instagram",postedAt:"2026-01-29",assignee:"혜영"},
         {title:"프리온 행사 홍보 컨텐츠",platform:"instagram",postedAt:"2026-01-30",assignee:"영서"},
         {title:"오토 고데기 홍보 컨텐츠",platform:"instagram",postedAt:"2026-02-05",assignee:"영서"},
-        {title:"팔로워 이벤트",platform:"instagram",postedAt:"2026-02-05",assignee:"지수"},
+        {title:"팔로워 이벤트",platform:"instagram",postedAt:"2026-02-05",assignee:"혜영"},
         {title:"네이버 설특가 홍보 컨텐츠",platform:"instagram",postedAt:"2026-02-09",assignee:"영서"},
         {title:"발렌타인-히팅뷰러 rt 이벤트",platform:"twitter",postedAt:"2026-02-10",assignee:"영서"},
         {title:"에이블리 설 에누리 행사 홍보 컨텐츠",platform:"instagram",postedAt:"2026-02-12",assignee:"영서"},
-        {title:"발렌타인데이_컨텐츠 제작",platform:"instagram",postedAt:"2026-02-13",assignee:"지수"},
-        {title:"에이블리 에누리 기획전_오토고데기 홍보 컨텐츠",platform:"instagram",postedAt:"2026-02-13",assignee:"지수"},
-        {title:"에이블리 단독 기획전_홍보 컨텐츠",platform:"instagram",postedAt:"2026-02-19",assignee:"지수"},
+        {title:"발렌타인데이_컨텐츠 제작",platform:"instagram",postedAt:"2026-02-13",assignee:"혜영"},
+        {title:"에이블리 에누리 기획전_오토고데기 홍보 컨텐츠",platform:"instagram",postedAt:"2026-02-13",assignee:"혜영"},
+        {title:"에이블리 단독 기획전_홍보 컨텐츠",platform:"instagram",postedAt:"2026-02-19",assignee:"혜영"},
         {title:"지그재그 셀프케어페스타 홍보 컨텐츠",platform:"instagram",postedAt:"2026-02-23",assignee:"영서"},
         {title:"프리온 홍보 글",platform:"instagram",postedAt:"2026-02-24",assignee:"영서"},
         {title:"오아 고데기 홍보 콘텐츠",platform:"instagram",postedAt:"2026-02-27",assignee:"영서"},
@@ -18401,6 +18634,7 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
           {sec==="adschedule"  && <AdSchedulePanel C={C} getSetting={getSetting}/>}
           {sec==="inf_archive" && <InfluencerArchiveSection/>}
           {sec==="launch"      && <LaunchSection/>}
+          {sec==="traffic"     && <TrafficAdsSection C={C} Card={Card}/>}
           {sec==="schedule"    && ScheduleSection}
           {sec==="naver"       && <NaverSection/>}
           {sec==="creative"    && CreativeSection}
@@ -18725,120 +18959,7 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
           </div>
         )}
 
-        {/* ── 공지 팝업 (하단 고정) ── */}
-        {(()=>{
-          if(!activeNotice) return null;
-          const readBy = (noticeReads[activeNotice.id])||[];
-          const allRead = NOTICE_MEMBERS.every(m=>readBy.includes(m));
-          if(allRead) return null;
-          return(
-            <div style={{
-              position:"fixed",bottom:80,left:"50%",transform:"translateX(-50%)",
-              width:"min(460px,calc(100vw - 32px))",
-              background:C.white,borderRadius:18,
-              boxShadow:"0 8px 40px rgba(0,0,0,0.18)",
-              border:`1.5px solid ${C.rose}55`,
-              zIndex:2000,overflow:"hidden",
-            }}>
-              {/* 헤더 */}
-              <div style={{background:C.rose,padding:"10px 16px",display:"flex",alignItems:"center",gap:8}}>
-                <MI n="campaign" size={16} style={{color:C.white}}/>
-                <span style={{fontSize:13,fontWeight:800,color:C.white,flex:1}}>📣 팀 공지</span>
-                <span style={{fontSize:12,color:"rgba(255,255,255,0.75)"}}>
-                  {readBy.length}/{NOTICE_MEMBERS.length} 확인
-                </span>
-                <button onClick={()=>{setNoticeInput(activeNotice.content);setNoticeEditMode(true);}}
-                  style={{background:"rgba(255,255,255,0.2)",border:"none",borderRadius:6,
-                    width:24,height:24,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>
-                  <MI n="edit" size={13} style={{color:C.white}}/>
-                </button>
-              </div>
-
-              {/* 공지 내용 */}
-              <div style={{padding:"14px 16px"}}>
-                {noticeEditMode ? (
-                  <div style={{display:"flex",flexDirection:"column",gap:8}}>
-                    <textarea value={noticeInput} onChange={e=>setNoticeInput(e.target.value)}
-                      rows={3}
-                      style={{width:"100%",padding:"8px 10px",border:`1.5px solid ${C.border}`,
-                        borderRadius:8,fontSize:13,fontFamily:"inherit",outline:"none",
-                        resize:"none",boxSizing:"border-box"}}/>
-                    <div style={{display:"flex",gap:6,justifyContent:"flex-end"}}>
-                      <button onClick={()=>setNoticeEditMode(false)}
-                        style={{fontSize:12,padding:"6px 14px",borderRadius:8,border:`1px solid ${C.border}`,
-                          background:C.cream,color:C.inkMid,cursor:"pointer",fontFamily:"inherit",fontWeight:700}}>
-                        취소
-                      </button>
-                      <button onClick={()=>{
-                        const id = Date.now().toString();
-                        setActiveNotice({id,content:noticeInput.trim(),createdAt:new Date().toISOString().slice(0,10)});
-                        setNoticeReads(prev=>({...prev,[id]:[]}));
-                        setNoticeEditMode(false);
-                      }}
-                        style={{fontSize:12,padding:"6px 14px",borderRadius:8,border:"none",
-                          background:C.rose,color:C.white,cursor:"pointer",fontFamily:"inherit",fontWeight:700}}>
-                        저장
-                      </button>
-                    </div>
-                  </div>
-                ) : (
-                  <p style={{fontSize:13,color:C.ink,lineHeight:1.7,margin:0,whiteSpace:"pre-wrap"}}>
-                    {activeNotice.content}
-                  </p>
-                )}
-              </div>
-
-              {/* 확인 버튼 */}
-              {!noticeEditMode&&(
-                <div style={{padding:"0 16px 14px",display:"flex",gap:8,flexWrap:"wrap"}}>
-                  {NOTICE_MEMBERS.map(m=>{
-                    const done = readBy.includes(m);
-                    return(
-                      <button key={m} onClick={()=>{
-                        if(done) return;
-                        const next = [...readBy, m];
-                        setNoticeReads(prev=>({...prev,[activeNotice.id]:next}));
-                      }}
-                        style={{flex:1,minWidth:60,padding:"8px 0",borderRadius:10,fontFamily:"inherit",
-                          fontWeight:800,fontSize:13,cursor:done?"default":"pointer",transition:"all 0.15s",
-                          border:`1.5px solid ${done?"#4DAD7A":C.border}`,
-                          background:done?"#EDF7F1":C.cream,
-                          color:done?"#2e7d32":C.inkMid}}>
-                        {done?"✓ ":""}{m}
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          );
-        })()}
-
-        {/* 공지 없을 때 작성 버튼 */}
-        {(()=>{
-          if(!activeNotice) return(
-            <button onClick={()=>{setNoticeInput("");setNoticeEditMode(true);setActiveNotice({id:"__new__",content:"",createdAt:""});}}
-              style={{position:"fixed",bottom:80,right:80,background:"#fff",border:`1.5px solid ${C.rose}55`,
-                borderRadius:12,padding:"6px 12px",fontSize:12,fontWeight:700,color:C.rose,
-                cursor:"pointer",boxShadow:"0 2px 12px rgba(0,0,0,0.1)",zIndex:1999,fontFamily:"inherit",
-                display:"flex",alignItems:"center",gap:4}}>
-              <MI n="campaign" size={13}/> 공지 작성
-            </button>
-          );
-          const readBy = (noticeReads[activeNotice.id])||[];
-          const allRead = NOTICE_MEMBERS.every(m=>readBy.includes(m));
-          if(!allRead) return null;
-          // 모두 읽은 경우에도 작성 버튼 표시
-          return(
-            <button onClick={()=>{setNoticeInput("");setNoticeEditMode(true);setActiveNotice({id:"__new__",content:"",createdAt:""});}}
-              style={{position:"fixed",bottom:80,right:80,background:"#fff",border:`1.5px solid ${C.rose}55`,
-                borderRadius:12,padding:"6px 12px",fontSize:12,fontWeight:700,color:C.rose,
-                cursor:"pointer",boxShadow:"0 2px 12px rgba(0,0,0,0.1)",zIndex:1999,fontFamily:"inherit",
-                display:"flex",alignItems:"center",gap:4}}>
-              <MI n="campaign" size={13}/> 공지 작성
-            </button>
-          );
-        })()}
+        {/* 팀 공지 팝업·작성 버튼 — 사용자 요청으로 제거 (09-21) */}
 
         {/* 플로팅 버튼 */}
         <button className="agent-fab-btn" onClick={()=>setAgentOpen(v=>!v)}

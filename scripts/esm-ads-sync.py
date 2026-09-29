@@ -28,54 +28,29 @@ with sync_playwright() as p:
     # ── G마켓 광고센터 ──
     page.goto("https://adcenter.esmplus.com/report", wait_until="domcontentloaded", timeout=60000); time.sleep(8)
     if "login" in page.url: login_form(page, "adcenter"); page.goto("https://adcenter.esmplus.com/report", wait_until="domcontentloaded", timeout=60000); time.sleep(8)
-    # 판매자 선택 UI 탐색
+    # 판매자 전환(좌측 상단 드롭다운 좌표 170,96 → 버튼 텍스트) + 기간 선택(좌표 487,287 → '지난 30일' → 적용)
     def gm_collect(seller):
-        cur = page.evaluate("() => { const el=[...document.querySelectorAll('*')].find(e=>e.children.length===0 && /^(k2ci00|k2ci01|voar00|voarn3)$/.test((e.innerText||'').trim()) && e.getBoundingClientRect().top<200); return el ? el.innerText.trim() : 'none'; }")
-        print("  current seller:", cur, flush=True)
-        if cur != seller and page.locator("select").count():
-            try:
-                sel = next(i for i in range(page.locator("select").count()) if seller in page.locator("select").nth(i).inner_text())
-                page.locator("select").nth(sel).select_option(label=seller); time.sleep(6); print("  select_option ok", flush=True)
-            except Exception as e: print("  select_option fail", str(e)[:60])
-            cur = page.evaluate("() => { const el=[...document.querySelectorAll('*')].find(e=>e.children.length===0 && /^(k2ci00|k2ci01|voar00|voarn3)$/.test((e.innerText||'').trim()) && e.getBoundingClientRect().top<200); return el ? el.innerText.trim() : 'none'; }")
-        if cur != seller:
-            r = page.evaluate("""() => { const el=[...document.querySelectorAll('*')].find(e=>e.children.length===0 && /^(k2ci00|k2ci01|voar00|voarn3)$/.test((e.innerText||'').trim()) && e.getBoundingClientRect().top<200); if(!el) return 'no-el'; const box=el.parentElement; box.click(); const svg=box.querySelector('svg')||box.nextElementSibling; if(svg) svg.dispatchEvent(new MouseEvent('click',{bubbles:true})); return 'clicked '+box.tagName+'.'+box.className.slice(0,30); }""")
-            time.sleep(1.5); page.screenshot(path="/tmp/esm_seller_dd.png")
-            opts = page.evaluate("() => [...document.querySelectorAll('li,button,div,span')].filter(e=>e.children.length===0 && /^(k2ci00|k2ci01)$/.test((e.innerText||'').trim())).map(e=>e.innerText.trim()+'@'+Math.round(e.getBoundingClientRect().top))")
-            print("  dd:", r, opts, flush=True)
-            page.evaluate(f"""() => {{ const els=[...document.querySelectorAll('li,button,div,span')].filter(e=>e.children.length===0 && (e.innerText||'').trim()==='{seller}'); const el=els[els.length-1]; if(el) (el.closest('li')||el.closest('button')||el).click(); }}"""); time.sleep(6)
-            cur2 = page.evaluate("() => { const el=[...document.querySelectorAll('*')].find(e=>e.children.length===0 && /^(k2ci00|k2ci01|voar00|voarn3)$/.test((e.innerText||'').trim()) && e.getBoundingClientRect().top<200); return el ? el.innerText.trim() : 'none'; }")
-            print("  after switch:", cur2, flush=True)
+        page.goto("https://adcenter.esmplus.com/report", wait_until="domcontentloaded", timeout=60000); time.sleep(8)
+        page.mouse.click(170, 96); time.sleep(2)
+        try: page.get_by_role("button", name=seller, exact=True).first.click(timeout=5000); time.sleep(7)
+        except Exception as e: print("  seller switch err", seller, str(e)[:60]); page.keyboard.press("Escape")
+        cur = page.evaluate("() => { const el=[...document.querySelectorAll('p,span,div')].find(e=>e.children.length===0 && /^(k2ci00|k2ci01|voar00|voarn3)$/.test((e.innerText||'').trim()) && e.getBoundingClientRect().top<120); return el ? el.innerText.trim() : 'none'; }")
+        page.mouse.click(487, 287); time.sleep(2)
         try:
-            tag = page.evaluate("""() => { const el=[...document.querySelectorAll('button,div,span,input')].find(e=>e.children.length<3 && /\\d{4}\\.\\d{2}\\.\\d{2} ~/.test(e.innerText||e.value||'')); if(!el) return 'none'; el.click(); return el.tagName+'.'+el.className; }"""); print("  date el:", tag, flush=True); time.sleep(2)
-            page.screenshot(path="/tmp/esm_gm_period.png")
-            btn = page.get_by_text("지난 30일", exact=True)
-            print("  '지난 30일' count", btn.count(), "visible", btn.first.is_visible(), flush=True)
-            btn.first.click(force=True); time.sleep(2)
-            for nm in ("적용", "확인", "조회"):
-                b = page.get_by_role("button", name=nm)
-                if b.count() and b.first.is_visible(): b.first.click(); break
-            time.sleep(7)
-            print("  period now:", page.get_by_text(re.compile(r"\d{4}\.\d{2}\.\d{2} ~")).first.inner_text(), flush=True)
-        except Exception as e: print("  period err", str(e)[:100]); page.screenshot(path="/tmp/esm_gm_period_err.png")
-        txt = page.inner_text("body"); s = summary_from(txt)
-        print(f"[gmarket {seller}]", s, flush=True)
-        if s: out["gmarket"][seller] = s
-        # 캠페인별 상세
-        try:
-            page.get_by_text("캠페인별", exact=True).first.click(); time.sleep(1); page.get_by_role("button", name="검색").first.click(); time.sleep(6)
-            rows = page.eval_on_selector_all("table tr", "trs=>trs.map(tr=>[...tr.querySelectorAll('td')].map(td=>td.innerText.trim())).filter(r=>r.length>8)")
-            camps = []
-            for r in rows:
-                cells = [c for c in r if c and c != "checkbox"]
-                if len(cells) < 9: continue
-                camps.append({"name": cells[0], "imp": num(cells[1]), "clicks": num(cells[2]), "cpc": num(cells[4]), "spend": num(cells[5]), "rev": num(cells[6]), "roas": num(cells[7]) / 100, "conv": num(cells[8])})
-            out["gmarket"].setdefault("campaigns", {})[seller] = camps; print(f"  campaigns {len(camps)}", [c["name"][:14] for c in camps[:5]], flush=True)
-        except Exception as e: print("  campaign table err", str(e)[:80])
+            page.get_by_text("지난 30일", exact=True).last.click(force=True, timeout=5000); time.sleep(2)
+            page.get_by_role("button", name="적용").first.click(timeout=5000); time.sleep(9)
+        except Exception as e: print("  period err", str(e)[:80]); page.keyboard.press("Escape")
+        txt = page.inner_text("body"); s = summary_from(txt); m = re.search(r"조회 일자 \(([\d.]+ - [\d.]+)\)", txt)
+        print(f"[gmarket {seller} cur={cur}] period={m[1] if m else '?'}", s, flush=True)
+        if s and cur == seller: out["gmarket"][f"{seller} (30일)"] = dict(s, period=m[1] if m else "")
+        elif s: out["gmarket"][f"{cur} (30일, {seller} 전환실패)"] = dict(s, period=m[1] if m else "")
     for s in ("k2ci00", "k2ci01"): gm_collect(s)
     # ── 옥션 광고센터 (API 직접 호출) ──
     page.goto("https://ad.esmplus.com/CPC/Main", wait_until="domcontentloaded", timeout=60000); time.sleep(6)
-    if "LogOn" in page.url: login_form(page, "auction")
+    if "LogOn" in page.url:
+        try: page.get_by_text("ESM PLUS", exact=True).first.click(timeout=3000); time.sleep(1)
+        except Exception: pass
+        login_form(page, "auction")
     fd, td = START.isoformat(), END.isoformat()
     for name, url, body in [
         ("cpp_daily", "https://ad.esmplus.com/CPP/Report/GetReportSuccBidSummaryDate", {"sellerIdList": OA_SELLERS, "fromDate": fd, "toDate": td, "productSeqList": [1, 2, 3, 4, 5, 6], "pageNo": 1, "pageSize": "100"}),
@@ -90,6 +65,9 @@ with sync_playwright() as p:
         inp = page.locator("input").filter(has_text="").first
         info = page.evaluate("() => [...document.querySelectorAll('input')].map(i=>({t:i.type,n:i.name,id:i.id,v:i.value,cls:i.className.slice(0,40)})).filter(i=>i.t!='hidden'||/date|Date/.test(i.n+i.id))")
         print("cpc inputs:", info[:12], flush=True)
+        rad = page.evaluate("() => [...document.querySelectorAll('input[type=radio]')].map(i=>({n:i.name,v:i.value,chk:i.checked,lab:(i.closest('label')||i.parentElement).innerText.trim().slice(0,20),top:Math.round(i.getBoundingClientRect().top)}))"); print("  radios:", rad, flush=True)
+        sh = page.evaluate("() => [...document.querySelectorAll('*')].filter(e=>e.children.length===0 && (e.innerText||'').trim() && (e.innerText||'').length<16 && e.getBoundingClientRect().width>0).map(e=>e.tagName+'|'+e.innerText.trim()+'@'+Math.round(e.getBoundingClientRect().top)+','+Math.round(e.getBoundingClientRect().left))"); print("  shorts:", [x for x in sh if any(k in x for k in ["일","주","월","조회","~","기간"])][:40], flush=True)
+        page.screenshot(path="/tmp/auc_daily.png", full_page=True)
         page.evaluate(f"""() => {{ for (const i of document.querySelectorAll('input')) {{ if (/(from|start|sdate|begin)/i.test(i.name+i.id)) {{ i.value='{fd}'; i.dispatchEvent(new Event('change',{{bubbles:true}})); }} if (/(to|end|edate)/i.test(i.name+i.id) && !/total/i.test(i.name+i.id)) {{ i.value='{td}'; i.dispatchEvent(new Event('change',{{bubbles:true}})); }} }} }}""")
         labels = page.evaluate("() => [...document.querySelectorAll('label')].map(l=>l.innerText.trim()).filter(t=>t)"); print("  cpc labels:", labels[:20], flush=True)
         page.get_by_text("조회하기", exact=True).first.click(); time.sleep(7)

@@ -66,17 +66,23 @@ def fetch_meta():
 def fetch_adboost():
     import openpyxl
     from playwright.sync_api import sync_playwright
-    from adboost_lib import launch, ensure_login
+    from adboost_lib import ensure_login, PROFILE
     bufs, period = [], ""
     with sync_playwright() as pw:
-        ctx = launch(pw)  # 기존 adboost_daily와 동일(헤드리스 아님)
+        # ★ 다운로드 시 브라우저가 죽는 문제: window-position 오프스크린 옵션 제거 + downloads_path 지정으로 해결(09-15)
+        ctx = pw.chromium.launch_persistent_context(user_data_dir=str(PROFILE), channel="chrome", headless=False, viewport={"width": 1600, "height": 950}, accept_downloads=True, downloads_path=str(Path(PROFILE).parent / "downloads"), args=["--disable-blink-features=AutomationControlled"])
         page = ctx.pages[0] if ctx.pages else ctx.new_page(); ensure_login(page)
         for acct in ("1742505", "2236"):
             try:
                 page.goto(f"https://ads.naver.com/manage/ad-accounts/{acct}/all-campaigns", timeout=60000); page.wait_for_timeout(12000)
+                try:  # 기간을 최근 30일(오늘 제외)로
+                    page.get_by_text(re.compile(r"^\d{4}\.\d{2}\.\d{2}\.$")).first.click(); page.wait_for_timeout(2000)
+                    page.get_by_text("최근 30일 (오늘 제외)", exact=True).first.click(); page.wait_for_timeout(800)
+                    page.get_by_role("button", name="확인").last.click(); page.wait_for_timeout(12000)
+                except Exception as e: log("adboost", acct, "30d picker skip", str(e)[:60])
                 m = re.findall(r"(\d{4}\.\d{2}\.\d{2})", page.inner_text("body")[:3000]); period = f"{m[0]}~{m[1]}" if len(m) >= 2 else period
-                with page.expect_download(timeout=30000) as dl: page.click("text=다운로드", timeout=10000)
-                bufs.append(io.BytesIO(Path(dl.value.path()).read_bytes()))
+                with page.expect_download(timeout=40000) as dl: page.click("text=다운로드", timeout=10000)
+                tmp = Path(PROFILE).parent / "downloads" / f"adboost_{acct}.xlsx"; dl.value.save_as(str(tmp)); bufs.append(io.BytesIO(tmp.read_bytes()))
             except Exception as e: log("adboost", acct, "skip", str(e)[:80])
         ctx.close()
     num = lambda v: float(re.sub(r"[^0-9.]", "", str(v)) or 0)
@@ -89,7 +95,24 @@ def fetch_adboost():
             gu = str(r[1] or ""); kind = str(r[6] or "")
             out.append({"name": str(r[5]), "goal": f"{gu} · {kind}", "cat": cat_of(str(r[5]) + " " + kind), "spend": spend,
                         "clicks": int(num(r[8])), "imp": int(num(r[7])), "conv": int(num(r[12])), "rev": num(r[13]), "gu": gu})
+    if period: (Path(PROFILE).parent / "downloads" / "period.txt").write_text(period)
     return out, period
+def parse_adboost_files():
+    """브라우저 실패 시 마지막으로 내려받은 xlsx(30일)를 그대로 사용"""
+    import openpyxl
+    from adboost_lib import PROFILE
+    d = Path(PROFILE).parent / "downloads"; bufs = [io.BytesIO(f.read_bytes()) for f in sorted(d.glob("adboost_*.xlsx"))]
+    period = (d / "period.txt").read_text().strip() if (d / "period.txt").exists() else ""
+    num = lambda v: float(re.sub(r"[^0-9.]", "", str(v)) or 0)
+    out = []
+    for buf in bufs:
+        for r in list(openpyxl.load_workbook(buf).active.iter_rows(values_only=True))[1:]:
+            if len(r) < 14 or not r[5] or "보아르" in str(r[5]): continue
+            spend = num(r[11])
+            if spend <= 0: continue
+            gu = str(r[1] or ""); kind = str(r[6] or "")
+            out.append({"name": str(r[5]), "goal": f"{gu} · {kind}", "cat": cat_of(str(r[5]) + " " + kind), "spend": spend, "clicks": int(num(r[8])), "imp": int(num(r[7])), "conv": int(num(r[12])), "rev": num(r[13]), "gu": gu})
+    return out, (period + " (파일)") if period else "저장 파일"
 
 # ── 3) 네이버 GFA ──
 def fetch_gfa():
@@ -105,9 +128,19 @@ if "--no-meta" not in ARGV:
   try:
     meta = fetch_meta(); data["channels"]["meta"] = {"period": "최근 30일", "rows": meta}; log("meta", len(meta))
   except Exception as e: log("meta FAIL", e); data["channels"]["meta"] = {"error": str(e)[:200]}
+if "--no-naver" in ARGV:
+    try: ab, period = parse_adboost_files(); data["channels"]["adboost"] = {"period": period, "rows": ab}; log("adboost from saved files", len(ab), period)
+    except Exception as e: log("adboost file skip", e)
 if "--no-naver" not in ARGV:
     try:
-        ab, period = fetch_adboost(); data["channels"]["adboost"] = {"period": period or "최근 7일", "rows": ab}; log("adboost", len(ab))
+        ab, period = [], ""
+        for _try in range(3):  # 다운로드 중 브라우저 종료가 간헐적 → 재시도
+            ab, period = fetch_adboost()
+            if ab: break
+            log("adboost retry", _try + 1)
+        if not ab:
+            ab, period = parse_adboost_files(); log("adboost from saved files", len(ab), period)
+        data["channels"]["adboost"] = {"period": period or "최근 30일", "rows": ab}; log("adboost", len(ab))
     except Exception as e: log("adboost FAIL", e); data["channels"]["adboost"] = {"error": str(e)[:200]}
     if "--no-gfa" in ARGV: pass
     else:
@@ -141,6 +174,13 @@ try:
     for dt, v in z.get("daily", {}).items():
         if "cpc" in v: daily.setdefault("지그재그", {})[dt] = {"spend": v["spend"], "clicks": v["clicks"], "imp": v["imp"], "rev": 0}
 except Exception as ex: log("zigzag json skip", ex)
+try:  # 쿠팡 (광고보고서 xlsx 집계, docs/coupang-ads.json)
+    c = json.loads((DOCS / "coupang-ads.json").read_text()); rows_c = []
+    for cp in c.get("campaigns", []):
+        brand = "쿠팡 오아" if "오아" in cp["name"] else "쿠팡 기타브랜드"
+        rows_c.append({"name": cp["name"], "goal": brand, "cat": cat_of(cp["name"]), "spend": cp["spend"], "clicks": cp["clicks"], "imp": cp["imp"], "conv": cp["conv"], "rev": cp["rev"]})
+    data["channels"]["coupang"] = {"period": c.get("period", "지난달"), "rows": rows_c}
+except Exception as ex: log("coupang json skip", ex)
 # X (트위터): scripts/xads/xads_stats.py 산출물 docs/x-ads.json {제품:{날짜:{cost,imp,clk}}}
 try:
     x = json.loads((DOCS / "x-ads.json").read_text())
@@ -196,7 +236,7 @@ data["summary"] = summary
 hist_p = DOCS / "ad-cost-map.json"
 hist = json.loads(hist_p.read_text()) if hist_p.exists() else {"history": []}
 prev_latest = hist.get("latest") or {}
-for ch in ("meta", "adboost", "gfa", "esm", "ably", "x", "zigzag"):
+for ch in ("meta", "adboost", "gfa", "esm", "ably", "x", "zigzag", "coupang"):
     if ch not in data["channels"] and ch in prev_latest.get("channels", {}):
         data["channels"][ch] = prev_latest["channels"][ch]; summary[ch] = prev_latest.get("summary", {}).get(ch, {})
 data["summary"] = summary
@@ -217,13 +257,26 @@ try:
     urllib.request.urlopen(req, timeout=60); log("supabase push ok")
 except Exception as ex: log("supabase push FAIL", ex)
 
+
+# ── 독립 현황판(oa-adcost.vercel.app) 갱신: data.json + report.html 쓰고 배포 ──
+try:
+    import shutil, subprocess
+    try:
+        ib = json.loads((DOCS / ("iboss-merged.json" if (DOCS / "iboss-merged.json").exists() else "iboss-ad-products.json")).read_text())
+        payload["iboss"] = {"crawled": ib.get("crawled"), "count": ib.get("count"), "items": [{k: it.get(k) for k in ("name", "category", "platform_type", "url", "cpc", "cpm", "cpv", "flat_price", "min_budget", "pricing_text", "cpc_range", "audience", "tags", "brochure_pdf", "thumb", "contact_email", "contact_phone", "contact_site", "contact_person", "contact_src", "media", "web_note", "source_url", "source_year", "fit", "fit_reason", "price_basis", "brochure_dl", "openads", "openads_perf", "adssoon")} for it in ib.get("items", [])]}
+    except Exception as ex: log("iboss skip", ex)
+    try: payload["test_candidates"] = json.loads((DOCS / "test-candidates.json").read_text())
+    except Exception as ex: log("test-candidates skip", ex)
+    (Path.home() / "oa-adcost" / "data.json").write_text(json.dumps(payload, ensure_ascii=False)); log("oa-adcost data ok")
+except Exception as ex: log("oa-adcost data FAIL", ex)
+
 # ── HTML 생성 (템플릿 치환) ──
 def fmt(v): return "-" if v is None else f"{v:,.0f}"
 def table(rows_html, head):
     return f'<div class="tablewrap"><table><thead><tr>{head}</tr></thead><tbody>{rows_html}</tbody></table></div>'
 def real_table():
     rows = ""
-    labels = {"meta": "메타", "adboost": "네이버 AD부스터", "gfa": "네이버 GFA", "esm": "지마켓·옥션", "ably": "에이블리", "x": "X (트위터)", "zigzag": "지그재그"}
+    labels = {"meta": "메타", "adboost": "네이버 AD부스터", "gfa": "네이버 GFA", "esm": "지마켓·옥션", "ably": "에이블리", "x": "X (트위터)", "zigzag": "지그재그", "coupang": "쿠팡"}
     for ch, v in data["channels"].items():
         if "error" in v: rows += f'<tr><td class="key">{labels[ch]}</td><td colspan="5" class="note">수집 실패: {v["error"]}</td></tr>'; continue
         for goal, a in sorted(summary[ch]["by_goal"].items(), key=lambda x: -x[1]["spend"]):
@@ -241,7 +294,7 @@ def cat_table(ch):
     return table(rows, "<th>카테고리</th><th>목표</th><th class='num'>지출</th><th class='num'>클릭</th><th class='num'>CPC</th><th class='num'>CPM</th><th class='num'>ROAS</th>")
 def exec_block():
     # 매체 대표 행: (라벨, 채널, 목표키 매칭, 표시 기간)
-    picks = [("에이블리", "ably", "에이블리"), ("메타 트래픽", "meta", "트래픽"), ("X (트위터) 트래픽", "x", "X 트래픽"), ("지그재그", "zigzag", "지그재그"), ("메타 전환", "meta", "전환"),
+    picks = [("에이블리", "ably", "에이블리"), ("메타 트래픽", "meta", "트래픽"), ("X (트위터) 트래픽", "x", "X 트래픽"), ("지그재그", "zigzag", "지그재그"), ("쿠팡 (오아)", "coupang", "쿠팡 오아"), ("메타 전환", "meta", "전환"),
              ("네이버 디스플레이 전환", "adboost", "웹사이트 전환"), ("네이버 파워링크", "adboost", "파워링크"), ("네이버 쇼핑검색", "adboost", "쇼핑검색"),
              ("GFA", "gfa", "GFA"), ("G마켓 광고센터", "esm", "k2ci00"), ("파워클릭 (G+A)", "esm", "파워클릭"), ("네이버 AD부스터 쇼핑", "adboost", "ADVoost")]
     rows = []
@@ -298,3 +351,7 @@ if "--no-telegram" not in ARGV:
         urllib.request.urlopen(urllib.request.Request(f"https://api.telegram.org/bot{bot}/sendMessage", data=urllib.parse.urlencode({"chat_id": chat, "text": "\n".join(lines)}).encode()), timeout=30)
         log("telegram sent")
     except Exception as e: log("telegram skip", e)
+try:
+    import shutil; shutil.copy(DOCS / "광고단가지도.html", Path.home() / "oa-adcost" / "report.html")
+    r = subprocess.run(["npx", "vercel", "deploy", "--prod", "--yes"], cwd=Path.home() / "oa-adcost", capture_output=True, text=True, timeout=600); log("oa-adcost deploy", r.returncode)
+except Exception as ex: log("oa-adcost deploy FAIL", ex)

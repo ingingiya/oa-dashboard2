@@ -1,0 +1,813 @@
+Connectivity without Border
+motiv intelligence
+
+
+
+
+                                                                    TV
+
+
+
+
+                                                  PC                              OOH
+                     2014   4
+
+
+
+                                       110   12
+
+                     www.motiv-i.com                   AI Speaker        Mobile
+motiv intelligence
+
+
+Programmatic                                                                                         2020.02
+
+
+
+
+                                                             2020
+
+          Programmatic                           2019
+                                                                              ∙
+
+
+
+
+          Leadership                                                               2019.09           2019.10
+
+
+                                          2018
+
+
+
+                                   2017
+
+
+
+                            2016
+
+                                                        2014.05     2014.06       2017.09 SBS/CNBC   2018.11
+                     2015
+
+
+
+           2014
+              Key Point 1. Omni Channel DMP
+
+
+CrossTarget   Key Point 2. Premium Coverage
+
+
+DSP           Key Point 3. Data Analysis & Optimization
+
+              Appendix
+Why CrossTarget
+
+
+                              DSP
+
+
+
+
+        4,000                            100
+
+                  SKP DMP / DeepAD DMP    Premium Mobile Media       Target Analysis
+                                          SNS / TV / OTT / DOOH   Campaign Optimization
+                                                                      Insight Report
+CrossTarget DSP
+
+
+Key Point 1. Omni Channel DMP
+Key Point 1. Omni Channel DMP
+
+
+
+
+4,000          ∙
+
+
+                                                       월 2회 이상 색조 관련 화장품 구매자
+
+
+
+
+                                월 3회 이상 간편조리식품 구매자                               한강뷰 아파트 거주자
+
+
+
+
+                   강남역 인근 OOH 광고 시청자                                                            월 4회 이상 PT샵 및 헬스장 방문자
+
+
+
+                                         오픈마켓
+                                               SKP Data
+                                                       행동
+                                                   네비게이션
+                                                                     앱 삭제
+                                                                            APP Data
+                                                                            앱 카테고리
+
+                                                                                     GPS Data
+
+                                                       DATA
+                                         멤버쉽               포털사이트
+                                                인구통계                         앱 설치
+                                                                                       특정지역
+                                       L.Point Data
+                                                                             Wifi Data 기간
+                                                구매상품
+                                        소비업종                                    상권
+                                                              매장방문                   브랜드
+                                               소비형태    소득구분           아파트거주
+Key Point 1. Omni Channel DMP
+
+
+
+
+SKP [                ] Data Targeting
+
+
+      Data Source                       Segment
+Key Point 1. Omni Channel DMP
+
+
+
+
+DeepAD [                        ] Data Targeting
+
+
+      Data Source                                  Segment
+Key Point 1. Omni Channel DMP
+
+
+
+
+           App Profile
+           Data Targeting
+
+      Data Source               Segment
+Key Point 1. Omni Channel DMP
+
+
+
+
+           Data Targeting
+
+      Data Source               Segment
+Key Point 1. Omni Channel DMP
+
+
+
+
+           Data Targeting
+
+      Data Source               Segment
+
+
+
+                                          ∙
+Key Point 1. Omni Channel DMP
+
+
+
+
+                 DMP
+
+                                          기존 마케팅                        크로스타겟 차별화 Point
+
+
+                                     SKPData만활용                          교차 분석 및 타겟팅 조합 가능
+                                                         SKP Data
+
+
+
+
+                                        L.pointData만활용                   교차 분석 및 타겟팅 조합 가능
+                                                         L.point Data
+
+
+
+
+                                    특정앱설치/미설치자                           앱 설치/미설치 + ª (설치 시점/삭제 시점 등)
+                                                         앱 프로파일
+
+
+
+
+                                                                         위성 지도 상 특정 지역의 Geo-Fence 기술을 활용
+                                특정시/군/구or특정거점반경
+                                                                         하여 세밀한 위치 타겟팅 제공
+                                                          실외위치
+
+
+
+
+                                                                         특정 매장, 브랜드, 상권에 대한 오프라인 이력 타겟팅 제공
+                                        타겟팅불가능
+                                                                         + 아파트 거주자 식별 가능
+                                                          실내위치
+Key Point 1. Omni Channel DMP
+
+
+
+
+                                
+                                
+                                
+                                
+Key Point 1. Omni Channel DMP
+
+
+
+
+                                •
+
+
+                                •
+
+
+                                •
+
+
+                                •
+
+
+                                •
+
+
+                                •
+
+
+                                •
+
+
+                                •
+CrossTarget DSP
+
+
+Key Point 2. Premium Coverage
+Key Point 2. Premium Coverage
+
+
+
+
+                                Mobile   SNS       IPTV   CTV
+
+
+
+
+                                               必
+Key Point 2. Premium Coverage
+Key Point 2. Premium Coverage
+
+
+
+
+                                L.Point    CJ ONE     CJ ONE
+
+
+
+
+                                           MBC Mini
+                Been Together
+
+
+
+
+                 MX Player            TV
+CrossTarget DSP
+
+
+Key Point 3. Data Analysis & Optimization
+Key Point 3. Data Analysis & Optimization
+
+
+
+
+      1                                     2   3   Goal
+Key Point 3. Data Analysis & Optimization
+
+
+
+
+                                                          •
+                                                          •
+                                                          •
+                                                          •
+
+
+
+                                            SKP Data          App profile Data
+
+
+
+
+                                                   Data                Data
+Key Point 3. Data Analysis & Optimization
+
+
+
+
+1                                                             2   3
+                                            CrossTarget DMP
+
+
+
+
+ADID
+DMP
+Key Point 3. Data Analysis & Optimization
+
+
+
+
+1.6                                                                1.5%
+1.4
+1.2
+                                                     1.0%
+ 1                                          0.8%
+0.8
+0.6           0.5%
+0.4
+0.2
+ 0
+           D-Day ~ D+7                D+8 ~ D+14   D+15 ~ D+21   D+22 ~ D+30
+Key Point 3. Data Analysis & Optimization
+
+
+
+
+               •
+
+               •
+
+               •
+
+               •
+
+               •
+
+               •
+
+               •
+
+               •
+
+               •
+
+               •
+Key Point 3.
+Appendix
+Appendix.
+
+
+
+
+               Targeting                       Data Source                   공시단가
+              Non-Targeting                         -                         100원
+
+              1st Party ADID                  광고주 보유 ADID                     200원
+
+               Re-Targeting                    캠페인 반응 이력                      200원
+
+                DMP (SKP)        SK플래닛 서비스 행동 이력(쇼핑/네비/멤버십/포털/페이 등)           200원
+
+             DMP (앱프로파일)              3,500만 앱설치/삭제 이력(안드로이드기준)               200원
+
+            DMP (실외위치_GPS)           GPS 기반 위치정보 이력(Geo-fencing 기술활용)         200원
+
+            DMP (실내위치_Wi-Fi)   Wi-Fi 기반 위치정보 이력(카테고리/브랜드/매장기준/아파트 거주 등)       200원
+
+             DMP (롯데멤버스)             L.POINT 기반의 다양한 온/오프라인 결제 이력             200원
+
+             Double DMP (2개)                  2개 DMP 조합 사용                    300원
+
+             Triple DMP (3개)                  3개 DMP 조합 사용                    400원
+
+             Quad DMP (4개)                    4개 DMP 조합 사용                    500원
+
+                                                                          *고정 CPC단가 입니다.
+Appendix.
+
+
+            Native Banner
+Appendix. 3rd party tracker
+•
+
+
+•
+
+
+•
+
+
+•
+
+
+
+
+•
+
+
+•
+
+
+•
+
+
+•
+•
+
+
+•
+
+
+•
+
+
+•
+
+
+
+
+•
+
+
+•
+
+
+•
+
+
+•
+•
+
+
+•
+
+
+•
+
+
+•
+
+
+
+
+•
+
+
+•
+
+
+•
+
+
+•
+•
+
+
+•
+
+
+•
+
+
+•
+
+
+
+
+•
+
+
+•
+
+
+•
+
+
+•
+Connectivity without Border
+          TV광고에 대한 반복되는 여러 고민들
+
+  “ 프로그램, 채널 타겟팅 이외에 좀더       “ 지금 까지 누구에게
+ 정교한 타겟팅을 할 수 없을까? ”
+                              몇번 노출 되었을까? ”
+
+           ” TV 광고를 보다 효율적으로 하고 싶다 “
+
+                              “ 캠핑 컨텐츠를 보는 사람들이
+“ 내 광고를 본 사람에게만             실제로 캠핑을 하고 있을까? “
+   다시 Mobile 로 광고할 수 없나?“
+크로스타겟TV는 무엇인가요?
+             크로스타겟 TV 는 “모바일의 행동 데이터를 기반으로
+
+             TV 에 광고를 노출하는“ 프로그래머틱 TV 광고상품입니다.
+
+
+
+            Mobile DATA
+                                    TV 매체
+   Mobile 행동 데이터
+M 국내 4,000만 오디언스의 행동 데이터
+   외부 DMP 파트너를 통한 400억 행동 데이터
+
+                                    VOD 광고지면
+                                V   집중도와 광고시청율이 높은 프리미엄 광고지면
+
+
+                                    Q-Tone 광고지면
+                                Q   저렴한 가격에 도달율이 높은 가성비 광고지면
+크로스타겟TV 의 장점은
+어떤 것들이 있나요?
+기존 TV 광고에서는 불가능했던 정교한 타겟팅 및 Mobile 과의 경계 없는 연결이 가능합니다.
+
+
+
+  Mobile 의 풍부한 행동데이터를         Mobile 과 TV 의 연결
+                                                         TV 광고의 최적화
+   활용한 정교한 타켓팅 가능             크로스디바이스 타겟팅
+
+
+
+   국내 4,000만 오디언스          Mobile ADID -> TV     ADID 기반 광고 도달율
+    데이터 기반 타겟팅               오디언스 타겟팅 광고            및 노출 수 관리
+
+   쇼핑, 위치, 앱설치 등등          TV 광고시청자-> Mobile     ADID 기반 노출량 최적화
+    다양한 타겟팅 옵션               리타겟팅 광고
+                                                   모든 타겟팅 할증 비용
+   SKP, Lotte, CT DMP 등    ADID기반 특정 오디언스에
+                                                    없음
+    국내 최고의 행동데이터             대해 Mobile/TV 동시 노출
+Mobile 행동 Data 타겟팅,
+어떻게 가능한가요?
+모티브인텔리전스의 실시간 광고거래 기술 및 관심사 데이터를
+SK브로드밴드의 모바일과 셋톱박스를 연결해주는 Finger Print 기술과 접목하였습니다.
+
+
+
+
+                        Device Pairing
+크로스타겟TV 매체
+             국가 고객만족도 8년 연속 1위
+              SK Broadband 매체 활용
+
+
+
+
+               VOD 지면
+                콘텐츠 시청전 노출
+                최상의 Viewability
+                프리미엄 광고지면
+
+
+
+
+             실시간 지면
+                Q-Tone 실시간 광고
+                 True –View 과금
+                가성비 광고비 집행
+ADID 타겟팅 -> TV 광고노출
+
+크로스타겟의 행동데이터를 활용하여 ADID 모수 추출 -> Pairing 된 TV 광고노출
+
+
+
+
+                크로스타겟 DMP 활용                     추출된 ADID기반
+  광고주 잠재고객 분석                  ADID List 타겟 구성
+                  타겟 모수 추출                        TV 광고 노출
+Mobile광고 반응 유저 -> TV 광고노출
+
+   모바일 광고에 반응한 ADID를 수집하여 동일 대상에게, TV 광고 노출
+
+
+
+
+                   광고 반응 ADID 수집
+ 크로스타겟 Mobile 광고                    동일 ADID에 TV광고 집행
+                   (클릭, 유입, 오픈 등)
+TV 광고 시청자 -> Mobile 광고 집행
+
+  TV광고가 노출된 ADID를 수집 하여 동일 대상에게, Mobile 광고 노출
+
+
+
+
+   TV 광고 노출       노출된 ADID 수집        Mobile 광고 집행
+  주요 오디언스 타겟팅 : 자동차 및 중고차 거래 고관여자
+
+
+                         타겟 시나리오
+
+주유소 방문 이력   SKP
+
+
+
+자동차 매장(중고차 매장+신차 전시장)+자동차 정비소+타이어 매장 방문 이력   SKP
+
+
+
+중고차 매장 네비게이션 목적지 검색 이력         SKP
+
+
+
+주유소 네비게이션 목적지 검색 이력      SKP
+
+
+
+주유소 포인트 결제 이력      SKP
+
+
+
+중고차 앱 설치자   AP
+
+
+
+"내차 팔기" 앱 설치자     AP
+주요 오디언스 타겟팅 : 애견관련 고관여자
+
+
+
+
+                             타겟 시나리오
+
+애견 사료/간식/영양제 구매 이력     SKP
+
+
+
+애견 미용용품/의류/잡화/장난감 구매 이력        SKP
+
+
+
+동물병원 네비게이션 검색 이력     SKP
+
+
+
+반려동물 매장 결제 이력   롯데
+주요 오디언스 타겟팅 : 자사 데이터 + 요식 & 배달 고관여자
+
+
+
+
+                              타겟 시나리오
+
+기존 모바일 광고 캠페인 클릭 유저     2nd
+
+
+
+피자 배달 및 매장 결제 이력   롯데
+
+
+
+패밀리 레스토랑 결제 이력     롯데
+
+
+
+패스트푸드 배달 및 매장 결제 이력     롯데
+
+
+
+배달의민족, 요기요 등 배달 업종 결제 이력        롯데
+주요 오디언스 타겟팅 : 골프 고관여자
+
+
+
+
+                                     타겟 시나리오
+
+골프장/골프연습장 네비게이션 검색 이력                 SKP
+
+
+
+골프 용품 구매 이력   SKP
+
+
+
+골프 잡화/골프복/골프화 구매 이력            SKP
+
+
+
+골프장 방문 GPS 위치 데이터        GPS
+
+
+
+골프 고관여 앱 프로파일       AP
+주요 오디언스 타겟팅 : 건강 고관여자
+
+
+
+
+                          타겟 시나리오
+
+건강식품, 건강용품 검색 조회 장바구니 구매 유저+산부인과, 산후조리원 방문자      SKP
+
+
+
+건강식품, 용품 구매자+사회초년생   롯데
+
+
+
+건강식품 매장 방문자+요가, 필라테스 2회 이상 방문자      WI-FI
+
+
+
+
+직장인 관련 앱 사용자+학부모 및 임신,출산,육아 관련 앱 사용자        AP
+주요 오디언스 타겟팅 : 돼지고기 구매/관심자
+
+
+
+
+                           타겟 시나리오
+
+돼지고기 구매 or 장바구니 이력   SKP
+
+
+
+돼지고기 구매 or 장바구니 이력 or 상품조회 이력 (온오프라인)   롯데
+#리포트
+모티브인텔리전스만의 머신러닝과 관심사 데이터를 기반으로 캠페인에 최적화된 리포트를 제공 합니다.
+•        DailyReport                                                                                           •   SimilarityReport (캠페인종료후제공)
+                  시간대별 VIDEO VIEW                                                             요일별 VIDEO VIEW
+
+20,000                                                                          40,000
+                                                                                30,000
+15,000
+                                                                                20,000
+10,000                                                                          10,000
+                                                                                     0
+    5,000
+
+        0
+
+                                                                         (비어…
+             00   02   04   06   08   10   12   14   16   18   20   22
+
+                                                                                                                                                      광고가노출된ADID추출
+    60,000
+    50,000
+    40,000                                                                                                                          ADID기준유사도분석
+    30,000
+    20,000
+    10,000
+         -
+
+
+
+
+                                                           합계 : _Impression         CompletedView
+                                                                                                                                             •   성별/연령분석
+80,000                                                                                                                                       •   주요쇼핑매체및행태분석
+60,000
+40,000
+                                                                                                                                             •   AppProfile
+20,000                                                                                                                                       •   관심목적지등다양한 항목의리포
+        -
+                                                                                                                                                 트제공
+
+
+                                                     합계 : _Impression           합계 : _CompletedView
+크로스타겟 TV 기본 단가
+    Channel                  상품                 영상 초수                       DMP 사용                                 가격                                    비고
+
+
+
+
+                                                   15초                         DMP                            CPM 50,000원
+
+
+                            VOD
+                           Pre-roll
+
+
+                                                   30초                         DMP                           CPM 100,000원               ※ 60초 이상 광고는 별도 협의 후 집행 가능
+     SK BTV
+                                                                                                                                    ※ 영상 소재는 해상도 1920 * 1080 & mp4 파일 권장
+
+
+
+                                                                               Basic                             CPV 6원
+                                                   15초
+                                                                              Prime                              CPV 7원
+                           Q Tone
+                                                                               Basic                            CPV 12원
+                                                   30초
+                                                                              Prime                             CPV 14원
+
+
+※ Basic 주요 채널 목록 : Prime 채널 + KBS joy, Screen, MBC스포츠, SBS스포츠, OtvN, E채널, JTBC4, 코미디TV, 드라맥스, 드라마큐브, CNTV, KBSN스포츠, SPOTV, MBC ON, IB스포츠, jtbc3 Fox 스포츠, SBS골프, jtbc골프, K-star,
+OnStyle, XtvN, AXN, sky Sports, Mplex, FOX, Cinef, CH.U, AsiaN, TVCHOSUN2, 텔레노벨라, Ch.China, 애니플러스, 서울경제TV, 매일경제TV, FTV 등..
+※ Prime 주요 채널 목록 : tvN, JTBC, TV조선, MBN, SBS플러스, 채널A, YTN, 연합뉴스TV ,OCN, Ch.CGV, MBC드라마, MNET, KBS드라마, 올리브TV, MBC에브리원1, SKY드라마, 슈퍼액션, 디원, JTBC2, SBS funE
+Contact Us
+모티브인텔리전스 | Digital Motivation Team
+
+Email : cc@motiv-i.com
+
+
+
+
+                                     Copyright ⓒ motiv intelligence. ALL RIGHTS RESERVED
+

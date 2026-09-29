@@ -19,10 +19,10 @@ export const CHANNEL = env.NAVER_WORKS_CHANNEL_ID;
 export const MEMBER_EMAIL = {
   지원: 'jwsong@oa-world.com',
   경은: 'kkeim@oa-world.com',
-  지수: 'jisu01@oa-world.com',
+  혜영: 'hyyoon@oa-world.com',
   소리: 'srahn@oa-world.com',
   영서: 'bread22@oa-world.com',
-  // TODO: 혜영 웍스 이메일 미확보 — 계정 패턴이 불규칙해 추측 금지, 사용자 확인 후 추가할 것
+  // 혜영(윤혜영) hyyoon@oa-world.com — 09-21 지수→혜영 담당자 교체 (메모리 project_pkg_automation_test 기준)
 };
 
 export const kst = (offsetDays = 0) =>
@@ -47,6 +47,29 @@ async function botSend(path, text) {
 export const sendToChannel = (text) => botSend(`/channels/${CHANNEL}/messages`, text);
 export const sendToUser = (email, text) => botSend(`/users/${email}/messages`, text);
 
+export async function sendImageToUser(email, url) {
+  const token = await getToken('bot.message');
+  const r = await fetch(`https://www.worksapis.com/v1.0/bots/${BOT}/users/${email}/messages`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ content: { type: 'image', previewImageUrl: url, resourceUrl: url } }),
+  });
+  if (!r.ok) throw new Error(`웍스 이미지 발송(user) ${r.status}: ${(await r.text()).slice(0, 200)}`);
+}
+// PNG/PDF 원본 파일 그대로 전송 (이미지 메시지는 웍스가 리사이즈해 긴 표가 깨짐 → 파일로)
+export async function sendFileToUser(email, localPath, fileName) {
+  const token = await getToken('bot.message');
+  const { readFileSync } = await import('fs');
+  const buf = readFileSync(localPath); const name = fileName || localPath.split('/').pop();
+  const a = await fetch(`https://www.worksapis.com/v1.0/bots/${BOT}/attachments`, { method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ fileName: name }) });
+  if (!a.ok) throw new Error(`웍스 첨부 생성 ${a.status}: ${(await a.text()).slice(0, 200)}`);
+  const { fileId, uploadUrl } = await a.json();
+  const fd = new FormData(); fd.append('Filedata', new Blob([buf], { type: name.endsWith('.png') ? 'image/png' : 'application/octet-stream' }), name);
+  const u = await fetch(uploadUrl, { method: 'POST', headers: { Authorization: `Bearer ${token}` }, body: fd });
+  if (!u.ok) throw new Error(`웍스 파일 업로드 ${u.status}: ${(await u.text()).slice(0, 200)}`);
+  const r = await fetch(`https://www.worksapis.com/v1.0/bots/${BOT}/users/${email}/messages`, { method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ content: { type: 'file', fileId } }) });
+  if (!r.ok) throw new Error(`웍스 파일 발송(user) ${r.status}: ${(await r.text()).slice(0, 200)}`);
+}
 export async function sendImageToChannel(url) {
   const token = await getToken('bot.message');
   const r = await fetch(`https://www.worksapis.com/v1.0/bots/${BOT}/channels/${CHANNEL}/messages`, {

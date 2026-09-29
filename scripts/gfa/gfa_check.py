@@ -4,7 +4,7 @@ from pathlib import Path
 from playwright.sync_api import sync_playwright
 
 HERE = Path(__file__).resolve().parent
-PROFILE = HERE / ".gfa_profile"
+PROFILE = HERE.parent / "adboost" / ".adboost_profile"  # ★광고주센터(adboost) 로그인 프로필 공유 — NID 쿠키가 여기만 남음(09-21)
 
 with sync_playwright() as pw:
     ctx = pw.chromium.launch_persistent_context(
