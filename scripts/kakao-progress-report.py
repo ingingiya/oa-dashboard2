@@ -160,6 +160,24 @@ if sh_today:
         path = [sv(h, plat, k) for h in pts_h]; cur = path[-1] if path else None
         line_it = next((it for it in ads if "소닉" in (it.get("product") or "") and (("무신사" in camp and "무신사" in it["product"]) or ("지그재그" in camp and "지그재그" in it["product"]))), None)
         SONIC_ROWS.append({"name": label, "camp": camp + (f" · {line_it['status']}" if line_it else ""), "base": b0, "path": path, "cur": cur, "extra": extra(plat, ex)})
+# 에어스트레이트 (무신사, 09-29 2주차 신규) — oa_airstraight_rank_v1
+try:
+    airs = sget("oa_airstraight_rank_v1") or {}; ah = [h for h in (airs.get("history") or []) if isinstance(h, dict) and h.get("ts")]
+    ah_today = [h for h in ah if h["ts"].startswith(today)]; ah_yday = [h for h in ah if h["ts"].startswith(yday)]
+    if ah_today and SONIC_ROWS is not None:
+        a_base = ah_yday[-1] if ah_yday else ah_today[0]
+        def asv(h, k): 
+            v = (h.get("musinsa") or {}).get(k); return None if v in ("", None) else v
+        pts_a = ah_today[-5:]
+        line_a = next((it for it in ads if "에어스트레이트" in (it.get("product") or "")), None)
+        ex = []
+        for k, lab in (("page_view_total", "조회"), ("purchase_total", "구매"), ("reviews", "리뷰")):
+            b0 = asv(a_base, k); cur = asv(ah_today[-1], k)
+            if cur is None: continue
+            ex.append(f"{lab} {cur:,}" + (f"({cur - b0:+,})" if isinstance(b0, (int, float)) and isinstance(cur, (int, float)) and cur != b0 else ""))
+        SONIC_ROWS.append({"name": "에어스트레이트", "camp": "무신사 헤어케어" + (f" · {line_a['status']}" if line_a else ""), "base": asv(a_base, "hair_rank"), "path": [asv(h, "hair_rank") for h in pts_a] + [None] * (len(sonic_times) - len(pts_a)), "cur": asv(ah_today[-1], "hair_rank"), "extra": " · ".join(ex)})
+        sonic_lines.append(f"· 에어스트레이트 무신사: 헤어케어 순위 {'-' if asv(a_base,'hair_rank') is None else str(asv(a_base,'hair_rank'))+'위'} → {'-' if asv(ah_today[-1],'hair_rank') is None else str(asv(ah_today[-1],'hair_rank'))+'위'} · " + " · ".join(ex))
+except Exception as _e: pass
 live_total = sum(len(r["live"]["on"]) for r in rows)
 L.append(f"\n🟢 실시간 배지: 오늘 {live_total}회 켜짐" + (" — 캐시슬라이드 분산 유입으론 아직 안 켜짐" if live_total == 0 else ""))
 if sonic_lines:

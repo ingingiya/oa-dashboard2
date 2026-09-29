@@ -25,10 +25,14 @@ export default function TrafficAdsSection({ C, Card }) {
   const [compOpen, setCompOpen] = useState(true);
   const [rank, setRank] = useState(null);           // 카카오 랭킹 스냅샷 (settings oa_kakao_rank_v1 ← scripts/kakao-rank/kakao_rank.py 08:30·17:30)
   const [sonic, setSonic] = useState(null);
+  const [airs, setAirs] = useState(null);
   const [sonicTab, setSonicTab] = useState("musinsa"); // 랭킹 카드 탭: musinsa | ably | zigzag         // 소닉플로우 무신사/지그재그 랭킹 트래커 (settings oa_sonic_rank_v1 ← scripts/sonic/sonic_rank_track.py 매시간, 09-23)
   useEffect(() => {
     fetch(`${SURL}/rest/v1/settings?key=eq.oa_sonic_rank_v1&select=value`, { headers: sh }).then((r) => r.json())
       .then((d) => { const v = Array.isArray(d) && d[0]?.value; if (v && v.latest) setSonic(v); }).catch(() => {});
+    // 에어스트레이트 무신사 트래커 (09-29, oa_airstraight_rank_v1) — 라인 제품명에 '에어스트레이트'가 있으면 이 데이터로 순위 표시
+    fetch(`${SURL}/rest/v1/settings?key=eq.oa_airstraight_rank_v1&select=value`, { headers: sh }).then((r) => r.json())
+      .then((d) => { const v = Array.isArray(d) && d[0]?.value; if (v && v.latest) setAirs(v); }).catch(() => {});
   }, []);
   useEffect(() => {
     fetch(`${SURL}/rest/v1/settings?key=eq.oa_kakao_rank_v1&select=value`, { headers: sh }).then((r) => r.json())
@@ -46,12 +50,13 @@ export default function TrafficAdsSection({ C, Card }) {
   const RankCell = ({ it }) => {
     const plat = platformOf(it);
     if (plat !== "kakao") {
-      const L = sonic?.latest || {}, H = sonic?.history || [], prev = H.length > 1 ? H[H.length - 2] : null;
+      const src = /에어스트레이트/.test(it.product || "") ? airs : sonic;
+      const L = src?.latest || {}, H = src?.history || [], prev = H.length > 1 ? H[H.length - 2] : null;
       const cur = plat === "musinsa" ? L.musinsa?.hair_rank : plat === "zigzag" ? L.zigzag?.hair_rank : L.ably?.hair_device_daily;
       const pv = plat === "musinsa" ? prev?.musinsa?.hair_rank : plat === "zigzag" ? prev?.zigzag?.hair_rank : prev?.ably?.hair_device_daily;
       const total = plat === "musinsa" ? L.musinsa?.hair_rank_total : plat === "zigzag" ? L.zigzag?.hair_rank_total : L.ably?.hair_device_daily_total;
       const listName = plat === "musinsa" ? "헤어케어 실시간" : plat === "zigzag" ? "헤어기기 추천순" : "헤어기기 일간";
-      if (!sonic) return <span style={{ fontSize: 11, color: C.inkLt }}>순위 미추적</span>;
+      if (!src) return <span style={{ fontSize: 11, color: C.inkLt }}>순위 미추적</span>;
       const d = cur != null && pv != null ? pv - cur : null;
       return (<div style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", minWidth: 0 }}>
         {cur != null ? <span style={{ fontSize: 14, fontWeight: 900, color: C.ink }}>{cur}위</span> : <span style={{ fontSize: 12, fontWeight: 800, color: C.bad }}>{total ? `${total}위 밖` : "미노출"}</span>}

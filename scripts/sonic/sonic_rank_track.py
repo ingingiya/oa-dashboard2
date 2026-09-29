@@ -6,7 +6,11 @@ import json, re, os, sys, asyncio, urllib.request, urllib.parse, datetime
 ROOT=os.path.expanduser("~/oa-dashboard2"); env=dict(l.strip().split("=",1) for l in open(f"{ROOT}/.env.local",encoding="utf-8") if "=" in l and not l.startswith("#"))
 URL=(env.get("NEXT_PUBLIC_SUPABASE_URL") or env.get("SUPABASE_URL")).strip('"'); KEY=(env.get("SUPABASE_SERVICE_ROLE_KEY")).strip('"')
 H={"apikey":KEY,"Authorization":f"Bearer {KEY}","Content-Type":"application/json"}
-KEYNAME="oa_sonic_rank_v1"; MS_ID="6074981"; ZZ_ID="168691181"
+# ★09-29: --product 로 추적 상품 선택 (기본 sonic). airstraight = 에어스트레이트(무신사만, 지그재그/에이블리 미입점 → 스킵)
+PRODUCTS={"sonic":{"key":"oa_sonic_rank_v1","name":"소닉플로우 미니","ms":"6074981","zz":"168691181","ably":True},
+          "airstraight":{"key":"oa_airstraight_rank_v1","name":"에어스트레이트","ms":"7009064","zz":None,"ably":False}}
+PRODUCT=sys.argv[sys.argv.index("--product")+1] if "--product" in sys.argv else "sonic"; CFG=PRODUCTS[PRODUCT]
+KEYNAME=CFG["key"]; MS_ID=CFG["ms"]; ZZ_ID=CFG["zz"] or ""
 UA="Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1"
 def get(u,hdr=None):
     if hdr: r=urllib.request.Request(u,headers=hdr); return json.load(urllib.request.urlopen(r,timeout=40))
@@ -111,8 +115,8 @@ def save(rec):
     try: cur=(get(f"{URL}/rest/v1/settings?key=eq.{KEYNAME}&select=value",H) or [{}])[0].get("value") or {}
     except Exception: cur={}
     hist=(cur.get("history") or []); hist.append(rec); hist=hist[-720:]
-    val={"product":"소닉플로우 미니","links":{"musinsa":f"https://www.musinsa.com/products/{MS_ID}","zigzag":f"https://zigzag.kr/catalog/products/{ZZ_ID}","ably":"https://m.a-bly.com/goods/55114185"},"latest":rec,"history":hist,"updated_at":rec["ts"]}
+    val={"product":CFG["name"],"links":{"musinsa":f"https://www.musinsa.com/products/{MS_ID}",**({"zigzag":f"https://zigzag.kr/catalog/products/{ZZ_ID}","ably":"https://m.a-bly.com/goods/55114185"} if PRODUCT=="sonic" else {})},"latest":rec,"history":hist,"updated_at":rec["ts"]}
     req=urllib.request.Request(f"{URL}/rest/v1/settings",data=json.dumps([{"key":KEYNAME,"value":val}],ensure_ascii=False).encode(),headers={**H,"Prefer":"resolution=merge-duplicates,return=minimal"},method="POST"); urllib.request.urlopen(req,timeout=40).read()
 if __name__=="__main__":
-    ts=datetime.datetime.now().strftime("%Y-%m-%d %H:%M"); rec={"ts":ts,"musinsa":musinsa(),"zigzag":asyncio.run(zigzag()),"ably":ably()}
+    ts=datetime.datetime.now().strftime("%Y-%m-%d %H:%M"); rec={"ts":ts,"musinsa":musinsa(),"zigzag":asyncio.run(zigzag()) if CFG["zz"] else {},"ably":ably() if CFG["ably"] else {}}
     print(json.dumps(rec,ensure_ascii=False)); save(rec); print("saved",KEYNAME)
