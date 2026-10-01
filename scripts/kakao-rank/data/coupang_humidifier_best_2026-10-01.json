@@ -1,0 +1,284 @@
+{
+ "date": "2026-10-01",
+ "time": "17:12",
+ "category": "가습기 › USB/스틱가습기",
+ "overall": {
+  "name": "가습기 전체",
+  "oa_rank": 12,
+  "top": [
+   [
+    "닥터하르 5L",
+    36800,
+    709
+   ],
+   [
+    "홈플래닛 4L H1001D11",
+    25990,
+    50676
+   ],
+   [
+    "풀라스 UV",
+    44890,
+    416
+   ],
+   [
+    "듀플렉스 DP-9090UH",
+    39800,
+    25281
+   ],
+   [
+    "SUNGOD 500ml",
+    18800,
+    5999
+   ],
+   [
+    "돌아라 4L",
+    19800,
+    2681
+   ]
+  ]
+ },
+ "source": "쿠팡 앱 구매 BEST › 가습기 › USB/스틱가습기 (최근 30일 누적 판매량 기준), 아이폰 미러링 캡처",
+ "items": [
+  {
+   "rank": 1,
+   "name": "풀라스 UV 살균 대용량 무선 미니 가습기 (백화점 입점)",
+   "brand": "풀라스",
+   "price": 44890,
+   "list_price": 89890,
+   "discount": 50,
+   "monthly": "1,000명+",
+   "reviews": 416,
+   "rating": 4.5,
+   "ship": "판매자로켓"
+  },
+  {
+   "rank": 2,
+   "name": "SUNGOD 미니 가습기 듀얼미스트 500ml 무드등",
+   "brand": "SUNGOD",
+   "price": 18800,
+   "list_price": 119000,
+   "discount": 84,
+   "monthly": "1,000명+",
+   "reviews": 5999,
+   "rating": 4.5,
+   "ship": "판매자로켓"
+  },
+  {
+   "rank": 3,
+   "name": "알리사 미니 초음파 사무용 무선 가습기 700ml + 필터 4p",
+   "brand": "알리사",
+   "price": 31900,
+   "list_price": 39700,
+   "discount": 19,
+   "monthly": "1,000명+",
+   "reviews": 5329,
+   "rating": 4.5,
+   "ship": "로켓 새벽"
+  },
+  {
+   "rank": 4,
+   "name": "BEO 미니 무선 가습기 사무실용 1.2L",
+   "brand": "BEO",
+   "price": 21900,
+   "list_price": 59900,
+   "discount": 63,
+   "monthly": "900명+",
+   "reviews": 1034,
+   "rating": 4.5,
+   "ship": "판매자로켓"
+  },
+  {
+   "rank": 5,
+   "name": "★오아 듀얼미스트 미니 휴대용 초음파 탁상용 무선가습기 oa-hm048",
+   "brand": "오아",
+   "price": 25330,
+   "list_price": 43800,
+   "discount": 42,
+   "monthly": "800명+",
+   "reviews": 12875,
+   "rating": 4.5,
+   "ship": "로켓"
+  },
+  {
+   "rank": 6,
+   "name": "신지모루 오퓨리엠 테이블 미스트 USB 무드등 600ml",
+   "brand": "신지모루",
+   "price": 11920,
+   "list_price": 19900,
+   "discount": 40,
+   "monthly": "700명+",
+   "reviews": 2682,
+   "rating": 4.5,
+   "ship": "로켓"
+  },
+  {
+   "rank": 7,
+   "name": "에이든 무소음 초음파 생수병 미니가습기 ADEN-002",
+   "brand": "에이든",
+   "price": 7900,
+   "list_price": 23900,
+   "discount": 66,
+   "monthly": "500명+",
+   "reviews": 164,
+   "rating": 5.0,
+   "ship": "판매자로켓"
+  },
+  {
+   "rank": 8,
+   "name": "홈플래닛 무드 라이팅 미스트 분사 미니 가습기 600ml",
+   "brand": "홈플래닛",
+   "price": 10990,
+   "list_price": 15800,
+   "discount": 30,
+   "monthly": "500명+",
+   "reviews": 1106,
+   "rating": 4.5,
+   "ship": "로켓"
+  },
+  {
+   "rank": 9,
+   "name": "클린인 2L 무드등 듀얼 가습기",
+   "brand": "이더컴퍼니",
+   "price": 11900,
+   "list_price": 21900,
+   "discount": 45,
+   "monthly": "400명+",
+   "reviews": 2814,
+   "rating": 4.5,
+   "ship": "판매자로켓"
+  },
+  {
+   "rank": 10,
+   "name": "JGUG 미니 가습기 듀얼미스트 700ml 대용량",
+   "brand": "JGUG",
+   "price": 21800,
+   "list_price": 89900,
+   "discount": 75,
+   "monthly": "500명+",
+   "reviews": 595,
+   "rating": 5.0,
+   "ship": "판매자로켓"
+  },
+  {
+   "rank": 11,
+   "name": "미니 가습기 휴대용 탁상용 원룸용 충전식 무드등 H16L",
+   "brand": "(해외)",
+   "price": 10990,
+   "list_price": 22300,
+   "discount": 50,
+   "monthly": "300명+",
+   "reviews": 375,
+   "rating": 4.5,
+   "ship": "판매자로켓"
+  },
+  {
+   "rank": 12,
+   "name": "한경희생활과학 초음파 무선 미니가습기 HTM-500C",
+   "brand": "한경희",
+   "price": 24700,
+   "list_price": 45000,
+   "discount": 45,
+   "monthly": "200명+",
+   "reviews": 5605,
+   "rating": 4.5,
+   "ship": "로켓"
+  },
+  {
+   "rank": 13,
+   "name": "필모어 9세대 2L 초음파 듀얼 가습기 무드등",
+   "brand": "필모어",
+   "price": 12800,
+   "list_price": 23900,
+   "discount": 46,
+   "monthly": "200명+",
+   "reviews": 269,
+   "rating": 4.5,
+   "ship": "판매자로켓"
+  },
+  {
+   "rank": 14,
+   "name": "코지스 미니 무소음 차량용 사무실 탁상용 가습기 260ml",
+   "brand": "코지스",
+   "price": 8900,
+   "list_price": 32670,
+   "discount": 72,
+   "monthly": "200명+",
+   "reviews": 131,
+   "rating": 4.5,
+   "ship": "판매자로켓"
+  },
+  {
+   "rank": 15,
+   "name": "헤이즈 에그포그 미니 가습기 탁상용 1.2L",
+   "brand": "헤이즈",
+   "price": 16900,
+   "list_price": 20000,
+   "discount": 15,
+   "monthly": "200명+",
+   "reviews": 1077,
+   "rating": 5.0,
+   "ship": "로켓"
+  },
+  {
+   "rank": 16,
+   "name": "SEONGYE 초음파 사무용 무선 휴대용 충전식 가습기 1300ml",
+   "brand": "SEONGYE",
+   "price": 15800,
+   "list_price": 45900,
+   "discount": 65,
+   "monthly": "200명+",
+   "reviews": 219,
+   "rating": 5.0,
+   "ship": "판매자로켓"
+  },
+  {
+   "rank": 17,
+   "name": "루메나 듀얼 무선 가습기 H3 X (새틴베이지)",
+   "brand": "루메나",
+   "price": 37100,
+   "list_price": 44900,
+   "discount": 17,
+   "monthly": "200명+",
+   "reviews": 1367,
+   "rating": 4.5,
+   "ship": "로켓"
+  },
+  {
+   "rank": 18,
+   "name": "에이든 휴대용 초음파 미니 가습기 ADEN-003",
+   "brand": "에이든",
+   "price": 7900,
+   "list_price": 22900,
+   "discount": 65,
+   "monthly": "200명+",
+   "reviews": 139,
+   "rating": 5.0,
+   "ship": "판매자로켓"
+  },
+  {
+   "rank": 19,
+   "name": "Uu-rii 3.5L 대용량 USB 4구분무 무드등 가습기",
+   "brand": "Uu-rii",
+   "price": 19200,
+   "list_price": 32000,
+   "discount": 40,
+   "monthly": "200명+",
+   "reviews": 59,
+   "rating": 5.0,
+   "ship": "판매자로켓"
+  },
+  {
+   "rank": 20,
+   "name": "브이닉 촉촉맥스 PRO 3.0 생수병 미니가습기",
+   "brand": "브이닉",
+   "price": 17800,
+   "list_price": 35600,
+   "discount": 50,
+   "monthly": "100명+",
+   "reviews": 87,
+   "rating": 5.0,
+   "ship": "판매자로켓"
+  }
+ ]
+}

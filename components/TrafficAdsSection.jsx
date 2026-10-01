@@ -26,11 +26,13 @@ export default function TrafficAdsSection({ C, Card }) {
   const [rank, setRank] = useState(null);           // 카카오 랭킹 스냅샷 (settings oa_kakao_rank_v1 ← scripts/kakao-rank/kakao_rank.py 08:30·17:30)
   const [sonic, setSonic] = useState(null);
   const [airs, setAirs] = useState(null);
-  const [cpBest, setCpBest] = useState(null);         // 쿠팡 여행용/휴대용 구매 BEST (settings oa_coupang_travel_best_v1 ← 아이폰 미러링 수동 측정, 10-01)
-  const [cpOpen, setCpOpen] = useState(true);
+  // 쿠팡 구매 BEST (아이폰 미러링 수동 측정 → settings history 누적, 10-01): 고데기 여행용/휴대용(프리온)·가습기 USB/스틱(듀얼미스트)
+  const CP_LISTS = [["oa_coupang_travel_best_v1", "쿠팡 구매 BEST · 여행용/휴대용 고데기"], ["oa_coupang_humidifier_best_v1", "쿠팡 구매 BEST · USB/스틱 가습기"]];
+  const [cpBest, setCpBest] = useState({});
+  const [cpOpen, setCpOpen] = useState({});
   useEffect(() => {
-    fetch(`${SURL}/rest/v1/settings?key=eq.oa_coupang_travel_best_v1&select=value`, { headers: sh }).then((r) => r.json())
-      .then((d) => { const v = Array.isArray(d) && d[0]?.value; if (v && Array.isArray(v.history) && v.history.length) setCpBest(v.history); }).catch(() => {});
+    CP_LISTS.forEach(([k]) => fetch(`${SURL}/rest/v1/settings?key=eq.${k}&select=value`, { headers: sh }).then((r) => r.json())
+      .then((d) => { const v = Array.isArray(d) && d[0]?.value; if (v && Array.isArray(v.history) && v.history.length) setCpBest((o) => ({ ...o, [k]: v.history })); }).catch(() => {}));
   }, []);
   const [sonicTab, setSonicTab] = useState("musinsa"); // 랭킹 카드 탭: musinsa | ably | zigzag         // 소닉플로우 무신사/지그재그 랭킹 트래커 (settings oa_sonic_rank_v1 ← scripts/sonic/sonic_rank_track.py 매시간, 09-23)
   useEffect(() => {
@@ -296,19 +298,19 @@ export default function TrafficAdsSection({ C, Card }) {
         })}
       </Card>
       {/* 쿠팡 구매 BEST · 고데기/스타일러 › 여행용/휴대용 — 프리온 행사 대비 경쟁 가격·월 구매 추적 (10-01). 쿠팡은 사무실 회선 403이라 아이폰 미러링으로 수동 측정 → scripts/iphone_mirror.py, 결과는 history 배열에 누적 */}
-      {cpBest && (() => {
-        const cur = cpBest[cpBest.length - 1], prev = cpBest.length > 1 ? cpBest[cpBest.length - 2] : null;
+      {CP_LISTS.map(([key, title]) => cpBest[key] && (() => {
+        const H = cpBest[key], cur = H[H.length - 1], prev = H.length > 1 ? H[H.length - 2] : null; const open = cpOpen[key] !== false;
         const pm = {}; (prev?.items || []).forEach((it) => { pm[it.name] = it; });
         const won = (n) => (n == null ? "-" : Number(n).toLocaleString());
         return (
-          <Card style={{ padding: 0, overflow: "hidden" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 14px", borderBottom: `1px solid ${C.border}`, cursor: "pointer" }} onClick={() => setCpOpen((v) => !v)}>
-              <span style={{ fontSize: 14, fontWeight: 800, color: C.ink }}>쿠팡 구매 BEST · 여행용/휴대용 고데기</span>
+          <Card key={key} style={{ padding: 0, overflow: "hidden" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 14px", borderBottom: `1px solid ${C.border}`, cursor: "pointer" }} onClick={() => setCpOpen((o) => ({ ...o, [key]: !open }))}>
+              <span style={{ fontSize: 14, fontWeight: 800, color: C.ink }}>{title}</span>
               <span style={{ fontSize: 11.5, color: C.inkLt }}>최근 30일 누적 판매량 순 · 월 구매는 상품 페이지 "한 달간 N명 이상" 표기</span>
               <span style={{ flex: 1 }} />
-              <span style={{ fontSize: 11, color: C.inkLt }}>측정 {cur.date} {cur.time} · 기록 {cpBest.length}회{prev ? ` · 비교 ${prev.date}` : ""} {cpOpen ? "▲" : "▼"}</span>
+              <span style={{ fontSize: 11, color: C.inkLt }}>측정 {cur.date} {cur.time} · 기록 {H.length}회{prev ? ` · 비교 ${prev.date}` : ""} {open ? "▲" : "▼"}</span>
             </div>
-            {cpOpen && (
+            {open && (
               <div style={{ overflowX: "auto" }}>
                 <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 860 }}>
                   <thead><tr>{["순위", "상품", "브랜드", "판매가", "정가", "할인", "월 구매", "리뷰", "배송"].map((h, i) => <th key={h} style={{ padding: "7px 10px", textAlign: i >= 3 && i <= 7 ? "right" : "left", fontSize: 11.5, fontWeight: 700, color: C.inkMid, background: C.cream, borderBottom: `1px solid ${C.border}`, whiteSpace: "nowrap" }}>{h}</th>)}</tr></thead>
@@ -331,12 +333,12 @@ export default function TrafficAdsSection({ C, Card }) {
                     })}
                   </tbody>
                 </table>
-                <div style={{ padding: "8px 12px", fontSize: 11, color: C.inkLt }}>출처: {cur.source}. 재측정은 맥에서 아이폰 미러링 켜고 <code>scripts/iphone_mirror.py</code>로 카드별 캡처(25개 약 10분) — 자동 수집 불가(쿠팡 사무실 회선 차단).</div>
+                <div style={{ padding: "8px 12px", fontSize: 11, color: C.inkLt }}>{cur.overall ? `${cur.overall.name} 랭킹에서 오아 ${cur.overall.oa_rank}위 · ` : ""}출처: {cur.source}. 재측정은 맥에서 아이폰 미러링 켜고 <code>scripts/iphone_mirror.py</code>로 카드별 캡처(25개 약 10분) — 자동 수집 불가(쿠팡 사무실 회선 차단).</div>
               </div>
             )}
           </Card>
         );
-      })()}
+      })())}
       {/* 타사 광고 모니터 — 메타 광고 라이브러리(KR, 게재 중) 스캔 결과. 갱신: scripts/competitor/meta_adlib_scan.py <주제> (09-21) */}
       <Card style={{ padding: 0, overflow: "hidden" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 14px", flexWrap: "wrap", cursor: "pointer" }} onClick={() => setCompOpen((v) => !v)}>
