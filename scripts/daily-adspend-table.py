@@ -51,17 +51,16 @@ for ci, c in enumerate(CH):
 y += 74
 # 캠페인별
 d.text((M, y), f"{D['until_label']} 캠페인별", font=font(22, "Bold"), fill=INK); y += 38
-half = (W - 2 * M) // 2
-y0 = y
-for ci, c in enumerate(D["chans"]):
-    x0 = M + ci * half; yy = y0
-    d.text((x0, yy), f"{c}  {won(D['yday_ch'].get(c,0))}원", font=font(19, "SemiBold"), fill=RED); yy += 32
-    for row in D["camps"].get(c, [])[:12]:
+for c in D["chans"]:
+    d.text((M, y), f"{c}  {won(D['yday_ch'].get(c,0))}원", font=font(19, "SemiBold"), fill=RED); y += 30
+    rows_ = D["camps"].get(c, []); lim = 6 if c == "메타" else 10
+    for row in rows_[:lim]:
         name, cost = row[0], row[1]; extra = (str(row[2]) if len(row) > 2 and row[2] else "") + (f" · CPM {won(row[3])}" if len(row) > 3 and row[3] else "") + (f" · 노출 {won(row[4])}" if len(row) > 4 and row[4] else "")
         nm = name
-        while d.textlength(nm, font=font(15)) > half - 400 and len(nm) > 4: nm = nm[:-2]
-        d.text((x0, yy), nm + ("…" if nm != name else ""), font=font(15), fill=INK); rt(x0 + half - 330, yy, won(cost), font(15, "SemiBold")); d.text((x0 + half - 322, yy + 2), extra, font=font(12), fill=SUB); yy += 27
-    y = max(y, yy)
+        while d.textlength(nm, font=font(16)) > 400 and len(nm) > 4: nm = nm[:-2]
+        d.text((M, y), nm + ("…" if nm != name else ""), font=font(16), fill=INK); rt(M + 540, y, won(cost), font(16, "SemiBold")); d.text((M + 560, y + 1), extra, font=font(15), fill=SUB); y += 25
+    if len(rows_) > lim: d.text((M, y), f"외 {len(rows_) - lim}개  {won(sum(r[1] for r in rows_[lim:]))}", font=font(15), fill=SUB); y += 25
+    y += 12
 d.text((M, H - M - 34), "CPM=노출 1,000회당 비용 · CPC=클릭당 비용(메타는 링크 클릭 기준) · 결과당 비용=전환 캠페인은 구매당, 트래픽은 클릭당 · ROAS는 계산하지 않음", font=font(15), fill=SUB)
 d.text((M, H - M - 10), D.get("note", ""), font=font(15), fill=SUB)
 im.save(out)
