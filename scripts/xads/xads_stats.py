@@ -15,6 +15,7 @@ args = [a for a in sys.argv[1:] if not a.startswith("--")]
 start, end = args[0], args[1]
 flt = [f.strip() for f in (sys.argv[sys.argv.index("--filter") + 1] if "--filter" in sys.argv else "트래픽,카카오").split(",") if f.strip()]
 RAW = "--raw" in sys.argv
+ALL = "--all" in sys.argv  # 필터 없이 계정 전체 캠페인 (일별 광고비 리포트용)
 WITH_STATUS = "--with-status" in sys.argv  # 출력 {"data":..., "status":{제품: true=집행중}}
 PRODUCTS = ["듀얼포켓건", "히트스팟S", "히트스팟", "눈편한세상", "넥스트레쳐", "롤링스팟", "소닉플로우", "에어리소닉", "클린이스윙"]
 
@@ -56,7 +57,7 @@ while d <= d1:
     ds = d.isoformat()
     for it in query(ds):
         name = it["name"]
-        if not any(f in name for f in flt): continue
+        if not ALL and not any(f in name for f in flt): continue
         if not it.get("deleted"): status[name if RAW else product_of(name)] = status.get(name if RAW else product_of(name), False) or it.get("serving_status") == 0  # serving_status 0=집행중, 1=일시중지
         s = it["stats"]
         cost, imp, clk = s["total_spend_local_micro"] / 1e6, s["total_impressions"], s["total_clicks"]
