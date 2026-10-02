@@ -5,7 +5,8 @@
 import { execFileSync } from 'child_process';
 import { dirname, resolve } from 'path';
 import { fileURLToPath } from 'url';
-import { env, sendToUser, sendFileToUser, telegram } from './nworks-lib.mjs';
+import { readFileSync } from 'fs';
+import { env, sendToUser, sendImageToUser, sendFileToUser, telegram } from './nworks-lib.mjs';
 const HERE = dirname(fileURLToPath(import.meta.url));
 const args = process.argv.slice(2); const DRY = args.includes('--dry-run');
 const opt = (k, d) => (args.includes(k) ? args[args.indexOf(k) + 1] : d);
@@ -63,7 +64,7 @@ L.push('', `■ 어제 캠페인별`);
 for (const c of chans) { const m = Object.entries(res[c].byCamp[UNTIL] || {}).sort((a, b) => b[1] - a[1]); if (!m.length) { L.push(`[${c}] 집행 없음`); continue; } L.push(`[${c}]`); for (const [n, v] of m.slice(0, 12)) L.push(`  ${won(v)} · ${n}`); if (m.length > 12) L.push(`  외 ${m.length - 12}개 ${won(m.slice(12).reduce((a, [, v]) => a + v, 0))}`); }
 if (res['메타']?.note) L.push('', `※ 메타는 ${res['메타'].note}. X는 계정 전체.`);
 if (errs.length) L.push('', '⚠️ ' + errs.join(' / '));
-// 표 이미지(A4 인쇄용 PNG+PDF) — scripts/daily-adspend-table.py
+// 표 이미지(PNG) — scripts/daily-adspend-table.py → Supabase 업로드 후 웍스 이미지 메시지로 발송(실패 시 파일 첨부)
 let png = null;
 try {
   const a = tot(UNTIL), bb = prev ? tot(prev) : 0;
@@ -75,4 +76,8 @@ try {
 } catch (e) { errs.push('표 이미지 실패: ' + String(e.message || e).slice(0, 100)); }
 const text = L.join('\n');
 console.log(text);
-if (!DRY) { const parts = []; let cur = ''; for (const ln of text.split('\n')) { if ((cur + ln).length > 1700) { parts.push(cur); cur = ''; } cur += ln + '\n'; } if (cur.trim()) parts.push(cur); for (const p of parts) await sendToUser(TO, p.trim()); if (png) await sendFileToUser(TO, png, `일별광고비_${UNTIL}.png`).catch((e) => errs.push('이미지 발송 실패')); console.error('sent', parts.length, png || ''); if (errs.length) await telegram('일별 광고비 리포트 오류: ' + errs.join(' / ')).catch(() => {}); }
+if (!DRY) { const parts = []; let cur = ''; for (const ln of text.split('\n')) { if ((cur + ln).length > 1700) { parts.push(cur); cur = ''; } cur += ln + '\n'; } if (cur.trim()) parts.push(cur); for (const p of parts) await sendToUser(TO, p.trim()); if (png) { try { const SB = clean(env.NEXT_PUBLIC_SUPABASE_URL), SK = clean(env.SUPABASE_SERVICE_ROLE_KEY), path = `reports/adspend/${UNTIL}.png`;
+      const up = await fetch(`${SB}/storage/v1/object/detail-assets/${path}`, { method: 'POST', headers: { apikey: SK, Authorization: 'Bearer ' + SK, 'Content-Type': 'image/png', 'x-upsert': 'true' }, body: readFileSync(png) });
+      if (!up.ok) throw new Error('upload ' + up.status);
+      await sendImageToUser(TO, `${SB}/storage/v1/object/public/detail-assets/${path}?v=${Date.now()}`);
+    } catch (e) { await sendFileToUser(TO, png, `일별광고비_${UNTIL}.png`).catch(() => errs.push('이미지 발송 실패')); } } console.error('sent', parts.length, png || ''); if (errs.length) await telegram('일별 광고비 리포트 오류: ' + errs.join(' / ')).catch(() => {}); }

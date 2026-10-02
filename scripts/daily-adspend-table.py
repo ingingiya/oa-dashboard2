@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# 일별 광고비 표 이미지 (A4 세로 비율 1240x1754, 인쇄용) — stdin JSON {until, days:[{d,label,total,ch:{}}], chans, sum14, month:{label,total,ch}, camps:{ch:[[name,cost]]}, note} → PNG+PDF 경로 출력
+# 일별 광고비 표 이미지 (1240x1754) — stdin JSON {until, days:[{d,label,total,ch:{}}], chans, sum14, month:{label,total,ch}, camps:{ch:[[name,cost]]}, note} → PNG 경로 출력
 import sys, json
 from pathlib import Path
 from PIL import Image, ImageDraw, ImageFont
@@ -53,5 +53,5 @@ for ci, c in enumerate(D["chans"]):
         d.text((x0, yy), nm + ("…" if nm != name else ""), font=font(17), fill=INK); rt(x0 + half - 30, yy, won(cost), font(17, "SemiBold")); yy += 27
     y = max(y, yy)
 d.text((M, H - M - 10), D.get("note", ""), font=font(15), fill=SUB)
-im.save(out); im.save(out.replace(".png", ".pdf"), "PDF", resolution=150.0)
+im.save(out)
 print(out)
