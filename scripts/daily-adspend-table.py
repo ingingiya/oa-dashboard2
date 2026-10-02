@@ -24,21 +24,22 @@ for i, (lab, val, s2) in enumerate([(f"최근 {len(D['days'])}일 합계", won(D
     if s2: d.text((x0 + 18, y + 86), s2, font=font(15), fill=SUB)
 y += 150
 # 날짜 표
-cols = [M + 10, M + 420, M + 700, M + 960]; cr = [M + 400, M + 680, M + 940, W - M - 10]
+cr = [0, M + 330, M + 470, M + 570, M + 680, M + 780, M + 870, M + 960, W - M - 10]; cols = [M + 10]; HD = ["합계"] + D["chans"] + ["클릭", "CPC", "CTR", "구매", "ROAS"]
 d.text((cols[0], y), "날짜", font=font(18, "SemiBold"), fill=SUB)
-for i, t in enumerate(["합계"] + D["chans"]): rt(cr[i + 1] if i + 1 < len(cr) else cr[-1], y, t, font(18, "SemiBold"), SUB)
+for i, t in enumerate(HD): rt(cr[i + 1], y, t, font(17, "SemiBold"), SUB)
 y += 30; d.line((M, y, W - M, y), fill=INK, width=2); y += 8
 mx = max([r["total"] for r in D["days"]] + [1])
 for i, r in enumerate(D["days"]):
     if i == 0: d.rectangle((M, y - 4, W - M, y + 34), fill=HL)
     d.text((cols[0], y), r["label"], font=font(21, "Bold" if i == 0 else "Regular"), fill=INK)
-    bw = int(200 * r["total"] / mx); d.rectangle((M + 150, y + 8, M + 150 + bw, y + 22), fill="#c9c1b4" if i else RED)
-    rt(cr[1], y, won(r["total"]), font(21, "Bold"))
-    for j, c in enumerate(D["chans"]): rt(cr[j + 2] if j + 2 < len(cr) else cr[-1], y, won(r["ch"].get(c, 0)), font(21))
+    bw = int(80 * r["total"] / mx); d.rectangle((M + 130, y + 9, M + 130 + bw, y + 21), fill="#c9c1b4" if i else RED)
+    vals = [won(r["total"])] + [won(r["ch"].get(c, 0)) for c in D["chans"]] + [won(r.get("clk", 0)), won(r["total"] / r["clk"]) if r.get("clk") else "-", f"{r['clk'] / r['imp'] * 100:.2f}%" if r.get("imp") else "-", won(r.get("buy", 0)), f"{r['rev'] / r['mcost'] * 100:.0f}%" if r.get("mcost") else "-"]
+    for j, v in enumerate(vals): rt(cr[j + 1], y + 2, v, font(18, "Bold" if j == 0 else "Regular"))
     y += 38; d.line((M, y - 2, W - M, y - 2), fill=LINE)
 d.rectangle((M, y, W - M, y + 44), fill=INK)
-d.text((cols[0], y + 9), f"총 금액 ({len(D['days'])}일)", font=font(22, "Bold"), fill="white"); rt(cr[1], y + 9, won(D["sum14"]["total"]), font(22, "Bold"), "white")
-for j, c in enumerate(D["chans"]): rt(cr[j + 2] if j + 2 < len(cr) else cr[-1], y + 9, won(D["sum14"]["ch"].get(c, 0)), font(22, "Bold"), "white")
+d.text((cols[0], y + 10), f"총 금액 ({len(D['days'])}일)", font=font(19, "Bold"), fill="white"); S = {k: sum(r.get(k, 0) for r in D["days"]) for k in ("clk", "imp", "buy", "rev", "mcost")}; T14 = D["sum14"]["total"]
+vals = [won(T14)] + [won(D["sum14"]["ch"].get(c, 0)) for c in D["chans"]] + [won(S["clk"]), won(T14 / S["clk"]) if S["clk"] else "-", f"{S['clk'] / S['imp'] * 100:.2f}%" if S["imp"] else "-", won(S["buy"]), f"{S['rev'] / S['mcost'] * 100:.0f}%" if S["mcost"] else "-"]
+for j, v in enumerate(vals): rt(cr[j + 1], y + 11, v, font(18, "Bold"), "white")
 y += 74
 # 캠페인별
 d.text((M, y), f"{D['until_label']} 캠페인별", font=font(22, "Bold"), fill=INK); y += 38
@@ -47,11 +48,13 @@ y0 = y
 for ci, c in enumerate(D["chans"]):
     x0 = M + ci * half; yy = y0
     d.text((x0, yy), f"{c}  {won(D['yday_ch'].get(c,0))}원", font=font(19, "SemiBold"), fill=RED); yy += 32
-    for name, cost in D["camps"].get(c, [])[:12]:
+    for row in D["camps"].get(c, [])[:12]:
+        name, cost = row[0], row[1]; extra = (f"CPC {won(row[2])}" if len(row) > 2 and row[2] else "") + (f" · ROAS {row[3]:.0f}%" if len(row) > 3 and row[3] is not None else "")
         nm = name
-        while d.textlength(nm, font=font(17)) > half - 150 and len(nm) > 4: nm = nm[:-2]
-        d.text((x0, yy), nm + ("…" if nm != name else ""), font=font(17), fill=INK); rt(x0 + half - 30, yy, won(cost), font(17, "SemiBold")); yy += 27
+        while d.textlength(nm, font=font(16)) > half - 330 and len(nm) > 4: nm = nm[:-2]
+        d.text((x0, yy), nm + ("…" if nm != name else ""), font=font(16), fill=INK); rt(x0 + half - 210, yy, won(cost), font(16, "SemiBold")); d.text((x0 + half - 200, yy), extra, font=font(14), fill=SUB); yy += 27
     y = max(y, yy)
+d.text((M, H - M - 34), "클릭=링크 클릭(메타)+클릭(X) · CPC·CTR=전체 광고비 기준 · 구매·ROAS=메타 픽셀 구매 기준(X 제외)", font=font(15), fill=SUB)
 d.text((M, H - M - 10), D.get("note", ""), font=font(15), fill=SUB)
 im.save(out)
 print(out)
