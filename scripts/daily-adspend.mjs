@@ -53,7 +53,7 @@ const chans = Object.keys(res);
 const days = []; for (let d = new Date(SINCE + 'T00:00:00Z'); d.toISOString().slice(0, 10) <= UNTIL; d = new Date(d.getTime() + 86400000)) days.push(d.toISOString().slice(0, 10));
 const tot = (d) => chans.reduce((a, c) => a + (res[c].byDay[d] || 0), 0);
 const E = (c, d) => res[c]?.eff?.[d] || { imp: 0, clk: 0, buy: 0, rev: 0 };
-const effLine = (c, d) => { const e = E(c, d), cost = res[c].byDay[d] || 0; if (!cost) return ''; return `클릭 ${Math.round(e.clk).toLocaleString('ko-KR')} · CPC ${e.clk ? won(cost / e.clk) : '-'} · CTR ${e.imp ? (e.clk / e.imp * 100).toFixed(2) : '-'}%` + (c === '메타' ? ` · 구매 ${Math.round(e.buy)}건 · ROAS ${cost ? Math.round(e.rev / cost * 100) : 0}%` : ''); };
+const effLine = (c, d) => { const e = E(c, d), cost = res[c].byDay[d] || 0; if (!cost) return ''; return `노출 ${Math.round(e.imp).toLocaleString('ko-KR')} · 클릭 ${Math.round(e.clk).toLocaleString('ko-KR')} · CPM ${e.imp ? won(cost / e.imp * 1000) : '-'} · CPC ${e.clk ? won(cost / e.clk) : '-'} · CTR ${e.imp ? (e.clk / e.imp * 100).toFixed(2) : '-'}%`; };
 const L = [`[일별 광고비 · ${md(UNTIL)}까지]`, ''];
 L.push(`■ 어제 ${md(UNTIL)}: ${won(tot(UNTIL))}`);
 for (const c of chans) { L.push(`  ${c} ${won(res[c].byDay[UNTIL] || 0)}`); const el = effLine(c, UNTIL); if (el) L.push(`    ${el}`); }
@@ -67,7 +67,7 @@ const mdays = Object.keys(Object.assign({}, ...chans.map((c) => res[c].byDay))).
 L.push('', `■ ${+UNTIL.slice(5, 7)}월 누적 (${+MONTH0.slice(8)}일~${+UNTIL.slice(8)}일): ${won(mdays.reduce((a, d) => a + tot(d), 0))}`);
 for (const c of chans) L.push(`  ${c} ${won(mdays.reduce((a, d) => a + (res[c].byDay[d] || 0), 0))}`);
 L.push('', `■ 어제 캠페인별`);
-for (const c of chans) { const m = Object.entries(res[c].byCamp[UNTIL] || {}).sort((a, b) => b[1] - a[1]); if (!m.length) { L.push(`[${c}] 집행 없음`); continue; } L.push(`[${c}]`); for (const [n, v] of m.slice(0, 12)) { const e = res[c].eff?._camp?.[UNTIL]?.[n]; L.push(`  ${won(v)} · ${n}` + (e ? ` · CPC ${e.clk ? won(v / e.clk) : '-'}` + (c === '메타' ? ` · ROAS ${Math.round(e.rev / v * 100)}%` : '') : '')); } if (m.length > 12) L.push(`  외 ${m.length - 12}개 ${won(m.slice(12).reduce((a, [, v]) => a + v, 0))}`); }
+for (const c of chans) { const m = Object.entries(res[c].byCamp[UNTIL] || {}).sort((a, b) => b[1] - a[1]); if (!m.length) { L.push(`[${c}] 집행 없음`); continue; } L.push(`[${c}]`); for (const [n, v] of m.slice(0, 12)) { const e = res[c].eff?._camp?.[UNTIL]?.[n]; L.push(`  ${won(v)} · ${n}` + (e ? ` · CPC ${e.clk ? won(v / e.clk) : '-'} · CPM ${e.imp ? won(v / e.imp * 1000) : '-'}` : '')); } if (m.length > 12) L.push(`  외 ${m.length - 12}개 ${won(m.slice(12).reduce((a, [, v]) => a + v, 0))}`); }
 if (res['메타']?.note) L.push('', `※ 메타는 ${res['메타'].note}. X는 계정 전체.`);
 if (errs.length) L.push('', '⚠️ ' + errs.join(' / '));
 // 표 이미지(PNG) — scripts/daily-adspend-table.py → Supabase 업로드 후 웍스 이미지 메시지로 발송(실패 시 파일 첨부)
@@ -77,7 +77,7 @@ try {
   const payload = { until_label: md(UNTIL), yday_total: a, yday_ch: Object.fromEntries(chans.map((c) => [c, res[c].byDay[UNTIL] || 0])), delta: prev && bb ? `${a >= bb ? '+' : '−'}${Math.round(Math.abs(a - bb)).toLocaleString('ko-KR')}원 (${a >= bb ? '+' : '−'}${Math.abs(Math.round((a - bb) / bb * 100))}%)` : '', chans,
     days: [...days].reverse().map((d) => ({ label: md(d), total: tot(d), ch: Object.fromEntries(chans.map((c) => [c, res[c].byDay[d] || 0])), clk: chans.reduce((x, c) => x + E(c, d).clk, 0), imp: chans.reduce((x, c) => x + E(c, d).imp, 0), buy: E('메타', d).buy, rev: E('메타', d).rev, mcost: res['메타']?.byDay[d] || 0 })), sum14,
     month: { label: `${+UNTIL.slice(5, 7)}월 누적 (${+MONTH0.slice(8)}~${+UNTIL.slice(8)}일)`, total: mdays.reduce((x, d) => x + tot(d), 0), ch: sumCh(mdays) },
-    camps: Object.fromEntries(chans.map((c) => [c, Object.entries(res[c].byCamp[UNTIL] || {}).sort((x, y) => y[1] - x[1]).map(([n, v]) => { const e = res[c].eff?._camp?.[UNTIL]?.[n] || {}; return [n, v, e.clk ? v / e.clk : 0, c === '메타' && v ? (e.rev || 0) / v * 100 : null]; })])), note: `메타: 캠페인명 ${clean(env.META_CAMPAIGN_FILTER || '뷰티,부스터')} 포함분 · X: 계정 전체 · 광고 관리자 집행액 기준 · ${kst(0)} 작성` };
+    camps: Object.fromEntries(chans.map((c) => [c, Object.entries(res[c].byCamp[UNTIL] || {}).sort((x, y) => y[1] - x[1]).map(([n, v]) => { const e = res[c].eff?._camp?.[UNTIL]?.[n] || {}; return [n, v, e.clk ? v / e.clk : 0, e.imp ? v / e.imp * 1000 : 0]; })])), note: `메타: 캠페인명 ${clean(env.META_CAMPAIGN_FILTER || '뷰티,부스터')} 포함분 · X: 계정 전체 · 광고 관리자 집행액 기준 · ${kst(0)} 작성` };
   png = execFileSync('/usr/bin/python3', [resolve(HERE, 'daily-adspend-table.py'), `/tmp/daily-adspend-${UNTIL}.png`], { input: JSON.stringify(payload), encoding: 'utf8', timeout: 60000 }).trim().split('\n').pop();
 } catch (e) { errs.push('표 이미지 실패: ' + String(e.message || e).slice(0, 100)); }
 let sheet = null;

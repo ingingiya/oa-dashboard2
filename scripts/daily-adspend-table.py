@@ -24,7 +24,7 @@ for i, (lab, val, s2) in enumerate([(f"최근 {len(D['days'])}일 합계", won(D
     if s2: d.text((x0 + 18, y + 86), s2, font=font(15), fill=SUB)
 y += 150
 # 날짜 표
-cr = [0, M + 330, M + 470, M + 570, M + 680, M + 780, M + 870, M + 960, W - M - 10]; cols = [M + 10]; HD = ["합계"] + D["chans"] + ["클릭", "CPC", "CTR", "구매", "ROAS"]
+cr = [0, M + 330, M + 470, M + 570, M + 720, M + 820, M + 920, M + 1010, W - M - 10]; cols = [M + 10]; HD = ["합계"] + D["chans"] + ["노출", "클릭", "CPM", "CPC", "CTR"]
 d.text((cols[0], y), "날짜", font=font(18, "SemiBold"), fill=SUB)
 for i, t in enumerate(HD): rt(cr[i + 1], y, t, font(17, "SemiBold"), SUB)
 y += 30; d.line((M, y, W - M, y), fill=INK, width=2); y += 8
@@ -33,12 +33,12 @@ for i, r in enumerate(D["days"]):
     if i == 0: d.rectangle((M, y - 4, W - M, y + 34), fill=HL)
     d.text((cols[0], y), r["label"], font=font(21, "Bold" if i == 0 else "Regular"), fill=INK)
     bw = int(80 * r["total"] / mx); d.rectangle((M + 130, y + 9, M + 130 + bw, y + 21), fill="#c9c1b4" if i else RED)
-    vals = [won(r["total"])] + [won(r["ch"].get(c, 0)) for c in D["chans"]] + [won(r.get("clk", 0)), won(r["total"] / r["clk"]) if r.get("clk") else "-", f"{r['clk'] / r['imp'] * 100:.2f}%" if r.get("imp") else "-", won(r.get("buy", 0)), f"{r['rev'] / r['mcost'] * 100:.0f}%" if r.get("mcost") else "-"]
+    vals = [won(r["total"])] + [won(r["ch"].get(c, 0)) for c in D["chans"]] + [won(r.get("imp", 0)), won(r.get("clk", 0)), won(r["total"] / r["imp"] * 1000) if r.get("imp") else "-", won(r["total"] / r["clk"]) if r.get("clk") else "-", f"{r['clk'] / r['imp'] * 100:.2f}%" if r.get("imp") else "-"]
     for j, v in enumerate(vals): rt(cr[j + 1], y + 2, v, font(18, "Bold" if j == 0 else "Regular"))
     y += 38; d.line((M, y - 2, W - M, y - 2), fill=LINE)
 d.rectangle((M, y, W - M, y + 44), fill=INK)
 d.text((cols[0], y + 10), f"총 금액 ({len(D['days'])}일)", font=font(19, "Bold"), fill="white"); S = {k: sum(r.get(k, 0) for r in D["days"]) for k in ("clk", "imp", "buy", "rev", "mcost")}; T14 = D["sum14"]["total"]
-vals = [won(T14)] + [won(D["sum14"]["ch"].get(c, 0)) for c in D["chans"]] + [won(S["clk"]), won(T14 / S["clk"]) if S["clk"] else "-", f"{S['clk'] / S['imp'] * 100:.2f}%" if S["imp"] else "-", won(S["buy"]), f"{S['rev'] / S['mcost'] * 100:.0f}%" if S["mcost"] else "-"]
+vals = [won(T14)] + [won(D["sum14"]["ch"].get(c, 0)) for c in D["chans"]] + [won(S["imp"]), won(S["clk"]), won(T14 / S["imp"] * 1000) if S["imp"] else "-", won(T14 / S["clk"]) if S["clk"] else "-", f"{S['clk'] / S['imp'] * 100:.2f}%" if S["imp"] else "-"]
 for j, v in enumerate(vals): rt(cr[j + 1], y + 11, v, font(18, "Bold"), "white")
 y += 74
 # 캠페인별
@@ -49,12 +49,12 @@ for ci, c in enumerate(D["chans"]):
     x0 = M + ci * half; yy = y0
     d.text((x0, yy), f"{c}  {won(D['yday_ch'].get(c,0))}원", font=font(19, "SemiBold"), fill=RED); yy += 32
     for row in D["camps"].get(c, [])[:12]:
-        name, cost = row[0], row[1]; extra = (f"CPC {won(row[2])}" if len(row) > 2 and row[2] else "") + (f" · ROAS {row[3]:.0f}%" if len(row) > 3 and row[3] is not None else "")
+        name, cost = row[0], row[1]; extra = (f"CPC {won(row[2])}" if len(row) > 2 and row[2] else "") + (f" · CPM {won(row[3])}" if len(row) > 3 and row[3] else "")
         nm = name
         while d.textlength(nm, font=font(16)) > half - 330 and len(nm) > 4: nm = nm[:-2]
         d.text((x0, yy), nm + ("…" if nm != name else ""), font=font(16), fill=INK); rt(x0 + half - 210, yy, won(cost), font(16, "SemiBold")); d.text((x0 + half - 200, yy), extra, font=font(14), fill=SUB); yy += 27
     y = max(y, yy)
-d.text((M, H - M - 34), "클릭=링크 클릭(메타)+클릭(X) · CPC·CTR=전체 광고비 기준 · 구매·ROAS=메타 픽셀 구매 기준(X 제외)", font=font(15), fill=SUB)
+d.text((M, H - M - 34), "노출·클릭=메타(링크 클릭)+X 합산 · CPM=노출 1,000회당 비용 · CPC=클릭당 비용 · 구매·ROAS는 수치가 부정확해 표시하지 않음", font=font(15), fill=SUB)
 d.text((M, H - M - 10), D.get("note", ""), font=font(15), fill=SUB)
 im.save(out)
 print(out)
