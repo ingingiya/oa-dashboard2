@@ -5,7 +5,7 @@
 import { execFileSync } from 'child_process';
 import { dirname, resolve } from 'path';
 import { fileURLToPath } from 'url';
-import { env, sendToUser, telegram } from './nworks-lib.mjs';
+import { env, sendToUser, sendFileToUser, telegram } from './nworks-lib.mjs';
 const HERE = dirname(fileURLToPath(import.meta.url));
 const args = process.argv.slice(2); const DRY = args.includes('--dry-run');
 const opt = (k, d) => (args.includes(k) ? args[args.indexOf(k) + 1] : d);
@@ -53,6 +53,9 @@ for (const c of chans) L.push(`  ${c} ${won(res[c].byDay[UNTIL] || 0)}`);
 const prev = days[days.length - 2]; if (prev) { const a = tot(UNTIL), b = tot(prev); L.push(`  전일 대비 ${a >= b ? '+' : '−'}${won(Math.abs(a - b))}${b ? ` (${a >= b ? '+' : '−'}${Math.abs(Math.round((a - b) / b * 100))}%)` : ''}`); }
 L.push('', `■ 최근 ${days.length}일 (합계 / ${chans.join(' / ')})`);
 for (const d of [...days].reverse()) L.push(`${md(d)}  ${won(tot(d))}  /  ${chans.map((c) => won(res[c].byDay[d] || 0)).join(' / ')}`);
+const sumCh = (ds) => Object.fromEntries(chans.map((c) => [c, ds.reduce((x, d) => x + (res[c].byDay[d] || 0), 0)]));
+const sum14 = { total: days.reduce((x, d) => x + tot(d), 0), ch: sumCh(days) };
+L.push(`총 금액 (${days.length}일)  ${won(sum14.total)}  /  ${chans.map((c) => won(sum14.ch[c])).join(' / ')}`, `일평균 ${won(sum14.total / days.length)}`);
 const mdays = Object.keys(Object.assign({}, ...chans.map((c) => res[c].byDay))).filter((d) => d >= MONTH0 && d <= UNTIL);
 L.push('', `■ ${+UNTIL.slice(5, 7)}월 누적 (${+MONTH0.slice(8)}일~${+UNTIL.slice(8)}일): ${won(mdays.reduce((a, d) => a + tot(d), 0))}`);
 for (const c of chans) L.push(`  ${c} ${won(mdays.reduce((a, d) => a + (res[c].byDay[d] || 0), 0))}`);
@@ -60,6 +63,16 @@ L.push('', `■ 어제 캠페인별`);
 for (const c of chans) { const m = Object.entries(res[c].byCamp[UNTIL] || {}).sort((a, b) => b[1] - a[1]); if (!m.length) { L.push(`[${c}] 집행 없음`); continue; } L.push(`[${c}]`); for (const [n, v] of m.slice(0, 12)) L.push(`  ${won(v)} · ${n}`); if (m.length > 12) L.push(`  외 ${m.length - 12}개 ${won(m.slice(12).reduce((a, [, v]) => a + v, 0))}`); }
 if (res['메타']?.note) L.push('', `※ 메타는 ${res['메타'].note}. X는 계정 전체.`);
 if (errs.length) L.push('', '⚠️ ' + errs.join(' / '));
+// 표 이미지(A4 인쇄용 PNG+PDF) — scripts/daily-adspend-table.py
+let png = null;
+try {
+  const a = tot(UNTIL), bb = prev ? tot(prev) : 0;
+  const payload = { until_label: md(UNTIL), yday_total: a, yday_ch: Object.fromEntries(chans.map((c) => [c, res[c].byDay[UNTIL] || 0])), delta: prev && bb ? `${a >= bb ? '+' : '−'}${Math.round(Math.abs(a - bb)).toLocaleString('ko-KR')}원 (${a >= bb ? '+' : '−'}${Math.abs(Math.round((a - bb) / bb * 100))}%)` : '', chans,
+    days: [...days].reverse().map((d) => ({ label: md(d), total: tot(d), ch: Object.fromEntries(chans.map((c) => [c, res[c].byDay[d] || 0])) })), sum14,
+    month: { label: `${+UNTIL.slice(5, 7)}월 누적 (${+MONTH0.slice(8)}~${+UNTIL.slice(8)}일)`, total: mdays.reduce((x, d) => x + tot(d), 0), ch: sumCh(mdays) },
+    camps: Object.fromEntries(chans.map((c) => [c, Object.entries(res[c].byCamp[UNTIL] || {}).sort((x, y) => y[1] - x[1])])), note: `메타: 캠페인명 ${clean(env.META_CAMPAIGN_FILTER || '뷰티,부스터')} 포함분 · X: 계정 전체 · 광고 관리자 집행액 기준 · ${kst(0)} 작성` };
+  png = execFileSync('/usr/bin/python3', [resolve(HERE, 'daily-adspend-table.py'), `/tmp/daily-adspend-${UNTIL}.png`], { input: JSON.stringify(payload), encoding: 'utf8', timeout: 60000 }).trim().split('\n').pop();
+} catch (e) { errs.push('표 이미지 실패: ' + String(e.message || e).slice(0, 100)); }
 const text = L.join('\n');
 console.log(text);
-if (!DRY) { const parts = []; let cur = ''; for (const ln of text.split('\n')) { if ((cur + ln).length > 1700) { parts.push(cur); cur = ''; } cur += ln + '\n'; } if (cur.trim()) parts.push(cur); for (const p of parts) await sendToUser(TO, p.trim()); console.error('sent', parts.length); if (errs.length) await telegram('일별 광고비 리포트 오류: ' + errs.join(' / ')).catch(() => {}); }
+if (!DRY) { const parts = []; let cur = ''; for (const ln of text.split('\n')) { if ((cur + ln).length > 1700) { parts.push(cur); cur = ''; } cur += ln + '\n'; } if (cur.trim()) parts.push(cur); for (const p of parts) await sendToUser(TO, p.trim()); if (png) await sendFileToUser(TO, png, `일별광고비_${UNTIL}.png`).catch((e) => errs.push('이미지 발송 실패')); console.error('sent', parts.length, png || ''); if (errs.length) await telegram('일별 광고비 리포트 오류: ' + errs.join(' / ')).catch(() => {}); }
