@@ -24,30 +24,30 @@ for i, (lab, val, s2) in enumerate([(f"최근 {len(D['days'])}일 합계", won(D
     if s2: d.text((x0 + 18, y + 86), s2, font=font(15), fill=SUB)
 y += 150
 # 날짜 표 — 매체별로 광고비·CPM·CPC·CTR을 나눠서 표시 (10-02 "효율은 메타랑 트위터 나눠서")
-CH = D["chans"]; x0 = M + 300; gw = (W - M - x0) // max(1, len(CH)); sub = ["광고비", "CPM", "CPC", "CTR"]; sw = gw // 4
+CH = D["chans"]; x0 = M + 250; gw = (W - M - x0) // max(1, len(CH)); sub = ["광고비", "노출", "CPM", "CPC", "CTR"]; SWD = [0.235, 0.225, 0.17, 0.16, 0.21]; XR = lambda gx, k: gx + int(gw * sum(SWD[:k + 1])) - 8
 def effv(cost, e):
     imp, clk = e.get("imp", 0), e.get("clk", 0)
-    return [won(cost), won(cost / imp * 1000) if imp else "-", won(cost / clk) if clk else "-", f"{clk / imp * 100:.2f}%" if imp else "-"]
-d.text((M + 10, y + 26), "날짜", font=font(17, "SemiBold"), fill=SUB); rt(x0 - 20, y + 26, "합계", font(17, "SemiBold"), SUB)
+    return [won(cost), won(imp) if imp else "-", won(cost / imp * 1000) if imp else "-", won(cost / clk) if clk else "-", f"{clk / imp * 100:.2f}%" if imp else "-"]
+d.text((M + 10, y + 26), "날짜", font=font(17, "SemiBold"), fill=SUB); rt(x0 - 14, y + 26, "합계", font(17, "SemiBold"), SUB)
 for ci, c in enumerate(CH):
     gx = x0 + ci * gw; d.rectangle((gx + 6, y, gx + gw - 6, y + 24), fill=INK if ci == 0 else "#57504a"); tw = d.textlength(c, font=font(16, "Bold")); d.text((gx + gw / 2 - tw / 2, y + 2), c, font=font(16, "Bold"), fill="white")
-    for k, s_ in enumerate(sub): rt(gx + (k + 1) * sw - 8, y + 28, s_, font(15, "SemiBold"), SUB)
+    for k, s_ in enumerate(sub): rt(XR(gx, k), y + 28, s_, font(15, "SemiBold"), SUB)
 y += 52; d.line((M, y, W - M, y), fill=INK, width=2); y += 8
 for i, r in enumerate(D["days"]):
     if i == 0: d.rectangle((M, y - 4, W - M, y + 34), fill=HL)
     d.text((M + 10, y), r["label"], font=font(20, "Bold" if i == 0 else "Regular"), fill=INK)
-    rt(x0 - 20, y + 1, won(r["total"]), font(19, "Bold"))
+    rt(x0 - 14, y + 2, won(r["total"]), font(18, "Bold"))
     for ci, c in enumerate(CH):
         gx = x0 + ci * gw; cost = r["ch"].get(c, 0)
-        vals = effv(cost, (r.get("eff") or {}).get(c, {})) if cost else ["0", "-", "-", "-"]
-        for k, v in enumerate(vals): rt(gx + (k + 1) * sw - 8, y + 2, v, font(18, "SemiBold" if k == 0 else "Regular"), INK if cost else "#b5aca0")
+        vals = effv(cost, (r.get("eff") or {}).get(c, {})) if cost else ["0", "-", "-", "-", "-"]
+        for k, v in enumerate(vals): rt(XR(gx, k), y + 3, v, font(17, "SemiBold" if k == 0 else "Regular"), INK if cost else "#b5aca0")
         if ci: d.line((gx, y - 4, gx, y + 34), fill=LINE)
     y += 38; d.line((M, y - 2, W - M, y - 2), fill=LINE)
 d.rectangle((M, y, W - M, y + 44), fill=INK)
-d.text((M + 10, y + 10), f"총 금액 ({len(D['days'])}일)", font=font(19, "Bold"), fill="white"); rt(x0 - 20, y + 11, won(D["sum14"]["total"]), font(19, "Bold"), "white")
+d.text((M + 10, y + 10), f"총 금액 ({len(D['days'])}일)", font=font(19, "Bold"), fill="white"); rt(x0 - 14, y + 12, won(D["sum14"]["total"]), font(18, "Bold"), "white")
 for ci, c in enumerate(CH):
     gx = x0 + ci * gw; cost = D["sum14"]["ch"].get(c, 0); e = {k: sum((r.get("eff") or {}).get(c, {}).get(k, 0) for r in D["days"]) for k in ("imp", "clk")}
-    for k, v in enumerate(effv(cost, e)): rt(gx + (k + 1) * sw - 8, y + 12, v, font(18, "Bold"), "white")
+    for k, v in enumerate(effv(cost, e)): rt(XR(gx, k), y + 13, v, font(17, "Bold"), "white")
 y += 74
 # 캠페인별
 d.text((M, y), f"{D['until_label']} 캠페인별", font=font(22, "Bold"), fill=INK); y += 38
@@ -57,10 +57,10 @@ for ci, c in enumerate(D["chans"]):
     x0 = M + ci * half; yy = y0
     d.text((x0, yy), f"{c}  {won(D['yday_ch'].get(c,0))}원", font=font(19, "SemiBold"), fill=RED); yy += 32
     for row in D["camps"].get(c, [])[:12]:
-        name, cost = row[0], row[1]; extra = (str(row[2]) if len(row) > 2 and row[2] else "") + (f" · CPM {won(row[3])}" if len(row) > 3 and row[3] else "")
+        name, cost = row[0], row[1]; extra = (str(row[2]) if len(row) > 2 and row[2] else "") + (f" · CPM {won(row[3])}" if len(row) > 3 and row[3] else "") + (f" · 노출 {won(row[4])}" if len(row) > 4 and row[4] else "")
         nm = name
-        while d.textlength(nm, font=font(16)) > half - 400 and len(nm) > 4: nm = nm[:-2]
-        d.text((x0, yy), nm + ("…" if nm != name else ""), font=font(16), fill=INK); rt(x0 + half - 290, yy, won(cost), font(16, "SemiBold")); d.text((x0 + half - 280, yy + 1), extra, font=font(14), fill=SUB); yy += 27
+        while d.textlength(nm, font=font(15)) > half - 400 and len(nm) > 4: nm = nm[:-2]
+        d.text((x0, yy), nm + ("…" if nm != name else ""), font=font(15), fill=INK); rt(x0 + half - 330, yy, won(cost), font(15, "SemiBold")); d.text((x0 + half - 322, yy + 2), extra, font=font(12), fill=SUB); yy += 27
     y = max(y, yy)
 d.text((M, H - M - 34), "CPM=노출 1,000회당 비용 · CPC=클릭당 비용(메타는 링크 클릭 기준) · 결과당 비용=전환 캠페인은 구매당, 트래픽은 클릭당 · ROAS는 계산하지 않음", font=font(15), fill=SUB)
 d.text((M, H - M - 10), D.get("note", ""), font=font(15), fill=SUB)

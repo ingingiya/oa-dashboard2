@@ -65,7 +65,8 @@ for i, g in enumerate(top):
     d.text((x, ty), f"{won(g['cost'])}원", font=font(22, "Bold"), fill="#1b1917")
     d.text((x, ty + 31), (f"{res_lab}당 {cpr}" if res_n else cpr), font=font(18, "Bold"), fill="#e8452c" if not res_n else "#1b1917")
     d.text((x + 172, ty + 34), f"({res_lab} {won(res_n)})", font=font(15), fill="#6d645b")
-    d.text((x, ty + 57), f"CPM {won(cpm)}원 · CTR {g['clk'] / g['imp'] * 100:.2f}%" if g["imp"] else "", font=font(16), fill="#1b1917")
+    d.text((x, ty + 57), f"노출 {won(g['imp'])} · CPM {won(cpm)}원" if g["imp"] else "", font=font(16), fill="#1b1917")
+    rt_ = f"CTR {g['clk'] / g['imp'] * 100:.2f}%" if g["imp"] else ""; d.text((x + IMG - d.textlength(rt_, font=font(15)), ty + 4), rt_, font=font(15), fill="#6d645b")
     nm = g["name"]
     while d.textlength(nm, font=font(14)) > IMG and len(nm) > 4: nm = nm[:-2]
     d.text((x, ty + 82), nm, font=font(14), fill="#6d645b")
