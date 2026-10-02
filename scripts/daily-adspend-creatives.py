@@ -46,7 +46,7 @@ R = (len(top) + COLS - 1) // COLS; W = PAD * 2 + COLS * CW; HEAD = 110; H = HEAD
 im = Image.new("RGB", (W, H), "white"); d = ImageDraw.Draw(im); won = lambda n: f"{round(n):,}"
 d.text((PAD, 22), f"메타 소재별 성과 · {int(day[5:7])}/{int(day[8:10])}", font=font(34, "Bold"), fill="#1b1917")
 tc = sum(g["cost"] for g in top); ta = sum(float(r["spend"]) for r in rows)
-d.text((PAD, 70), f"광고비 상위 {len(top)}개 소재 {won(tc)}원 (메타 전체 {won(ta)}원의 {tc / ta * 100:.0f}%) · 결과 = 링크 클릭 (구매·ROAS는 부정확해 표시하지 않음)", font=font(17), fill="#6d645b")
+d.text((PAD, 70), f"광고비 상위 {len(top)}개 소재 {won(tc)}원 (메타 전체 {won(ta)}원의 {tc / ta * 100:.0f}%) · 결과당 비용 = 전환 캠페인은 구매당, 트래픽 캠페인은 클릭당", font=font(17), fill="#6d645b")
 for i, g in enumerate(top):
     x, y = PAD + (i % COLS) * CW, HEAD + (i // COLS) * (IMG + TH)
     try:
@@ -57,12 +57,13 @@ for i, g in enumerate(top):
     d.rectangle((x, y, x + 44, y + 34), fill="#1b1917"); d.text((x + 12, y + 5), str(i + 1), font=font(20, "Bold"), fill="white")
     if g["video"]: d.rectangle((x + IMG - 58, y, x + IMG, y + 28), fill="#e8452c"); d.text((x + IMG - 50, y + 4), "영상", font=font(16, "Bold"), fill="white")
     ty = y + IMG + 8
-    # 결과 = 링크 클릭으로 통일 (10-02 사용자: 메타 구매 수치는 정확하지 않으니 구매·ROAS는 쓰지 않음)
-    res_n = g["clk"]; res_lab = "클릭"
-    cpr = f"{won(g['cost'] / res_n)}원" if res_n else "결과 없음"
+    # 결과 = 메타 광고 관리자와 같은 기준: 전환(판매) 캠페인은 구매, 트래픽 캠페인은 링크 클릭 (10-02 사용자 "결과당 구매", ROAS는 계산 안 함)
+    traffic = "TRAFFIC" in g["obj"] or "LINK_CLICKS" in g["obj"] or "트래픽" in g["camp"]
+    res_n = g["clk"] if traffic else g["buy"]; res_lab = "클릭" if traffic else "구매"
+    cpr = f"{won(g['cost'] / res_n)}원" if res_n else "구매 없음"
     cpm = g["cost"] / g["imp"] * 1000 if g["imp"] else 0
     d.text((x, ty), f"{won(g['cost'])}원", font=font(22, "Bold"), fill="#1b1917")
-    d.text((x, ty + 31), f"결과당 {cpr}", font=font(18, "Bold"), fill="#e8452c" if not res_n else "#1b1917")
+    d.text((x, ty + 31), (f"{res_lab}당 {cpr}" if res_n else cpr), font=font(18, "Bold"), fill="#e8452c" if not res_n else "#1b1917")
     d.text((x + 172, ty + 34), f"({res_lab} {won(res_n)})", font=font(15), fill="#6d645b")
     d.text((x, ty + 57), f"CPM {won(cpm)}원 · CTR {g['clk'] / g['imp'] * 100:.2f}%" if g["imp"] else "", font=font(16), fill="#1b1917")
     nm = g["name"]
