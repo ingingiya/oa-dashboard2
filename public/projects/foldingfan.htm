@@ -1,0 +1,222 @@
+<title>폴딩팬 경쟁 지도</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&family=IBM+Plex+Mono:wght@500;600&display=swap">
+<style>
+/* layout: one reading column, tables scroll in their own box; accent = fan-blade cobalt on paper */
+:root{--bg:#f7f6f2;--fg:#1c1b19;--muted:#6b675f;--line:#dcd8cf;--card:#ffffff;--acc:#1f4ed8;--acc2:#e8edfb;--warn:#b4541b;--ok:#1d7a4f;--pink:#d6336c;color-scheme:light}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--bg:#15161a;--fg:#ecebe6;--muted:#a19d94;--line:#2f3138;--card:#1d1f25;--acc:#7b9cff;--acc2:#222a44;--warn:#f0905a;--ok:#5cc48d;--pink:#ff6b9a;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#15161a;--fg:#ecebe6;--muted:#a19d94;--line:#2f3138;--card:#1d1f25;--acc:#7b9cff;--acc2:#222a44;--warn:#f0905a;--ok:#5cc48d;--pink:#ff6b9a;color-scheme:dark}
+body{background:var(--bg);color:var(--fg);font-family:"Noto Sans KR",system-ui,sans-serif;font-size:15px;line-height:1.65;padding-block:40px 80px;padding-inline:20px}
+.wrap{max-width:1040px;margin:0 auto;display:flex;flex-direction:column;gap:40px}
+h1{font-size:clamp(28px,4.5vw,44px);font-weight:900;letter-spacing:-.03em;line-height:1.15;margin:0;text-wrap:balance}
+h2{font-size:21px;font-weight:900;letter-spacing:-.02em;margin:0 0 14px}
+h3{font-size:16px;font-weight:700;margin:0 0 8px}
+p{margin:0}
+.eyebrow{font-family:"IBM Plex Mono",monospace;font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--acc);font-weight:600}
+.lead{color:var(--muted);max-width:66ch}
+header{display:flex;flex-direction:column;gap:12px;border-bottom:2px solid var(--fg);padding-bottom:24px}
+.meta{font-family:"IBM Plex Mono",monospace;font-size:12px;color:var(--muted);display:flex;gap:18px;flex-wrap:wrap}
+.tiers{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px}
+.tier{border:1px solid var(--line);background:var(--card);padding:18px 20px;display:flex;flex-direction:column;gap:8px;min-width:0}
+.tier .price{font-family:"IBM Plex Mono",monospace;font-weight:600;font-size:13px;color:var(--acc)}
+.tier ul{margin:0;padding-left:18px;color:var(--muted);font-size:14px}
+.tier.mine{border-color:var(--acc);background:var(--acc2)}
+.tbox{overflow-x:auto;border:1px solid var(--line);background:var(--card)}
+table{border-collapse:collapse;width:100%;min-width:900px;font-size:13.5px}
+th,td{padding:10px 12px;border-bottom:1px solid var(--line);vertical-align:top;text-align:left}
+th{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:700;background:var(--bg);position:sticky;top:0}
+td.n{font-family:"IBM Plex Mono",monospace;font-variant-numeric:tabular-nums;white-space:nowrap;font-weight:600}
+td.b{font-weight:700;white-space:nowrap}
+tr.hl td{background:var(--acc2)}
+tr.cl td{background:color-mix(in srgb,var(--pink) 8%,transparent)}
+.tag{display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:3px;margin-left:6px;vertical-align:middle}
+.tag.o{background:var(--pink);color:#fff}.tag.c{background:var(--acc);color:#fff}.tag.s{background:var(--fg);color:var(--bg)}
+.plus{color:var(--ok)}.minus{color:var(--warn)}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px}
+.note{border-left:4px solid var(--acc);padding:14px 18px;background:var(--card);display:flex;flex-direction:column;gap:6px;min-width:0}
+.note.w{border-color:var(--warn)}
+.gap{display:grid;grid-template-columns:1fr auto 1fr;gap:14px;align-items:stretch}
+.gap .col{border:1px solid var(--line);background:var(--card);padding:16px 18px;min-width:0}
+.gap .arrow{display:flex;align-items:center;font-size:28px;color:var(--acc)}
+.gap .col.target{border:2px solid var(--acc)}
+.chart{display:flex;flex-direction:column;gap:6px}
+.bar{display:grid;grid-template-columns:150px 1fr 80px;gap:10px;align-items:center;font-size:13px}
+.bar .track{height:14px;background:var(--acc2);position:relative;border-radius:2px}
+.bar .fill{position:absolute;left:0;top:0;bottom:0;background:var(--acc);border-radius:2px}
+.bar .fill.c{background:var(--pink)}
+.bar .v{font-family:"IBM Plex Mono",monospace;text-align:right;font-variant-numeric:tabular-nums}
+small.src{display:block;color:var(--muted);font-size:12px;margin-top:8px}
+.sources{columns:2;column-gap:28px;font-size:12.5px;color:var(--muted)}
+.sources a{color:var(--acc);text-decoration:none}
+.sources li{break-inside:avoid;margin-bottom:4px}
+@media (max-width:640px){.gap{grid-template-columns:1fr}.gap .arrow{justify-content:center;transform:rotate(90deg)}.sources{columns:1}.bar{grid-template-columns:110px 1fr 70px}}
+</style>
+
+<div class="wrap">
+<header>
+  <span class="eyebrow">Competitive map · 접이식 무선 BLDC 선풍기</span>
+  <h1>시코 폴딩팬이 만든 시장, 누가 어디에 서 있나</h1>
+  <p class="lead">시코 FLZ-254D를 기준점으로 폴딩 스탠드팬 경쟁사의 가격·사양·강점을 정리했습니다. 캠핑 채널의 기준 브랜드인 크레모아를 함께 놓고, 오아가 들어갈 수 있는 빈자리를 표시했습니다.</p>
+  <div class="meta"><span>조사일 2026-10-26</span><span>가격 = 다나와 최저가 또는 판매처 표시가</span><span>성수기엔 채널별로 최대 2배 변동</span></div>
+</header>
+
+<section>
+  <h2>시장은 3층으로 나뉩니다</h2>
+  <div class="tiers">
+    <div class="tier"><h3>① 프리미엄 폴딩 스탠드</h3><span class="price">15만 ~ 26만원</span>
+      <ul><li>시코가 원조, 신일·클레어·아이닉·클래파·프롬비가 추격</li><li>소구점: 얇게 접힘 + 내장 배터리 20시간 이상</li><li>신일 폴딩팬 3년 누적 72억, 2025년 1~5월 전년비 +63%</li></ul></div>
+    <div class="tier"><h3>② 중가 접이식 스탠드·서큘레이터</h3><span class="price">8만 ~ 15만원</span>
+      <ul><li>파세코 아리아, 신일 FD12·T08JK, 시너그래프, 르젠</li><li>소구점: "BLDC 서큘레이터인데 접힌다"</li><li>유선 모델 섞여 있어 무선 여부 확인 필수</li></ul></div>
+    <div class="tier mine"><h3>③ 저가 접이식 탁상·핸디</h3><span class="price">1만 ~ 6만원</span>
+      <ul><li>루메나, 프롬비 빅팬, 크레모아 V600+, 쿨린</li><li><b>오아 쿨링에어핸디팬 OPFN-016이 여기 있음</b> (32,900원, 4,000mAh 14h)</li><li>스탠드 폴딩 라인은 오아에 없음</li></ul></div>
+  </div>
+</section>
+
+<section>
+  <h2>경쟁사 비교표</h2>
+  <div class="tbox"><table>
+    <thead><tr><th>브랜드 / 모델</th><th>가격</th><th>형태</th><th>핵심 사양</th><th>강점</th><th>약점</th></tr></thead>
+    <tbody>
+      <tr class="hl"><td class="b">시코 FLB-254D 배터리 내장형 <span class="tag s">기준</span></td><td class="n">25.9만<br><span style="font-weight:400">정가 32.9만 · 공식몰 품절</span></td><td>폴딩 스탠드</td><td>10인치 7엽 BLDC · 4단 · 내장 배터리 "최대 60시간"(최저풍, 용량 비공개) · 접으면 7cm · 리모컨·타이머</td><td class="plus">원조 디자인 + 내장 배터리, 7cm 수납, 평점 4.6~4.7</td><td class="minus">26만원, 4단뿐, 용량·소음 비공개, 비시즌 품절</td></tr>
+      <tr class="hl"><td class="b">시코 FLA-254D 외장배터리형</td><td class="n">19.4만~23.8만<br><span style="font-weight:400">외장배터리+케이블 +7만</span></td><td>폴딩 스탠드</td><td>동일 본체 · 유선 24V 13.5W · 무선은 외장배터리 별매(20V)</td><td class="plus">리퍼 19.9만 등 가격 접근성</td><td class="minus">무선으로 쓰면 26만원대, 2단 이상 소음·저단 바람 약함 후기</td></tr>
+      <tr><td class="b">신일 SIF-H32CIV</td><td class="n">18.2만</td><td>폴딩 스탠드</td><td>12단 BLDC · 10,400mAh 20h · 3.6kg</td><td class="plus">대용량 내장 배터리, 캠핑 포지션, AS·브랜드 신뢰</td><td class="minus">디자인 투박, 3.6kg</td></tr>
+      <tr><td class="b">신일 SIF-FD12 / 26년형 H32UCVA</td><td class="n">12.4만 / 11.9만</td><td>폴딩 스탠드</td><td>12단 · 7,800mAh 27h / 저소음 캠핑형</td><td class="plus">보급형 가격으로 카테고리 볼륨 확대 중</td><td class="minus">사양 중복 라인업, 할인 의존</td></tr>
+      <tr><td class="b">클레어 4세대 폴딩형</td><td class="n">16.8만</td><td>폴딩 스탠드</td><td>무선 BLDC 저소음</td><td class="plus">다나와 인기순 1위 노출(광고)</td><td class="minus">배터리·풍량 사양 비공개, 인지도 낮음</td></tr>
+      <tr><td class="b">아이닉 iSC02</td><td class="n">14.9만~16.9만</td><td>폴딩 스탠드</td><td>10,200mAh 25h · 4단 · 18W · 25.04 출시</td><td class="plus">가전 브랜드 감성, 공격적 할인</td><td class="minus">4단뿐, 후기 적음</td></tr>
+      <tr><td class="b">클래파 에어제로 BEF-C156W</td><td class="n">14.2만~15.8만<br><span style="font-weight:400">정가 24.8만</span></td><td>폴딩 스탠드</td><td>15,600mAh 30h · 8단 · 35dB · 배터리 교체형</td><td class="plus">아기방 저소음 소구, 배터리 교체</td><td class="minus">중국 OEM, 정가 대비 큰 할인에 의존</td></tr>
+      <tr><td class="b">프롬비 타워스톰 FG261</td><td class="n">9.9만~25.8만</td><td>접이식 서큘레이터</td><td>무선 BLDC · 리모컨 · 하드케이스</td><td class="plus">캠핑 채널 강세, 가격 유연</td><td class="minus">채널별 가격 2배 편차, 배터리 사양 비공개</td></tr>
+      <tr><td class="b">파세코 아리아 PCF-MSF1100</td><td class="n">10.9만~11.9만<br><span style="font-weight:400">공식몰 17.9만</span></td><td>접이식 서큘레이터</td><td>10인치 3엽 BLDC · 12단 · 24W · 5kg · 보관가방</td><td class="plus">서큘레이터 성능, 가격 대비 사양</td><td class="minus">유선, 5kg, 접어도 두꺼움</td></tr>
+      <tr><td class="b">시너그래프 CoolFan003</td><td class="n">11.6만</td><td>접이식 스탠드</td><td>16엽 BLDC 무선</td><td class="plus">저소음 소구, 가격</td><td class="minus">브랜드 미약</td></tr>
+      <tr><td class="b">르젠 LZDF-FR10AT</td><td class="n">9.6만</td><td>접이식 스탠드</td><td>6단 BLDC · 2,600mAh 30h</td><td class="plus">가성비 스탠드</td><td class="minus">배터리 작음</td></tr>
+      <tr class="cl"><td class="b">크레모아 투윈드 팬 V2000 <span class="tag o">크레모아</span></td><td class="n">17.9만</td><td>스탠드 (비폴딩)</td><td>12단 BLDC · 15,000mAh 32h · 33cm 날개</td><td class="plus">배터리·사용시간 최상위, 캠핑 1등 브랜드 신뢰</td><td class="minus">접히지 않음, 수납 부피</td></tr>
+      <tr class="cl"><td class="b">크레모아 팬 V1500 <span class="tag o">크레모아</span></td><td class="n">16.5만 (품절)</td><td>탁상 대형</td><td>14,700mAh 38h · 4단 · 25cm · 1.54kg</td><td class="plus">보조배터리 겸용, 장시간</td><td class="minus">4단, 품절 잦음</td></tr>
+      <tr class="cl"><td class="b">크레모아 V1040 <span class="tag o">크레모아</span></td><td class="n">8.5만~8.9만</td><td>탁상 · 구스넥</td><td>10,400mAh 23h · 4단 · 18.2cm · 910g · 12W · 리모컨</td><td class="plus">캠핑 타프팬 표준, 보조배터리 겸용, 안전망 분리</td><td class="minus">접이식 아님, 바람 도달거리 짧음</td></tr>
+      <tr class="cl"><td class="b">크레모아 V600+ <span class="tag o">크레모아</span></td><td class="n">4.9만~5.9만</td><td>탁상</td><td>7,800mAh 32h · 4단 · 16.5cm · 600g</td><td class="plus">가성비 캠핑 입문, 색상 다양</td><td class="minus">소형, 접이식 아님</td></tr>
+      <tr class="cl"><td class="b">크레모아 팬 14 (CLFN-M140A) <span class="tag o">크레모아</span></td><td class="n">39.5만</td><td>탁상 초대형</td><td>30,000mAh 97h · 35.5cm · 4.46kg</td><td class="plus">카테고리 최고 배터리</td><td class="minus">가격·무게, 틈새</td></tr>
+      <tr><td class="b">루메나 FAN PRO MAX V / JET ULTRA FOLD</td><td class="n">4.99만</td><td>핸디 접이식</td><td>4,800mAh 22h / 10단 19h · 238~285g</td><td class="plus">핸디 1위 브랜드, 디자인</td><td class="minus">스탠드 아님</td></tr>
+      <tr><td class="b">프롬비 빅팬 FG259</td><td class="n">5.98만</td><td>핸디 접이식</td><td>10,000mAh 45h · 17.5cm · 465g</td><td class="plus">사용시간 최강</td><td class="minus">핸디 폼팩터</td></tr>
+      <tr><td class="b">쿨린 CL-007</td><td class="n">2.49만~2.99만</td><td>탁상 접이식</td><td>4,000mAh 12h · 520g</td><td class="plus">최저가 폴딩</td><td class="minus">성능·후기 적음</td></tr>
+      <tr class="hl"><td class="b">오아 라운드 PRO OFN-045 <span class="tag c">오아 기존</span></td><td class="n">정가 14.8만<br><span style="font-weight:400">판매가 12.9만 (10-26 확정)</span></td><td>삼각대 스탠드 (비접이)</td><td>33cm 7엽 BLDC · 12단 · 10,000mAh 24h · 21.6W · 500×900×480 · 리모컨·타이머·에코풍</td><td class="plus">배터리·풍량은 신일 H32급, 리뷰 1,300건 이상, 23년 3월 출시</td><td class="minus">접히지 않아 수납 부피, 폴딩팬과 가격대 겹침</td></tr>
+      <tr class="hl"><td class="b">오아 폴딩팬 (출시 예정) <span class="tag c">오아 신규</span></td><td class="n">미정</td><td>폴딩 스탠드</td><td>AC 어댑터 충전 전용 · 보조배터리 충전 불가 · 배터리 라운드 PRO의 절반(약 5,000mAh급, 확정 필요)</td><td class="plus">접이식 폼팩터, 시코 FLB(25.9만) 대비 반값 가능</td><td class="minus">USB 충전 ✕, 사용시간 10시간 안팎 예상, 라운드 PRO보다 배터리 작음</td></tr>
+      <tr class="hl"><td class="b">오아 쿨링에어핸디팬 OPFN-016 <span class="tag c">오아</span></td><td class="n">3.29만</td><td>핸디 접이식</td><td>BLDC · 4,000mAh 14h · 100단 · 225g</td><td class="plus">이미 보유한 접이식 핸디 라인</td><td class="minus">스탠드 폴딩 없음</td></tr>
+    </tbody>
+  </table></div>
+  <small class="src">가격은 10-26 기준 다나와 최저가·판매처 표시가. 시코 배터리 용량·무게, 클레어 배터리, 프롬비 FG261 배터리는 공개 자료에서 확인되지 않았습니다. 시코 공식몰은 10-26 현재 전 모델 품절(비시즌).</small>
+</section>
+
+<section>
+  <h2>크레모아는 어떻게 다른가</h2>
+  <div class="grid2">
+    <div class="note"><h3>크레모아는 '접힘'이 아니라 '배터리'로 싸웁니다</h3><p>V2000 15,000mAh 32시간, V1500 14,700mAh 38시간, 팬 14는 30,000mAh 97시간. 전 모델이 보조배터리 겸용이고 캠핑 타프에 매다는 용도가 기준입니다. 폴딩 스탠드 제품은 없습니다.</p></div>
+    <div class="note"><h3>같은 돈이면 어느 쪽이 팔리나</h3><p>18만원대에서 시코 FLA(접힘·외장배터리 별매)와 크레모아 V2000(비접힘·15,000mAh)이 만나고, 26만원에는 시코 FLB(접힘·내장)만 있습니다. 신일 H32CIV(18.2만)는 "접히고 배터리도 큰" 포지션으로 양쪽 고객을 가져갑니다. 오아 라운드 PRO(판매가 12.9만, 10,000mAh)는 비접이지만 이 표에서 가격 대비 배터리가 가장 좋은 축입니다.</p></div>
+    <div class="note"><h3>크레모아의 약점</h3><p>탁상형 중심이라 서 있는 선풍기 수요(원룸·사무실)를 못 받습니다. V1040은 4단, 18cm 날개로 바람 도달거리가 짧고, 인기 모델 V1500은 품절이 잦습니다.</p></div>
+    <div class="note"><h3>시코의 약점</h3><p>내장형 FLB는 25.9만원(정가 32.9만)으로 카테고리 최고가이고 4단뿐입니다. 외장형 FLA는 무선으로 쓰려면 +7만원이 듭니다. 두 모델 다 배터리 용량·dB·풍량을 공개하지 않고, 후기에서 2단부터 소음과 저단 풍량 부족이 반복됩니다.</p></div>
+  </div>
+</section>
+
+<section>
+  <h2>배터리 사용시간으로 본 위치 (최저단 기준, 제조사 공개값)</h2>
+  <div class="chart">
+    <div class="bar"><span>크레모아 팬 14</span><div class="track"><div class="fill c" style="width:100%"></div></div><span class="v">97h</span></div>
+    <div class="bar"><span>시코 FLB-254D (최저풍 공칭)</span><div class="track"><div class="fill" style="width:62%;opacity:.6"></div></div><span class="v">60h*</span></div>
+    <div class="bar"><span>프롬비 빅팬 FG259</span><div class="track"><div class="fill" style="width:46%"></div></div><span class="v">45h</span></div>
+    <div class="bar"><span>크레모아 V1500</span><div class="track"><div class="fill c" style="width:39%"></div></div><span class="v">38h</span></div>
+    <div class="bar"><span>크레모아 V2000</span><div class="track"><div class="fill c" style="width:33%"></div></div><span class="v">32h</span></div>
+    <div class="bar"><span>클래파 에어제로</span><div class="track"><div class="fill" style="width:31%"></div></div><span class="v">30h</span></div>
+    <div class="bar"><span>신일 SIF-FD12</span><div class="track"><div class="fill" style="width:28%"></div></div><span class="v">27h</span></div>
+    <div class="bar"><span>아이닉 iSC02</span><div class="track"><div class="fill" style="width:26%"></div></div><span class="v">25h</span></div>
+    <div class="bar"><span>오아 라운드 PRO</span><div class="track"><div class="fill" style="width:25%"></div></div><span class="v">24h</span></div>
+    <div class="bar"><span>크레모아 V1040</span><div class="track"><div class="fill c" style="width:24%"></div></div><span class="v">23h</span></div>
+    <div class="bar"><span>신일 SIF-H32CIV</span><div class="track"><div class="fill" style="width:21%"></div></div><span class="v">20h</span></div>
+    <div class="bar"><span>오아 폴딩팬 (예상)</span><div class="track"><div class="fill" style="width:10%;opacity:.5"></div></div><span class="v">~10h?</span></div>
+    <div class="bar"><span>오아 OPFN-016</span><div class="track"><div class="fill" style="width:14%"></div></div><span class="v">14h</span></div>
+    <div class="bar"><span>시코 FLA-254D</span><div class="track"><div class="fill" style="width:0%"></div></div><span class="v">외장 별매</span></div>
+  </div>
+  <small class="src">분홍 = 크레모아. *시코 FLB 60시간은 용량·조건 비공개 공칭값이라 흐리게 표시. 공개 수치가 없는 클레어·프롬비 FG261은 제외.</small>
+</section>
+
+<section>
+  <h2>오아 제품 조건으로 다시 본 자리</h2>
+  <div class="gap">
+    <div class="col"><h3>우리 조건</h3><p><b>시코식 납작 접힘</b>(헤드를 뒤집어 책처럼 세워 수납, 10-26 확인). AC 어댑터 충전 전용, 보조배터리로 충전 불가, 배터리는 경쟁사 절반 수준. 캠핑 시장(크레모아·신일 H32)의 핵심 구매 이유 두 가지, 즉 "USB로 어디서나 충전"과 "20시간 이상"을 둘 다 못 씁니다.</p></div>
+    <div class="arrow">→</div>
+    <div class="col target"><h3>그래서 포지션은 "시코의 반값 폴딩팬"</h3><p>시코 FLB(내장 배터리)가 25.9만, FLA는 무선 구성 시 26만원대입니다. 같은 "7cm 접힘 + 내장 배터리"를 <b>12.9만~14.9만</b>에 내면 비교 프레임이 성립합니다. 비교 대상은 시코 하나로 고정하고, 배터리 숫자로 붙는 신일·아이닉·크레모아와는 같은 화면에 서지 않습니다.</p></div>
+  </div>
+  <div class="note" style="margin-top:14px"><h3>"접이식"은 두 종류입니다 — 149,000이 성립하는 이유</h3>
+  <div class="tbox"><table style="min-width:620px"><thead><tr><th>접힘 방식</th><th>제품</th><th>접은 상태</th><th>가격대</th></tr></thead><tbody>
+  <tr><td>높이만 줄이는 접이(텔레스코픽)</td><td>신일 H32CIV·FD12, 아이닉 iSC02, 클래파, 파세코 아리아, 르젠</td><td>짧아지지만 두께 그대로, 헤드가 남음</td><td>9.6만~18.2만</td></tr>
+  <tr><td><b>납작하게 뒤집어 접는 접이(시코식)</b></td><td>시코 FLB-254D·FLA-254D, <b>오아 폴딩팬</b></td><td>두께 7cm급, 책처럼 세워 옷장 틈·트렁크 수납</td><td>시코 25.9만(내장) / 오아 14.9만</td></tr>
+  </tbody></table></div>
+  <p>14만원대 접이식(아이닉·클래파·신일 FD12)은 전부 텔레스코픽입니다. 납작 접힘은 시코와 오아 둘뿐이라 149,000은 "접이식 중간값"이 아니라 <b>"시코 반값"</b>으로 읽힙니다. 상세 첫 컷은 "옷장 틈에 꽂힌 선풍기" 한 장, 비교표는 시코 FLB 한 줄로 고정합니다. 라운드 PRO(비접이, 12.9만)와는 "접힘 필요 여부"로 자연 분리되고, 2만원 차이가 접힘·케이스·2년 보증의 값입니다.</p></div>
+  <div class="grid2" style="margin-top:14px">
+    <div class="note"><h3>라운드 PRO와의 관계 (자기잠식 주의)</h3><p>라운드 PRO는 판매가 12.9만(10-26 확정)에 10,000mAh 24시간·12단·33cm 비접이, 폴딩팬은 14.9만에 납작 접힘·배터리 절반. 2만원 차이의 사다리입니다. 라운드 PRO = 풍량·배터리·캠핑, 폴딩팬 = 수납·이동·실내로 한 화면에 "용도로 고르세요". 단, 라운드 PRO가 쿠팡·오늘의집에서 9.9만~11.9만으로 흘러내리면 폴딩팬은 실거래가 10만원대 제품과 비교되므로 <b>라운드 PRO 12.9만 유지(할인 금지)</b>가 149,000의 전제 조건입니다. 전산 평균단가가 8.6~9.2만이었던 건 할인·채널 정산 반영이므로 내년 할인 운영은 두 제품 동시에 설계해야 합니다.</p></div>
+    <div class="note"><h3>캠핑으로 시작해야 한다면</h3><p>국내 오토캠핑장 대부분이 사이트마다 220V 전기를 주고, 차박·글램핑 고객은 파워스테이션을 씁니다. 그래서 "AC 충전 전용"은 <b>오토캠핑·차박·글램핑</b>에서는 결함이 아닙니다. 노지·백패킹만 포기하면 됩니다. 메시지는 "전기 있는 캠핑장에서 낮엔 충전, 밤엔 무선 수면풍 N시간"으로 잡고, N은 최저단 실측값이어야 합니다. 밤 8시간이 안 나오면 캠핑 출발은 접어야 합니다. 시코가 파는 전용 가로 케이스(3.8만)처럼 수납 케이스를 기본 동봉하면 "차 트렁크에 꽂히는 선풍기"로 라운드 PRO와도 겹치지 않습니다.</p></div>
+  </div>
+  <div class="note" style="margin-top:14px"><h3>라운드 PRO 실제 판매 실적 (전산 v_daily_sales_detail, 10-26 조회)</h3>
+  <div class="tbox"><table style="min-width:620px">
+  <thead><tr><th>연도</th><th>판매수량</th><th>매출(전산)</th><th>평균 단가</th><th>피크 월</th></tr></thead>
+  <tbody>
+  <tr><td>2024 (4월 출시)</td><td>3,209대</td><td>2.94억</td><td>약 9.2만</td><td>6월 1,052대</td></tr>
+  <tr><td>2025 (카키 추가)</td><td>5,334대</td><td>4.73억</td><td>약 8.9만</td><td>6월 1,817대</td></tr>
+  <tr><td>2026 (~10월)</td><td>2,283대</td><td>1.96억</td><td>약 8.6만</td><td>7월 590대</td></tr>
+  </tbody></table></div>
+  <p>2년 7개월 누적 <b>10,826대</b>. 시즌은 3월에 열리고 5~7월에 전체의 70%가 팔리고 9월에 닫힙니다. 10~2월 다섯 달은 월 20대 미만, 반품이 더 많은 달도 있습니다. 2026년은 전년의 43%로 꺾였습니다. 2026 채널은 오늘의집 739 · 쿠팡 567 · 스마트스토어 399 · 고릴라캠핑(B2B) 217 · 카카오 선물하기 25대 순입니다.</p>
+  <p><b>2만대의 의미:</b> 라운드 PRO 최고 연도의 3.7배, 최고 월(1,817대)의 11배를 한 시즌에 팔아야 합니다. 회사 선풍기 라인업(보아르 포함) 중 평균 단가 8만원 이상으로 2025년 이후 누적 2만대를 넘긴 제품은 한 종도 없습니다(보아르 엘레어 5,613대, 메가에어써큘레이터3 4,851대, 라운드 PRO 5,334대). 2만대를 넘긴 것은 모두 1~3만원대 핸디·탁상팬입니다. 1차 2만대는 "한 시즌 완판"이 아니라 <b>2~3시즌 소진 계획</b>으로 잡고, 비수기 다섯 달을 채울 B2B·선물하기·홈쇼핑 물량을 처음부터 배분해야 합니다.</p></div>
+  <div class="grid2" style="margin-top:14px">
+    <div class="note"><h3>살릴 소구점</h3><p>① 접은 두께·수납(시코가 증명한 구매 이유) ② 무게 2.5kg 이하라면 "한 손 이동" ③ 실측 소음 dB와 풍량(접이식 중 공개 브랜드 없음) ④ 플렌티플렛과 같은 "접이식 무선" 패밀리 문법.</p></div>
+    <div class="note w"><h3>피할 표현</h3><p>노지·백패킹·"하루 종일" 같은 장시간 소구, 보조배터리 연결 암시, USB-C 표기. 사용시간은 최저단 기준 실측값만 쓰고 "최대 N시간"은 조건을 함께 표기해야 합니다. 캠핑으로 가더라도 "전기 사이트·파워스테이션 기준"을 상세 첫 화면에 명시해야 리뷰 방어가 됩니다.</p></div>
+  </div>
+</section>
+
+<section>
+  <h2>가격 시나리오 (원가 5.5만원 가정)</h2>
+  <div class="tbox"><table style="min-width:760px">
+    <thead><tr><th>판매가</th><th>스마트스토어 6%</th><th>쿠팡 판매자배송 10.8%</th><th>오픈마켓·홈쇼핑몰 13%</th><th>카카오 선물하기 19.5%+2,700</th><th>자리</th></tr></thead>
+    <tbody>
+      <tr class="hl"><td class="n">149,000</td><td class="n">77,080 (52%)</td><td class="n">69,928 (47%)</td><td class="n">66,650 (45%)</td><td class="n">54,265 (36%)</td><td><b>확정 판매가(10-26 사장님).</b> 아이닉·클래파·라운드 PRO 정가와 같은 칸이라 "구성·보증·실측"으로 값을 만들어야 함. 아래 성립 조건 참조</td></tr>
+      <tr><td class="n">139,000</td><td class="n">67,880 (49%)</td><td class="n">61,208 (44%)</td><td class="n">58,150 (42%)</td><td class="n">46,415 (33%)</td><td>(이전 검토안) 라운드 PRO 12.9만과 1만원 차이라 사다리가 무너짐. 폐기</td></tr>
+      <tr><td class="n">129,000</td><td class="n">58,680 (45%)</td><td class="n">52,488 (41%)</td><td class="n">49,650 (38%)</td><td class="n">38,565 (30%)</td><td>(이전 권장안) 신일 FD12(12.4만) 바로 위. 149,000 확정으로 행사가 하한 후보</td></tr>
+      <tr><td class="n">119,000</td><td class="n">49,480 (42%)</td><td class="n">43,768 (37%)</td><td class="n">41,150 (35%)</td><td class="n">30,715 (26%)</td><td>행사 하한. 광고비 15% 써도 남음</td></tr>
+      <tr><td class="n">99,000</td><td class="n">31,080 (31%)</td><td class="n">26,328 (27%)</td><td class="n">24,150 (24%)</td><td class="n">15,015 (15%)</td><td>방어선. 광고 태우면 적자 근접, 공구 1회성만</td></tr>
+    </tbody>
+  </table></div>
+  <small class="src">기여이익 = 판매가 − 수수료 − 원가 55,000 − 포장·택배 5,000 − 반품·AS 충당 2%. 광고비 별도. 쿠팡 로켓(직매입)은 공급가 협의라 제외.</small>
+  <div class="grid2" style="margin-top:14px">
+    <div class="note"><h3>149,000 실판매가 성립 조건</h3><p>① 정가는 169,000~179,000으로 두고 자사몰에서 실제 판매 이력을 만든 뒤 149,000을 상시가로 표기(표시광고법상 허위 정가 방지). ② 수납 케이스·리모컨·어댑터 기본 동봉 "풀패키지"(시코는 케이스만 3.8만 별매). ③ 보증 2년(경쟁사 전부 1년, 라운드 PRO도 1년). 기여이익 52%라 충당 가능. ④ 최저단 실측 사용시간·dB·무게·접은 두께 공개. ⑤ 라운드 PRO 12.9만 고정(할인 금지)으로 2만원 사다리 유지, "풍량·배터리 vs 접힘·수납"으로 역할 분리. ⑥ 1차 시즌 홈쇼핑·공구·쿠팡 최저가 동기화 금지로 가격 유지. 선물하기·B2B는 149,000 유지가 쉬운 채널.</p></div>
+    <div class="note"><h3>149,000에서의 광고 여력</h3><p>스마트스토어 기준 대당 77,080원이 남으므로 광고비를 대당 3만원(판매가의 20%) 써도 4.7만원이 남습니다. 2만대 × 149,000 = 매출 29.8억, 기여이익 11~15억(채널 믹스에 따라). 반대로 129,000으로 내리면 대당 1.8만원씩 2만대에 3.7억이 사라지므로, 할인은 재고 소진 속도가 계획보다 늦을 때만 쓰는 카드로 남겨야 합니다.</p></div>
+    <div class="note w"><h3>원가에 아직 안 들어간 것</h3><p>KC·전파 인증비, 초기 금형·개발비 배분, 리모컨·보관가방 등 구성품, 배터리 포함 해상운송과 관세(리튬 배터리는 항공 제약), 불량률. 이것들을 넣으면 실제 원가는 6만원대로 봐야 합니다.</p></div>
+  </div>
+</section>
+
+<section>
+  <div class="grid2">
+    <div class="note w"><h3>주의: 성수기 가격 붕괴</h3><p>프롬비 FG261은 같은 모델이 9.9만~25.8만원, 파세코는 10.7만~17.9만원으로 채널별 2배 차이가 납니다. 진입 시 채널 가격 통제가 손익을 좌우합니다.</p></div>
+    <div class="note w"><h3>확인하지 못한 것</h3><p>시코 FLZ-254D의 무게·소비전력(13.5W 표기만), 2026년 시코 신모델 유무, 클레어 4세대 배터리, 보국전자 무선 폴딩팬 존재 여부(유선 서큘레이터만 확인), 폴딩팬 시장 규모 공식 통계(신일 공개치만 있음).</p></div>
+  </div>
+</section>
+
+<section>
+  <h2>출처</h2>
+  <ul class="sources">
+    <li><a href="https://prod.danawa.com/info/?pcode=57303596">다나와 시코 FLZ-254D</a></li>
+    <li><a href="https://cicomall.com/product/%ED%8F%B4%EB%94%A9%ED%8C%AC-%EC%A0%91%EC%9D%B4%ED%98%95-254d/87/">시코몰 FLZ-254D</a></li>
+    <li><a href="https://www.ssg.com/item/itemView.ssg?itemId=1000028533453">SSG 시코 본사직영</a></li>
+    <li><a href="https://www.thescoop.co.kr/news/articleView.html?idxno=310462">더스쿠프 접히는 무선 선풍기</a></li>
+    <li><a href="https://search.danawa.com/dsearch.php?query=%EC%A0%91%EC%9D%B4%EC%8B%9D+%EB%AC%B4%EC%84%A0+%EC%84%A0%ED%92%8D%EA%B8%B0">다나와 접이식 무선 선풍기</a></li>
+    <li><a href="https://search.danawa.com/dsearch.php?query=%ED%8F%B4%EB%94%A9%ED%8C%AC">다나와 폴딩팬</a></li>
+    <li><a href="https://search.danawa.com/dsearch.php?query=%ED%81%AC%EB%A0%88%EB%AA%A8%EC%95%84+%EC%84%A0%ED%92%8D%EA%B8%B0">다나와 크레모아 선풍기</a></li>
+    <li><a href="https://prod.danawa.com/info/?pcode=16400486">다나와 크레모아 V1040</a></li>
+    <li><a href="https://prismlight.co.kr/category/%EC%84%A0%ED%92%8D%EA%B8%B0/123/">크레모아 공식몰 선풍기</a></li>
+    <li><a href="https://m.lotteimall.com/goods/viewGoodsDetail.lotte?goods_no=2993412209">롯데아이몰 신일 폴딩팬</a></li>
+    <li><a href="https://m.gsshop.com/section/brandSect/269218?lCate=1660676&mCate=1661370&mseq=406604">GS SHOP 신일 26년형</a></li>
+    <li><a href="https://www.mt.co.kr/future/2025/06/10/2025061015424032608">머니투데이 신일 폴딩팬 +63%</a></li>
+    <li><a href="https://edaily.co.kr/News/Read?mediaCodeNo=257&newsId=01577686638952552">이데일리 신일 폴딩팬 누적 72억</a></li>
+    <li><a href="https://biz.newdaily.co.kr/site/data/html/2026/07/31/2026073100099.html">뉴데일리 신일 폴딩팬 체험기</a></li>
+    <li><a href="https://prod.danawa.com/info/?pcode=14626505">다나와 파세코 PCF-MSF1100</a></li>
+    <li><a href="https://www.kurly.com/goods/1002132275">컬리 아이닉 iSC02</a></li>
+    <li><a href="https://www.kurly.com/goods/1001422448">컬리 클래파 에어제로</a></li>
+    <li><a href="https://m.gsshop.com/section/brandSect/78350?lCate=1660676">GS SHOP 프롬비</a></li>
+    <li><a href="https://prod.danawa.com/info/?pcode=19952924">다나와 쿨린 CL-007</a></li>
+    <li><a href="https://www.youtube.com/watch?v=mkrSiipiL94">유튜브 무선선풍기 판매순위</a></li>
+  </ul>
+</section>
+</div>

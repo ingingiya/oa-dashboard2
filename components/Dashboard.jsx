@@ -579,7 +579,7 @@ function pbSeedFoldingFan() {
   return {
     id: pbId(), name:"폴딩팬 (가칭)", status:"진행", targetDate:"2027-04-30", owner:"사장님",
     summary:"시코식 납작 접힘 무선 스탠드 선풍기. AC 어댑터 충전 전용(보조배터리 ✕), 배터리는 라운드 PRO의 절반. 1차 20,000대, 판매가 149,000 고정. 포지션 = '시코 FLB-254D(25.9만)의 반값'. 라운드 PRO(129,000, 비접이)와는 접힘 여부로 역할 분리.",
-    links:[{label:"경쟁 분석·가격 페이지", url:"https://claude.ai/artifact/FKLyyfLJKezHKCpSbCsFK6"}],
+    links:[{label:"경쟁 분석·가격 페이지", url:"/projects/foldingfan.htm"}],
     decisions:[
       {id:pbId(), date:D, by:"사장님", text:"판매가 149,000 고정. 정가는 169,000~179,000으로 두고 자사몰 실판매 이력 후 149,000 상시가 표기"},
       {id:pbId(), date:D, by:"사장님", text:"라운드 PRO 판매가 129,000. 폴딩팬과 2만원 사다리, 라운드 PRO 할인 금지가 전제"},
@@ -9787,7 +9787,6 @@ export default function OaDashboard(){
 
   const NAVS=[
     {id:"home",      icon:"home",           label:"홈"},
-    {id:"portfolio", icon:"donut_small",    label:"포트폴리오"},
     {id:"traffic",   icon:"route",          label:"광고관리(트래픽)"},
     {id:"meta",      icon:"campaign",       label:"메타광고"},
     {id:"guide",     icon:"menu_book",      label:"가이드"},
@@ -9795,7 +9794,6 @@ export default function OaDashboard(){
     {id:"project",   icon:"view_kanban",    label:"프로젝트"},
     {id:"schedule",  icon:"calendar_month", label:"스케줄"},
     {id:"creative",  icon:"palette",        label:"소재"},
-    {id:"insight",   icon:"edit_note",      label:"팀 노트"},
   ];
   const NAVS_WIP=[
     {id:"keyword",   icon:"search",         label:"키워드"},
@@ -18938,33 +18936,6 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
                       {totalAlerts}
                     </span>
                   )}
-                </button>
-              );
-            })}
-          </div>
-          {/* 수리중 탭 구분선 */}
-          <div style={{borderTop:"1px solid rgba(0,0,0,.06)",marginTop:8,paddingTop:8}}>
-            <div style={{fontSize:12,fontWeight:800,color:"#C93400",padding:"2px 14px 6px",letterSpacing:"0.05em",display:"flex",alignItems:"center",gap:4}}>
-              🚧 <span>수리중</span>
-            </div>
-            {NAVS_WIP.map(n=>{
-              const active = sec===n.id;
-              return(
-                <button key={n.id} onClick={()=>n.href?window.location.assign(n.href):setSec(n.id)} style={{
-                  width:"100%",display:"flex",alignItems:"center",gap:12,
-                  padding:"11px 14px",borderRadius:11,border:"none",cursor:"pointer",
-                  fontFamily:"inherit",fontWeight:700,fontSize:13,
-                  marginBottom:4,transition:"all 0.18s",textAlign:"left",
-                  background:active?"#FF9F0A":"transparent",
-                  color:active?C.white:"#86868B",
-                  boxShadow:active?"0 4px 12px rgba(255,159,10,.3)":"none",
-                  opacity:0.9,
-                }}
-                onMouseEnter={e=>{ if(!active){ e.currentTarget.style.background="rgba(0,0,0,.045)"; } }}
-                onMouseLeave={e=>{ if(!active){ e.currentTarget.style.background="transparent"; } }}>
-                  <MI n={n.icon} size={18}/>
-                  <span>{n.label}</span>
-                  <span style={{marginLeft:"auto",fontSize:11,fontWeight:800,color:"#f59e0b",background:"#fef3c7",borderRadius:4,padding:"1px 5px",border:"1px solid #fcd34d"}}>수리중</span>
                 </button>
               );
             })}
