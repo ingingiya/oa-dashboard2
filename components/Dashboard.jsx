@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef, Fragment } from "react";
 import { getSetting, setSetting, getAdImages, saveAdImagesMeta, uploadAdImage, uploadSettleFile, getBeautyRealSales } from "../lib/useSupabase";
 import TrafficAdsSection from "./TrafficAdsSection"; // 광고관리(트래픽) — 카카오 선물하기 유입 캠페인 운영표 (09-21)
+import GongguInfluencerSection from "./GongguInfluencerSection"; // 공구 인플루언서 리서치 뷰 (data/gonggu-influencers.json 정적, 10-26)
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // Supabase 동기화 훅 — 팀 전체 공유 (localStorage 대체)
@@ -9788,6 +9789,7 @@ export default function OaDashboard(){
   const NAVS=[
     {id:"home",      icon:"home",           label:"홈"},
     {id:"traffic",   icon:"route",          label:"광고관리(트래픽)"},
+    {id:"gonggu",    icon:"groups",         label:"공구 인플루언서"},
     {id:"meta",      icon:"campaign",       label:"메타광고"},
     {id:"guide",     icon:"menu_book",      label:"가이드"},
     {id:"inf_archive",icon:"photo_library", label:"아카이브"},
@@ -18989,6 +18991,7 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
           {sec==="launch"      && <LaunchSection/>}
           {sec==="project"     && <ProjectBoardSection/>}
           {sec==="traffic"     && <TrafficAdsSection C={C} Card={Card}/>}
+          {sec==="gonggu"      && <GongguInfluencerSection C={C} Card={Card}/>}
           {sec==="schedule"    && ScheduleSection}
           {sec==="naver"       && <NaverSection/>}
           {sec==="creative"    && CreativeSection}
