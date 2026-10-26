@@ -61,6 +61,8 @@ export default function GongguInfluencerSection({ C, Card }) {
     const bg = v.startsWith("프리온") ? C.blush : v.startsWith("플렌티") ? C.sageLt : C.cream;
     return <span style={{ fontSize: 11, fontWeight: 800, padding: "2px 8px", borderRadius: 20, color: col, background: bg, border: `1px solid ${col}33`, whiteSpace: "nowrap" }}>{v}</span>;
   };
+  const Av = ({ src, size = 28 }) => src ? <img src={src} alt="" loading="lazy" referrerPolicy="no-referrer" style={{ width: size, height: size, borderRadius: "50%", objectFit: "cover", background: C.cream, flexShrink: 0 }} /> : <span style={{ width: size, height: size, borderRadius: "50%", background: C.cream, display: "inline-block", flexShrink: 0 }} />;
+  const Thumbs = ({ list }) => <div style={{ display: "flex", gap: 4 }}>{(list || []).map((u, i) => <a key={i} href={u} target="_blank" rel="noreferrer"><img src={u} alt="" loading="lazy" referrerPolicy="no-referrer" style={{ width: 44, height: 44, borderRadius: 6, objectFit: "cover", background: C.cream, display: "block" }} /></a>)}</div>;
   const Account = ({ a }) => isHandle(a)
     ? <a href={igUrl(a)} target="_blank" rel="noreferrer" style={{ color: C.rose, fontWeight: 700, textDecoration: "none" }}>@{a}</a>
     : <span style={{ fontWeight: 700 }}>{a}</span>;
@@ -154,7 +156,7 @@ export default function GongguInfluencerSection({ C, Card }) {
               <tbody>
                 {zvHist.map((r, i) => (
                   <tr key={i} style={{ opacity: r.sales > 0 ? 1 : 0.6 }}>
-                    <td style={{ ...td, whiteSpace: "nowrap" }}><a href={`https://zv-zo.com/ko/${r.code}`} target="_blank" rel="noreferrer" style={{ color: C.rose, fontWeight: 700, textDecoration: "none" }}>{r.alias}</a> <span style={{ color: C.inkLt, fontSize: 11 }}>{r.code}</span></td>
+                    <td style={{ ...td, whiteSpace: "nowrap" }}><span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}><Av src={r.pic} /><span><a href={`https://zv-zo.com/ko/${r.code}`} target="_blank" rel="noreferrer" style={{ color: C.rose, fontWeight: 700, textDecoration: "none" }}>{r.alias}</a> <span style={{ color: C.inkLt, fontSize: 11 }}>{r.code}</span></span></span></td>
                     <td style={{ ...td, textAlign: "right", fontWeight: 800, whiteSpace: "nowrap" }}>{r.sales > 0 ? won(r.sales) : "—"}</td>
                     <td style={{ ...td, textAlign: "right", whiteSpace: "nowrap", color: C.inkMid }}>{r.units} / {r.sold}</td>
                     <td style={{ ...td, whiteSpace: "nowrap", color: C.inkMid }}>{r.last === "9999-12-31" ? "상시" : r.last}</td>
@@ -170,7 +172,7 @@ export default function GongguInfluencerSection({ C, Card }) {
               <tbody>
                 {zvLiked.map((r, i) => (
                   <tr key={i}>
-                    <td style={{ ...td, whiteSpace: "nowrap" }}><a href={`https://zv-zo.com/ko/${r.code}`} target="_blank" rel="noreferrer" style={{ color: C.rose, fontWeight: 700, textDecoration: "none" }}>{r.alias}</a> <span style={{ color: C.inkLt, fontSize: 11 }}>{r.code}</span>{r.newbie && <span style={{ marginLeft: 4, fontSize: 10, color: C.sage, fontWeight: 800 }}>NEW</span>}</td>
+                    <td style={{ ...td, whiteSpace: "nowrap" }}><span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}><Av src={r.pic} /><span><a href={`https://zv-zo.com/ko/${r.code}`} target="_blank" rel="noreferrer" style={{ color: C.rose, fontWeight: 700, textDecoration: "none" }}>{r.alias}</a> <span style={{ color: C.inkLt, fontSize: 11 }}>{r.code}</span>{r.newbie && <span style={{ marginLeft: 4, fontSize: 10, color: C.sage, fontWeight: 800 }}>NEW</span>}</span></span></td>
                     <td style={{ ...td, textAlign: "right", whiteSpace: "nowrap" }}>{fmtK(r.f)}{r.yt ? <span style={{ color: C.inkLt, fontSize: 11 }}> · YT {fmtK(r.yt)}</span> : null}</td>
                     <td style={{ ...td, whiteSpace: "nowrap", color: C.inkMid, fontSize: 12 }}>{(r.main || []).join("·") || "—"}</td>
                     <td style={{ ...td, whiteSpace: "nowrap", color: C.inkMid, fontSize: 12 }}>{r.tier || "—"}</td>
@@ -187,7 +189,7 @@ export default function GongguInfluencerSection({ C, Card }) {
               <tbody>
                 {(zvzo?.picks || []).map((r, i) => (
                   <tr key={i}>
-                    <td style={{ ...td, whiteSpace: "nowrap" }}><a href={`https://zv-zo.com/ko/${r.code}`} target="_blank" rel="noreferrer" style={{ color: C.rose, fontWeight: 700, textDecoration: "none" }}>{r.alias}</a> <span style={{ color: C.inkLt, fontSize: 11 }}>{r.code}</span></td>
+                    <td style={{ ...td, whiteSpace: "nowrap" }}><span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}><Av src={r.pic} /><span><a href={`https://zv-zo.com/ko/${r.code}`} target="_blank" rel="noreferrer" style={{ color: C.rose, fontWeight: 700, textDecoration: "none" }}>{r.alias}</a> <span style={{ color: C.inkLt, fontSize: 11 }}>{r.code}</span></span></span></td>
                     <td style={{ ...td, textAlign: "right", whiteSpace: "nowrap" }}>{fmtK(r.f)}</td>
                     <td style={{ ...td, textAlign: "right", fontWeight: 800 }}>{r.score}</td>
                     <td style={{ ...td, whiteSpace: "nowrap", color: C.inkMid }}>{r.self_rev || "—"}</td>
@@ -223,12 +225,13 @@ export default function GongguInfluencerSection({ C, Card }) {
         </div>
         <div style={{ overflowX: "auto", maxHeight: 640, overflowY: "auto" }}>
           <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 600 }}>
-            <thead><tr><th style={th}>#</th><th style={th}>계정</th><th style={{ ...th, textAlign: "right" }}>팔로워</th><th style={{ ...th, textAlign: "right" }}>릴스 평균 조회</th><th style={{ ...th, textAlign: "right" }}>조회/팔로워</th><th style={{ ...th, textAlign: "right" }}>좋아요</th><th style={{ ...th, textAlign: "right" }}>댓글</th><th style={th}>카테고리</th></tr></thead>
+            <thead><tr><th style={th}>#</th><th style={th}>계정</th><th style={th}>최근 콘텐츠</th><th style={{ ...th, textAlign: "right" }}>팔로워</th><th style={{ ...th, textAlign: "right" }}>릴스 평균 조회</th><th style={{ ...th, textAlign: "right" }}>조회/팔로워</th><th style={{ ...th, textAlign: "right" }}>좋아요</th><th style={{ ...th, textAlign: "right" }}>댓글</th><th style={th}>카테고리</th></tr></thead>
             <tbody>
               {ipRows.slice(0, ipLimit).map((r, i) => (
                 <tr key={r.u}>
                   <td style={{ ...td, color: C.inkLt, fontSize: 11 }}>{i + 1}</td>
-                  <td style={{ ...td, whiteSpace: "nowrap" }}><Account a={r.u} /></td>
+                  <td style={{ ...td, whiteSpace: "nowrap" }}><span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}><Av src={r.pic} /><Account a={r.u} /></span></td>
+                  <td style={{ ...td, padding: "6px 12px" }}><Thumbs list={r.th} /></td>
                   <td style={{ ...td, textAlign: "right", whiteSpace: "nowrap" }}>{fmtK(r.f)}</td>
                   <td style={{ ...td, textAlign: "right", fontWeight: 800, whiteSpace: "nowrap" }}>{fmtK(r.v)}</td>
                   <td style={{ ...td, textAlign: "right", whiteSpace: "nowrap", color: r.v / r.f >= 1 ? C.rose : C.inkMid }}>{(r.v / r.f).toFixed(1)}x</td>
@@ -237,7 +240,7 @@ export default function GongguInfluencerSection({ C, Card }) {
                   <td style={{ ...td, color: C.inkLt, fontSize: 12 }}>{(r.cats || []).map((c) => IP_CAT[c] || c).join(" · ")}</td>
                 </tr>
               ))}
-              {!ipAll && <tr><td colSpan={8} style={{ ...td, color: C.inkLt, padding: 20 }}>불러오는 중…</td></tr>}
+              {!ipAll && <tr><td colSpan={9} style={{ ...td, color: C.inkLt, padding: 20 }}>불러오는 중…</td></tr>}
             </tbody>
           </table>
           {ipRows.length > ipLimit && <div style={{ padding: 12, textAlign: "center" }}><button onClick={() => setIpLimit(ipLimit + 200)} style={{ fontSize: 12, fontWeight: 700, padding: "7px 16px", borderRadius: 20, border: `1px solid ${C.border}`, background: C.white, cursor: "pointer" }}>200명 더 보기 ({(ipRows.length - ipLimit).toLocaleString()}명 남음)</button></div>}
