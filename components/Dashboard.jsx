@@ -514,6 +514,25 @@ const PB_STATUS_STYLE = {
 const PB_MEMBERS = ["지원","경은","혜영","소리","영서","사장님"];
 const PB_NOTION_MEMBERS = ["소리","영서","경은","혜영"]; // 노션 일정 DB 담당자 select 옵션
 
+const PB_MEASURE_COLS = ["오아 샘플","시코 FLB-254D","라운드 PRO"];
+const PB_MEASURE_ROWS = [
+  ["fold_t","접은 두께","cm",["","7(공칭)",""]],
+  ["height","펼친 최대 높이","cm",["","",""]],
+  ["weight","무게","kg",["","",""]],
+  ["run_min","최저단 사용시간","h",["","60(공칭, 최저풍)","24(공칭)"]],
+  ["run_mid","중간단 사용시간","h",["","",""]],
+  ["run_max","최대단 사용시간","h",["","",""]],
+  ["db_min","최저단 소음","dB",["","비공개",""]],
+  ["db_max","최대단 소음","dB",["","비공개",""]],
+  ["wind","최대 풍속","m/s",["","비공개",""]],
+  ["charge","완충 시간","h",["","","2.5(어댑터 DC18V 1.2A)"]],
+  ["charge_use","사용 중 충전","",["","","1~8단만"]],
+  ["mah","배터리 용량","mAh",["","비공개","10,000"]],
+  ["steps","풍량 단수","단",["","4","12"]],
+  ["price","판매가","원",["149,000","259,000","129,000"]],
+];
+function pbNewMeasurements(){ return {cols:[...PB_MEASURE_COLS], rows:PB_MEASURE_ROWS.map(([key,label,unit,vals])=>({key,label,unit,vals:[...vals],note:""}))}; }
+
 function pbToday(){ return new Date(Date.now()+9*3600*1000).toISOString().slice(0,10); }
 function pbDays(d){ if(!d) return null; return Math.ceil((new Date(d+"T00:00:00+09:00")-Date.now())/86400000); }
 function pbFmt(iso){ if(!iso) return ""; const d=new Date(iso); return `${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}`; }
@@ -533,8 +552,8 @@ function pbSeedFoldingFan() {
     pbItem("최저단·중간·최대 사용시간 실측 (만충→꺼짐 영상 기록, 8h 기준)", "2026-11-14"),
     pbItem("소음 dB·풍속 실측 (시코·라운드 PRO 같은 조건)", "2026-11-14"),
     pbItem("충전 시간·사용 중 충전 가능 여부 확인", "2026-11-14"),
-    pbItem("컬러 확정: 포그밀크 계열 65 / 차콜·올리브그레이 35 (라운드 PRO 베이지6:카키4 근거)", "2026-11-21"),
-    pbItem("수납 케이스 기본 동봉 결정 (시코는 3.8만 별매)", "2026-11-21"),
+    pbItem("컬러 확정: 포그밀크 계열 65 / 차콜·올리브그레이 35 (라운드 PRO 베이지6:카키4 근거)", "2026-11-21", {needsDecision:true}),
+    pbItem("수납 케이스 기본 동봉 결정 (시코는 3.8만 별매)", "2026-11-21", {needsDecision:true}),
     pbItem("2차 발주 수정 리스트 개설: ①USB-C PD ②교체형 배터리 ③증량/역충전 ④랜턴 LED ⑤온도연동 자동풍", "2026-12-31"),
   ]};
   t.dev = { owner:"", items:[
@@ -542,7 +561,7 @@ function pbSeedFoldingFan() {
     pbItem("충전 단자 보강 (라운드 PRO AS 1위: 잭 접촉 불량)", "2026-11-21"),
     pbItem("충전 중 전 단계 사용 가능 확인 (라운드 PRO는 1~8단만)", "2026-11-21"),
     pbItem("배터리 저전압 보호 펌웨어 + 장기 방치 시 2~3개월 충전 안내", "2026-11-28"),
-    pbItem("좌우 회전 구조 결정: 손으로 돌려도 안 망가지는 클러치 또는 상하 각도만", "2026-11-28"),
+    pbItem("좌우 회전 구조 결정: 손으로 돌려도 안 망가지는 클러치 또는 상하 각도만", "2026-11-28", {needsDecision:true}),
     pbItem("리모컨 본체 자석 거치 + 수신 범위 확대", "2026-11-28"),
     pbItem("비프음 끄기(무음) 모드", "2026-11-28"),
     pbItem("KC 전기용품 안전확인·전파인증·배터리 KC·UN38.3 서류 확보 (공장 보유 여부 먼저)", "2026-12-19"),
@@ -572,7 +591,7 @@ function pbSeedFoldingFan() {
     pbItem("카카오 선물하기 기획 노출 구매 (어버이날·신혼)", "2027-04-10"),
   ]};
   t.cs = { owner:"", items:[
-    pbItem("보증 2년 결정 (경쟁사 전부 1년, 기여이익 52%로 충당)", "2026-11-21"),
+    pbItem("보증 2년 결정 (경쟁사 전부 1년, 기여이익 52%로 충당)", "2026-11-21", {needsDecision:true}),
     pbItem("FAQ: 보조배터리 충전 불가·사용시간 조건·장기 미사용 충전 주기·회전 손조작 금지", "2027-03-13"),
     pbItem("AS 부품 단가표 (날개·어댑터·리모컨·케이스)", "2027-03-13"),
     pbItem("리뷰·CS 태그 체계 (사용시간/충전/소음/안정성) → 2차 발주 수정 근거", "2027-04-10"),
@@ -589,14 +608,14 @@ function pbSeedFoldingFan() {
       {id:pbId(), date:D, by:"사장님", text:"1차 2만대는 한 시즌 완판이 아닌 2~3시즌 소진 계획. 비수기 5개월은 B2B·선물하기·복지몰로"},
       {id:pbId(), date:D, by:"사장님", text:"캠핑 소구는 오토캠핑 전기 사이트·파워스테이션 전제. 최저단 실측 8시간 미만이면 캠핑 소구 제외"},
     ],
-    teams:t, log:[{at:new Date().toISOString(), by:"클로드", text:"프로젝트 생성 (10-26 회의 내용 반영)"}],
+    teams:t, measurements:pbNewMeasurements(), log:[{at:new Date().toISOString(), by:"클로드", text:"프로젝트 생성 (10-26 회의 내용 반영)"}],
     createdAt:new Date().toISOString(),
   };
 }
 
 function pbNewProject(name) {
   const t = {}; for (const d of PB_TEAM_DEFS) t[d.key] = {owner:"", items:[]};
-  return { id:pbId(), name, status:"진행", targetDate:"", owner:"", summary:"", links:[], decisions:[], teams:t,
+  return { id:pbId(), name, status:"진행", targetDate:"", owner:"", summary:"", links:[], decisions:[], teams:t, measurements:pbNewMeasurements(),
     log:[{at:new Date().toISOString(), by:"", text:"프로젝트 생성"}], createdAt:new Date().toISOString() };
 }
 
@@ -786,6 +805,31 @@ function ProjectBoardSection() {
           </Card>
         </div>
 
+        {/* 결정 대기함 */}
+        {(()=>{
+          const pend = allItems.filter(i=>i.needsDecision && i.status!=="완료");
+          if (!pend.length) return null;
+          return (
+            <Card style={{border:"1.5px solid #fecaca",background:"#fffafa"}}>
+              <CardTitle title={`🔴 사장님 결정 대기 (${pend.length})`} sub="결정 내용을 쓰고 엔터 → 결정 사항에 기록되고 항목 메모에 남습니다. 텔레그램으로 답하셔도 같은 자리에 기록돼요"/>
+              <div style={{display:"flex",flexDirection:"column",gap:6}}>
+                {pend.map(it=>(
+                  <div key={it.id} style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap",padding:"7px 10px",background:C.white,border:`1px solid ${C.border}`,borderRadius:10}}>
+                    <span style={{fontSize:11,fontWeight:800,color:C.inkLt,whiteSpace:"nowrap"}}>{it.teamLabel}</span>
+                    <span style={{fontSize:12.5,color:C.ink,flex:"1 1 260px"}}>{it.text}{it.due?<span style={{color:C.inkLt,fontSize:11}}> · {it.due.slice(5)}</span>:null}</span>
+                    <input placeholder="결정 내용 입력 후 엔터" style={{...inp,flex:"1 1 220px"}}
+                      onKeyDown={e=>{ const v=e.currentTarget.value.trim(); if(e.key!=="Enter"||!v) return;
+                        patchSel(p=>{ (p.decisions=p.decisions||[]).push({id:pbId(),date:today,by:who,text:v}); const x=p.teams[it.teamKey].items.find(y=>y.id===it.id); if(x){ x.needsDecision=false; x.memo=`결정: ${v}`.slice(0,200); stamp(x);} }, `결정: ${v.slice(0,40)}`);
+                        e.currentTarget.value=""; }}/>
+                    <button title="결정 대기 해제" onClick={()=>patchSel(p=>{ const x=p.teams[it.teamKey].items.find(y=>y.id===it.id); if(x){ x.needsDecision=false; stamp(x);} }, `${it.text.slice(0,30)} 결정 필요 해제`)}
+                      style={{border:"none",background:"transparent",cursor:"pointer",color:C.inkLt,padding:0,display:"flex"}}><MI n="close" size={13}/></button>
+                  </div>
+                ))}
+              </div>
+            </Card>
+          );
+        })()}
+
         {/* 필터 */}
         <div style={{display:"flex",gap:6,flexWrap:"wrap",alignItems:"center"}}>
           {[["open","미완료만"],["mine","내 것만"],["all","전체"]].map(([k,l])=>(
@@ -842,6 +886,8 @@ function ProjectBoardSection() {
                               <input key={it.id+"_m"+(it.updatedAt||"")} defaultValue={it.memo||""} placeholder="메모 한 줄"
                                 onBlur={e=>{ const v=e.target.value; if(v!==(it.memo||"")) patchSel(p=>{ const x=p.teams[def.key].items.find(y=>y.id===it.id); x.memo=v; stamp(x); }, `${it.text.slice(0,30)} 메모`); }}
                                 style={{...selSty,flex:1,minWidth:120}}/>
+                              <button title={it.needsDecision?"결정 대기 해제":"사장님 결정 필요로 표시"} onClick={()=>patchSel(p=>{ const x=p.teams[def.key].items.find(y=>y.id===it.id); x.needsDecision=!x.needsDecision; stamp(x); }, `${it.text.slice(0,30)} 결정 필요 ${it.needsDecision?"해제":"표시"}`)}
+                                style={{border:"none",background:"transparent",cursor:"pointer",color:it.needsDecision?"#D70015":C.inkLt,padding:0,display:"flex"}}><MI n="gavel" size={15}/></button>
                               <button title="노션 일정에 등록" disabled={notionBusy} onClick={()=>pushNotion({...it,teamKey:def.key}, def.label)}
                                 style={{border:"none",background:"transparent",cursor:"pointer",color:it.notionId?C.good:C.inkLt,padding:0,display:"flex"}}><MI n={it.notionId?"event_available":"event"} size={15}/></button>
                               <button title="삭제" onClick={()=>{ if(confirm("이 항목을 삭제할까요?")) patchSel(p=>{ p.teams[def.key].items = p.teams[def.key].items.filter(y=>y.id!==it.id); }, `${def.label} 항목 삭제: ${it.text.slice(0,30)}`); }}
@@ -863,6 +909,43 @@ function ProjectBoardSection() {
             );
           })}
         </div>
+
+        {/* 실측 기록표 */}
+        {(()=>{
+          const M = sel.measurements || pbNewMeasurements();
+          const setCell=(ri,ci,v)=>patchSel(p=>{ if(!p.measurements) p.measurements=pbNewMeasurements(); p.measurements.rows[ri].vals[ci]=v; }, `실측 ${M.rows[ri].label} / ${M.cols[ci]} = ${v}`);
+          const setNote=(ri,v)=>patchSel(p=>{ if(!p.measurements) p.measurements=pbNewMeasurements(); p.measurements.rows[ri].note=v; }, `실측 비고 ${M.rows[ri].label}`);
+          const cell={padding:"4px 6px",border:`1px solid ${C.border}`,borderRadius:6,fontSize:12,fontFamily:"inherit",outline:"none",width:"100%",boxSizing:"border-box",background:C.white,color:C.ink};
+          return (
+            <Card>
+              <CardTitle title="실측 기록표" sub="샘플이 오면 여기에. '공칭'은 제조사 표기값, 빈칸은 미측정. 오아 샘플 칸이 채워지면 상세·광고 숫자의 출처가 됩니다"
+                action={<Btn small variant="neutral" onClick={()=>{ const t=["항목\t단위\t"+M.cols.join("\t")+"\t비고",...M.rows.map(r=>[r.label,r.unit,...r.vals,r.note].join("\t"))].join("\n"); navigator.clipboard?.writeText(t); alert("표를 복사했어요 (엑셀에 붙여넣기)"); }}>표 복사</Btn>}/>
+              <div style={{overflowX:"auto"}}>
+                <table style={{width:"100%",borderCollapse:"collapse",fontSize:12,minWidth:640}}>
+                  <thead><tr style={{background:C.cream}}>
+                    {["항목","단위",...M.cols,"비고"].map((h,i)=>(<th key={i} style={{padding:"6px 8px",textAlign:"left",fontWeight:700,color:i===2?C.rose:C.inkMid,borderBottom:`1px solid ${C.border}`,whiteSpace:"nowrap"}}>{h}</th>))}
+                  </tr></thead>
+                  <tbody>
+                    {M.rows.map((r,ri)=>(
+                      <tr key={r.key} style={{borderBottom:`1px solid ${C.cream}`}}>
+                        <td style={{padding:"4px 8px",fontWeight:700,color:C.ink,whiteSpace:"nowrap"}}>{r.label}</td>
+                        <td style={{padding:"4px 8px",color:C.inkLt,whiteSpace:"nowrap"}}>{r.unit}</td>
+                        {M.cols.map((c,ci)=>(
+                          <td key={ci} style={{padding:"3px 4px",minWidth:110,background:ci===0?"#FFF7F7":"transparent"}}>
+                            <input key={r.key+ci+(r.vals[ci]||"")} defaultValue={r.vals[ci]||""} onBlur={e=>{ if(e.target.value!==(r.vals[ci]||"")) setCell(ri,ci,e.target.value); }} style={{...cell,fontWeight:ci===0?800:500}}/>
+                          </td>
+                        ))}
+                        <td style={{padding:"3px 4px",minWidth:140}}>
+                          <input key={r.key+"n"+(r.note||"")} defaultValue={r.note||""} placeholder="조건·측정일" onBlur={e=>{ if(e.target.value!==(r.note||"")) setNote(ri,e.target.value); }} style={{...cell,color:C.inkMid}}/>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </Card>
+          );
+        })()}
 
         {/* 변경 기록 + 삭제 */}
         <Card>
