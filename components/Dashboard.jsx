@@ -495,6 +495,393 @@ function detectPlatformClient(url) {
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 🗂 제품 프로젝트 보드 (팀별 진행상황 · oa_projects_v1)
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+const PB_TEAM_DEFS = [
+  {key:"plan",     label:"상품기획",  icon:"lightbulb"},
+  {key:"dev",      label:"개발·QC",   icon:"engineering"},
+  {key:"scm",      label:"구매·물류", icon:"local_shipping"},
+  {key:"design",   label:"디자인",    icon:"palette"},
+  {key:"mkt",      label:"마케팅",    icon:"campaign"},
+  {key:"cs",       label:"CS·운영",   icon:"support_agent"},
+];
+const PB_STATUS_CYCLE = ["대기","진행","완료","차단"];
+const PB_STATUS_STYLE = {
+  "대기":{bg:"#f4f4f5",fg:"#71717a"}, "진행":{bg:"#EAF3FF",fg:"#0071E3"},
+  "완료":{bg:"#F0FDF4",fg:"#248A3D"}, "차단":{bg:"#FEF2F2",fg:"#D70015"},
+};
+const PB_MEMBERS = ["지원","경은","혜영","소리","영서","사장님"];
+const PB_NOTION_MEMBERS = ["소리","영서","경은","혜영"]; // 노션 일정 DB 담당자 select 옵션
+
+function pbToday(){ return new Date(Date.now()+9*3600*1000).toISOString().slice(0,10); }
+function pbDays(d){ if(!d) return null; return Math.ceil((new Date(d+"T00:00:00+09:00")-Date.now())/86400000); }
+function pbFmt(iso){ if(!iso) return ""; const d=new Date(iso); return `${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}`; }
+function pbId(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,6); }
+
+function pbItem(text, due, extra={}) {
+  return { id:pbId(), text, status:"대기", owner:"", due:due||"", memo:"", updatedAt:"", updatedBy:"", ...extra };
+}
+
+// 폴딩팬 (가칭) 초기 프로젝트 — 10-26 경쟁 분석·가격 회의 내용
+function pbSeedFoldingFan() {
+  const D = "2026-10-26";
+  const t = {};
+  t.plan = { owner:"", items:[
+    pbItem("샘플 입수 일정 확인 (공장)", "2026-11-07"),
+    pbItem("접은 두께·무게·펼친 높이 실측 (시코 7cm와 비교)", "2026-11-14"),
+    pbItem("최저단·중간·최대 사용시간 실측 (만충→꺼짐 영상 기록, 8h 기준)", "2026-11-14"),
+    pbItem("소음 dB·풍속 실측 (시코·라운드 PRO 같은 조건)", "2026-11-14"),
+    pbItem("충전 시간·사용 중 충전 가능 여부 확인", "2026-11-14"),
+    pbItem("컬러 확정: 포그밀크 계열 65 / 차콜·올리브그레이 35 (라운드 PRO 베이지6:카키4 근거)", "2026-11-21"),
+    pbItem("수납 케이스 기본 동봉 결정 (시코는 3.8만 별매)", "2026-11-21"),
+    pbItem("2차 발주 수정 리스트 개설: ①USB-C PD ②교체형 배터리 ③증량/역충전 ④랜턴 LED ⑤온도연동 자동풍", "2026-12-31"),
+  ]};
+  t.dev = { owner:"", items:[
+    pbItem("어댑터 규격 라운드 PRO와 통일 (DC18V 1.2A, 5.5/2.1) 협의", "2026-11-21"),
+    pbItem("충전 단자 보강 (라운드 PRO AS 1위: 잭 접촉 불량)", "2026-11-21"),
+    pbItem("충전 중 전 단계 사용 가능 확인 (라운드 PRO는 1~8단만)", "2026-11-21"),
+    pbItem("배터리 저전압 보호 펌웨어 + 장기 방치 시 2~3개월 충전 안내", "2026-11-28"),
+    pbItem("좌우 회전 구조 결정: 손으로 돌려도 안 망가지는 클러치 또는 상하 각도만", "2026-11-28"),
+    pbItem("리모컨 본체 자석 거치 + 수신 범위 확대", "2026-11-28"),
+    pbItem("비프음 끄기(무음) 모드", "2026-11-28"),
+    pbItem("KC 전기용품 안전확인·전파인증·배터리 KC·UN38.3 서류 확보 (공장 보유 여부 먼저)", "2026-12-19"),
+  ]};
+  t.scm = { owner:"", items:[
+    pbItem("1차 발주 20,000대 조건 협상: 2차 발주 시점을 '완판'이 아닌 '기간'으로", "2026-11-28"),
+    pbItem("부속품 단일색 공용화 (어댑터·리모컨·받침) — 색상별 품절 사고 방지", "2026-11-28"),
+    pbItem("원가 확정: 5만원대 + 인증·운송·관세·구성품 → 6만원대 검증", "2026-12-05"),
+    pbItem("입고 일정 확정 (목표 2027-04, 5~7월 성수기 70%)", "2026-12-19"),
+    pbItem("부품 단품 재고 계획 (날개·어댑터·리모컨·케이스)", "2027-03-06"),
+  ]};
+  t.design = { owner:"", items:[
+    pbItem("제품명·모델명 확정 + 상표 검색 ('폴딩팬'은 시코 연상)", "2026-12-12"),
+    pbItem("상세 기획: 첫 컷 '옷장 틈/트렁크에 꽂힌 접힌 선풍기' + 시코 FLB 비교 1줄 + 라운드 PRO 용도 비교 1화면", "2027-01-30"),
+    pbItem("촬영: 트렁크·옷장 틈·캠핑 220V 사이트·밤 텐트·침대 옆·실측 장면(저울·자·소음계)", "2027-02-27"),
+    pbItem("썸네일: 접힌 두께가 보이는 측면 컷 1번", "2027-03-13"),
+    pbItem("상세·썸네일 최종 완료", "2027-03-20"),
+  ]};
+  t.mkt = { owner:"", items:[
+    pbItem("가격 확정: 폴딩팬 149,000 / 정가 169,000~179,000 / 라운드 PRO 129,000 고정(할인 금지)", D, {status:"완료", updatedAt:new Date().toISOString(), updatedBy:"사장님"}),
+    pbItem("2만대 채널 배분표 (오늘의집·카카오 선물하기·자사몰/스마트스토어·복지몰·기업 B2B·캠핑 B2B·쿠팡 판매자배송) 월별", "2026-12-12"),
+    pbItem("광고 표현 가이드: '최대 N시간'은 최저단 조건 병기, 캠핑은 '전기 사이트·파워스테이션 기준' 명시, 보조배터리 충전 불가 첫 화면 고지, mAh 비교표 금지", "2027-01-16"),
+    pbItem("경쟁사 가격 모니터 봇 등록 (시코 FLB/FLA·신일·크레모아)", "2027-03-06"),
+    pbItem("자사몰 사전예약 (정가 판매 이력 2주 → 149,000 상시가 표기)", "2027-03-20"),
+    pbItem("체험단 리뷰 500건 (실제 구성만, 허위 증정 금지)", "2027-04-17"),
+    pbItem("메타 소재 A/B: '수납' 훅 vs '무선' 훅, 접기 3초 릴스", "2027-04-10"),
+    pbItem("카카오 선물하기 기획 노출 구매 (어버이날·신혼)", "2027-04-10"),
+  ]};
+  t.cs = { owner:"", items:[
+    pbItem("보증 2년 결정 (경쟁사 전부 1년, 기여이익 52%로 충당)", "2026-11-21"),
+    pbItem("FAQ: 보조배터리 충전 불가·사용시간 조건·장기 미사용 충전 주기·회전 손조작 금지", "2027-03-13"),
+    pbItem("AS 부품 단가표 (날개·어댑터·리모컨·케이스)", "2027-03-13"),
+    pbItem("리뷰·CS 태그 체계 (사용시간/충전/소음/안정성) → 2차 발주 수정 근거", "2027-04-10"),
+  ]};
+  return {
+    id: pbId(), name:"폴딩팬 (가칭)", status:"진행", targetDate:"2027-04-30", owner:"사장님",
+    summary:"시코식 납작 접힘 무선 스탠드 선풍기. AC 어댑터 충전 전용(보조배터리 ✕), 배터리는 라운드 PRO의 절반. 1차 20,000대, 판매가 149,000 고정. 포지션 = '시코 FLB-254D(25.9만)의 반값'. 라운드 PRO(129,000, 비접이)와는 접힘 여부로 역할 분리.",
+    links:[{label:"경쟁 분석·가격 페이지", url:"https://claude.ai/artifact/FKLyyfLJKezHKCpSbCsFK6"}],
+    decisions:[
+      {id:pbId(), date:D, by:"사장님", text:"판매가 149,000 고정. 정가는 169,000~179,000으로 두고 자사몰 실판매 이력 후 149,000 상시가 표기"},
+      {id:pbId(), date:D, by:"사장님", text:"라운드 PRO 판매가 129,000. 폴딩팬과 2만원 사다리, 라운드 PRO 할인 금지가 전제"},
+      {id:pbId(), date:D, by:"사장님", text:"접힘 방식 = 시코식 납작 접힘. 14만원대 접이식(아이닉·클래파·신일 FD12)은 텔레스코픽이라 비교 대상 아님"},
+      {id:pbId(), date:D, by:"사장님", text:"비교 대상은 시코 FLB-254D 하나로 고정. 배터리 mAh 비교표 금지"},
+      {id:pbId(), date:D, by:"사장님", text:"1차 2만대는 한 시즌 완판이 아닌 2~3시즌 소진 계획. 비수기 5개월은 B2B·선물하기·복지몰로"},
+      {id:pbId(), date:D, by:"사장님", text:"캠핑 소구는 오토캠핑 전기 사이트·파워스테이션 전제. 최저단 실측 8시간 미만이면 캠핑 소구 제외"},
+    ],
+    teams:t, log:[{at:new Date().toISOString(), by:"클로드", text:"프로젝트 생성 (10-26 회의 내용 반영)"}],
+    createdAt:new Date().toISOString(),
+  };
+}
+
+function pbNewProject(name) {
+  const t = {}; for (const d of PB_TEAM_DEFS) t[d.key] = {owner:"", items:[]};
+  return { id:pbId(), name, status:"진행", targetDate:"", owner:"", summary:"", links:[], decisions:[], teams:t,
+    log:[{at:new Date().toISOString(), by:"", text:"프로젝트 생성"}], createdAt:new Date().toISOString() };
+}
+
+function ProjectBoardSection() {
+  const [state, setState, loaded] = useSupabaseState("oa_projects_v1", {projects:[]});
+  const projects = state?.projects || [];
+  const [selId, setSelId] = useState(null);
+  const [me, setMe] = useState("");
+  const [filter, setFilter] = useState("open"); // open | mine | all
+  const [teamFilter, setTeamFilter] = useState("all");
+  const [addOpen, setAddOpen] = useState(false);
+  const [newName, setNewName] = useState("");
+  const [newItem, setNewItem] = useState({}); // {teamKey: text}
+  const [decText, setDecText] = useState("");
+  const [linkInput, setLinkInput] = useState(null);
+  const [notionBusy, setNotionBusy] = useState(false);
+  const seededRef = useRef(false);
+
+  useEffect(()=>{ try{ const m=localStorage.getItem("oa_board_me"); if(m) setMe(m); }catch(e){} },[]);
+  const pickMe = (m)=>{ setMe(m); try{ localStorage.setItem("oa_board_me", m); }catch(e){} };
+
+  // 첫 로드 시 비어 있으면 폴딩팬 시드
+  useEffect(()=>{
+    if (!loaded || seededRef.current) return;
+    seededRef.current = true;
+    if (projects.length===0) setState({projects:[pbSeedFoldingFan()], updated:new Date().toISOString()});
+  // eslint-disable-next-line
+  },[loaded]);
+
+  const sel = projects.find(p=>p.id===selId) || projects[0] || null;
+  const persist = (ps) => setState({projects:ps, updated:new Date().toISOString()});
+  const who = me || "익명";
+  const patchSel = (fn, logText) => persist(projects.map(p=>{
+    if (p.id!==sel.id) return p;
+    const c = structuredClone(p); fn(c);
+    if (logText) { c.log = [{at:new Date().toISOString(), by:who, text:logText}, ...(c.log||[])].slice(0,200); }
+    return c;
+  }));
+  const stamp = (it)=>{ it.updatedAt=new Date().toISOString(); it.updatedBy=who; };
+
+  const allItems = sel ? PB_TEAM_DEFS.flatMap(d=>(sel.teams?.[d.key]?.items||[]).map(it=>({...it, teamKey:d.key, teamLabel:d.label}))) : [];
+  const today = pbToday();
+  const doneN = allItems.filter(i=>i.status==="완료").length;
+  const lateItems = allItems.filter(i=>i.status!=="완료" && i.due && i.due<today);
+  const weekItems = allItems.filter(i=>i.status!=="완료" && i.due && i.due>=today && pbDays(i.due)<=7);
+  const blocked = allItems.filter(i=>i.status==="차단");
+  const dday = pbDays(sel?.targetDate);
+
+  const visible = (it)=>{
+    if (filter==="open" && it.status==="완료") return false;
+    if (filter==="mine" && it.owner!==me) return false;
+    return true;
+  };
+
+  async function pushNotion(it, teamLabel) {
+    if (!it.due) return alert("마감일이 있어야 노션 일정에 넣을 수 있어요");
+    setNotionBusy(true);
+    try {
+      const r = await fetch("/api/notion", {method:"POST", headers:{"Content-Type":"application/json"},
+        body: JSON.stringify({action:"create", data:{
+          title:`[${sel.name}] ${it.text}`, date:it.due,
+          assignee: PB_NOTION_MEMBERS.includes(it.owner) ? it.owner : undefined,
+          type:"기타", status:"예정", memo:`${teamLabel} · 대시보드 프로젝트 보드`}})});
+      const j = await r.json();
+      if (!j.ok) throw new Error("노션 응답 실패");
+      patchSel(p=>{ const x=p.teams[it.teamKey].items.find(y=>y.id===it.id); if(x){ x.notionId=j.id; stamp(x);} }, `노션 일정 등록: ${it.text}`);
+    } catch(e) { alert("노션 등록 실패: "+e.message); }
+    setNotionBusy(false);
+  }
+  async function pushAllNotion() {
+    const targets = allItems.filter(i=>i.status!=="완료" && i.due && !i.notionId);
+    if (!targets.length) return alert("등록할 미완료 마감 항목이 없어요");
+    if (!confirm(`미완료 마감 ${targets.length}건을 노션 일정 DB에 등록할까요?`)) return;
+    for (const it of targets) await pushNotion(it, it.teamLabel);
+  }
+
+  const inp = {padding:"6px 9px",border:`1px solid ${C.border}`,borderRadius:8,fontSize:12,outline:"none",fontFamily:"inherit",background:C.white,color:C.ink};
+  const selSty = {...inp, padding:"4px 6px", fontSize:11};
+
+  if (!loaded) return <Card><div style={{fontSize:12,color:C.inkLt,padding:"20px 0",textAlign:"center"}}>프로젝트 데이터 로딩 중…</div></Card>;
+
+  return (
+    <div style={{display:"flex",flexDirection:"column",gap:14}}>
+      {/* 프로젝트 선택 + 나 */}
+      <Card>
+        <CardTitle title="🗂 제품 프로젝트 보드" sub="팀별 할 일·담당·마감·메모를 한 곳에서. 체크하거나 메모를 쓰면 누가 언제 바꿨는지 자동 기록"
+          action={<div style={{display:"flex",gap:6}}>
+            <Btn small variant="neutral" onClick={pushAllNotion} disabled={notionBusy || !sel}>노션 일정에 마감 일괄 등록</Btn>
+            <Btn small onClick={()=>setAddOpen(v=>!v)}>{addOpen?"닫기":"+ 새 프로젝트"}</Btn>
+          </div>}/>
+        <div style={{display:"flex",gap:8,flexWrap:"wrap",alignItems:"center"}}>
+          {projects.map(p=>{
+            const active = sel?.id===p.id;
+            const its = PB_TEAM_DEFS.flatMap(d=>p.teams?.[d.key]?.items||[]);
+            const dn = its.filter(i=>i.status==="완료").length;
+            return (
+              <button key={p.id} onClick={()=>setSelId(p.id)} style={{padding:"6px 14px",borderRadius:20,cursor:"pointer",fontFamily:"inherit",fontSize:12,fontWeight:700,
+                border:`1.5px solid ${active?C.rose:C.border}`,background:active?C.rose:C.white,color:active?"#fff":C.inkMid}}>
+                {p.name} <span style={{fontSize:11,opacity:0.8}}>{dn}/{its.length}</span>
+              </button>
+            );
+          })}
+          <div style={{marginLeft:"auto",display:"flex",alignItems:"center",gap:6,fontSize:12,color:C.inkLt}}>
+            나는
+            {PB_MEMBERS.map(m=>(
+              <button key={m} onClick={()=>pickMe(m)} style={{padding:"3px 9px",borderRadius:14,cursor:"pointer",fontFamily:"inherit",fontSize:11,fontWeight:700,
+                border:`1.5px solid ${me===m?C.ink:C.border}`,background:me===m?C.ink:C.white,color:me===m?"#fff":C.inkMid}}>{m}</button>
+            ))}
+          </div>
+        </div>
+        {addOpen && (
+          <div style={{marginTop:12,padding:"12px 14px",background:C.cream,borderRadius:12,display:"flex",gap:8,alignItems:"center"}}>
+            <input value={newName} onChange={e=>setNewName(e.target.value)} placeholder="프로젝트명 (예: 보이스팬 2)" style={{...inp,width:240}}/>
+            <Btn small onClick={()=>{ if(!newName.trim()) return; const p=pbNewProject(newName.trim()); p.log[0].by=who; persist([...projects,p]); setSelId(p.id); setNewName(""); setAddOpen(false); }}>생성</Btn>
+          </div>
+        )}
+      </Card>
+
+      {sel && (<>
+        {/* 요약 */}
+        <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+          {[
+            ["진행률",`${doneN}/${allItems.length}`,C.ink,"#fff"],
+            ["지연",`${lateItems.length}건`,lateItems.length?"#b91c1c":C.ink,lateItems.length?"#fef2f2":"#fff"],
+            ["이번 주 마감",`${weekItems.length}건`,weekItems.length?"#0071E3":C.ink,weekItems.length?"#EAF3FF":"#fff"],
+            ["차단",`${blocked.length}건`,blocked.length?"#b91c1c":C.ink,"#fff"],
+            ["목표일",sel.targetDate?`${sel.targetDate} (${dday>=0?`D-${dday}`:`D+${-dday}`})`:"미정",C.ink,"#fff"],
+          ].map(([l,v,fg,bg])=>(
+            <div key={l} style={{flex:1,minWidth:120,background:bg,border:`1px solid ${C.border}`,borderRadius:12,padding:"10px 14px"}}>
+              <div style={{fontSize:11,fontWeight:700,color:C.inkLt}}>{l}</div>
+              <div style={{fontSize:17,fontWeight:800,color:fg}}>{v}</div>
+            </div>
+          ))}
+        </div>
+
+        {/* 개요 + 결정 사항 */}
+        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(320px,1fr))",gap:10}}>
+          <Card>
+            <CardTitle title="개요" action={
+              <div style={{display:"flex",gap:6,alignItems:"center"}}>
+                <span style={{fontSize:11,color:C.inkLt}}>목표일</span>
+                <input type="date" value={sel.targetDate||""} onChange={e=>patchSel(p=>{p.targetDate=e.target.value;}, `목표일 변경 → ${e.target.value}`)} style={selSty}/>
+                <span style={{fontSize:11,color:C.inkLt}}>PM</span>
+                <select value={sel.owner||""} onChange={e=>patchSel(p=>{p.owner=e.target.value;}, `PM → ${e.target.value}`)} style={selSty}>
+                  <option value="">—</option>{PB_MEMBERS.map(m=><option key={m}>{m}</option>)}
+                </select>
+              </div>}/>
+            <textarea key={sel.id+"_s"} defaultValue={sel.summary||""} placeholder="제품 한 줄 설명·포지션 (포커스 벗어나면 저장)"
+              onBlur={e=>{ const v=e.target.value; if(v!==(sel.summary||"")) patchSel(p=>{p.summary=v;}, "개요 수정"); }}
+              style={{width:"100%",minHeight:84,padding:"10px 12px",border:`1px solid ${C.border}`,borderRadius:10,fontSize:12.5,lineHeight:1.6,fontFamily:"inherit",color:C.ink,outline:"none",resize:"vertical",boxSizing:"border-box"}}/>
+            <div style={{marginTop:8,display:"flex",flexWrap:"wrap",gap:6,alignItems:"center"}}>
+              {(sel.links||[]).map((a,i)=>(
+                <span key={i} style={{display:"inline-flex",alignItems:"center",gap:4,fontSize:12,background:C.cream,borderRadius:8,padding:"4px 8px"}}>
+                  <MI n="link" size={12} style={{color:C.inkLt}}/>
+                  <a href={a.url} target="_blank" rel="noreferrer" style={{color:C.rose,fontWeight:700,textDecoration:"none"}}>{a.label||a.url}</a>
+                  <button onClick={()=>patchSel(p=>{p.links.splice(i,1);}, `링크 삭제: ${a.label}`)} style={{border:"none",background:"transparent",cursor:"pointer",color:C.inkLt,padding:0,display:"flex"}}><MI n="close" size={12}/></button>
+                </span>
+              ))}
+              {linkInput ? (
+                <span style={{display:"inline-flex",gap:4}}>
+                  <input value={linkInput.label} onChange={e=>setLinkInput(v=>({...v,label:e.target.value}))} placeholder="이름" style={{...inp,width:90}}/>
+                  <input value={linkInput.url} onChange={e=>setLinkInput(v=>({...v,url:e.target.value}))} placeholder="URL" style={{...inp,width:200}}/>
+                  <Btn small onClick={()=>{ if(!linkInput.url.trim()) return; const a={label:linkInput.label.trim()||linkInput.url.trim(),url:linkInput.url.trim()}; patchSel(p=>{(p.links=p.links||[]).push(a);}, `링크 추가: ${a.label}`); setLinkInput(null); }}>추가</Btn>
+                  <Btn small variant="neutral" onClick={()=>setLinkInput(null)}>취소</Btn>
+                </span>
+              ) : (
+                <button onClick={()=>setLinkInput({label:"",url:""})} style={{border:"none",background:"transparent",cursor:"pointer",fontFamily:"inherit",fontSize:12,fontWeight:700,color:C.inkLt,padding:0,display:"flex",alignItems:"center",gap:3}}><MI n="add" size={12}/> 자료 링크</button>
+              )}
+            </div>
+          </Card>
+          <Card>
+            <CardTitle title={`결정 사항 (${(sel.decisions||[]).length})`} sub="바뀌지 않을 것만. 날짜·누가 정했는지 함께"/>
+            <div style={{display:"flex",flexDirection:"column",gap:5,maxHeight:230,overflowY:"auto"}}>
+              {(sel.decisions||[]).map((d,i)=>(
+                <div key={d.id||i} style={{display:"flex",gap:8,alignItems:"flex-start",fontSize:12,lineHeight:1.5,padding:"5px 8px",background:C.cream,borderRadius:8}}>
+                  <span style={{fontSize:11,color:C.inkLt,whiteSpace:"nowrap",paddingTop:1}}>{d.date?.slice(5)} · {d.by}</span>
+                  <span style={{flex:1,color:C.ink}}>{d.text}</span>
+                  <button onClick={()=>{ if(confirm("이 결정을 삭제할까요?")) patchSel(p=>{p.decisions.splice(i,1);}, `결정 삭제: ${d.text.slice(0,30)}`); }} style={{border:"none",background:"transparent",cursor:"pointer",color:C.inkLt,padding:0,display:"flex"}}><MI n="close" size={12}/></button>
+                </div>
+              ))}
+            </div>
+            <div style={{display:"flex",gap:6,marginTop:8}}>
+              <input value={decText} onChange={e=>setDecText(e.target.value)} placeholder="새 결정 사항" style={{...inp,flex:1}}
+                onKeyDown={e=>{ if(e.key==="Enter" && decText.trim()){ patchSel(p=>{(p.decisions=p.decisions||[]).push({id:pbId(),date:today,by:who,text:decText.trim()});}, `결정 추가: ${decText.trim().slice(0,30)}`); setDecText(""); } }}/>
+              <Btn small onClick={()=>{ if(!decText.trim()) return; patchSel(p=>{(p.decisions=p.decisions||[]).push({id:pbId(),date:today,by:who,text:decText.trim()});}, `결정 추가: ${decText.trim().slice(0,30)}`); setDecText(""); }}>추가</Btn>
+            </div>
+          </Card>
+        </div>
+
+        {/* 필터 */}
+        <div style={{display:"flex",gap:6,flexWrap:"wrap",alignItems:"center"}}>
+          {[["open","미완료만"],["mine","내 것만"],["all","전체"]].map(([k,l])=>(
+            <button key={k} onClick={()=>setFilter(k)} style={{padding:"5px 12px",borderRadius:16,cursor:"pointer",fontFamily:"inherit",fontSize:12,fontWeight:700,
+              border:`1.5px solid ${filter===k?C.rose:C.border}`,background:filter===k?C.rose:C.white,color:filter===k?"#fff":C.inkMid}}>{l}</button>
+          ))}
+          <span style={{width:1,height:18,background:C.border,margin:"0 4px"}}/>
+          <button onClick={()=>setTeamFilter("all")} style={{padding:"5px 12px",borderRadius:16,cursor:"pointer",fontFamily:"inherit",fontSize:12,fontWeight:700,
+            border:`1.5px solid ${teamFilter==="all"?C.ink:C.border}`,background:teamFilter==="all"?C.ink:C.white,color:teamFilter==="all"?"#fff":C.inkMid}}>모든 팀</button>
+          {PB_TEAM_DEFS.map(d=>(
+            <button key={d.key} onClick={()=>setTeamFilter(d.key)} style={{padding:"5px 12px",borderRadius:16,cursor:"pointer",fontFamily:"inherit",fontSize:12,fontWeight:700,display:"flex",alignItems:"center",gap:4,
+              border:`1.5px solid ${teamFilter===d.key?C.ink:C.border}`,background:teamFilter===d.key?C.ink:C.white,color:teamFilter===d.key?"#fff":C.inkMid}}><MI n={d.icon} size={13}/>{d.label}</button>
+          ))}
+        </div>
+
+        {/* 팀 카드 */}
+        <div style={{display:"grid",gridTemplateColumns:teamFilter==="all"?"repeat(auto-fill,minmax(380px,1fr))":"1fr",gap:10}}>
+          {PB_TEAM_DEFS.filter(d=>teamFilter==="all"||teamFilter===d.key).map(def=>{
+            const team = sel.teams?.[def.key] || {owner:"",items:[]};
+            const items = team.items||[];
+            const dn = items.filter(i=>i.status==="완료").length;
+            const late = items.filter(i=>i.status!=="완료" && i.due && i.due<today).length;
+            const shown = items.filter(visible);
+            return (
+              <div key={def.key} style={{background:C.white,border:`1px solid ${late?"#D7001566":C.border}`,borderRadius:14,padding:"14px 16px"}}>
+                <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10}}>
+                  <MI n={def.icon} size={17} style={{color:C.rose}}/>
+                  <div style={{fontSize:13,fontWeight:800,color:C.ink,flex:1}}>{def.label} <span style={{fontSize:11,color:C.inkLt,fontWeight:700}}>{dn}/{items.length}{late?` · 지연 ${late}`:""}</span></div>
+                  <span style={{fontSize:11,color:C.inkLt}}>팀 담당</span>
+                  <select value={team.owner||""} onChange={e=>patchSel(p=>{p.teams[def.key].owner=e.target.value;}, `${def.label} 팀 담당 → ${e.target.value}`)} style={selSty}>
+                    <option value="">—</option>{PB_MEMBERS.map(m=><option key={m}>{m}</option>)}
+                  </select>
+                </div>
+                <div style={{display:"flex",flexDirection:"column",gap:6}}>
+                  {shown.length===0 && <div style={{fontSize:12,color:C.inkLt,padding:"6px 0"}}>{items.length? "필터에 해당하는 항목이 없어요" : "항목을 추가하세요"}</div>}
+                  {shown.map(it=>{
+                    const sty = PB_STATUS_STYLE[it.status]||PB_STATUS_STYLE["대기"];
+                    const dd = pbDays(it.due);
+                    const isLate = it.status!=="완료" && it.due && it.due<today;
+                    return (
+                      <div key={it.id} style={{border:`1px solid ${isLate?"#fecaca":C.cream}`,background:isLate?"#fff7f7":C.white,borderRadius:10,padding:"8px 10px"}}>
+                        <div style={{display:"flex",alignItems:"flex-start",gap:8}}>
+                          <button onClick={()=>{ const next=PB_STATUS_CYCLE[(PB_STATUS_CYCLE.indexOf(it.status)+1)%PB_STATUS_CYCLE.length];
+                              patchSel(p=>{ const x=p.teams[def.key].items.find(y=>y.id===it.id); x.status=next; stamp(x); }, `${def.label} · ${it.text.slice(0,30)} → ${next}`); }}
+                            style={{padding:"2px 9px",borderRadius:20,border:"none",cursor:"pointer",fontFamily:"inherit",fontSize:11,fontWeight:800,background:sty.bg,color:sty.fg,whiteSpace:"nowrap",marginTop:1}}>{it.status}</button>
+                          <div style={{flex:1,minWidth:0}}>
+                            <div style={{fontSize:12.5,lineHeight:1.5,color:it.status==="완료"?C.inkLt:C.ink,textDecoration:it.status==="완료"?"line-through":"none"}}>{it.text}</div>
+                            <div style={{display:"flex",flexWrap:"wrap",gap:6,alignItems:"center",marginTop:5}}>
+                              <select value={it.owner||""} onChange={e=>patchSel(p=>{ const x=p.teams[def.key].items.find(y=>y.id===it.id); x.owner=e.target.value; stamp(x); }, `${it.text.slice(0,30)} 담당 → ${e.target.value}`)} style={selSty}>
+                                <option value="">담당 —</option>{PB_MEMBERS.map(m=><option key={m}>{m}</option>)}
+                              </select>
+                              <input type="date" value={it.due||""} onChange={e=>patchSel(p=>{ const x=p.teams[def.key].items.find(y=>y.id===it.id); x.due=e.target.value; stamp(x); }, `${it.text.slice(0,30)} 마감 → ${e.target.value}`)} style={{...selSty,color:isLate?"#b91c1c":C.ink,fontWeight:isLate?800:500}}/>
+                              {it.due && it.status!=="완료" && <span style={{fontSize:11,fontWeight:800,color:isLate?"#b91c1c":(dd<=7?"#0071E3":C.inkLt)}}>{dd===0?"오늘":(dd>0?`D-${dd}`:`D+${-dd}`)}</span>}
+                              <input key={it.id+"_m"+(it.updatedAt||"")} defaultValue={it.memo||""} placeholder="메모 한 줄"
+                                onBlur={e=>{ const v=e.target.value; if(v!==(it.memo||"")) patchSel(p=>{ const x=p.teams[def.key].items.find(y=>y.id===it.id); x.memo=v; stamp(x); }, `${it.text.slice(0,30)} 메모`); }}
+                                style={{...selSty,flex:1,minWidth:120}}/>
+                              <button title="노션 일정에 등록" disabled={notionBusy} onClick={()=>pushNotion({...it,teamKey:def.key}, def.label)}
+                                style={{border:"none",background:"transparent",cursor:"pointer",color:it.notionId?C.good:C.inkLt,padding:0,display:"flex"}}><MI n={it.notionId?"event_available":"event"} size={15}/></button>
+                              <button title="삭제" onClick={()=>{ if(confirm("이 항목을 삭제할까요?")) patchSel(p=>{ p.teams[def.key].items = p.teams[def.key].items.filter(y=>y.id!==it.id); }, `${def.label} 항목 삭제: ${it.text.slice(0,30)}`); }}
+                                style={{border:"none",background:"transparent",cursor:"pointer",color:C.inkLt,padding:0,display:"flex"}}><MI n="close" size={13}/></button>
+                            </div>
+                            {it.updatedAt && <div style={{fontSize:10.5,color:C.inkLt,marginTop:3}}>{it.updatedBy||"—"} · {pbFmt(it.updatedAt)}</div>}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+                <div style={{display:"flex",gap:6,marginTop:8}}>
+                  <input value={newItem[def.key]||""} onChange={e=>setNewItem(v=>({...v,[def.key]:e.target.value}))} placeholder={`${def.label} 할 일 추가`} style={{...inp,flex:1}}
+                    onKeyDown={e=>{ const t=(newItem[def.key]||"").trim(); if(e.key==="Enter" && t){ patchSel(p=>{ const x=pbItem(t,""); x.owner=me; stamp(x); p.teams[def.key].items.push(x); }, `${def.label} 항목 추가: ${t.slice(0,30)}`); setNewItem(v=>({...v,[def.key]:""})); } }}/>
+                  <Btn small onClick={()=>{ const t=(newItem[def.key]||"").trim(); if(!t) return; patchSel(p=>{ const x=pbItem(t,""); x.owner=me; stamp(x); p.teams[def.key].items.push(x); }, `${def.label} 항목 추가: ${t.slice(0,30)}`); setNewItem(v=>({...v,[def.key]:""})); }}>추가</Btn>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* 변경 기록 + 삭제 */}
+        <Card>
+          <CardTitle title="변경 기록" sub="최근 200건" action={<Btn small variant="danger" onClick={()=>{ if(confirm(`"${sel.name}" 프로젝트를 삭제할까요?`)) { persist(projects.filter(p=>p.id!==sel.id)); setSelId(null);} }}>프로젝트 삭제</Btn>}/>
+          <div style={{display:"flex",flexDirection:"column",gap:3,maxHeight:220,overflowY:"auto"}}>
+            {(sel.log||[]).slice(0,60).map((l,i)=>(
+              <div key={i} style={{fontSize:11.5,color:C.inkMid,display:"flex",gap:8}}>
+                <span style={{color:C.inkLt,whiteSpace:"nowrap"}}>{pbFmt(l.at)}</span>
+                <span style={{fontWeight:700,color:C.ink,whiteSpace:"nowrap"}}>{l.by||"—"}</span>
+                <span>{l.text}</span>
+              </div>
+            ))}
+          </div>
+        </Card>
+      </>)}
+    </div>
+  );
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // 🚀 신제품 런칭 (스킬 스크립트와 oa_launch_v1 공유)
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 const LAUNCH_STAGE_DEFS = [
@@ -9411,6 +9798,7 @@ export default function OaDashboard(){
     {id:"guide",     icon:"menu_book",      label:"가이드"},
     {id:"inf_archive",icon:"photo_library", label:"아카이브"},
     {id:"launch",    icon:"rocket_launch",  label:"런칭"},
+    {id:"project",   icon:"view_kanban",    label:"프로젝트"},
     {id:"schedule",  icon:"calendar_month", label:"스케줄"},
     {id:"creative",  icon:"palette",        label:"소재"},
     {id:"insight",   icon:"edit_note",      label:"팀 노트"},
@@ -18634,6 +19022,7 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
           {sec==="adschedule"  && <AdSchedulePanel C={C} getSetting={getSetting}/>}
           {sec==="inf_archive" && <InfluencerArchiveSection/>}
           {sec==="launch"      && <LaunchSection/>}
+          {sec==="project"     && <ProjectBoardSection/>}
           {sec==="traffic"     && <TrafficAdsSection C={C} Card={Card}/>}
           {sec==="schedule"    && ScheduleSection}
           {sec==="naver"       && <NaverSection/>}
