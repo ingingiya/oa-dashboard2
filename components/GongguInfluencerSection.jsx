@@ -50,7 +50,7 @@ export default function GongguInfluencerSection({ C, Card }) {
     const R = IP_RANGES.find((r) => r[0] === ipRange) || IP_RANGES[0];
     const [key, dir] = ipSort;
     const kf = { v: (r) => r.v, f: (r) => r.f, r: (r) => (r.f ? r.v / r.f : 0), l: (r) => r.l, c: (r) => r.c }[key];
-    return ipAll.rows.filter((r) => r.f >= R[2] && r.f < R[3] && (!ipCats.length || ipCats.some((c) => r.cats.includes(c))) && (!q || r.u.toLowerCase().includes(q)) && (!onlySL || sl[r.u])).sort((a, b) => (kf(b) - kf(a)) * dir);
+    return ipAll.rows.filter((r) => r.f >= R[2] && r.f < R[3] && (!ipCats.length || ipCats.some((c) => r.cats.includes(c))) && (!q || r.u.toLowerCase().includes(q)) && (!onlySL || sl[r.u])).sort((a, b) => (kf(a) - kf(b)) * dir);
   }, [ipAll, ipQ, ipRange, ipCats, ipSort, onlySL, sl]);
   useEffect(() => { setIpLimit(60); }, [ipQ, ipRange, ipCats, ipSort, onlySL]);
 

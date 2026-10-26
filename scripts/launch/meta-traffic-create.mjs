@@ -52,7 +52,8 @@ out.campaign = camp.id;
 log(`✅ 캠페인 ${camp.id}`);
 
 const targeting = {
-  geo_locations: { countries: ["KR"], location_types: ["home", "recent"] },
+  // cfg.geo 가 있으면 그대로 사용 (예: 공항 반경 custom_locations + location_types ["recent"])
+  geo_locations: cfg.geo || { countries: ["KR"], location_types: ["home", "recent"] },
   // ★어드밴티지+ 타겟에선 age_max 상한(65 미만)이 거부됨(1870189) → age_range로 "권장 연령"만 전달
   age_min: 18, age_max: 65, age_range: [cfg.ageMin || 18, cfg.ageMax || 65],
   targeting_automation: { advantage_audience: 1 },
@@ -61,7 +62,7 @@ const targeting = {
 for (const p of cfg.products) {
   // 2) 광고세트
   const adsetBody = {
-    name: `[트래픽] ${p.name}`, campaign_id: camp.id, status: "PAUSED",
+    name: p.adsetName || `[트래픽] ${p.name}`, campaign_id: camp.id, status: "PAUSED",
     daily_budget: String(cfg.dailyBudget), billing_event: "IMPRESSIONS",
     optimization_goal: cfg.optimization || "LINK_CLICKS",
     bid_strategy: cfg.bidCap > 0 ? "COST_CAP" : "LOWEST_COST_WITHOUT_CAP",
@@ -78,10 +79,10 @@ for (const p of cfg.products) {
   for (const img of p.images) {
     // 3) 이미지 업로드 → 4) 크리에이티브 → 5) 광고
     // ★adimages는 url 파라미터가 앱 권한(#3)으로 막혀 바이트 직접 업로드(bytes=base64)
-    const bin = Buffer.from(await (await fetch(img.url)).arrayBuffer());
+    const bin = img.file ? fs.readFileSync(img.file) : Buffer.from(await (await fetch(img.url)).arrayBuffer());
     const up = await post(`${ACT}/adimages`, { bytes: bin.toString("base64") });
     const hash = Object.values(up.images || {})[0]?.hash;
-    if (!hash) throw new Error("이미지 해시 없음: " + img.url);
+    if (!hash) throw new Error("이미지 해시 없음: " + (img.url || img.file));
     const cr = await post(`${ACT}/adcreatives`, {
       name: `${p.name}_${img.label}`,
       object_story_spec: {

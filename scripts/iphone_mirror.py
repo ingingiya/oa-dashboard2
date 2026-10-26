@@ -31,6 +31,7 @@ if __name__=="__main__":
         elif c=="type": typ(cmd[i+1]); i+=2
         elif c=="key": key(int(cmd[i+1])); i+=2
         elif c=="scroll": move(174,400); scroll(int(cmd[i+1])); i+=2
+        elif c=="scrollpx": move(174,450); scroll(int(cmd[i+1]),1); i+=2
         elif c=="sleep": time.sleep(float(cmd[i+1])); i+=2
         elif c=="shot": shot(cmd[i+1]); i+=2
         else: i+=1
