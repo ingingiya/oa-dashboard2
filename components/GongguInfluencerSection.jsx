@@ -1,7 +1,7 @@
 "use client";
 // 공구 인플루언서 — 구글 뉴스 사례 + 인공(insta-gong.com) 10월 집계를 한 화면에서 보는 리서치 뷰 (10-26)
 // 데이터: data/gonggu-influencers.json 정적 임포트 (API 없음). 갱신은 JSON 교체 후 재배포.
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import DATA from "../data/gonggu-influencers.json";
 
 const IG_RE = /^[a-z0-9._]+$/i;
@@ -11,7 +11,11 @@ const igUrl = (a) => `https://instagram.com/${a}`;
 // 품목 필터: "가습기·드라이기"처럼 복합 품목은 포함 매칭
 const ITEM_CHIPS = ["가습기", "고데기", "드라이기", "가전"];
 const FIT_CHIPS = ["프리온", "플렌티플렛", "둘 다"];
-const IP_TABS = [["beauty", "뷰티"], ["home_living", "홈·리빙"], ["digital", "디지털·가전"], ["efficient", "효율(조회/팔로워)"]];
+const IP_LABEL = { beauty: "뷰티", home_living: "홈·리빙", digital: "디지털·가전", digital_electronics: "디지털·가전", baby_kids: "육아·키즈", food_cooking: "식품·요리", fashion: "패션", furniture_interior: "가구·인테리어", sports_health: "스포츠·건강", travel_outdoor: "여행·아웃도어", edu_career: "교육·커리어", hobbies_arts: "취미·아트", pet: "반려동물", other: "기타", efficient: "효율(조회/팔로워)" };
+const IP_ORDER = ["beauty", "home_living", "digital", "baby_kids", "food_cooking", "fashion", "furniture_interior", "sports_health", "travel_outdoor", "pet", "edu_career", "hobbies_arts", "other", "efficient"];
+const IP_CATS = ["beauty", "home_living", "digital_electronics", "furniture_interior", "baby_kids", "food_cooking", "fashion", "sports_health", "travel_outdoor", "pet", "edu_career", "hobbies_arts", "other"];
+const IP_RANGES = { all: [0, Infinity], "1-5": [10000, 50000], "5-10": [50000, 100000], "10-30": [100000, 300000], "30-100": [300000, 1000001] };
+const IP_RANGE_LABEL = { all: "전체", "1-5": "1~5만", "5-10": "5~10만", "10-30": "10~30만", "30-100": "30~100만" };
 const IP_CAT = { beauty: "뷰티", home_living: "홈리빙", digital_electronics: "가전", furniture_interior: "인테리어", baby_kids: "육아", food_cooking: "식품", fashion: "패션", sports_health: "건강", travel_outdoor: "여행", pet: "펫", other: "기타", hobbies_arts: "취미", edu_career: "교육" };
 const won = (v) => { v = +v || 0; return v >= 1e8 ? (v / 1e8).toFixed(1) + "억" : v >= 1e4 ? Math.round(v / 1e4).toLocaleString() + "만원" : Math.round(v).toLocaleString() + "원"; };
 const fmtK = (v) => { v = +v || 0; return v >= 1e4 ? (v / 1e4).toFixed(v >= 1e5 ? 0 : 1) + "만" : v.toLocaleString(); };
@@ -19,8 +23,26 @@ const fmtK = (v) => { v = +v || 0; return v >= 1e4 ? (v / 1e4).toFixed(v >= 1e5 
 export default function GongguInfluencerSection({ C, Card }) {
   const [item, setItem] = useState("all");
   const [fit, setFit] = useState("all");
-  const [zv, setZv] = useState("picks");
-  const [ip, setIp] = useState("beauty");
+  const [zv, setZv] = useState("history");
+  const [zvzo, setZvzo] = useState(null);
+  const [ipAll, setIpAll] = useState(null);
+  const [ipCats, setIpCats] = useState([]);       // 다중 선택 카테고리
+  const [ipRange, setIpRange] = useState("all");  // 팔로워 구간
+  const [ipSort, setIpSort] = useState("v");      // v 조회 / f 팔로워 / r 조회·팔로워 / l 좋아요
+  const [ipQ, setIpQ] = useState("");
+  const [ipLimit, setIpLimit] = useState(100);
+  const [zvQ, setZvQ] = useState("");
+  useEffect(() => { fetch("/gonggu/zvzo.json").then((r) => r.json()).then(setZvzo).catch(() => {}); fetch("/gonggu/inpock.json").then((r) => r.json()).then(setIpAll).catch(() => {}); }, []);
+  const ipRows = useMemo(() => {
+    if (!ipAll) return [];
+    const q = ipQ.trim().toLowerCase();
+    const [lo, hi] = IP_RANGES[ipRange] || [0, Infinity];
+    const rows = ipAll.rows.filter((r) => r.f >= lo && r.f < hi && (!ipCats.length || ipCats.some((c) => r.cats.includes(c))) && (!q || r.u.toLowerCase().includes(q)));
+    const key = { v: (r) => r.v, f: (r) => r.f, r: (r) => (r.f ? r.v / r.f : 0), l: (r) => r.l }[ipSort];
+    return rows.sort((a, b) => key(b) - key(a));
+  }, [ipAll, ipQ, ipRange, ipCats, ipSort]);
+  const zvHist = useMemo(() => { const q = zvQ.trim().toLowerCase(); const rows = zvzo?.history || []; return q ? rows.filter((r) => (r.alias + " " + r.code + " " + (r.products || []).join(" ")).toLowerCase().includes(q)) : rows; }, [zvzo, zvQ]);
+  const zvLiked = useMemo(() => { const q = zvQ.trim().toLowerCase(); const rows = zvzo?.liked || []; return q ? rows.filter((r) => (r.alias + " " + r.code + " " + (r.main || []).join(" ") + " " + (r.bio || "")).toLowerCase().includes(q)) : rows; }, [zvzo, zvQ]);
 
   const gong = useMemo(() => (DATA.gong || []).filter((g) =>
     (item === "all" || String(g.item || "").includes(item)) &&
@@ -113,110 +135,114 @@ export default function GongguInfluencerSection({ C, Card }) {
         </div>
       </Card>
 
-      {/* (d) 지비지오 — 오아 스토어 협업 실매출 */}
-      {DATA.zvzo_history && (
-        <Card style={{ padding: 0, overflow: "hidden" }}>
-          <div style={{ padding: "18px 18px 10px" }}>
-            <div style={{ fontSize: 14, fontWeight: 800, color: C.ink, marginBottom: 2 }}>지비지오(ZVZO) 우리 협업 실매출 TOP</div>
-            <div style={{ fontSize: 12, color: C.inkLt }}>{DATA.zvzo_history.note} · 누적 {won(DATA.zvzo_history.total_sales)}</div>
+      {/* (d) 지비지오 — 전체 */}
+      <Card style={{ padding: 0, overflow: "hidden" }}>
+        <div style={{ padding: "18px 18px 10px" }}>
+          <div style={{ fontSize: 14, fontWeight: 800, color: C.ink, marginBottom: 2 }}>지비지오(ZVZO)</div>
+          <div style={{ fontSize: 12, color: C.inkLt }}>오아 스토어 협업 이력 {zvzo?.history?.length || 0}명 (실매출 발생 {(zvzo?.history || []).filter((r) => r.sales > 0).length}명, 누적 {won((zvzo?.history || []).reduce((a, r) => a + r.sales, 0))}) · 오아를 찜한 크리에이터 {zvzo?.liked?.length || 0}명 · 이번 주 추천 {zvzo?.picks?.length || 0}명. 수수료 18~23%</div>
+          <div style={{ display: "flex", gap: 6, marginTop: 10, flexWrap: "wrap", alignItems: "center" }}>
+            <Chip on={zv === "history"} onClick={() => setZv("history")}>협업 이력 {zvHist.length}</Chip>
+            <Chip on={zv === "liked"} onClick={() => setZv("liked")}>찜·관심 {zvLiked.length}</Chip>
+            <Chip on={zv === "picks"} onClick={() => setZv("picks")}>추천 {(zvzo?.picks || []).length}</Chip>
+            <input value={zvQ} onChange={(e) => setZvQ(e.target.value)} placeholder="이름·코드·제품 검색" style={{ marginLeft: 6, fontSize: 12, padding: "5px 10px", border: `1px solid ${C.border}`, borderRadius: 20, outline: "none", minWidth: 160 }} />
           </div>
-          <div style={{ overflowX: "auto" }}>
+        </div>
+        <div style={{ overflowX: "auto", maxHeight: 560, overflowY: "auto" }}>
+          {zv === "history" && (
             <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 560 }}>
-              <thead><tr><th style={th}>크리에이터</th><th style={{ ...th, textAlign: "right" }}>실매출</th><th style={{ ...th, textAlign: "right" }}>협업/판매</th><th style={th}>최근</th><th style={th}>판매 제품</th></tr></thead>
+              <thead><tr><th style={th}>크리에이터</th><th style={{ ...th, textAlign: "right" }}>실매출</th><th style={{ ...th, textAlign: "right" }}>협업/판매</th><th style={th}>최근</th><th style={th}>제품</th></tr></thead>
               <tbody>
-                {DATA.zvzo_history.rows.map((r, i) => (
+                {zvHist.map((r, i) => (
+                  <tr key={i} style={{ opacity: r.sales > 0 ? 1 : 0.6 }}>
+                    <td style={{ ...td, whiteSpace: "nowrap" }}><a href={`https://zv-zo.com/ko/${r.code}`} target="_blank" rel="noreferrer" style={{ color: C.rose, fontWeight: 700, textDecoration: "none" }}>{r.alias}</a> <span style={{ color: C.inkLt, fontSize: 11 }}>{r.code}</span></td>
+                    <td style={{ ...td, textAlign: "right", fontWeight: 800, whiteSpace: "nowrap" }}>{r.sales > 0 ? won(r.sales) : "—"}</td>
+                    <td style={{ ...td, textAlign: "right", whiteSpace: "nowrap", color: C.inkMid }}>{r.units} / {r.sold}</td>
+                    <td style={{ ...td, whiteSpace: "nowrap", color: C.inkMid }}>{r.last === "9999-12-31" ? "상시" : r.last}</td>
+                    <td style={{ ...td, color: C.inkMid, lineHeight: 1.4, fontSize: 12 }}>{(r.products || []).map((p) => p.replace(/^오아 /, "").replace(/ 배터리 분리로.*$/, "")).join(" · ")}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+          {zv === "liked" && (
+            <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 640 }}>
+              <thead><tr><th style={th}>크리에이터</th><th style={{ ...th, textAlign: "right" }}>팔로워</th><th style={th}>주력</th><th style={th}>예상 티어</th><th style={{ ...th, textAlign: "right" }}>희망 수수료</th><th style={th}>소개 / MD</th></tr></thead>
+              <tbody>
+                {zvLiked.map((r, i) => (
+                  <tr key={i}>
+                    <td style={{ ...td, whiteSpace: "nowrap" }}><a href={`https://zv-zo.com/ko/${r.code}`} target="_blank" rel="noreferrer" style={{ color: C.rose, fontWeight: 700, textDecoration: "none" }}>{r.alias}</a> <span style={{ color: C.inkLt, fontSize: 11 }}>{r.code}</span>{r.newbie && <span style={{ marginLeft: 4, fontSize: 10, color: C.sage, fontWeight: 800 }}>NEW</span>}</td>
+                    <td style={{ ...td, textAlign: "right", whiteSpace: "nowrap" }}>{fmtK(r.f)}{r.yt ? <span style={{ color: C.inkLt, fontSize: 11 }}> · YT {fmtK(r.yt)}</span> : null}</td>
+                    <td style={{ ...td, whiteSpace: "nowrap", color: C.inkMid, fontSize: 12 }}>{(r.main || []).join("·") || "—"}</td>
+                    <td style={{ ...td, whiteSpace: "nowrap", color: C.inkMid, fontSize: 12 }}>{r.tier || "—"}</td>
+                    <td style={{ ...td, textAlign: "right", whiteSpace: "nowrap" }}>{r.comm ? Math.round(r.comm * 100) + "%" : "—"}</td>
+                    <td style={{ ...td, color: C.inkMid, lineHeight: 1.4, fontSize: 12 }}>{r.md || r.bio || "—"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+          {zv === "picks" && (
+            <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 620 }}>
+              <thead><tr><th style={th}>크리에이터</th><th style={{ ...th, textAlign: "right" }}>팔로워</th><th style={{ ...th, textAlign: "right" }}>매칭</th><th style={th}>평균 매출(본인)</th><th style={th}>외부 검증</th><th style={th}>추천 이유</th></tr></thead>
+              <tbody>
+                {(zvzo?.picks || []).map((r, i) => (
                   <tr key={i}>
                     <td style={{ ...td, whiteSpace: "nowrap" }}><a href={`https://zv-zo.com/ko/${r.code}`} target="_blank" rel="noreferrer" style={{ color: C.rose, fontWeight: 700, textDecoration: "none" }}>{r.alias}</a> <span style={{ color: C.inkLt, fontSize: 11 }}>{r.code}</span></td>
-                    <td style={{ ...td, textAlign: "right", fontWeight: 800, whiteSpace: "nowrap" }}>{won(r.sales)}</td>
-                    <td style={{ ...td, textAlign: "right", whiteSpace: "nowrap", color: C.inkMid }}>{r.units}회 / {r.sold}회</td>
-                    <td style={{ ...td, whiteSpace: "nowrap", color: C.inkMid }}>{r.last}</td>
-                    <td style={{ ...td, color: C.inkMid, lineHeight: 1.4 }}>{(r.products || []).map((p) => p.replace(/^오아 /, "").replace(/ 배터리 분리로.*$/, "")).join(" · ")}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </Card>
-      )}
-
-      {/* (e) 지비지오 추천 + 관심 크리에이터 */}
-      {DATA.zvzo_picks && (
-        <Card style={{ padding: 0, overflow: "hidden" }}>
-          <div style={{ padding: "18px 18px 10px" }}>
-            <div style={{ fontSize: 14, fontWeight: 800, color: C.ink, marginBottom: 2 }}>지비지오 이번 주 추천 {DATA.zvzo_picks.length}명 · 오아를 찜한 크리에이터</div>
-            <div style={{ fontSize: 12, color: C.inkLt }}>매칭 점수·본인 작성 평균 매출·외부 매출 검증값. 상세 열람은 지비지오에서 제안 후 가능</div>
-            <div style={{ display: "flex", gap: 6, marginTop: 10 }}>
-              <Chip on={zv === "picks"} onClick={() => setZv("picks")}>추천 {DATA.zvzo_picks.length}</Chip>
-              <Chip on={zv === "liked"} onClick={() => setZv("liked")}>찜·관심 {(DATA.zvzo_brand_liked || []).length}</Chip>
-            </div>
-          </div>
-          <div style={{ overflowX: "auto" }}>
-            {zv === "picks" ? (
-              <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 620 }}>
-                <thead><tr><th style={th}>크리에이터</th><th style={{ ...th, textAlign: "right" }}>팔로워</th><th style={{ ...th, textAlign: "right" }}>매칭</th><th style={th}>평균 매출(본인)</th><th style={th}>외부 검증</th><th style={th}>추천 이유</th></tr></thead>
-                <tbody>
-                  {DATA.zvzo_picks.map((r, i) => (
-                    <tr key={i}>
-                      <td style={{ ...td, whiteSpace: "nowrap" }}><a href={`https://zv-zo.com/ko/${r.code}`} target="_blank" rel="noreferrer" style={{ color: C.rose, fontWeight: 700, textDecoration: "none" }}>{r.alias}</a> <span style={{ color: C.inkLt, fontSize: 11 }}>{r.code}</span></td>
-                      <td style={{ ...td, textAlign: "right", whiteSpace: "nowrap" }}>{fmtK(r.f)}</td>
-                      <td style={{ ...td, textAlign: "right", fontWeight: 800 }}>{r.score}</td>
-                      <td style={{ ...td, whiteSpace: "nowrap", color: C.inkMid }}>{r.self_rev || "—"}</td>
-                      <td style={{ ...td, whiteSpace: "nowrap", fontWeight: 700 }}>{r.ext ? won(+r.ext) : "—"}</td>
-                      <td style={{ ...td, color: C.inkMid, lineHeight: 1.45, fontSize: 12 }}>{r.reason.replace(/^[^\n]*\n\n/, "")}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            ) : (
-              <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 560 }}>
-                <thead><tr><th style={th}>크리에이터</th><th style={{ ...th, textAlign: "right" }}>팔로워</th><th style={th}>예상 티어</th><th style={{ ...th, textAlign: "right" }}>희망 수수료</th><th style={th}>MD 코멘트</th></tr></thead>
-                <tbody>
-                  {(DATA.zvzo_brand_liked || []).map((r, i) => (
-                    <tr key={i}>
-                      <td style={{ ...td, whiteSpace: "nowrap" }}><a href={`https://zv-zo.com/ko/${r.code}`} target="_blank" rel="noreferrer" style={{ color: C.rose, fontWeight: 700, textDecoration: "none" }}>{r.alias}</a> <span style={{ color: C.inkLt, fontSize: 11 }}>{r.code}</span></td>
-                      <td style={{ ...td, textAlign: "right", whiteSpace: "nowrap" }}>{fmtK(r.f)}</td>
-                      <td style={{ ...td, whiteSpace: "nowrap", color: C.inkMid }}>{r.tier || "—"}</td>
-                      <td style={{ ...td, textAlign: "right", whiteSpace: "nowrap" }}>{r.comm ? Math.round(r.comm * 100) + "%" : "—"}</td>
-                      <td style={{ ...td, color: C.inkMid, lineHeight: 1.45, fontSize: 12 }}>{r.md || "—"}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            )}
-          </div>
-        </Card>
-      )}
-
-      {/* (f) 인포크 — 릴스 조회수 상위 */}
-      {DATA.inpock && (
-        <Card style={{ padding: 0, overflow: "hidden" }}>
-          <div style={{ padding: "18px 18px 10px" }}>
-            <div style={{ fontSize: 14, fontWeight: 800, color: C.ink, marginBottom: 2 }}>인포크 비즈니스 크리에이터 탐색</div>
-            <div style={{ fontSize: 12, color: C.inkLt }}>{DATA.inpock.note}. 제안은 인포크에서 무료 10회</div>
-            <div style={{ display: "flex", gap: 6, marginTop: 10, flexWrap: "wrap" }}>
-              {IP_TABS.map(([k, l]) => <Chip key={k} on={ip === k} onClick={() => setIp(k)}>{l} {(DATA.inpock[k] || []).length}</Chip>)}
-            </div>
-          </div>
-          <div style={{ overflowX: "auto" }}>
-            <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 560 }}>
-              <thead><tr><th style={th}>계정</th><th style={{ ...th, textAlign: "right" }}>팔로워</th><th style={{ ...th, textAlign: "right" }}>릴스 평균 조회</th><th style={{ ...th, textAlign: "right" }}>조회/팔로워</th><th style={{ ...th, textAlign: "right" }}>좋아요</th><th style={{ ...th, textAlign: "right" }}>댓글</th><th style={th}>카테고리</th></tr></thead>
-              <tbody>
-                {(DATA.inpock[ip] || []).map((r, i) => (
-                  <tr key={i}>
-                    <td style={{ ...td, whiteSpace: "nowrap" }}><Account a={r.u} /></td>
                     <td style={{ ...td, textAlign: "right", whiteSpace: "nowrap" }}>{fmtK(r.f)}</td>
-                    <td style={{ ...td, textAlign: "right", fontWeight: 800, whiteSpace: "nowrap" }}>{fmtK(r.view)}</td>
-                    <td style={{ ...td, textAlign: "right", whiteSpace: "nowrap", color: r.view / r.f >= 1 ? C.rose : C.inkMid }}>{(r.view / r.f).toFixed(1)}x</td>
-                    <td style={{ ...td, textAlign: "right", whiteSpace: "nowrap", color: C.inkMid }}>{fmtK(r.like)}</td>
-                    <td style={{ ...td, textAlign: "right", whiteSpace: "nowrap", color: C.inkMid }}>{r.cmt}</td>
-                    <td style={{ ...td, color: C.inkLt, fontSize: 12 }}>{(r.cats || []).map((c) => IP_CAT[c] || c).join(" · ")}</td>
+                    <td style={{ ...td, textAlign: "right", fontWeight: 800 }}>{r.score}</td>
+                    <td style={{ ...td, whiteSpace: "nowrap", color: C.inkMid }}>{r.self_rev || "—"}</td>
+                    <td style={{ ...td, whiteSpace: "nowrap", fontWeight: 700 }}>{r.ext ? won(+r.ext) : "—"}</td>
+                    <td style={{ ...td, color: C.inkMid, lineHeight: 1.45, fontSize: 12 }}>{(r.reason || "").replace(/^[^\n]*\n\n/, "")}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
+          )}
+          {!zvzo && <div style={{ padding: 20, fontSize: 12, color: C.inkLt }}>불러오는 중…</div>}
+        </div>
+      </Card>
+
+      {/* (f) 인포크 — 전체 탐색 */}
+      <Card style={{ padding: 0, overflow: "hidden" }}>
+        <div style={{ padding: "18px 18px 10px" }}>
+          <div style={{ fontSize: 14, fontWeight: 800, color: C.ink, marginBottom: 2 }}>인포크 비즈니스 크리에이터 탐색 {ipAll ? `${ipAll.n.toLocaleString()}명` : ""}</div>
+          <div style={{ fontSize: 12, color: C.inkLt }}>팔로워 1만~100만 전 카테고리. 릴스 평균 조회수 기준(판매 지표 아님). 제안은 인포크에서 무료 10회 · {ipRows.length.toLocaleString()}명 표시</div>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 10, alignItems: "center" }}>
+            <span style={{ fontSize: 11, color: C.inkLt, fontWeight: 700 }}>카테고리</span>
+            <Chip on={!ipCats.length} onClick={() => setIpCats([])}>전체</Chip>
+            {IP_CATS.map((k) => <Chip key={k} on={ipCats.includes(k)} onClick={() => setIpCats(ipCats.includes(k) ? ipCats.filter((x) => x !== k) : [...ipCats, k])}>{IP_CAT[k] || k}</Chip>)}
           </div>
-        </Card>
-      )}
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 8, alignItems: "center" }}>
+            <span style={{ fontSize: 11, color: C.inkLt, fontWeight: 700 }}>팔로워</span>
+            {Object.keys(IP_RANGES).map((k) => <Chip key={k} on={ipRange === k} onClick={() => setIpRange(k)}>{IP_RANGE_LABEL[k]}</Chip>)}
+            <span style={{ width: 8 }} />
+            <span style={{ fontSize: 11, color: C.inkLt, fontWeight: 700 }}>정렬</span>
+            {[["v", "릴스 조회"], ["f", "팔로워"], ["r", "조회/팔로워"], ["l", "좋아요"]].map(([k, l]) => <Chip key={k} on={ipSort === k} onClick={() => setIpSort(k)}>{l}</Chip>)}
+            <input value={ipQ} onChange={(e) => setIpQ(e.target.value)} placeholder="계정 검색" style={{ marginLeft: 6, fontSize: 12, padding: "5px 10px", border: `1px solid ${C.border}`, borderRadius: 20, outline: "none", minWidth: 140 }} />
+          </div>
+        </div>
+        <div style={{ overflowX: "auto", maxHeight: 640, overflowY: "auto" }}>
+          <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 600 }}>
+            <thead><tr><th style={th}>#</th><th style={th}>계정</th><th style={{ ...th, textAlign: "right" }}>팔로워</th><th style={{ ...th, textAlign: "right" }}>릴스 평균 조회</th><th style={{ ...th, textAlign: "right" }}>조회/팔로워</th><th style={{ ...th, textAlign: "right" }}>좋아요</th><th style={{ ...th, textAlign: "right" }}>댓글</th><th style={th}>카테고리</th></tr></thead>
+            <tbody>
+              {ipRows.slice(0, ipLimit).map((r, i) => (
+                <tr key={r.u}>
+                  <td style={{ ...td, color: C.inkLt, fontSize: 11 }}>{i + 1}</td>
+                  <td style={{ ...td, whiteSpace: "nowrap" }}><Account a={r.u} /></td>
+                  <td style={{ ...td, textAlign: "right", whiteSpace: "nowrap" }}>{fmtK(r.f)}</td>
+                  <td style={{ ...td, textAlign: "right", fontWeight: 800, whiteSpace: "nowrap" }}>{fmtK(r.v)}</td>
+                  <td style={{ ...td, textAlign: "right", whiteSpace: "nowrap", color: r.v / r.f >= 1 ? C.rose : C.inkMid }}>{(r.v / r.f).toFixed(1)}x</td>
+                  <td style={{ ...td, textAlign: "right", whiteSpace: "nowrap", color: C.inkMid }}>{fmtK(r.l)}</td>
+                  <td style={{ ...td, textAlign: "right", whiteSpace: "nowrap", color: C.inkMid }}>{r.c}</td>
+                  <td style={{ ...td, color: C.inkLt, fontSize: 12 }}>{(r.cats || []).map((c) => IP_CAT[c] || c).join(" · ")}</td>
+                </tr>
+              ))}
+              {!ipAll && <tr><td colSpan={8} style={{ ...td, color: C.inkLt, padding: 20 }}>불러오는 중…</td></tr>}
+            </tbody>
+          </table>
+          {ipRows.length > ipLimit && <div style={{ padding: 12, textAlign: "center" }}><button onClick={() => setIpLimit(ipLimit + 200)} style={{ fontSize: 12, fontWeight: 700, padding: "7px 16px", borderRadius: 20, border: `1px solid ${C.border}`, background: C.white, cursor: "pointer" }}>200명 더 보기 ({(ipRows.length - ipLimit).toLocaleString()}명 남음)</button></div>}
+        </div>
+      </Card>
 
       {/* (c) 대형 살림 계정 */}
       <Card style={{ padding: 0, overflow: "hidden" }}>
