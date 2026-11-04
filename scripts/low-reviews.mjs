@@ -7,9 +7,11 @@ const since = new Date(Date.now() - 7 * 864e5).toISOString().slice(0, 10); const
 for (const [name, url] of PRODUCTS) {
   const p = await ctx.newPage();
   try {
-    await p.goto(url, { waitUntil: 'domcontentloaded', timeout: 40000 }); await p.waitForTimeout(5000);
-    const ids = await p.evaluate(() => { const st = window.__PRELOADED_STATE__ || {}; const prod = st.product?.A || {}; return { origin: prod.originProductNo || prod.productNo, merchant: st.channel?.A?.payReferenceKey || prod.channel?.payReferenceKey || st.product?.A?.channel?.payReferenceKey }; });
-    if (!ids.origin) { out.push({ name, error: 'originProductNo 없음' }); continue; }
+    let origin = null; p.on('request', (rq) => { const m = rq.url().match(/\/n\/v1\/marketing-message\/(\d+)/); if (m) origin = m[1]; });
+    await p.goto(url, { waitUntil: 'domcontentloaded', timeout: 40000 }); await p.waitForTimeout(6000);
+    const merchant = await p.evaluate(() => { const h = document.documentElement.innerHTML; const m = h.match(/"payReferenceKey":"(\d+)"/); return m ? m[1] : null; });
+    const ids = { origin, merchant: merchant || '500070063' };
+    if (!ids.origin) { out.push({ name, error: 'originProductNo 없음(marketing-message 요청 미발생)' }); continue; }
     const rows = [];
     for (let page = 1; page <= 5; page++) {
       const j = await p.evaluate(async ({ origin, merchant, page }) => { const r = await fetch('/n/v1/contents/reviews/query-pages', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ checkoutMerchantNo: merchant, originProductNo: origin, page, pageSize: 30, reviewSearchSortType: 'REVIEW_CREATE_DATE_DESC' }) }); return r.ok ? r.json() : { status: r.status }; }, { ...ids, page });
