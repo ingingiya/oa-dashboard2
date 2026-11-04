@@ -53,6 +53,23 @@ export async function POST(request) {
       }
       return Response.json({ results });
     }
+    if (Array.isArray(body.stock) && body.stock.length) {
+      // 재고 소진 예측(3): 발송가능재고(v_stock_status, 전 창고) + 최근 14일 판매(전 채널) → 남은 일수는 클라이언트에서
+      const PARTS = /케이블|배터리|박스|노즐|필터|파우치|부레|분무관|수조|어댑터|거치대|스트랩|커버|물통|케이스|와블러|패드|전원선|온도조절|리테일|날개|증정/;
+      const todayKST = new Date(Date.now() + 9 * 3600e3).toISOString().slice(0, 10); const d14 = addDays(todayKST, -14), d1 = addDays(todayKST, -1);
+      const results = {};
+      for (const m of body.stock.slice(0, 15)) {
+        const p = esc(m.product);
+        try {
+          const st = await mcpQuery(`SELECT 제품명, SUM(발송가능재고) q FROM db_for_ai_sm.v_stock_status WHERE 제품명 LIKE '${p}' GROUP BY 제품명`);
+          const sv = await mcpQuery(`SELECT 제품명, SUM(판매수량) q FROM db_for_ai_sm.v_daily_sales_detail WHERE 제품명 LIKE '${p}' AND 판매날짜 BETWEEN '${d14}' AND '${d1}' GROUP BY 제품명`);
+          const keep = (r) => !PARTS.test(String(r['제품명'] || ''));
+          const stock = st.filter(keep).reduce((a, r) => a + Number(r.q || 0), 0); const sold14 = sv.filter(keep).reduce((a, r) => a + Number(r.q || 0), 0);
+          results[m.id] = { stock, sold14, perDay: sold14 / 14, daysLeft: sold14 > 0 ? Math.round(stock / (sold14 / 14)) : null, names: st.filter(keep).map((r) => r['제품명']) };
+        } catch (err) { results[m.id] = { error: String(err.message || err).slice(0, 120) }; }
+      }
+      return Response.json({ results });
+    }
     if (Array.isArray(body.profit) && body.profit.length) {
       const todayKST = new Date(Date.now() + 9 * 3600e3).toISOString().slice(0, 10);
       const results = {};

@@ -128,21 +128,23 @@ export function KakaoRankCard({ C, Card }) {
 
 // 제품별 진행 중 카드(42·15): 달력(공구·행사·PPL·광고) + 재고를 제품 기준으로 묶음
 export function ProductNowCard({ C, Card, sch, onOpen }) {
-  const [stock, setStock] = useState(null);
-  useEffect(() => { fetch("/api/erp-stock").then((r) => r.json()).then((d) => setStock(Array.isArray(d) ? d : [])).catch(() => setStock([])); }, []);
+  const [stock, setStock] = useState({});
+  useEffect(() => { fetch("/api/event-perf", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ stock: PRODUCTS.map((p) => ({ id: p.label, product: p.like })) }) }).then((r) => r.json()).then((j) => setStock(j.results || {})).catch(() => {}); }, []);
   const today = new Date(Date.now() + 9 * 3600e3).toISOString().slice(0, 10);
   const RX = { "플렌티플렛4L": /플렌티\s*플렛/, "프리온": /프리온/, "포그밍 코듀": /코듀/, "포그밍 와플": /와플/, "듀얼미스트": /듀얼미스트/, "에어리소닉": /에어리소닉/, "소닉플로우": /소닉\s*플로우/, "히트스팟": /히트스팟/, "타프실링팬": /타프/, "퀵롤차저": /퀵롤/, "듀얼포켓건": /듀얼포켓/ };
   const items = (sch || []).filter((s) => s.date && s.status !== "완료" && (s.endDate || s.date) >= today);
-  const groups = Object.entries(RX).map(([label, rx]) => { const mine = items.filter((s) => rx.test(s.title || "")).sort((a, b) => a.date.localeCompare(b.date)); const live = mine.filter((s) => s.date <= today); const st = stock ? stock.filter((x) => rx.test(String(x.name || ""))).reduce((a, x) => a + Number(x.stock_qty || 0), 0) : null; return { label, mine, live, st }; }).filter((g) => g.mine.length);
+  const groups = Object.entries(RX).map(([label, rx]) => { const mine = items.filter((s) => rx.test(s.title || "")).sort((a, b) => a.date.localeCompare(b.date)); const live = mine.filter((s) => s.date <= today); const sk = stock[label]; return { label, mine, live, sk }; }).filter((g) => g.mine.length || (g.sk && g.sk.daysLeft != null && g.sk.daysLeft < 21));
   if (!groups.length) return null;
   const overlap = (g) => { const by = {}; g.mine.filter((s) => ["공구", "행사"].includes(s.type)).forEach((s) => { for (let d = new Date(s.date + "T00:00:00"); d <= new Date((s.endDate || s.date) + "T00:00:00"); d.setDate(d.getDate() + 1)) { const k = d.toISOString().slice(0, 10); (by[k] = by[k] || []).push(s.title); } }); return Object.entries(by).filter(([, v]) => v.length > 1).map(([k]) => k); };
   return (
     <Card style={{ padding: "14px 16px" }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 8 }}><div style={{ fontSize: 15, fontWeight: 900, color: C.ink }}>제품별 진행 중</div><span style={{ fontSize: 12, color: C.inkLt }}>달력의 공구·행사·PPL·광고를 제품으로 묶음 · 같은 날 공구·행사가 겹치면 빨간 표시</span></div>
+      <div style={{ display: "flex", alignItems: "center", gap: 8 }}><div style={{ fontSize: 15, fontWeight: 900, color: C.ink }}>제품별 진행 중</div><span style={{ fontSize: 12, color: C.inkLt }}>달력의 공구·행사·PPL·광고를 제품으로 묶음 · 재고는 전산 발송가능재고 ÷ 최근 14일 하루 판매 · 겹침·재고 부족은 빨간 표시</span></div>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(260px,1fr))", gap: 8, marginTop: 10 }}>
         {groups.map((g) => { const ov = overlap(g); return (
           <div key={g.label} onClick={onOpen} style={{ border: `1px solid ${ov.length ? "#dc2626" : C.border}`, borderRadius: 10, padding: "10px 12px", cursor: "pointer" }}>
-            <div style={{ display: "flex", alignItems: "baseline", gap: 6 }}><span style={{ fontSize: 14, fontWeight: 900, color: C.ink }}>{g.label}</span><span style={{ fontSize: 11, color: C.inkLt }}>{g.live.length ? `진행 ${g.live.length} · ` : ""}예정 {g.mine.length - g.live.length}{g.st != null && g.st > 0 ? ` · 재고 ${g.st.toLocaleString()}` : ""}</span></div>
+            <div style={{ display: "flex", alignItems: "baseline", gap: 6 }}><span style={{ fontSize: 14, fontWeight: 900, color: C.ink }}>{g.label}</span><span style={{ fontSize: 11, color: C.inkLt }}>{g.live.length ? `진행 ${g.live.length} · ` : ""}예정 {g.mine.length - g.live.length}</span></div>
+            {g.sk && !g.sk.error && (() => { const next = g.mine.find((s) => s.date > today && ["공구", "행사"].includes(s.type)); const nextIn = next ? Math.round((new Date(next.date) - new Date(today)) / 864e5) : null; const short = g.sk.daysLeft != null && (g.sk.daysLeft < 14 || (nextIn != null && g.sk.daysLeft < nextIn + 7));
+              return <div style={{ fontSize: 11, color: short ? "#dc2626" : C.inkMid, fontWeight: short ? 800 : 500 }}>재고 {g.sk.stock.toLocaleString()} · 하루 {g.sk.perDay.toFixed(1)}대 → {g.sk.daysLeft != null ? g.sk.daysLeft + "일분" : "판매 없음"}{short ? (next ? ` · ${next.date.slice(5)} ${next.type} 전 발주 필요` : " · 발주 필요") : ""}</div>; })()}
             {ov.length > 0 && <div style={{ fontSize: 11, fontWeight: 800, color: "#dc2626" }}>겹침: {ov.map((d) => d.slice(5)).join(", ")} 가격 확인</div>}
             {g.mine.slice(0, 4).map((s, i) => <div key={i} style={{ fontSize: 12, color: C.inkMid, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}><span style={{ fontSize: 10, fontWeight: 800, color: s.date <= today ? C.rose : C.inkLt }}>{s.date <= today ? "진행" : s.date.slice(5).replace("-", "/")}</span> {s.type} · {s.title.replace(/^\[[^\]]*\]\s*/, "")}</div>)}
           </div>); })}
