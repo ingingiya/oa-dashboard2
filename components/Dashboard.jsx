@@ -10004,8 +10004,7 @@ export default function OaDashboard(){
       {/* ── 카카오 선물하기 실시간 배지 모니터 ── */}
       <KakaoLiveCard/>
 
-      {/* ── 다가오는 플랫폼 대형 행사 (D-day) ── */}
-      <UpcomingEventsCard events={promoEvents} onOpen={()=>{setSec("meta");setMetaTab("events");}}/>
+      {/* 다가오는 플랫폼 대형 행사 카드 — 11/4 사용자 요청으로 홈에서 제거 (행사 탭에는 유지) */}
 
       {/* ── 광고 효율 요약 (채널·카테고리별 평균 CPC/CPM/ROAS, 관제판 연동) ── */}
       <AdEfficiencyCard/>
