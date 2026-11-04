@@ -13570,8 +13570,9 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
     const [prodMap,setProdMap]=useSyncState("oa_event_perf_map_v1",{});
     const [open,setOpen]=useState(true);
     const [stock,setStock]=useState(null); const recordedRef=useRef(new Set());
-    useEffect(()=>{ fetch("/api/erp-stock").then(r=>r.json()).then(d=>setStock(Array.isArray(d)?d:[])).catch(()=>setStock([])); },[]);
-    const stockOf=p=>{ if(!stock||!p) return null; const key=p.like.replace(/%/g,"").replace(/^오아/,""); const hit=stock.filter(x=>String(x.name||"").replace(/\s/g,"").includes(key.replace(/\s/g,""))); if(!hit.length) return null; return hit.reduce((a,x)=>a+Number(x.stock_qty||0),0); };
+    // 재고 = 전산 v_stock_status 발송가능재고(부품 제외) ÷ 최근 14일 판매 (/api/event-perf stock 모드)
+    useEffect(()=>{ fetch("/api/event-perf",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({stock:EVENT_PRODUCTS.map(p=>({id:p.label,product:p.like}))})}).then(r=>r.json()).then(j=>setStock(j.results||{})).catch(()=>setStock({})); },[]);
+    const stockOf=p=>{ if(!stock||!p) return null; const k=stock[p.label]; return k&&!k.error?k:null; };
     const dk=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
     const today=dk(new Date());
     const loadEv=useCallback(async()=>{
@@ -13579,7 +13580,7 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
       try{
         const from=dk(new Date(Date.now()-45*864e5));
         const r=await fetch(`/api/notion?from=${from}&completed=true`); const j=await r.json();
-        setEvItems((j.items||[]).filter(s=>s.type==="공구"||s.type==="행사"));
+        setEvItems((j.items||[]).filter(s=>(s.type==="공구"||s.type==="행사")&&!/^\[공구 D|^\[공구 오픈|^★원복|^\[행사 준비|^\[행사 오픈/.test(s.title||"")));
       }catch(e){}
       setEvLoading(false);
     // eslint-disable-next-line
@@ -13650,11 +13651,11 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
                 </div>
                 <div style={{minWidth:0}}>
                   {!s._prod?<span style={{fontSize:12,color:C.inkLt}}>제품을 고르면 성과가 나와요</span>
-                  :s._state==="예정"?(()=>{ const st=stockOf(s._prod); const ly=pf&&pf.lyQ!=null?pf.lyQ:null; const low=st!=null&&ly!=null&&st<ly*1.2;
+                  :s._state==="예정"?(()=>{ const sk=stockOf(s._prod); const st=sk?sk.stock:null; const ly=pf&&!pf.error&&pf.lyQ!=null?pf.lyQ:null; const daysTo=Math.round((new Date(s.date)-new Date(today))/864e5); const low=st!=null&&((ly!=null&&st<ly*1.2)||(sk.daysLeft!=null&&sk.daysLeft<daysTo+7));
                     return <div style={{display:"flex",gap:16,flexWrap:"wrap",alignItems:"baseline"}}>
-                      <div><div style={{fontSize:18,fontWeight:900,color:st==null?C.inkLt:low?C.bad:C.ink,lineHeight:1.1}}>{st==null?"재고 —":st.toLocaleString()+"대"}</div><div style={{fontSize:11,color:C.inkLt}}>{st==null?"재고 데이터에 제품 없음":"현재 재고 (전산 동기화)"}</div></div>
-                      <div><div style={{fontSize:16,fontWeight:900,color:C.ink,lineHeight:1.1}}>{ly==null?"—":ly.toLocaleString()+"대"}</div><div style={{fontSize:11,color:C.inkLt}}>작년 같은 날짜 판매</div></div>
-                      {low&&<span style={{fontSize:11,fontWeight:800,color:C.white,background:C.bad,borderRadius:4,padding:"2px 6px"}}>재고 부족 주의</span>}
+                      <div><div style={{fontSize:18,fontWeight:900,color:st==null?C.inkLt:low?C.bad:C.ink,lineHeight:1.1}}>{st==null?(stock===null?"재고 집계 중":"재고 —"):st.toLocaleString()+"대"}</div><div style={{fontSize:11,color:C.inkLt}}>{st==null?(stock===null?"":"전산 연결 실패 · 새로고침"):`발송가능재고 · 하루 ${sk.perDay.toFixed(1)}대 → ${sk.daysLeft!=null?sk.daysLeft+"일분":"판매 없음"}`}</div></div>
+                      <div><div style={{fontSize:16,fontWeight:900,color:C.ink,lineHeight:1.1}}>{ly==null?(pf&&pf.error?"실패":"—"):ly.toLocaleString()+"대"}</div><div style={{fontSize:11,color:C.inkLt}}>작년 같은 날짜 판매{pf&&pf.error?" · 전산 연결 실패":""}</div></div>
+                      {low&&<span style={{fontSize:11,fontWeight:800,color:C.white,background:C.bad,borderRadius:4,padding:"2px 6px"}}>재고 부족 주의 · 공구 전 발주</span>}
                     </div>; })()
                   :!pf?<span style={{fontSize:12,color:C.inkLt}}>집계 중...</span>
                   :pf.error?<span style={{fontSize:12,color:C.bad}}>집계 실패 (전산 연결) · 새로고침</span>
