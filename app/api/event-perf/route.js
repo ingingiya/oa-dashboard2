@@ -31,7 +31,22 @@ const esc = s => String(s).replace(/['\\%_]/g, '');
 
 export async function POST(request) {
   try {
-    const { items } = await request.json();
+    const body = await request.json();
+    if (Array.isArray(body.month) && body.month.length) {
+      const todayKST = new Date(Date.now() + 9 * 3600e3).toISOString().slice(0, 10);
+      const results = {};
+      for (const m of body.month.slice(0, 12)) {
+        if (!/^\d{4}-\d{2}$/.test(m.ym || '')) continue;
+        const s = m.ym + '-01'; const e = (m.ym === todayKST.slice(0, 7)) ? todayKST : `${m.ym}-${new Date(+m.ym.slice(0, 4), +m.ym.slice(5, 7), 0).getDate()}`;
+        const ly0 = lastYear(s), ly1 = lastYear(e); const p = esc(m.product);
+        try {
+          const [r] = await mcpQuery(`SELECT SUM(CASE WHEN DATE(주문등록일시) BETWEEN '${s}' AND '${e}' THEN 수량 ELSE 0 END) q, SUM(CASE WHEN DATE(주문등록일시) BETWEEN '${s}' AND '${e}' THEN 판매금액 ELSE 0 END) amt, SUM(CASE WHEN DATE(주문등록일시) BETWEEN '${ly0}' AND '${ly1}' THEN 수량 ELSE 0 END) ly_q FROM db_for_ai_sm.v_daily_order_detail WHERE 매출처명 IN ${CHANNELS} AND 제품명 LIKE '${p}' AND ((주문등록일시 BETWEEN '${s}' AND '${e} 23:59:59') OR (주문등록일시 BETWEEN '${ly0}' AND '${ly1} 23:59:59'))`);
+          results[m.id] = { q: Number(r?.q || 0), amt: Math.round(Number(r?.amt || 0)), lyQ: Number(r?.ly_q || 0), from: s, to: e };
+        } catch (err) { results[m.id] = { error: String(err.message || err).slice(0, 120) }; }
+      }
+      return Response.json({ results });
+    }
+    const { items } = body;
     if (!Array.isArray(items) || !items.length) return Response.json({ results: {} });
     const todayKST = new Date(Date.now() + 9 * 3600e3).toISOString().slice(0, 10);
     const results = {};

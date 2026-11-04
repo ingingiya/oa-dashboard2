@@ -54,6 +54,14 @@ export async function POST(request) {
   if (!targets.length)
     return Response.json({ ok: true, changed: 0, message: turnOn ? "이미 켜져 있음" : "이미 꺼져 있음", statuses: matches.map(a => a.effective_status) });
 
+  // 변경 기록(oa_ad_changes_v1)에 자동 추가 — 실패해도 본 동작엔 영향 없음
+  try {
+    const SU = process.env.NEXT_PUBLIC_SUPABASE_URL, SK = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+    const h = { apikey: SK, Authorization: `Bearer ${SK}`, "Content-Type": "application/json" };
+    const cur = await fetch(`${SU}/rest/v1/settings?key=eq.oa_ad_changes_v1&select=value`, { headers: h }).then(r => r.json()).then(d => d?.[0]?.value || []).catch(() => []);
+    const entry = { id: "c" + Date.now(), channel: "메타", target: adName, action: turnOn ? "켬" : "끔", detail: `${targets.length}개 광고`, reason: body?.reason || "대시보드 원클릭", by: body?.by || "자동", at: new Date().toISOString() };
+    await fetch(`${SU}/rest/v1/settings`, { method: "POST", headers: { ...h, Prefer: "resolution=merge-duplicates" }, body: JSON.stringify({ key: "oa_ad_changes_v1", value: [entry, ...cur].slice(0, 500), updated_at: new Date().toISOString() }) });
+  } catch {}
   const results = [];
   for (const ad of targets) {
     const r = await fetch(`${GRAPH}/${ad.id}`, {

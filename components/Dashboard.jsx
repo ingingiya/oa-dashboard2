@@ -3,7 +3,13 @@
 import { useState, useEffect, useCallback, useRef, Fragment } from "react";
 import { getSetting, setSetting, getAdImages, saveAdImagesMeta, uploadAdImage, uploadSettleFile, getBeautyRealSales } from "../lib/useSupabase";
 import TrafficAdsSection from "./TrafficAdsSection"; // 광고관리(트래픽) — 카카오 선물하기 유입 캠페인 운영표 (09-21)
-import GongguInfluencerSection from "./GongguInfluencerSection"; // 공구 인플루언서 리서치 뷰 (data/gonggu-influencers.json 정적, 10-26)
+import GongguInfluencerSection from "./GongguInfluencerSection";
+import PplSection from "./PplSection";           // PPL 협찬 진행판 (11-04)
+import GlobalSection from "./GlobalSection";     // 해외 진행판·판매가 계산 (11-04)
+import TeamSection from "./TeamSection";         // 요청함·회고·문서함·온보딩 (11-04)
+import AdChangeLog from "./AdChangeLog";         // 광고 변경 기록 (11-04)
+import { VerdictCard, GoalCard, PplBudgetCard } from "./HomeExtraCards"; // 홈 카드 (11-04)
+import useShared from "./useShared"; // 공구 인플루언서 리서치 뷰 (data/gonggu-influencers.json 정적, 10-26)
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // Supabase 동기화 훅 — 팀 전체 공유 (localStorage 대체)
@@ -3216,6 +3222,24 @@ function InvModalComp({mode, initial, onSave, onClose}){
 }
 
 // 스케줄 추가/수정 모달
+function SchComments({C, id}){
+  const [all,setAll]=useShared("oa_sch_comments_v1",{});
+  const [txt,setTxt]=useState("");
+  const list=(all&&all[id])||[];
+  const who=()=>{ try{ return localStorage.getItem("oa_board_me")||"익명"; }catch(e){ return "익명"; } };
+  const add=()=>{ const t=txt.trim(); if(!t) return; setAll(p=>({...(p||{}),[id]:[...(((p||{})[id])||[]),{by:who(),text:t,at:new Date().toISOString()}]})); setTxt(""); };
+  const render=t=>t.split(/(@[가-힣A-Za-z]+)/g).map((x,i)=>/^@/.test(x)?<b key={i} style={{color:C.rose}}>{x}</b>:x);
+  return(
+    <div style={{marginBottom:12,border:`1px solid ${C.border}`,borderRadius:10,padding:"10px 12px",background:C.cream}}>
+      <div style={{fontSize:12,fontWeight:800,color:C.inkMid,marginBottom:6}}>댓글 {list.length} <span style={{fontWeight:500,color:C.inkLt}}>· @이름 으로 멘션 (웍스 알림은 아직 안 가요)</span></div>
+      {list.map((c,i)=><div key={i} style={{fontSize:13,color:C.ink,lineHeight:1.5,marginBottom:4}}><b>{c.by}</b> <span style={{fontSize:11,color:C.inkLt}}>{c.at.slice(5,16).replace("T"," ")}</span><div>{render(c.text)}</div></div>)}
+      <div style={{display:"flex",gap:6,marginTop:6}}>
+        <input value={txt} onChange={e=>setTxt(e.target.value)} onKeyDown={e=>e.key==="Enter"&&add()} placeholder="@소리 소재 언제 돼요?" style={{flex:1,fontSize:13,padding:"6px 10px",border:`1px solid ${C.border}`,borderRadius:8,background:C.white,fontFamily:"inherit"}}/>
+        <button onClick={add} style={{fontSize:12,fontWeight:800,padding:"6px 12px",borderRadius:8,border:0,background:C.ink,color:C.white,cursor:"pointer",fontFamily:"inherit"}}>달기</button>
+      </div>
+    </div>
+  );
+}
 function SchModalComp({mode, initial, onSave, onClose}){
   const empty = {type:"공구",title:"",date:"",endDate:"",assignee:"",note:"",status:"예정",auto:true};
   const [f, setF] = useState(()=>initial||empty);
@@ -3237,6 +3261,7 @@ function SchModalComp({mode, initial, onSave, onClose}){
           onFocus={e=>e.target.style.borderColor=C.rose} onBlur={e=>e.target.style.borderColor=C.border}/>
       </FR>
       <FR label="상태"><Sel value={f.status} onChange={v=>set("status",v)} options={["예정","진행중","완료","보류"]}/></FR>
+      {mode==="edit"&&initial?.notionId&&!/^local_|^csv_|^temp_/.test(initial.notionId)&&<SchComments C={C} id={initial.notionId}/>}
       {mode==="add"&&(f.type==="공구"||f.type==="행사")&&(
         <label style={{display:"flex",alignItems:"center",gap:8,fontSize:13,color:C.inkMid,marginBottom:12,cursor:"pointer"}}>
           <input type="checkbox" checked={f.auto!==false} onChange={e=>set("auto",e.target.checked)}/>
@@ -9913,6 +9938,9 @@ export default function OaDashboard(){
   const NAVS=[
     {id:"home",      icon:"home",           label:"홈"},
     {id:"gonggu",    icon:"groups",         label:"공구 인플루언서"},
+    {id:"ppl",       icon:"movie",          label:"PPL 협찬"},
+    {id:"global",    icon:"public",         label:"해외"},
+    {id:"team",      icon:"diversity_3",    label:"팀"},
     {id:"meta",      icon:"campaign",       label:"메타광고"},
     {id:"guide",     icon:"menu_book",      label:"가이드"},
     {id:"inf_archive",icon:"photo_library", label:"아카이브"},
@@ -10162,6 +10190,12 @@ export default function OaDashboard(){
         </div>
       )}
 
+      {/* ── 오늘의 광고 판정 · 이번 달 목표 · PPL 예산 (11-04) ── */}
+      <VerdictCard C={C} Card={Card}/>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(320px,1fr))",gap:12}}>
+        <GoalCard C={C} Card={Card}/>
+        <PplBudgetCard C={C} Card={Card} onOpen={()=>setSec("ppl")}/>
+      </div>
       {/* ── AI 인사이트 ── */}
       {homeInsights.length>0&&(
         <div onClick={()=>setSec("insight")} style={{background:"linear-gradient(135deg,#7c3aed11,#a78bfa11)",border:`1px solid #e9d5ff`,borderRadius:16,padding:"14px 16px",cursor:"pointer"}}>
@@ -10941,7 +10975,7 @@ export default function OaDashboard(){
 
         {/* 탭 */}
         <div style={{display:"flex",gap:6,overflowX:"auto",paddingBottom:2}}>
-          {[{id:"overview",label:<><MI n="trending_up" size={12}/> 추이</>},{id:"campaign",label:<><MI n="campaign" size={12}/> 캠페인</>},{id:"weekly",label:<><MI n="calendar_month" size={12}/> 주별</>},{id:"monthly",label:<><MI n="date_range" size={12}/> 월별</>},{id:"daily",label:<><MI n="calendar_today" size={12}/> 일별</>},{id:"product",label:<><MI n="inventory_2" size={12}/> 제품별</>},{id:"events",label:<><MI n="celebration" size={12}/> 행사{(promoEvents||[]).some(e=>{const t=new Date().toISOString().slice(0,10);return e.start<=t&&t<=e.end;})?" ●":""}</>},{id:"guide",label:<><MI n="menu_book" size={12}/> 가이드</>}].map(t=>(
+          {[{id:"overview",label:<><MI n="trending_up" size={12}/> 추이</>},{id:"campaign",label:<><MI n="campaign" size={12}/> 캠페인</>},{id:"weekly",label:<><MI n="calendar_month" size={12}/> 주별</>},{id:"changes",label:<><MI n="history" size={12}/> 변경 기록</>},{id:"monthly",label:<><MI n="date_range" size={12}/> 월별</>},{id:"daily",label:<><MI n="calendar_today" size={12}/> 일별</>},{id:"product",label:<><MI n="inventory_2" size={12}/> 제품별</>},{id:"events",label:<><MI n="celebration" size={12}/> 행사{(promoEvents||[]).some(e=>{const t=new Date().toISOString().slice(0,10);return e.start<=t&&t<=e.end;})?" ●":""}</>},{id:"guide",label:<><MI n="menu_book" size={12}/> 가이드</>}].map(t=>(
             <button key={t.id} onClick={()=>setMetaTab(t.id)} style={{
               padding:"6px 16px",borderRadius:8,cursor:"pointer",border:`1px solid ${metaTab===t.id?C.rose:C.border}`,
               background:metaTab===t.id?C.blush:C.white,color:metaTab===t.id?C.rose:C.inkMid,
@@ -11698,6 +11732,7 @@ export default function OaDashboard(){
         )}
 
         {/* 주별 탭 */}
+        {metaTab==="changes"&&<AdChangeLog C={C} Card={Card}/>}
         {metaTab==="weekly"&&(()=>{
           if(!hasSheet) return(
             <div style={{textAlign:"center",padding:"40px 0",color:C.inkLt}}>
@@ -19258,6 +19293,9 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
           {sec==="project"     && <ProjectBoardSection/>}
           {sec==="traffic"     && <TrafficAdsSection C={C} Card={Card}/>}
           {sec==="gonggu"      && <GongguInfluencerSection C={C} Card={Card}/>}
+          {sec==="ppl"         && <PplSection C={C} Card={Card}/>}
+          {sec==="global"      && <GlobalSection C={C} Card={Card}/>}
+          {sec==="team"        && <TeamSection C={C} Card={Card}/>}
           {sec==="schedule"    && ScheduleSection}
           {sec==="naver"       && <NaverSection/>}
           {sec==="creative"    && CreativeSection}
