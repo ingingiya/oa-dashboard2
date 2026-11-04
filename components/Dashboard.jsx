@@ -9959,6 +9959,7 @@ export default function OaDashboard(){
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   // 🏠 홈
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  const homeRef=useRef(null); const HomeStable=useMemo(()=>function HomeStable(){ return homeRef.current?homeRef.current():null; },[]);
   const HomeSection=()=>{
     // 알림 그룹 정의
     const alertGroups = [
@@ -13667,6 +13668,7 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
     );
   })();
 
+  homeRef.current=HomeSection;
   // 간단 보기(20): 핸드폰에서 오늘 할 것만
   const SimpleSection=(()=>{
     const dk=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
@@ -19311,7 +19313,7 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
       {/* ── 콘텐츠 영역 ── */}
       <div className="oa-body">
         <main className="oa-main">
-          {sec==="home"        && <HomeSection/>}
+          {sec==="home"        && <HomeStable/>}
           {sec==="meta"        && MetaSection}
           {sec==="adschedule"  && <AdSchedulePanel C={C} getSetting={getSetting}/>}
           {sec==="inf_archive" && <InfluencerArchiveSection/>}
