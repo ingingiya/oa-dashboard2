@@ -6,7 +6,14 @@ export const maxDuration = 60;
 const MCP_URL = 'https://mcp-mysql.oa-corp.com/mcp';
 const CHANNELS = "('스마트스토어','네이버페이','토스페이먼츠','카카오페이')";
 
-async function mcpQuery(sql) {
+async function mcpQuery(sql, tries = 3) {
+  // 전산 MCP가 간헐적으로 "fetch failed" → 3회 재시도
+  for (let i = 1; ; i++) {
+    try { return await mcpOnce(sql); }
+    catch (e) { if (i >= tries) throw e; await new Promise(r => setTimeout(r, 2500 * i)); }
+  }
+}
+async function mcpOnce(sql) {
   const res = await fetch(MCP_URL, {
     method: 'POST',
     headers: {

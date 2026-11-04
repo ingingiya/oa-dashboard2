@@ -24,7 +24,11 @@ for i, e in enumerate(ev):
     like = next((l for k, l in PRODUCTS if k.replace(' ', '') in e['t'].replace(' ', '')), None)
     if like: items.append({'id': str(i), 'product': like, 'start': e['s'], 'end': e['e']})
 r = urllib.request.Request('https://oa-dashboard2.vercel.app/api/event-perf', data=json.dumps({'items': items}).encode(), headers={'Content-Type': 'application/json'})
-perf = json.load(urllib.request.urlopen(r, timeout=120)).get('results', {})
+perf = {}
+for _try in range(3):
+    perf = json.load(urllib.request.urlopen(r, timeout=180)).get('results', {})
+    if all(not (v or {}).get('error') for v in perf.values()): break
+    import time; time.sleep(5)
 PF = '/Users/kirby/Library/Fonts/PretendardVariable.ttf'
 def F(sz, w='Regular'):
     f = ImageFont.truetype(PF, sz)
