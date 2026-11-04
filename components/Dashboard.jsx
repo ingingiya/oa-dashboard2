@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback, useRef, Fragment } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo, Fragment } from "react";
 import { getSetting, setSetting, getAdImages, saveAdImagesMeta, uploadAdImage, uploadSettleFile, getBeautyRealSales } from "../lib/useSupabase";
 import TrafficAdsSection from "./TrafficAdsSection"; // 광고관리(트래픽) — 카카오 선물하기 유입 캠페인 운영표 (09-21)
 import GongguInfluencerSection from "./GongguInfluencerSection";
