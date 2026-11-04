@@ -8,7 +8,7 @@ import PplSection from "./PplSection";           // PPL 협찬 진행판 (11-04)
 import GlobalSection from "./GlobalSection";     // 해외 진행판·판매가 계산 (11-04)
 import TeamSection from "./TeamSection";         // 요청함·회고·문서함·온보딩 (11-04)
 import AdChangeLog from "./AdChangeLog";         // 광고 변경 기록 (11-04)
-import { VerdictCard, GoalCard, PplBudgetCard } from "./HomeExtraCards"; // 홈 카드 (11-04)
+import { VerdictCard, GoalCard, PplBudgetCard, KakaoRankCard, ProductNowCard } from "./HomeExtraCards"; // 홈 카드 (11-04)
 import useShared from "./useShared"; // 공구 인플루언서 리서치 뷰 (data/gonggu-influencers.json 정적, 10-26)
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -9941,6 +9941,7 @@ export default function OaDashboard(){
     {id:"ppl",       icon:"movie",          label:"PPL 협찬"},
     {id:"global",    icon:"public",         label:"해외"},
     {id:"team",      icon:"diversity_3",    label:"팀"},
+    {id:"simple",    icon:"smartphone",     label:"간단 보기"},
     {id:"meta",      icon:"campaign",       label:"메타광고"},
     {id:"guide",     icon:"menu_book",      label:"가이드"},
     {id:"inf_archive",icon:"photo_library", label:"아카이브"},
@@ -10196,6 +10197,8 @@ export default function OaDashboard(){
         <GoalCard C={C} Card={Card}/>
         <PplBudgetCard C={C} Card={Card} onOpen={()=>setSec("ppl")}/>
       </div>
+      <ProductNowCard C={C} Card={Card} sch={notionSch} onOpen={()=>setSec("schedule")}/>
+      <KakaoRankCard C={C} Card={Card}/>
       {/* ── AI 인사이트 ── */}
       {homeInsights.length>0&&(
         <div onClick={()=>setSec("insight")} style={{background:"linear-gradient(135deg,#7c3aed11,#a78bfa11)",border:`1px solid #e9d5ff`,borderRadius:16,padding:"14px 16px",cursor:"pointer"}}>
@@ -13661,6 +13664,30 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
             );
           })}
         </div>}
+      </div>
+    );
+  })();
+
+  // 간단 보기(20): 핸드폰에서 오늘 할 것만
+  const SimpleSection=(()=>{
+    const dk=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+    const today=dk(new Date()); const tmr=dk(new Date(Date.now()+864e5));
+    let me=""; try{ me=localStorage.getItem("oa_board_me")||""; }catch(e){}
+    const span=(s,d)=>s.date&&s.date<=d&&(s.endDate||s.date)>=d&&s.status!=="완료";
+    const mine=s=>!me||!s.assignee||s.assignee===me||s.assignee==="행사";
+    const T=notionSch.filter(s=>span(s,today)&&mine(s)), N=notionSch.filter(s=>s.date===tmr&&mine(s));
+    const Row=({s})=><div style={{display:"flex",gap:8,alignItems:"center",padding:"8px 0",borderBottom:`1px solid ${C.border}`}}><span style={{fontSize:10,fontWeight:800,color:schTypeColor(s.type),whiteSpace:"nowrap"}}>{s.type}</span><span style={{flex:1,fontSize:14,fontWeight:700,color:C.ink,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{s.title}</span>{s.assignee&&<span style={{fontSize:11,color:s.assigneeColor||C.inkLt,fontWeight:700}}>{s.assignee}</span>}</div>;
+    return(
+      <div style={{display:"flex",flexDirection:"column",gap:12,maxWidth:520}}>
+        <Card style={{padding:"12px 16px"}}>
+          <div style={{display:"flex",alignItems:"center",gap:8}}><div style={{fontSize:16,fontWeight:900,color:C.ink}}>오늘 {today.slice(5).replace("-","/")}</div><span style={{fontSize:12,color:C.inkLt}}>{me?me+" 기준":"전체"}</span><div style={{flex:1}}/><button onClick={()=>{const m=prompt("내 이름(경은·소리·영서·동욱)",me)||"";try{localStorage.setItem("oa_board_me",m);}catch(e){} setSec("home");setTimeout(()=>setSec("simple"),0);}} style={{fontSize:11,border:`1px solid ${C.border}`,background:C.cream,borderRadius:20,padding:"3px 9px",cursor:"pointer",fontFamily:"inherit"}}>이름</button></div>
+          {(restoreMissed.length>0||offConflicts.length>0)&&<div style={{marginTop:8,background:"#FEF0F0",borderRadius:8,padding:"8px 10px",fontSize:13,color:C.bad,fontWeight:700}}>{restoreMissed.length>0&&<div>원복 미완료 {restoreMissed.length}건</div>}{offConflicts.length>0&&<div>휴무 중 담당 일정 {offConflicts.length}건</div>}</div>}
+          <div style={{marginTop:8}}>{T.length?T.map(s=><Row key={s.id} s={s}/>):<div style={{fontSize:13,color:C.inkLt}}>오늘 일정 없음</div>}</div>
+          {N.length>0&&<><div style={{fontSize:12,fontWeight:800,color:C.inkMid,marginTop:10}}>내일</div>{N.map(s=><Row key={s.id} s={s}/>)}</>}
+        </Card>
+        <VerdictCard C={C} Card={Card}/>
+        <GoalCard C={C} Card={Card}/>
+        <ProductNowCard C={C} Card={Card} sch={notionSch} onOpen={()=>setSec("schedule")}/>
       </div>
     );
   })();
@@ -19296,6 +19323,7 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
           {sec==="ppl"         && <PplSection C={C} Card={Card}/>}
           {sec==="global"      && <GlobalSection C={C} Card={Card}/>}
           {sec==="team"        && <TeamSection C={C} Card={Card}/>}
+          {sec==="simple"      && SimpleSection}
           {sec==="schedule"    && ScheduleSection}
           {sec==="naver"       && <NaverSection/>}
           {sec==="creative"    && CreativeSection}

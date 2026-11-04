@@ -31,6 +31,11 @@ export default function TeamSection({ C, Card }) {
   const [tab, setTab] = useState("req");
   const [f, setF] = useState({ kind: KINDS[0], product: "", channel: "", due: "", assignee: "", note: "" });
   const [showDone, setShowDone] = useState(false);
+  // 당첨자 처리(39): 참여자 붙여넣기 → 추첨 → 발표 문구 → 전산 배송 주문용 JSON
+  const [win, setWin] = useState({ raw: "", n: 3, product: "프리온 무선 고데기", event: "", picked: [] });
+  const draw = () => { const names = win.raw.split(/\n|,/).map((x) => x.trim()).filter(Boolean); const u = [...new Set(names)]; const out = []; while (out.length < Math.min(win.n, u.length)) { const i = Math.floor(Math.random() * u.length); out.push(u.splice(i, 1)[0]); } setWin({ ...win, picked: out }); };
+  const ann = () => `[${win.event || "이벤트"}] 당첨자 발표 🎉\n\n참여해 주신 모든 분께 감사드립니다.\n당첨되신 분들께는 ${win.product}을(를) 보내드립니다.\n\n${win.picked.map((x) => "· " + x).join("\n")}\n\n당첨자분은 DM으로 받으실 분 성함·연락처·주소를 보내 주세요. (7일 내 미회신 시 당첨 취소)`;
+  const shipJson = () => JSON.stringify(win.picked.map((x, i) => ({ key: "win" + (i + 1), name: x, phone: "", zip: "", addr: "", addr2: "", memo: `${win.event || "이벤트"} 당첨 발송-${x} 건` })), null, 1);
   const wk = weekKey(); const r = retro[wk] || {};
   const add = () => { if (!f.note) return; setReq((p) => [{ id: "r" + Date.now(), ...f, status: "대기", by: me(), at: Date.now(), link: "" }, ...(p || [])]); setF({ ...f, note: "", product: "", due: "" }); };
   const patch = (id, p) => setReq((prev) => prev.map((x) => x.id === id ? { ...x, ...p } : x));
@@ -39,7 +44,7 @@ export default function TeamSection({ C, Card }) {
   const TabBtn = ({ k, l }) => <button onClick={() => setTab(k)} style={{ fontSize: 13, fontWeight: 800, padding: "8px 16px", borderRadius: 12, border: 0, cursor: "pointer", background: tab === k ? C.ink : C.cream, color: tab === k ? C.white : C.inkMid }}>{l}</button>;
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-      <Card style={{ padding: "12px 16px" }}><div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}><div style={{ fontSize: 16, fontWeight: 800, color: C.ink, marginRight: 6 }}>팀</div><TabBtn k="req" l={`요청함 ${(req || []).filter((x) => x.status !== "완료").length}`} /><TabBtn k="retro" l="주간 회고" /><TabBtn k="docs" l="문서함" /><TabBtn k="guide" l="PPL 가이드라인" /><TabBtn k="onb" l="온보딩" /></div></Card>
+      <Card style={{ padding: "12px 16px" }}><div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}><div style={{ fontSize: 16, fontWeight: 800, color: C.ink, marginRight: 6 }}>팀</div><TabBtn k="req" l={`요청함 ${(req || []).filter((x) => x.status !== "완료").length}`} /><TabBtn k="retro" l="주간 회고" /><TabBtn k="docs" l="문서함" /><TabBtn k="guide" l="PPL 가이드라인" /><TabBtn k="win" l="당첨자 처리" /><TabBtn k="onb" l="온보딩" /></div></Card>
       {tab === "req" && <>
         <Card style={{ padding: "14px 16px" }}>
           <div style={{ fontSize: 13, fontWeight: 800, color: C.ink, marginBottom: 8 }}>요청 넣기</div>
@@ -92,6 +97,22 @@ export default function TeamSection({ C, Card }) {
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}><div style={{ fontSize: 15, fontWeight: 900, color: C.ink }}>PPL·인플루언서 가이드라인 양식</div><div style={{ flex: 1 }} /><button onClick={() => navigator.clipboard?.writeText(GUIDE)} style={{ fontSize: 12, fontWeight: 700, border: `1px solid ${C.border}`, background: C.white, borderRadius: 20, padding: "4px 10px", cursor: "pointer" }}>복사</button></div>
         <pre style={{ whiteSpace: "pre-wrap", fontFamily: "inherit", fontSize: 13, lineHeight: 1.7, color: C.ink, background: C.cream, borderRadius: 10, padding: 14, marginTop: 10 }}>{GUIDE}</pre>
         <div style={{ fontSize: 12, color: C.inkLt }}>제품이 바뀌면 제품명·필수 장면만 고쳐서 쓰세요. 금지 표현은 팀 규칙(가격대 표기·날짜 금지·실제 숫자만)과 같아요.</div>
+      </Card>}
+      {tab === "win" && <Card style={{ padding: "14px 16px" }}>
+        <div style={{ fontSize: 15, fontWeight: 900, color: C.ink }}>이벤트 당첨자 처리</div>
+        <div style={{ fontSize: 12, color: C.inkLt, marginBottom: 10 }}>참여자 목록을 붙여넣고 추첨 → 발표 문구 복사 → 주소 받은 뒤 "배송 주문 JSON"을 복사해서 <code>erp-ship-order.mjs</code>에 넣으면 전산 등록까지 돼요.</div>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "end", marginBottom: 8 }}>
+          <label style={{ fontSize: 11, color: C.inkLt, fontWeight: 700, display: "flex", flexDirection: "column", gap: 3 }}>이벤트명<input value={win.event} onChange={(e) => setWin({ ...win, event: e.target.value })} placeholder="X 올리미컬리미 출시 이벤트" style={{ width: 220, fontSize: 13, padding: "6px 8px", border: `1px solid ${C.border}`, borderRadius: 8 }} /></label>
+          <label style={{ fontSize: 11, color: C.inkLt, fontWeight: 700, display: "flex", flexDirection: "column", gap: 3 }}>경품<input value={win.product} onChange={(e) => setWin({ ...win, product: e.target.value })} style={{ width: 180, fontSize: 13, padding: "6px 8px", border: `1px solid ${C.border}`, borderRadius: 8 }} /></label>
+          <label style={{ fontSize: 11, color: C.inkLt, fontWeight: 700, display: "flex", flexDirection: "column", gap: 3 }}>인원<input type="number" value={win.n} onChange={(e) => setWin({ ...win, n: +e.target.value })} style={{ width: 60, fontSize: 13, padding: "6px 8px", border: `1px solid ${C.border}`, borderRadius: 8 }} /></label>
+          <button onClick={draw} style={{ fontSize: 13, fontWeight: 800, padding: "7px 16px", borderRadius: 10, border: 0, background: C.ink, color: C.white, cursor: "pointer" }}>추첨</button>
+        </div>
+        <textarea value={win.raw} onChange={(e) => setWin({ ...win, raw: e.target.value })} placeholder={"참여자 아이디를 한 줄에 하나씩 (또는 쉼표)\n@abc\n@def"} style={{ width: "100%", boxSizing: "border-box", minHeight: 120, fontSize: 13, padding: 10, border: `1px solid ${C.border}`, borderRadius: 10, background: C.cream, fontFamily: "inherit" }} />
+        <div style={{ fontSize: 12, color: C.inkLt, marginTop: 4 }}>참여 {[...new Set(win.raw.split(/\n|,/).map((x) => x.trim()).filter(Boolean))].length}명 (중복 제거)</div>
+        {win.picked.length > 0 && <div style={{ marginTop: 12, display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(280px,1fr))", gap: 12 }}>
+          <div><div style={{ display: "flex", alignItems: "center", gap: 8 }}><b style={{ fontSize: 13 }}>발표 문구</b><button onClick={() => navigator.clipboard?.writeText(ann())} style={{ fontSize: 11, border: `1px solid ${C.border}`, background: C.white, borderRadius: 20, padding: "2px 8px", cursor: "pointer" }}>복사</button></div><pre style={{ whiteSpace: "pre-wrap", fontFamily: "inherit", fontSize: 13, background: C.cream, borderRadius: 10, padding: 12, lineHeight: 1.6 }}>{ann()}</pre></div>
+          <div><div style={{ display: "flex", alignItems: "center", gap: 8 }}><b style={{ fontSize: 13 }}>배송 주문 JSON (주소 채운 뒤)</b><button onClick={() => navigator.clipboard?.writeText(shipJson())} style={{ fontSize: 11, border: `1px solid ${C.border}`, background: C.white, borderRadius: 20, padding: "2px 8px", cursor: "pointer" }}>복사</button></div><pre style={{ whiteSpace: "pre-wrap", fontFamily: "ui-monospace,monospace", fontSize: 11, background: C.cream, borderRadius: 10, padding: 12, lineHeight: 1.5 }}>{shipJson()}</pre><div style={{ fontSize: 11, color: C.inkLt }}>실행: node scripts/erp-ship-order.mjs '[JSON]' --go --confirm</div></div>
+        </div>}
       </Card>}
       {tab === "onb" && <Card style={{ padding: "14px 16px", fontSize: 13, lineHeight: 1.8, color: C.ink }}>
         <div style={{ fontSize: 15, fontWeight: 900 }}>부스터즈팀 온보딩 (동욱님용)</div>
