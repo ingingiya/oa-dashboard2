@@ -72,7 +72,7 @@ const C = {
 };
 
 // 팀원 (담당자 지정용)
-const TEAM_MEMBERS = ["지원","경은","혜영","소리","영서"];
+const TEAM_MEMBERS = ["경은","소리","영서","동욱"];
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // Material Symbol Icon helper
@@ -511,8 +511,8 @@ const PB_STATUS_STYLE = {
   "대기":{bg:"#f4f4f5",fg:"#71717a"}, "진행":{bg:"#EAF3FF",fg:"#0071E3"},
   "완료":{bg:"#F0FDF4",fg:"#248A3D"}, "차단":{bg:"#FEF2F2",fg:"#D70015"},
 };
-const PB_MEMBERS = ["지원","경은","혜영","소리","영서","사장님"];
-const PB_NOTION_MEMBERS = ["소리","영서","경은","혜영"]; // 노션 일정 DB 담당자 select 옵션
+const PB_MEMBERS = ["경은","소리","영서","동욱","사장님"];
+const PB_NOTION_MEMBERS = ["소리","영서","경은","동욱"]; // 노션 일정 DB 담당자 select 옵션
 
 const PB_MEASURE_COLS = ["오아 샘플","시코 FLB-254D","라운드 PRO"];
 const PB_MEASURE_ROWS = [
@@ -1228,7 +1228,7 @@ function InfluencerArchiveSection() {
 
   const items = Array.isArray(archive) ? archive : [];
 
-  const assignees = ["전체","지원","경은","소리","혜영","영서"];
+  const assignees = ["전체","경은","소리","영서","동욱"];
 
   const filtered = items.filter(p => {
     if (catFilter !== "전체" && !(p.categories||[]).includes(catFilter)) return false;
@@ -1904,7 +1904,7 @@ function InfluencerArchiveSection() {
               <div>
                 <div style={{fontSize:12,color:C.inkMid,marginBottom:4,fontWeight:700}}>담당자</div>
                 <div style={{display:"flex",gap:4,flexWrap:"wrap"}}>
-                  {["지원","경은","소리","혜영","영서","행사"].map(a=>(
+                  {["경은","소리","영서","동욱","행사"].map(a=>(
                     <button key={a} onClick={()=>setForm(f=>({...f,assignee:f.assignee===a?"":a}))} style={{padding:"4px 10px",borderRadius:20,border:"none",background:form.assignee===a?"#374151":"#e5e7eb",color:form.assignee===a?"#fff":C.inkMid,fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>{a}</button>
                   ))}
                 </div>
@@ -3228,7 +3228,7 @@ function SchModalComp({mode, initial, onSave, onClose}){
         <FR label="시작일 *"><Inp type="date" value={f.date} onChange={v=>set("date",v)}/></FR>
         <FR label="종료일"><Inp type="date" value={f.endDate} onChange={v=>set("endDate",v)}/></FR>
       </div>
-      <FR label="담당자"><Sel value={f.assignee||""} onChange={v=>set("assignee",v)} options={["","지원","경은","소리","혜영","영서","행사"]}/></FR>
+      <FR label="담당자"><Sel value={f.assignee||""} onChange={v=>set("assignee",v)} options={["","경은","소리","영서","동욱","행사"]}/></FR>
       <FR label="메모">
         <textarea value={f.note||""} onChange={e=>set("note",e.target.value)} placeholder="한도 수량, 할인율, 주의사항 등 자유롭게 입력"
           style={{width:"100%",padding:"9px 12px",border:`1px solid ${C.border}`,borderRadius:9,
@@ -4794,7 +4794,7 @@ function ProjectSection() {
   const STATUS_MAP = {planning:{label:"기획중",color:"#6366f1",bg:"#eef2ff"},in_progress:{label:"진행중",color:"#2563eb",bg:"#eff6ff"},done:{label:"완료",color:"#16a34a",bg:"#f0fdf4"},paused:{label:"보류",color:"#a1a1aa",bg:"#f4f4f5"}};
   const PRIORITY_MAP = {urgent:{label:"긴급",color:"#dc2626",bg:"#fef2f2",icon:"priority_high"},high:{label:"높음",color:"#ea580c",bg:"#fff7ed",icon:"arrow_upward"},normal:{label:"보통",color:"#2563eb",bg:"#eff6ff",icon:"remove"},low:{label:"낮음",color:"#a1a1aa",bg:"#f4f4f5",icon:"arrow_downward"}};
   const TAG_COLORS = ["#2563eb","#6366f1","#16a34a","#ea580c","#dc2626","#0891b2","#7c3aed","#c026d3"];
-  const ASSIGNEES = ["지원","경은","소리","혜영","영서"];
+  const ASSIGNEES = ["경은","소리","영서","동욱"];
 
   const load = () => {
     setLoading(true);
@@ -6795,7 +6795,7 @@ export default function OaDashboard(){
     }).catch(()=>{});
   },[]);
 
-  const NOTION_ASSIGNEE_COLORS = {"지원":"#fb923c","경은":"#34d399","소리":"#f472b6","혜영":"#a78bfa","영서":"#60a5fa","행사":"#f97316"};
+  const NOTION_ASSIGNEE_COLORS = {"지원":"#fb923c","경은":"#34d399","소리":"#f472b6","혜영":"#a78bfa","영서":"#60a5fa","동욱":"#0d9488","행사":"#f97316"};
 
   // ── Notion CSV 내보내기 파일 파싱 ──────────────────────────────
   function parseNotionCSV(text) {
@@ -6848,7 +6848,7 @@ export default function OaDashboard(){
       const assigneeMatch = rawName.match(/^\(([^)]+)\)\s*/);
       if (assigneeMatch) {
         const candidate = assigneeMatch[1];
-        if (["지원","경은","소리","혜영","영서"].includes(candidate)) {
+        if (["지원","경은","소리","혜영","영서","동욱"].includes(candidate)) {
           assignee = candidate;
           title = rawName.slice(assigneeMatch[0].length);
         }
@@ -7022,7 +7022,7 @@ export default function OaDashboard(){
   const [noticeReads, setNoticeReads]   = useSyncState("oa_notice_reads_v1", {});
   const [noticeEditMode, setNoticeEditMode] = useState(false);
   const [noticeInput, setNoticeInput]   = useState("");
-  const NOTICE_MEMBERS = ["소리","영서","경은","혜영"];
+  const NOTICE_MEMBERS = ["소리","영서","경은","동욱"];
 
   // 목표 메모 (Supabase 팀 공유)
   const [metaGoal, setMetaGoal]         = useSyncState("oa_meta_goal_v7", "");
@@ -9871,7 +9871,6 @@ export default function OaDashboard(){
 
   const NAVS=[
     {id:"home",      icon:"home",           label:"홈"},
-    {id:"traffic",   icon:"route",          label:"광고관리(트래픽)"},
     {id:"gonggu",    icon:"groups",         label:"공구 인플루언서"},
     {id:"meta",      icon:"campaign",       label:"메타광고"},
     {id:"guide",     icon:"menu_book",      label:"가이드"},
@@ -13453,6 +13452,114 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
     }).filter(r=>r.name);
   }
 
+  // 공구·행사 성과 — 노션 일정(유형 공구/행사) × 전산 주문(스마트스토어+자사몰 결제) 자동 대조
+  const EVENT_PRODUCTS=[
+    {label:"플렌티플렛4L",like:"오아플렌티플렛4L",re:/플렌티\s*플렛/},
+    {label:"플렌티스팀",like:"오아플렌티스팀3L",re:/플렌티\s*스팀/},
+    {label:"프리온",like:"오아프리온무선고데기-%",re:/프리온/},
+    {label:"포그밍 코듀",like:"오아포그밍L코듀%",re:/코듀/},
+    {label:"포그밍 와플",like:"오아포그밍L와플%",re:/와플/},
+    {label:"포그밍 전기담요(전체)",like:"오아포그밍%",re:/포그밍|전기담요/},
+    {label:"듀얼미스트",like:"오아듀얼미스트무선가습기",re:/듀얼미스트(?!\s*맥스)/},
+    {label:"듀얼미스트맥스",like:"오아듀얼미스트맥스-%",re:/듀얼미스트\s*맥스/},
+    {label:"에어리소닉",like:"오아에어리소닉드라이기-%",re:/에어리소닉/},
+    {label:"소닉플로우",like:"오아소닉플로우-%",re:/소닉\s*플로우/},
+    {label:"히트스팟",like:"오아히트스팟%",re:/히트스팟/},
+    {label:"타프실링팬",like:"오아타프실링팬-화이트",re:/타프/},
+    {label:"퀵롤차저",like:"오아퀵롤차저65W%",re:/퀵롤/},
+    {label:"듀얼포켓건",like:"오아듀얼포켓건-%",re:/듀얼포켓/},
+  ];
+  const EventPerfPanel=(()=>{
+    const [evItems,setEvItems]=useState([]);
+    const [evLoading,setEvLoading]=useState(false);
+    const [perf,setPerf]=useState({});
+    const [prodMap,setProdMap]=useSyncState("oa_event_perf_map_v1",{});
+    const [open,setOpen]=useState(true);
+    const dk=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+    const today=dk(new Date());
+    const loadEv=useCallback(async()=>{
+      setEvLoading(true);
+      try{
+        const from=dk(new Date(Date.now()-45*864e5));
+        const r=await fetch(`/api/notion?from=${from}&completed=true`); const j=await r.json();
+        setEvItems((j.items||[]).filter(s=>s.type==="공구"||s.type==="행사"));
+      }catch(e){}
+      setEvLoading(false);
+    // eslint-disable-next-line
+    },[]);
+    useEffect(()=>{loadEv();},[loadEv]);
+    const prodOf=s=>{const k=prodMap[s.id]; if(k) return EVENT_PRODUCTS.find(p=>p.label===k)||null; return EVENT_PRODUCTS.find(p=>p.re.test(s.title||""))||null;};
+    const rows=evItems.map(s=>({...s,_end:s.endDate||s.date,_prod:prodOf(s)}))
+      .filter(s=>s.date && s._end>=dk(new Date(Date.now()-45*864e5)) && s.date<=dk(new Date(Date.now()+60*864e5)))
+      .map(s=>({...s,_state:s.date>today?"예정":s._end<today?"종료":"진행중"}))
+      .sort((a,b)=>{const o={"진행중":0,"예정":1,"종료":2}; if(o[a._state]!==o[b._state]) return o[a._state]-o[b._state]; return a._state==="종료"?b.date.localeCompare(a.date):a.date.localeCompare(b.date);});
+    const reqKey=rows.filter(s=>s._prod&&s._state!=="예정").map(s=>s.id+s._prod.like+s.date+s._end).join("|");
+    useEffect(()=>{
+      const items=rows.filter(s=>s._prod&&s._state!=="예정").map(s=>({id:s.id,product:s._prod.like,start:s.date,end:s._end}));
+      if(!items.length) return;
+      fetch("/api/event-perf",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({items})})
+        .then(r=>r.json()).then(j=>setPerf(p=>({...p,...(j.results||{})}))).catch(()=>{});
+    // eslint-disable-next-line
+    },[reqKey]);
+    const won=v=>v>=1e8?(v/1e8).toFixed(2)+"억":Math.round(v/1e4).toLocaleString()+"만";
+    const dday=d=>{const n=Math.round((new Date(d+"T00:00:00")-new Date(today+"T00:00:00"))/864e5);return n===0?"오늘":`D-${n}`;};
+    const stCol={"진행중":C.rose,"예정":"#2563eb","종료":C.inkLt};
+    const live=rows.filter(s=>s._state==="진행중").length, up=rows.filter(s=>s._state==="예정").length;
+    return(
+      <div style={{background:C.white,border:`1px solid ${C.border}`,borderRadius:14,overflow:"clip"}}>
+        <div onClick={()=>setOpen(o=>!o)} style={{display:"flex",alignItems:"center",gap:8,padding:"12px 14px",cursor:"pointer",borderBottom:open?`1px solid ${C.border}`:"none"}}>
+          <MI n="insights" size={18} style={{color:C.rose}}/>
+          <div style={{flex:1}}>
+            <div style={{fontSize:15,fontWeight:900,color:C.ink}}>공구·행사 성과</div>
+            <div style={{fontSize:12,color:C.inkLt}}>진행중 {live} · 예정 {up} · 최근 45일 종료분 · 스마트스토어+자사몰 결제 주문 기준</div>
+          </div>
+          <button onClick={e=>{e.stopPropagation();setPerf({});loadEv();}} style={{fontSize:12,padding:"4px 10px",borderRadius:20,border:`1px solid ${C.border}`,background:C.cream,cursor:"pointer",fontFamily:"inherit",fontWeight:700}}>
+            <MI n="refresh" size={14}/>
+          </button>
+          <MI n={open?"expand_less":"expand_more"} size={18} style={{color:C.inkLt}}/>
+        </div>
+        {open&&<div style={{display:"flex",flexDirection:"column"}}>
+          {evLoading&&!rows.length&&<div style={{padding:14,fontSize:13,color:C.inkLt}}>불러오는 중...</div>}
+          {!evLoading&&!rows.length&&<div style={{padding:14,fontSize:13,color:C.inkLt}}>달력에 유형 "공구" 또는 "행사"로 일정을 넣으면 여기서 성과가 자동으로 계산돼요.</div>}
+          {rows.map(s=>{
+            const pf=perf[s.id]; const lift=pf&&pf.prePerDay>0?pf.perDay/pf.prePerDay:null;
+            const ly=pf&&pf.lyQ>0?(pf.q/pf.lyQ-1)*100:null;
+            return(
+              <div key={s.id} style={{display:"grid",gridTemplateColumns:"minmax(0,1.3fr) minmax(0,2fr)",gap:12,padding:"11px 14px",borderBottom:`1px solid ${C.border}`,alignItems:"center"}}>
+                <div style={{minWidth:0}}>
+                  <div style={{display:"flex",gap:6,alignItems:"center",flexWrap:"wrap"}}>
+                    <span style={{fontSize:11,fontWeight:800,color:C.white,background:stCol[s._state],borderRadius:4,padding:"1px 6px"}}>{s._state==="예정"?dday(s.date):s._state}</span>
+                    <span style={{fontSize:11,fontWeight:700,color:schTypeColor(s.type)}}>{s.type}</span>
+                    {s.assignee&&<span style={{fontSize:11,fontWeight:700,color:s.assigneeColor||C.inkMid}}>{s.assignee}</span>}
+                  </div>
+                  <div style={{fontSize:14,fontWeight:800,color:C.ink,marginTop:3,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{s.title}</div>
+                  <div style={{fontSize:12,color:C.inkLt,display:"flex",gap:6,alignItems:"center",flexWrap:"wrap"}}>
+                    <span>{s.date.slice(5).replace("-","/")}{s._end!==s.date?` ~ ${s._end.slice(5).replace("-","/")}`:""}</span>
+                    <select value={s._prod?.label||""} onChange={e=>setProdMap(m=>({...m,[s.id]:e.target.value}))}
+                      style={{fontSize:11,border:`1px solid ${C.border}`,borderRadius:6,padding:"1px 4px",background:C.cream,fontFamily:"inherit",color:C.inkMid}}>
+                      <option value="">제품 선택</option>{EVENT_PRODUCTS.map(p=><option key={p.label} value={p.label}>{p.label}</option>)}
+                    </select>
+                  </div>
+                </div>
+                <div style={{minWidth:0}}>
+                  {!s._prod?<span style={{fontSize:12,color:C.inkLt}}>제품을 고르면 성과가 나와요</span>
+                  :s._state==="예정"?<span style={{fontSize:12,color:C.inkLt}}>시작하면 자동 집계 · 작년 같은 날짜와 비교</span>
+                  :!pf?<span style={{fontSize:12,color:C.inkLt}}>집계 중...</span>
+                  :pf.error?<span style={{fontSize:12,color:C.bad}}>집계 실패 (전산 연결) · 새로고침</span>
+                  :<div style={{display:"flex",gap:16,flexWrap:"wrap",alignItems:"baseline"}}>
+                    <div><div style={{fontSize:20,fontWeight:900,color:C.ink,lineHeight:1.1}}>{pf.q.toLocaleString()}대</div><div style={{fontSize:11,color:C.inkLt}}>{won(pf.amt)}원 · {pf.days}일{pf.live?" (진행중)":""}</div></div>
+                    <div><div style={{fontSize:16,fontWeight:900,color:lift&&lift>=1.5?C.good:C.ink,lineHeight:1.1}}>{lift?`${lift.toFixed(1)}배`:"—"}</div><div style={{fontSize:11,color:C.inkLt}}>하루 {Math.round(pf.perDay)}대 vs 직전7일 {Math.round(pf.prePerDay)}대</div></div>
+                    <div><div style={{fontSize:16,fontWeight:900,color:ly==null?C.inkLt:ly>=0?C.good:C.bad,lineHeight:1.1}}>{ly==null?"—":`${ly>=0?"+":""}${Math.round(ly)}%`}</div><div style={{fontSize:11,color:C.inkLt}}>작년 같은 날짜 {pf.lyQ.toLocaleString()}대</div></div>
+                  </div>}
+                </div>
+              </div>
+            );
+          })}
+        </div>}
+      </div>
+    );
+  })();
+
   const ScheduleSection=(()=>{
     const [calMonth, setCalMonth] = useState(()=>{const n=new Date();return{y:n.getFullYear(),m:n.getMonth()};});
     const [selDay, setSelDay] = useState(null);
@@ -13525,7 +13632,7 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
     });
 
     // 반복 체크리스트 → 달력에 자동 표시
-    const ASSIGNEE_COLORS={"소리":"#f472b6","영서":"#60a5fa","경은":"#34d399","혜영":"#a78bfa","행사":"#f97316"};
+    const ASSIGNEE_COLORS={"소리":"#f472b6","영서":"#60a5fa","경은":"#34d399","동욱":"#0d9488","혜영":"#a78bfa","행사":"#f97316"};
     (checkItems||[]).forEach(ci=>{
       const daysInCal = new Date(calMonth.y, calMonth.m+1, 0).getDate();
       for(let day=1; day<=daysInCal; day++){
@@ -13589,7 +13696,7 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
         <div style={{overflowX:"auto",WebkitOverflowScrolling:"touch",paddingBottom:2}}>
           <div style={{display:"flex",gap:4,whiteSpace:"nowrap",minWidth:"max-content"}}>
             {/* 담당자 필터 */}
-            {[{n:"전체",c:C.inkMid},{n:"소리",c:"#f472b6"},{n:"영서",c:"#60a5fa"},{n:"경은",c:"#34d399"},{n:"혜영",c:"#a78bfa"},{n:"행사",c:"#f97316"}].map(({n:a,c:col})=>{
+            {[{n:"전체",c:C.inkMid},{n:"소리",c:"#f472b6"},{n:"영서",c:"#60a5fa"},{n:"경은",c:"#34d399"},{n:"동욱",c:"#0d9488"},{n:"행사",c:"#f97316"}].map(({n:a,c:col})=>{
               const active=assigneeFilter===a;
               return(
                 <button key={a} onClick={()=>setAssigneeFilter(a)} style={{fontSize:12,padding:"4px 12px",borderRadius:20,
@@ -13611,6 +13718,8 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
           </div>
         </div>
       </div>
+
+      {EventPerfPanel}
 
       {/* 달력 */}
       <div style={{background:C.white,border:`1px solid ${C.border}`,borderRadius:14,overflow:"clip"}}>
@@ -13977,7 +14086,7 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
                 <div>
                   <div style={{fontSize:12,fontWeight:700,color:C.inkMid,marginBottom:4}}>담당자</div>
                   <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
-                    {["","소리","영서","경은","혜영"].map(m=>(
+                    {["","소리","영서","경은","동욱"].map(m=>(
                       <button key={m} onClick={()=>setClForm(p=>({...p,assignee:m}))} style={{fontSize:12,padding:"4px 12px",borderRadius:20,
                         border:`1px solid ${clForm.assignee===m?C.rose:C.border}`,background:clForm.assignee===m?C.rose:C.white,
                         color:clForm.assignee===m?C.white:C.inkMid,cursor:"pointer",fontFamily:"inherit",fontWeight:700}}>{m||"미지정"}</button>
@@ -14244,7 +14353,7 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
             <div style={{fontSize:12,color:C.inkMid,marginBottom:14,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{reqPopoverAd.adName}</div>
             <div style={{fontSize:12,fontWeight:700,color:C.inkMid,marginBottom:6}}>담당자</div>
             <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:12}}>
-              {["","소리","영서","경은","혜영"].map(a=>(
+              {["","소리","영서","경은","동욱"].map(a=>(
                 <span key={a} onClick={()=>setReqAssignee(a)}
                   style={{fontSize:12,padding:"4px 12px",borderRadius:20,cursor:"pointer",fontWeight:700,
                     background:reqAssignee===a?"#8b5cf6":"#f5f3ff",
@@ -14806,7 +14915,7 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
   })();
 
   const ReviewSection=(()=>{
-    const MEMBERS=["소리","영서","경은","혜영"];
+    const MEMBERS=["소리","영서","경은","동욱"];
     const PLATFORMS={instagram:{label:"인스타그램",icon:"photo_camera",color:"#e1306c",bg:"#fff0f5"},twitter:{label:"트위터",icon:"flutter_dash",color:"#1da1f2",bg:"#f0f9ff"}};
     const EMPTY_FORM={title:"",platform:"instagram",link:"",postedAt:"",views:"",likes:"",comments:"",saves:"",isAd:false,adSpend:"",adRoas:"",adCtr:"",adCpc:"",adCpa:"",adPurchases:"",isManyChat:false,assignee:"",note:""};
     const EMPTY_IG={month:"",views:"",reach:"",interactions:"",follows:"",unfollows:""};

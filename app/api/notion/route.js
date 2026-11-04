@@ -8,6 +8,7 @@ const MEMBER_COLORS = {
   "영서": "#60a5fa",
   "경은": "#34d399",
   "혜영": "#a78bfa",
+  "동욱": "#0d9488",
 };
 
 function parseProps(props) {
