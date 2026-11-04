@@ -2,6 +2,7 @@
 // 공구 인플루언서 — 인포크 탐색(1.2만) · 지비지오(우리 협업/찜/추천) · 인공 공구 계정 · 뉴스 사례 (10-26)
 // 정적 data/gonggu-influencers.json(뉴스·인공) + public/gonggu/{inpock,zvzo}.json(클라이언트 fetch). 후보 찜은 localStorage(gonggu_shortlist).
 import { useEffect, useMemo, useState } from "react";
+import { getSetting, setSetting } from "../lib/useSupabase";
 import DATA from "../data/gonggu-influencers.json";
 
 const IG_RE = /^[a-z0-9._]+$/i;
@@ -14,6 +15,10 @@ const won = (v) => { v = +v || 0; return v >= 1e8 ? (v / 1e8).toFixed(1) + "억"
 const fmtK = (v) => { v = +v || 0; return v >= 1e4 ? (v / 1e4).toFixed(v >= 1e5 ? 0 : 1) + "만" : v.toLocaleString(); };
 const LS = "gonggu_shortlist";
 const loadSL = () => { try { return JSON.parse(localStorage.getItem(LS) || "{}"); } catch { return {}; } };
+const SL_KEY = "oa_gonggu_shortlist_v1"; // 팀 공유(Supabase settings) — DM·협력 결정까지 포함
+const DEC = { go: ["협력", "#16a34a"], hold: ["보류", "#d97706"], no: ["안 함", "#9ca3af"] };
+const MEMBERS = ["경은", "소리", "영서", "동욱"];
+const dstr = (t) => { const d = new Date(t); return `${d.getMonth() + 1}/${d.getDate()}`; };
 
 export default function GongguInfluencerSection({ C, Card }) {
   const [tab, setTab] = useState("inpock");
@@ -40,7 +45,19 @@ export default function GongguInfluencerSection({ C, Card }) {
     fetch("/gonggu/zvzo.json").then((r) => r.json()).then(setZvzo).catch(() => {});
     fetch("/gonggu/inpock.json").then((r) => r.json()).then(setIpAll).catch(() => {});
   }, []);
-  const toggleSL = (key, meta) => { const n = { ...sl }; if (n[key]) delete n[key]; else n[key] = { ...meta, at: Date.now() }; setSl(n); try { localStorage.setItem(LS, JSON.stringify(n)); } catch {} };
+  const persist = (n) => { setSl(n); try { localStorage.setItem(LS, JSON.stringify(n)); } catch {} setSetting(SL_KEY, n).catch(() => {}); };
+  useEffect(() => {
+    getSetting(SL_KEY).then((remote) => {
+      const local = loadSL(); const merged = { ...local };
+      Object.entries(remote || {}).forEach(([k, v]) => { if (!merged[k] || (v.at || 0) >= (merged[k].at || 0)) merged[k] = { ...merged[k], ...v }; });
+      setSl(merged); try { localStorage.setItem(LS, JSON.stringify(merged)); } catch {}
+      if (JSON.stringify(merged) !== JSON.stringify(remote || {})) setSetting(SL_KEY, merged).catch(() => {});
+    }).catch(() => {});
+  }, []);
+  const toggleSL = (key, meta) => { const n = { ...sl }; if (n[key]) delete n[key]; else n[key] = { ...meta, at: Date.now() }; persist(n); };
+  const patchSL = (key, patch) => { if (!sl[key]) return; persist({ ...sl, [key]: { ...sl[key], ...patch, at: Date.now() } }); };
+  const slList = Object.entries(sl).sort((a, b) => (b[1].at || 0) - (a[1].at || 0));
+  const dmCount = slList.filter(([, m]) => m.dm).length, goCount = slList.filter(([, m]) => m.dec === "go").length;
   const slCount = Object.keys(sl).length;
   const copySL = () => { const txt = Object.entries(sl).map(([k, m]) => `${m.src === "zvzo" ? m.name + " (" + k + ")" : "@" + k}${m.f ? " · " + fmtK(m.f) : ""}${m.note ? " · " + m.note : ""}`).join("\n"); navigator.clipboard?.writeText(txt); };
 
@@ -69,8 +86,46 @@ export default function GongguInfluencerSection({ C, Card }) {
   const Chip = ({ on, onClick, children, small }) => (
     <button onClick={onClick} style={{ fontSize: small ? 11 : 12, fontWeight: 700, padding: small ? "4px 10px" : "6px 13px", borderRadius: 20, cursor: "pointer", border: `1px solid ${on ? C.rose : C.border}`, background: on ? C.rose : C.white, color: on ? C.white : C.inkMid, whiteSpace: "nowrap" }}>{children}</button>
   );
-  const Heart = ({ k, meta }) => (
-    <button title={sl[k] ? "후보에서 빼기" : "후보로 찜"} onClick={() => toggleSL(k, meta)} style={{ border: 0, background: "none", cursor: "pointer", fontSize: 17, lineHeight: 1, color: sl[k] ? C.rose : C.border, padding: "2px 4px" }}>{sl[k] ? "♥" : "♡"}</button>
+  const Heart = ({ k, meta }) => {
+    const m = sl[k];
+    return (
+      <span style={{ display: "inline-flex", alignItems: "center", gap: 3 }}>
+        <button title={m ? "후보에서 빼기" : "후보로 찜"} onClick={() => toggleSL(k, meta)} style={{ border: 0, background: "none", cursor: "pointer", fontSize: 17, lineHeight: 1, color: m ? C.rose : C.border, padding: "2px 4px" }}>{m ? "♥" : "♡"}</button>
+        {m?.dm && <span title={"DM " + dstr(m.dm)} style={{ fontSize: 10, fontWeight: 800, color: "#2563eb", background: "#dbeafe", borderRadius: 4, padding: "1px 4px" }}>DM</span>}
+        {m?.dec && DEC[m.dec] && <span style={{ fontSize: 10, fontWeight: 800, color: "#fff", background: DEC[m.dec][1], borderRadius: 4, padding: "1px 4px" }}>{DEC[m.dec][0]}</span>}
+      </span>
+    );
+  };
+  const Pipeline = () => slList.length === 0 ? null : (
+    <Card style={{ padding: "12px 16px" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8, flexWrap: "wrap" }}>
+        <div style={{ fontSize: 14, fontWeight: 800, color: C.ink }}>후보 진행판</div>
+        <span style={{ fontSize: 12, color: C.inkLt }}>후보 {slList.length} · DM 보냄 {dmCount} · 협력 {goCount} · 팀 공유 저장</span>
+      </div>
+      <div style={{ overflowX: "auto" }}>
+        <table style={{ borderCollapse: "collapse", width: "100%", minWidth: 760 }}>
+          <thead><tr>{["계정", "팔로워", "DM", "협력 여부", "담당", "메모", ""].map((h) => <th key={h} style={{ fontSize: 11, color: C.inkLt, fontWeight: 700, textAlign: "left", padding: "4px 10px", borderBottom: `1px solid ${C.border}`, whiteSpace: "nowrap" }}>{h}</th>)}</tr></thead>
+          <tbody>{slList.map(([k, m]) => (
+            <tr key={k} style={{ background: m.dec === "no" ? C.cream : "transparent", opacity: m.dec === "no" ? 0.6 : 1 }}>
+              <td style={td}><div style={{ display: "flex", alignItems: "center", gap: 8 }}><Av src={m.avatar || m.img} size={28} /><div>{m.src === "zvzo" ? <span style={{ fontWeight: 700 }}>{m.name} <span style={{ color: C.inkLt, fontWeight: 500, fontSize: 11 }}>({k})</span></span> : <Handle a={k} />}{m.note && <div style={{ fontSize: 11, color: C.inkLt }}>{m.note}</div>}</div></div></td>
+              <td style={{ ...td, whiteSpace: "nowrap" }}>{m.f ? fmtK(m.f) : "—"}</td>
+              <td style={{ ...td, whiteSpace: "nowrap" }}>
+                {m.dm ? <span onClick={() => patchSL(k, { dm: null })} title="누르면 취소" style={{ cursor: "pointer", fontSize: 12, fontWeight: 800, color: "#2563eb" }}>✓ {dstr(m.dm)} 보냄</span>
+                  : <Chip small onClick={() => patchSL(k, { dm: Date.now() })}>DM 보냄</Chip>}
+              </td>
+              <td style={{ ...td, whiteSpace: "nowrap" }}>
+                <div style={{ display: "flex", gap: 4 }}>{Object.entries(DEC).map(([d, [l, col]]) => (
+                  <button key={d} onClick={() => patchSL(k, { dec: m.dec === d ? null : d })} style={{ fontSize: 11, fontWeight: 800, padding: "3px 9px", borderRadius: 20, cursor: "pointer", border: `1px solid ${m.dec === d ? col : C.border}`, background: m.dec === d ? col : C.white, color: m.dec === d ? "#fff" : C.inkMid }}>{l}</button>
+                ))}</div>
+              </td>
+              <td style={td}><select value={m.by || ""} onChange={(e) => patchSL(k, { by: e.target.value })} style={{ fontSize: 12, padding: "3px 6px", border: `1px solid ${C.border}`, borderRadius: 8, background: C.white, color: C.ink }}><option value="">—</option>{MEMBERS.map((x) => <option key={x}>{x}</option>)}</select></td>
+              <td style={{ ...td, minWidth: 180 }}><input defaultValue={m.memo || ""} placeholder="단가·조건·회신 내용" onBlur={(e) => { if (e.target.value !== (m.memo || "")) patchSL(k, { memo: e.target.value }); }} style={{ width: "100%", fontSize: 12, padding: "4px 8px", border: `1px solid ${C.border}`, borderRadius: 8, background: C.cream, color: C.ink, boxSizing: "border-box" }} /></td>
+              <td style={td}><button onClick={() => toggleSL(k)} title="후보에서 빼기" style={{ border: 0, background: "none", cursor: "pointer", color: C.inkLt, fontSize: 14 }}>✕</button></td>
+            </tr>
+          ))}</tbody>
+        </table>
+      </div>
+    </Card>
   );
   const Av = ({ src, size = 34 }) => src ? <img src={src} alt="" loading="lazy" referrerPolicy="no-referrer" style={{ width: size, height: size, borderRadius: "50%", objectFit: "cover", background: C.cream, flexShrink: 0 }} /> : <span style={{ width: size, height: size, borderRadius: "50%", background: C.cream, display: "inline-block", flexShrink: 0 }} />;
   const Thumbs = ({ list, size = 64 }) => <div style={{ display: "flex", gap: 4 }}>{(list || []).map((u, i) => <a key={i} href={u} target="_blank" rel="noreferrer"><img src={u} alt="" loading="lazy" referrerPolicy="no-referrer" style={{ width: size, height: size, borderRadius: 8, objectFit: "cover", background: C.cream, display: "block" }} /></a>)}</div>;
@@ -92,12 +147,13 @@ export default function GongguInfluencerSection({ C, Card }) {
             <span style={{ fontSize: 13, fontWeight: 800, color: slCount ? C.rose : C.inkLt }}>♥ 후보 {slCount}</span>
             <Chip small on={onlySL} onClick={() => setOnlySL(!onlySL)}>찜만 보기</Chip>
             <Chip small onClick={copySL}>목록 복사</Chip>
-            {slCount > 0 && <Chip small onClick={() => { if (confirm("후보를 모두 비울까요?")) { setSl({}); try { localStorage.removeItem(LS); } catch {} } }}>비우기</Chip>}
+            {slCount > 0 && <Chip small onClick={() => { if (confirm("후보를 모두 비울까요?")) { persist({}); } }}>비우기</Chip>}
           </div>
         </div>
-        <div style={{ fontSize: 12, color: C.inkLt, marginTop: 8 }}>♡를 누르면 후보에 담기고 이 브라우저에 저장됩니다. 갱신 {DATA.updated} · 실매출은 지비지오 우리 협업 이력만 실제값, 인포크 조회수는 노출 지표</div>
+        <div style={{ fontSize: 12, color: C.inkLt, marginTop: 8 }}>♡를 누르면 후보에 담기고 팀 전체에 공유됩니다. 아래 진행판에서 DM 보냄·협력 여부·담당을 기록하세요. 갱신 {DATA.updated} · 실매출은 지비지오 우리 협업 이력만 실제값, 인포크 조회수는 노출 지표</div>
       </Card>
 
+      <Pipeline />
       {/* ── 인포크 */}
       {tab === "inpock" && (
         <Card style={{ padding: 0, overflow: "hidden" }}>
