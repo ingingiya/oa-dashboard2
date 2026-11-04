@@ -1,7 +1,7 @@
 // [오아 대시보드] 아침 브리핑 → 네이버웍스 그룹방 (크론: 매일 9:20, beauty_sales 동기화 9:12 이후)
 // 내용: 이미용 매출 급등급락(±40%만) + 메타 소재 검토 + 오늘의 가설/담당 + (월요일) 지난주 실행률
 // 테스트: node nworks-briefing.mjs --dry-run
-import { kst, fmtW, supa, sendToChannel, sendImageToChannel, telegram } from './nworks-lib.mjs';
+import { kst, fmtW, supa, sendToChannel, sendImageToChannel, telegram, env } from './nworks-lib.mjs';
 
 const BEAUTY_CODES = ['DRY', 'STR', 'GVN', 'MUM']; // 드라이기, 고데기, 갈바닉, 화장거울
 
@@ -164,6 +164,24 @@ async function weeklyScoreboard(today) {
   return parts.length ? `🏆 지난주 실행률: ${parts.join(' · ')}` : null;
 }
 
+async function teamAlerts(today) {
+  const out = [];
+  const DB = '32964cd9-cb02-81a5-82ce-f06d2b2fe959';
+  const H = { Authorization: `Bearer ${env.NOTION_TOKEN}`, 'Notion-Version': '2022-06-28', 'Content-Type': 'application/json' };
+  const from = kst(30), to = kst(-3);
+  const r = await fetch(`https://api.notion.com/v1/databases/${DB}/query`, { method: 'POST', headers: H, body: JSON.stringify({ filter: { and: [{ property: '날짜', date: { on_or_after: from } }, { property: '날짜', date: { on_or_before: to } }, { property: '완료', checkbox: { equals: false } }] }, page_size: 100 }) });
+  const items = ((await r.json()).results || []).map(p => { const pr = p.properties; return { t: pr['이름']?.title?.map(x => x.plain_text).join(''), ty: pr['유형']?.select?.name || '', a: pr['담당자']?.select?.name || '', s: pr['날짜']?.date?.start, e: pr['날짜']?.date?.end || pr['날짜']?.date?.start }; });
+  const restore = items.filter(i => /^★원복|원복/.test(i.t) && i.e < today);
+  if (restore.length) out.push(`🔴 원복 미완료 ${restore.length}건: ` + restore.map(i => `${i.t.replace(/^★원복\s*/, '')}${i.a ? '(' + i.a + ')' : ''}`).join(' · '));
+  const offs = items.filter(i => i.ty === '휴무' && i.s <= today && i.e >= today);
+  for (const o of offs) { const conf = items.filter(t => t.a === o.a && t.ty !== '휴무' && t.s <= o.e && t.e >= o.s); if (conf.length) out.push(`🟠 ${o.a} 휴무 중 담당 일정: ` + conf.map(t => t.t).join(' · ')); }
+  const d3 = kst(-3); const soon = items.filter(i => i.s === d3 && ['공구', '행사', '광고', '시딩'].includes(i.ty) && !/^\[공구 D|^\[행사 준비/.test(i.t));
+  if (soon.length) out.push(`⏰ D-3 (${d3.slice(5)}): ` + soon.map(i => `${i.t}${i.a ? '(' + i.a + ')' : ''}`).join(' · '));
+  try { const [v] = await supa('settings?key=eq.oa_ad_verdict_v1&select=value'); const rows = v?.value?.rows || []; const off = rows.filter(x => x.verdict === 'off'), down = rows.filter(x => x.verdict === 'down'), up = rows.filter(x => x.verdict === 'up');
+    if (rows.length) out.push(`📣 광고 판정: 끄기 ${off.length} · 줄이기 ${down.length} · 늘리기 ${up.length}` + (off.length ? '\n   끄기 → ' + off.slice(0, 4).map(x => `${x.product} ${x.channel} ${x.name}`).join(' / ') : '')); } catch {}
+  return out;
+}
+
 async function main() {
   const yday = kst(1), today = kst(0);
   const dow = '일월화수목금토'[new Date(today + 'T00:00:00+09:00').getDay()];
@@ -183,6 +201,11 @@ async function main() {
     lines.push(``, `🎯 오늘의 가설 ${hypoLines.length}건`);
     lines.push(...hypoLines);
   }
+  // 11-04 추가: 팀 경고(원복·휴무·D-3) + 아침 광고 판정 통합
+  try {
+    const team = await teamAlerts(today);
+    if (team.length) lines.push(``, ...team);
+  } catch (e) { lines.push(``, `(팀 경고 수집 실패: ${String(e.message).slice(0, 60)})`); }
   if (checks.length) lines.push(``, `⚠️ 확인: ${checks.join(' · ')}`);
   if (score) lines.push(``, score);
   lines.push(``, `👉 oa-dashboard2.vercel.app`);

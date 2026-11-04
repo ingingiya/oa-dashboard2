@@ -8,7 +8,8 @@ import PplSection from "./PplSection";           // PPL 협찬 진행판 (11-04)
 import GlobalSection from "./GlobalSection";     // 해외 진행판·판매가 계산 (11-04)
 import TeamSection from "./TeamSection";         // 요청함·회고·문서함·온보딩 (11-04)
 import AdChangeLog from "./AdChangeLog";         // 광고 변경 기록 (11-04)
-import { VerdictCard, GoalCard, PplBudgetCard, KakaoRankCard, ProductNowCard } from "./HomeExtraCards"; // 홈 카드 (11-04)
+import { VerdictCard, GoalCard, PplBudgetCard, KakaoRankCard, ProductNowCard, ProfitCard, SearchInflowCard } from "./HomeExtraCards";
+import BidGuide from "./BidGuide";               // 키워드 입찰 가이드 (11-04) // 홈 카드 (11-04)
 import useShared from "./useShared"; // 공구 인플루언서 리서치 뷰 (data/gonggu-influencers.json 정적, 10-26)
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -10197,7 +10198,9 @@ export default function OaDashboard(){
         <GoalCard C={C} Card={Card}/>
         <PplBudgetCard C={C} Card={Card} onOpen={()=>setSec("ppl")}/>
       </div>
+      <ProfitCard C={C} Card={Card}/>
       <ProductNowCard C={C} Card={Card} sch={notionSch} onOpen={()=>setSec("schedule")}/>
+      <SearchInflowCard C={C} Card={Card}/>
       <KakaoRankCard C={C} Card={Card}/>
       {/* ── AI 인사이트 ── */}
       {homeInsights.length>0&&(
@@ -10978,7 +10981,7 @@ export default function OaDashboard(){
 
         {/* 탭 */}
         <div style={{display:"flex",gap:6,overflowX:"auto",paddingBottom:2}}>
-          {[{id:"overview",label:<><MI n="trending_up" size={12}/> 추이</>},{id:"campaign",label:<><MI n="campaign" size={12}/> 캠페인</>},{id:"weekly",label:<><MI n="calendar_month" size={12}/> 주별</>},{id:"changes",label:<><MI n="history" size={12}/> 변경 기록</>},{id:"monthly",label:<><MI n="date_range" size={12}/> 월별</>},{id:"daily",label:<><MI n="calendar_today" size={12}/> 일별</>},{id:"product",label:<><MI n="inventory_2" size={12}/> 제품별</>},{id:"events",label:<><MI n="celebration" size={12}/> 행사{(promoEvents||[]).some(e=>{const t=new Date().toISOString().slice(0,10);return e.start<=t&&t<=e.end;})?" ●":""}</>},{id:"guide",label:<><MI n="menu_book" size={12}/> 가이드</>}].map(t=>(
+          {[{id:"overview",label:<><MI n="trending_up" size={12}/> 추이</>},{id:"campaign",label:<><MI n="campaign" size={12}/> 캠페인</>},{id:"weekly",label:<><MI n="calendar_month" size={12}/> 주별</>},{id:"changes",label:<><MI n="history" size={12}/> 변경 기록</>},{id:"bids",label:<><MI n="gavel" size={12}/> 입찰 가이드</>},{id:"monthly",label:<><MI n="date_range" size={12}/> 월별</>},{id:"daily",label:<><MI n="calendar_today" size={12}/> 일별</>},{id:"product",label:<><MI n="inventory_2" size={12}/> 제품별</>},{id:"events",label:<><MI n="celebration" size={12}/> 행사{(promoEvents||[]).some(e=>{const t=new Date().toISOString().slice(0,10);return e.start<=t&&t<=e.end;})?" ●":""}</>},{id:"guide",label:<><MI n="menu_book" size={12}/> 가이드</>}].map(t=>(
             <button key={t.id} onClick={()=>setMetaTab(t.id)} style={{
               padding:"6px 16px",borderRadius:8,cursor:"pointer",border:`1px solid ${metaTab===t.id?C.rose:C.border}`,
               background:metaTab===t.id?C.blush:C.white,color:metaTab===t.id?C.rose:C.inkMid,
@@ -11736,6 +11739,7 @@ export default function OaDashboard(){
 
         {/* 주별 탭 */}
         {metaTab==="changes"&&<AdChangeLog C={C} Card={Card}/>}
+        {metaTab==="bids"&&<BidGuide C={C} Card={Card}/>}
         {metaTab==="weekly"&&(()=>{
           if(!hasSheet) return(
             <div style={{textAlign:"center",padding:"40px 0",color:C.inkLt}}>

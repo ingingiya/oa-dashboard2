@@ -53,6 +53,20 @@ export async function POST(request) {
       }
       return Response.json({ results });
     }
+    if (Array.isArray(body.profit) && body.profit.length) {
+      const todayKST = new Date(Date.now() + 9 * 3600e3).toISOString().slice(0, 10);
+      const results = {};
+      for (const m of body.profit.slice(0, 12)) {
+        if (!/^\d{4}-\d{2}$/.test(m.ym || '')) continue;
+        const s = m.ym + '-01'; const e = (m.ym === todayKST.slice(0, 7)) ? todayKST : `${m.ym}-${new Date(+m.ym.slice(0, 4), +m.ym.slice(5, 7), 0).getDate()}`;
+        const ly0 = lastYear(s), ly1 = lastYear(e); const p = esc(m.product);
+        try {
+          const [r] = await mcpQuery(`SELECT SUM(CASE WHEN 판매날짜 BETWEEN '${s}' AND '${e}' THEN 판매수량 ELSE 0 END) q, SUM(CASE WHEN 판매날짜 BETWEEN '${s}' AND '${e}' THEN 총매출액 ELSE 0 END) rev, SUM(CASE WHEN 판매날짜 BETWEEN '${s}' AND '${e}' THEN 총매출이익 ELSE 0 END) gp, SUM(CASE WHEN 판매날짜 BETWEEN '${ly0}' AND '${ly1}' THEN 총매출이익 ELSE 0 END) ly_gp, SUM(CASE WHEN 판매날짜 BETWEEN '${ly0}' AND '${ly1}' THEN 판매수량 ELSE 0 END) ly_q FROM db_for_ai_sm.v_daily_sales_detail WHERE 제품명 LIKE '${p}' AND ((판매날짜 BETWEEN '${s}' AND '${e}') OR (판매날짜 BETWEEN '${ly0}' AND '${ly1}'))`);
+          results[m.id] = { q: Number(r?.q || 0), rev: Math.round(Number(r?.rev || 0)), gp: Math.round(Number(r?.gp || 0)), lyGp: Math.round(Number(r?.ly_gp || 0)), lyQ: Number(r?.ly_q || 0), from: s, to: e };
+        } catch (err) { results[m.id] = { error: String(err.message || err).slice(0, 120) }; }
+      }
+      return Response.json({ results });
+    }
     const { items } = body;
     if (!Array.isArray(items) || !items.length) return Response.json({ results: {} });
     const todayKST = new Date(Date.now() + 9 * 3600e3).toISOString().slice(0, 10);

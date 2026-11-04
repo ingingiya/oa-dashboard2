@@ -40,6 +40,11 @@ export default function PplSection({ C, Card }) {
         </div>
         <div style={{ fontSize: 12, color: C.inkLt, marginTop: 8 }}>제안·회신·확정은 유튜버 리스트에서 자동. 발송·업로드·조회수·판매는 여기서 기록하면 팀 전체에 공유돼요. 업로드일을 넣고 📅를 누르면 달력에 들어가요.</div>
       </Card>
+      {(() => { const cands = (rows || []).filter((r) => !r.confirmed && !r.rejected && !r.replied && r.cpv && (r.subscriber_count || r.subscribers || 0) >= 10000 && r.avg_views >= 5000).sort((a, b) => a.cpv - b.cpv).slice(0, 5);
+        return cands.length ? <Card style={{ padding: "12px 16px" }}>
+          <div style={{ fontSize: 14, fontWeight: 800, color: C.ink }}>이번 주 섭외 추천 5 <span style={{ fontSize: 12, fontWeight: 500, color: C.inkLt }}>· 아직 회신 없는 채널 중 조회당 비용이 낮은 순 (구독 1만↑, 평균 조회 5천↑)</span></div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(200px,1fr))", gap: 8, marginTop: 8 }}>{cands.map((r) => <div key={r.id} style={{ border: `1px solid ${C.border}`, borderRadius: 10, padding: "8px 10px" }}><a href={r.channel_url} target="_blank" rel="noreferrer" style={{ fontWeight: 800, color: C.ink, textDecoration: "none", fontSize: 13 }}>{r.channel_name}</a><div style={{ fontSize: 11, color: C.inkLt }}>구독 {fmtK(r.subscriber_count || r.subscribers)} · 평균 조회 {fmtK(r.avg_views)}</div><div style={{ fontSize: 12, color: C.ink }}>조회당 <b>{Math.round(r.cpv)}원</b>{r.ppl_price ? ` · PPL ${Number(r.ppl_price).toLocaleString()}만` : ""}{r.mailed ? <span style={{ fontSize: 10, color: C.inkLt }}> · 제안 보냄</span> : ""}</div></div>)}</div>
+        </Card> : null; })()}
       <Card style={{ padding: 0, overflow: "hidden" }}>
         <div style={{ overflowX: "auto" }}>
           <table style={{ borderCollapse: "collapse", width: "100%", minWidth: 1180 }}>

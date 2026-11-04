@@ -3,6 +3,7 @@
 // 정적 data/gonggu-influencers.json(뉴스·인공) + public/gonggu/{inpock,zvzo}.json(클라이언트 fetch). 후보 찜은 localStorage(gonggu_shortlist).
 import { useEffect, useMemo, useState } from "react";
 import { getSetting, setSetting } from "../lib/useSupabase";
+import GongguScoreboard from "./GongguScoreboard";
 import DATA from "../data/gonggu-influencers.json";
 
 const IG_RE = /^[a-z0-9._]+$/i;
@@ -154,6 +155,7 @@ export default function GongguInfluencerSection({ C, Card }) {
       </Card>
 
       <Pipeline />
+      <GongguScoreboard C={C} Card={Card} />
       {/* ── 인포크 */}
       {tab === "inpock" && (
         <Card style={{ padding: 0, overflow: "hidden" }}>

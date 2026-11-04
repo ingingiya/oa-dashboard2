@@ -22,6 +22,7 @@ const by = {}; thisW.forEach(i => (by[i.a || '담당 없음'] = by[i.a || '담�
 for (const [a, list] of Object.entries(by).sort()) { L.push(`  [${a}]`); list.sort((x, y) => x.s.localeCompare(y.s)).forEach(i => L.push(`   ${md(i.s)}${i.e !== i.s ? '~' + md(i.e) : ''} ${i.ty} · ${i.t}`)); }
 try { const [rq] = await supa('settings?key=eq.oa_requests_v1&select=value'); const open = (rq?.value || []).filter(x => x.status !== '완료'); if (open.length) { L.push('', `■ 요청함 미완료 ${open.length}건`); open.slice(0, 8).forEach(x => L.push(`  · [${x.kind}] ${x.product || ''} ${x.note}${x.assignee ? ' → ' + x.assignee : ''}${x.due ? ' (' + md(x.due) + ')' : ''}`)); } } catch {}
 try { const [rt] = await supa('settings?key=eq.oa_retro_v1&select=value'); const r = rt?.value?.[P0]; if (r) { L.push('', '■ 지난주 회고'); Object.entries(r).forEach(([m, v]) => L.push(`  ${m}: 잘됨 ${v.good || '—'} / 안됨 ${v.bad || '—'} / 다음 ${v.next || '—'}`)); } } catch {}
+try { const [lr] = await supa('settings?key=eq.oa_low_reviews_v1&select=value'); const prods = lr?.value?.products || []; const lows = prods.flatMap(p => (p.low || []).map(x => ({ ...x, name: p.name }))); if (prods.length) { L.push('', `■ 지난주 낮은 평점 리뷰 ${lows.length}건` + prods.filter(p => p.avg).map(p => ` · ${p.name} 평균 ${p.avg}(${p.total}건)`).join('')); lows.slice(0, 6).forEach(x => L.push(`  ★${x.score} ${x.name}${x.option ? '(' + x.option + ')' : ''}: ${x.text.slice(0, 70)}`)); } } catch {}
 L.push('', '대시보드: https://oa-dashboard2.vercel.app');
 const text = L.join('\n'); console.log(text);
 if (SEND === '채널') await sendToChannel(text);

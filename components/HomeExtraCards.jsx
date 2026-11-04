@@ -150,3 +150,59 @@ export function ProductNowCard({ C, Card, sch, onOpen }) {
     </Card>
   );
 }
+
+// 제품별 손익 카드(1): 이번 달 매출이익(전 채널) − 광고비(메타·네이버·GFA, 아침 판정 스크립트가 집계) − PPL(이번 달 업로드 확정액)
+export function ProfitCard({ C, Card }) {
+  const ym = new Date(Date.now() + 9 * 3600e3).toISOString().slice(0, 7);
+  const P = [{ label: "플렌티플렛4L", like: "오아플렌티플렛4L" }, { label: "프리온", like: "오아프리온무선고데기-%" }];
+  const [sales, setSales] = useState({}); const [spend, setSpend] = useState(null); const [ppl, setPpl] = useState({});
+  useEffect(() => {
+    fetch("/api/event-perf", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ profit: P.map((p) => ({ id: p.label, product: p.like, ym })) }) }).then((r) => r.json()).then((j) => setSales(j.results || {})).catch(() => {});
+    getSetting("oa_ad_spend_v1").then(setSpend).catch(() => {});
+    Promise.all([fetch("/api/ppl-leads").then((r) => r.json()).catch(() => ({})), getSetting("oa_ppl_stage_v1").catch(() => ({}))]).then(([j, st]) => { const by = {}; (j.rows || []).forEach((r) => { if (!r.confirmed) return; const up = (st || {})[r.id]?.uploadDate || ""; if (up.startsWith(ym)) by["프리온"] = (by["프리온"] || 0) + Number(r.deal_amount || 0) * 10000; }); setPpl(by); });
+  }, []);
+  const dom = new Date(Date.now() + 9 * 3600e3).getUTCDate();
+  return (
+    <Card style={{ padding: "14px 16px" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 8 }}><div style={{ fontSize: 15, fontWeight: 900, color: C.ink }}>{+ym.slice(5, 7)}월 제품 손익</div><span style={{ fontSize: 12, color: C.inkLt }}>1~{dom}일 · 매출이익(전 채널, 전산) − 광고비 − PPL(이번 달 업로드분) {spend?.at ? `· 광고비 ${spend.at.slice(5, 16).replace("T", " ")} 집계` : "· 광고비 집계 대기(매일 9시)"}</span></div>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(300px,1fr))", gap: 10, marginTop: 10 }}>
+        {P.map((p) => { const s = sales[p.label]; const ad = spend?.by?.[p.label] || { meta: 0, naver: 0, gfa: 0 }; const adSum = ad.meta + ad.naver + ad.gfa; const pp = ppl[p.label] || 0; const net = s && !s.error ? s.gp - adSum - pp : null; const lyDiff = s && s.lyGp ? (s.gp / s.lyGp - 1) * 100 : null;
+          return <div key={p.label} style={{ border: `1px solid ${C.border}`, borderRadius: 10, padding: "10px 12px" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}><b style={{ fontSize: 14 }}>{p.label}</b>{s && !s.error && <span style={{ fontSize: 12, color: C.inkLt }}>{s.q.toLocaleString()}대 · 매출 {won(s.rev)}</span>}</div>
+            {!s && <div style={{ fontSize: 12, color: C.inkLt }}>집계 중...</div>}
+            {s && s.error && <div style={{ fontSize: 12, color: C.bad }}>전산 연결 실패 · 새로고침</div>}
+            {s && !s.error && <div>
+              <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginTop: 4 }}><span style={{ fontSize: 26, fontWeight: 900, color: net >= 0 ? "#16a34a" : "#dc2626" }}>{(net >= 0 ? "+" : "-") + won(Math.abs(net)) + "원"}</span><span style={{ fontSize: 12, color: C.inkLt }}>남은 돈</span></div>
+              <div style={{ fontSize: 12, color: C.inkMid, lineHeight: 1.7 }}>
+                <div>매출이익 <b>{won(s.gp)}</b>{lyDiff != null && <span style={{ color: lyDiff >= 0 ? "#16a34a" : "#dc2626" }}>{" (" + (lyDiff >= 0 ? "+" : "") + Math.round(lyDiff) + "% vs 작년)"}</span>}</div>
+                <div>광고비 <b>{won(adSum)}</b> <span style={{ color: C.inkLt }}>{"(메타 " + won(ad.meta) + " · 네이버 " + won(ad.naver) + " · GFA " + won(ad.gfa) + ")"}</span></div>
+                {pp > 0 && <div>PPL <b>{won(pp)}</b></div>}
+                <div>광고비 ÷ 매출이익 <b>{(s.gp ? Math.round(adSum / s.gp * 100) : 0) + "%"}</b></div>
+              </div>
+            </div>}
+          </div>; })}
+      </div>
+    </Card>
+  );
+}
+
+// 검색 유입 카드(4): 스마트스토어 검색어 유입(캠핑 등) 주간 자동 수집 결과 oa_ss_query_v1
+export function SearchInflowCard({ C, Card }) {
+  const [d, setD] = useState(null);
+  useEffect(() => { getSetting("oa_ss_query_v1").then(setD).catch(() => {}); }, []);
+  if (!d?.groups) return null;
+  const pct = (a, b) => b ? Math.round((a / b - 1) * 100) : null;
+  return (
+    <Card style={{ padding: "14px 16px" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 8 }}><div style={{ fontSize: 15, fontWeight: 900, color: C.ink }}>스마트스토어 검색 유입</div><span style={{ fontSize: 12, color: C.inkLt }}>{d.range} · 작년 같은 기간 대비 · 매주 월요일 자동</span></div>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(220px,1fr))", gap: 8, marginTop: 10 }}>
+        {d.groups.map((g) => { const dp = pct(g.pay, g.lyPay), dv = pct(g.visit, g.lyVisit); const f = (x) => x == null ? "" : " (" + (x >= 0 ? "+" : "") + x + "%)"; const conv = g.visit ? (g.pay / g.visit * 100).toFixed(1) : "0";
+          return <div key={g.label} style={{ border: `1px solid ${C.border}`, borderRadius: 10, padding: "8px 10px" }}>
+            <div style={{ fontSize: 13, fontWeight: 800, color: C.ink }}>{g.label}</div>
+            <div style={{ fontSize: 12, color: C.inkMid }}>{"구매 "}<b>{g.pay}</b>{"건"}<span style={{ color: dp == null ? C.inkLt : dp >= 0 ? "#16a34a" : "#dc2626" }}>{f(dp)}</span>{" · 방문 " + g.visit.toLocaleString()}<span style={{ color: C.inkLt }}>{f(dv)}</span></div>
+            <div style={{ fontSize: 11, color: C.inkLt }}>{"전환율 " + conv + "% · 매출 " + won(g.sales)}</div>
+          </div>; })}
+      </div>
+    </Card>
+  );
+}

@@ -50,6 +50,25 @@ try:
         else: v, why = 'keep', f'클릭 1번 {cpc:,.0f}원'
         rows.append({'product': prod, 'channel': '메타', 'name': name, 'cost7': cost, 'cpc7': cpc, 'verdict': v, 'reason': why})
 except Exception as e: rows.append({'product': '-', 'channel': '메타', 'name': '수집 실패', 'cost7': 0, 'verdict': 'keep', 'reason': str(e)[:80]})
+# 이번 달 누적 광고비(제품별·채널별) → oa_ad_spend_v1 (손익 카드용)
+try:
+    ym = datetime.date.today().strftime('%Y-%m'); spend = {'플렌티플렛4L': {'meta': 0, 'naver': 0, 'gfa': 0}, '프리온': {'meta': 0, 'naver': 0, 'gfa': 0}}
+    P = lambda prod: '플렌티플렛4L' if '플렌티' in prod else '프리온'
+    for g in run([sys.executable, 'naver_sa.py']) or []:
+        if '플렌티스팀' in g['group']: continue
+        for d in g.get('daily', []):
+            if str(d['day']).startswith(ym.replace('-', '')) or str(d['day']).startswith(ym): spend[P(g['group'])]['naver'] += float(d.get('cost') or 0)
+    gf = run([sys.executable, 'gfa_pp.py']) or {}
+    for d in gf.get('daily', []):
+        nm = d.get('name', '')
+        if ('플렌티' in nm or '프리온' in nm) and str(d.get('day', '')).startswith(ym): spend[P(nm)]['gfa'] += float(d.get('cost') or 0)
+    for r in run(['node', 'meta_daily.mjs']) or []:
+        if str(r['day']).startswith(ym): spend[P(r['product'])]['meta'] += float(r['cost'] or 0)
+    v2 = {'ym': ym, 'at': datetime.datetime.now().isoformat(timespec='minutes'), 'by': spend}
+    req2 = urllib.request.Request(env['NEXT_PUBLIC_SUPABASE_URL'] + '/rest/v1/settings', method='POST', data=json.dumps({'key': 'oa_ad_spend_v1', 'value': v2, 'updated_at': datetime.datetime.utcnow().isoformat() + 'Z'}).encode(),
+        headers={'apikey': env['NEXT_PUBLIC_SUPABASE_ANON_KEY'], 'Authorization': 'Bearer ' + env['NEXT_PUBLIC_SUPABASE_ANON_KEY'], 'Content-Type': 'application/json', 'Prefer': 'resolution=merge-duplicates'})
+    urllib.request.urlopen(req2, timeout=60); print('spend', spend)
+except Exception as e: print('spend fail', str(e)[:120])
 order = {'off': 0, 'down': 1, 'up': 2, 'keep': 3}
 rows.sort(key=lambda r: (order[r['verdict']], -r.get('cost7', 0)))
 val = {'at': datetime.datetime.now().isoformat(timespec='minutes'), 'be': {'플렌티플렛': BE['플렌티플렛 4L'], '프리온': BE['프리온']}, 'rows': rows}
