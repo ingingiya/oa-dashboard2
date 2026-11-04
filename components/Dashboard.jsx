@@ -3217,12 +3217,12 @@ function InvModalComp({mode, initial, onSave, onClose}){
 
 // 스케줄 추가/수정 모달
 function SchModalComp({mode, initial, onSave, onClose}){
-  const empty = {type:"공구",title:"",date:"",endDate:"",assignee:"",note:"",status:"예정"};
+  const empty = {type:"공구",title:"",date:"",endDate:"",assignee:"",note:"",status:"예정",auto:true};
   const [f, setF] = useState(()=>initial||empty);
   const set = (k,v) => setF(p=>({...p,[k]:v}));
   return(
     <Modal title={mode==="add"?"일정 추가":"일정 수정"} onClose={onClose}>
-      <FR label="유형"><Sel value={f.type} onChange={v=>set("type",v)} options={["소재제작","광고","시딩","이벤트","행사","공구","촬영","인스타","트위터","기타"]}/></FR>
+      <FR label="유형"><Sel value={f.type} onChange={v=>set("type",v)} options={["소재제작","광고","시딩","이벤트","행사","공구","촬영","인스타","트위터","휴무","기타"]}/></FR>
       <FR label="제목 *"><Inp value={f.title} onChange={v=>set("title",v)} placeholder="세럼 30ml 공구 오픈"/></FR>
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:12}}>
         <FR label="시작일 *"><Inp type="date" value={f.date} onChange={v=>set("date",v)}/></FR>
@@ -3237,6 +3237,13 @@ function SchModalComp({mode, initial, onSave, onClose}){
           onFocus={e=>e.target.style.borderColor=C.rose} onBlur={e=>e.target.style.borderColor=C.border}/>
       </FR>
       <FR label="상태"><Sel value={f.status} onChange={v=>set("status",v)} options={["예정","진행중","완료","보류"]}/></FR>
+      {mode==="add"&&(f.type==="공구"||f.type==="행사")&&(
+        <label style={{display:"flex",alignItems:"center",gap:8,fontSize:13,color:C.inkMid,marginBottom:12,cursor:"pointer"}}>
+          <input type="checkbox" checked={f.auto!==false} onChange={e=>set("auto",e.target.checked)}/>
+          준비 할 일 자동 생성 ({f.type==="공구"?"D-3 재고·가격 점검 → D-1 세팅 → 오픈 확인 → 종료 원복":"D-1 가격 예약·배너·구매제한 → 당일 풀기 → 종료 원복"})
+        </label>
+      )}
+      {f.type==="휴무"&&<div style={{fontSize:12,color:C.inkLt,marginBottom:12}}>휴무 기간에 담당 일정이 있으면 홈에 경고가 떠요. 제목은 "휴무" 또는 "외근 · 사유"처럼 적어 주세요.</div>}
       <Btn onClick={()=>{if(!f.title||!f.date)return; onSave(f);}} style={{width:"100%",marginTop:8}}>💾 저장</Btn>
     </Modal>
   );
@@ -6900,6 +6907,34 @@ export default function OaDashboard(){
   // CSV/로컬 ID 여부 (Notion API 호출 불필요)
   function isLocalId(id) { return !id || id.startsWith("csv_") || id.startsWith("local_") || id.startsWith("temp_"); }
 
+  // 공구·행사 등록 시 준비 할 일 자동 생성 (6·33) — 제목 "★원복"은 홈 원복 누락 경고(34)의 기준
+  function linkedTasksFor(item){
+    const S=item.date, E=item.endDate||item.date; if(!S) return [];
+    const shift=(d,n)=>{const t=new Date(d+"T00:00:00");t.setDate(t.getDate()+n);return `${t.getFullYear()}-${String(t.getMonth()+1).padStart(2,"0")}-${String(t.getDate()).padStart(2,"0")}`;};
+    const base={assignee:item.assignee||"소리",memo:`자동 생성 ← ${item.title} (${S}~${E})`};
+    const name=item.title.replace(/^\[[^\]]*\]\s*/,"");
+    if(item.type==="공구") return [
+      {...base,type:"공구",date:shift(S,-3),title:`[공구 D-3] ${name} 재고·가격·결제경로 점검`},
+      {...base,type:"공구",date:shift(S,-1),title:`[공구 D-1] ${name} 가격 세팅·1인 구매제한·링크/소재 전달 확인`},
+      {...base,type:"공구",date:S,title:`[공구 오픈] ${name} 오픈 확인`},
+      {...base,type:"공구",date:E,title:`★원복 [공구 종료] ${name} 가격 원복·구매제한 해제`},
+    ];
+    if(item.type==="행사") return [
+      {...base,type:"행사",date:shift(S,-1),title:`[행사 준비] ${name} 가격 예약·배너 등록·1인 구매제한 걸기`},
+      {...base,type:"행사",date:S,title:`[행사 오픈] 11시 ${name} 구매제한 풀기·노출 확인`},
+      {...base,type:"행사",date:E,title:`★원복 [행사 종료] ${name} 가격 원복·배너 내리기`},
+    ];
+    return [];
+  }
+  function createNotionQuick(it){
+    const newItem={ id:`local_${Date.now()}_${Math.random().toString(36).slice(2,6)}`, title:it.title, date:it.date, endDate:it.endDate||null,
+      assignee:it.assignee||null, type:it.type, status:"예정", memo:it.memo||"", done:false, assigneeColor:NOTION_ASSIGNEE_COLORS[it.assignee]||"#94a3b8" };
+    setNotionSch(prev=>{ const next=[...prev,newItem]; saveSchCache(next); return next; });
+    fetch("/api/notion",{ method:"POST", headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({ action:"create", data:{ title:it.title, date:it.date, endDate:it.endDate||null, assignee:it.assignee||null, type:it.type, status:"예정", memo:it.memo||"" }}),
+    }).then(r=>r.json()).then(data=>{ if(data.id) setNotionSch(prev=>{ const next=prev.map(s=>s.id===newItem.id?{...s,id:data.id}:s); saveSchCache(next); return next; }); }).catch(()=>{});
+  }
+
   async function saveNotionSch(item) {
     const isEdit = schModalData?.mode === "edit" && item.notionId;
     setSchModalData(null);
@@ -6943,6 +6978,7 @@ export default function OaDashboard(){
       }).then(r=>r.json()).then(data=>{
         if (data.id) setNotionSch(prev => { const next=prev.map(s=>s.id===newItem.id?{...s,id:data.id}:s); saveSchCache(next); return next; });
       }).catch(()=>{});
+      if (item.auto!==false) linkedTasksFor(item).forEach(createNotionQuick);
     }
   }
 
@@ -8233,6 +8269,11 @@ export default function OaDashboard(){
   const cautionInv     = inv.filter(i=>stockStatus(i).label==="주의");
   const overdueScheds  = notionSch.filter(s=>{const d=daysUntil(s.endDate||s.date);return d!==null&&d<0&&d>=-14&&s.status!=="완료";});
   const urgentScheds   = notionSch.filter(s=>{const d=daysUntil(s.date);return d!==null&&d>=0&&d<=5&&s.status!=="완료";});
+  const restoreMissed  = notionSch.filter(s=>/^★원복|원복/.test(s.title||"")&&s.status!=="완료"&&(()=>{const d=daysUntil(s.endDate||s.date);return d!==null&&d<0&&d>=-30;})());
+  const offConflicts   = (()=>{ const offs=notionSch.filter(s=>s.type==="휴무"||/^휴무|^외근/.test(s.title||"")); const out=[];
+    offs.forEach(o=>{ const a=o.assignee; if(!a) return; const s0=o.date, e0=o.endDate||o.date;
+      notionSch.forEach(t=>{ if(t.id===o.id||t.assignee!==a||t.status==="완료"||t.type==="휴무") return; const s1=t.date, e1=t.endDate||t.date; if(s1&&s1<=e0&&e1>=s0&&daysUntil(e1)>=-1) out.push({...t,_off:o}); }); });
+    return out; })();
   // 광고 교체/보류 알림 — 시트 데이터 있을 때만
   const adAlerts = hasSheet ? metaForChart.reduce((acc, r)=>{
     const key = (r.adName||r.campaign||"") + "|||" + (r.adset||"");
@@ -9917,6 +9958,18 @@ export default function OaDashboard(){
         count:orderRaw.length, items:orderRaw,
         render:(r)=>r["SKU명"]||r["상품명"]||"",
         action:()=>{},
+      },
+      {
+        id:"restoreMissed", icon:"warning", label:"원복 미완료 (가격 사고 주의)", color:C.bad, bg:"#FEF0F0",
+        count:restoreMissed.length, items:restoreMissed,
+        render:(s)=>`${Math.abs(daysUntil(s.endDate||s.date))}일 지남 · ${s.title.replace(/^★원복\s*/,"")}${s.assignee?" · "+s.assignee:""}`,
+        action:()=>setSec("schedule"),
+      },
+      {
+        id:"offConflicts", icon:"event_busy", label:"휴무 중 담당 일정", color:C.warn, bg:"#FFF8EC",
+        count:offConflicts.length, items:offConflicts,
+        render:(s)=>`${s.assignee} 휴무(${s._off.date.slice(5)}) · ${s.title}`,
+        action:()=>setSec("schedule"),
       },
       {
         id:"recreateReqs", icon:"palette", label:"재제작 요청", color:"#8b5cf6", bg:"#f5f3ff",
@@ -13474,6 +13527,9 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
     const [perf,setPerf]=useState({});
     const [prodMap,setProdMap]=useSyncState("oa_event_perf_map_v1",{});
     const [open,setOpen]=useState(true);
+    const [stock,setStock]=useState(null); const recordedRef=useRef(new Set());
+    useEffect(()=>{ fetch("/api/erp-stock").then(r=>r.json()).then(d=>setStock(Array.isArray(d)?d:[])).catch(()=>setStock([])); },[]);
+    const stockOf=p=>{ if(!stock||!p) return null; const key=p.like.replace(/%/g,"").replace(/^오아/,""); const hit=stock.filter(x=>String(x.name||"").replace(/\s/g,"").includes(key.replace(/\s/g,""))); if(!hit.length) return null; return hit.reduce((a,x)=>a+Number(x.stock_qty||0),0); };
     const dk=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
     const today=dk(new Date());
     const loadEv=useCallback(async()=>{
@@ -13492,15 +13548,25 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
       .filter(s=>s.date && s._end>=dk(new Date(Date.now()-45*864e5)) && s.date<=dk(new Date(Date.now()+60*864e5)))
       .map(s=>({...s,_state:s.date>today?"예정":s._end<today?"종료":"진행중"}))
       .sort((a,b)=>{const o={"진행중":0,"예정":1,"종료":2}; if(o[a._state]!==o[b._state]) return o[a._state]-o[b._state]; return a._state==="종료"?b.date.localeCompare(a.date):a.date.localeCompare(b.date);});
-    const reqKey=rows.filter(s=>s._prod&&s._state!=="예정").map(s=>s.id+s._prod.like+s.date+s._end).join("|");
+    const reqKey=rows.filter(s=>s._prod).map(s=>s.id+s._prod.like+s.date+s._end).join("|");
     useEffect(()=>{
-      const items=rows.filter(s=>s._prod&&s._state!=="예정").map(s=>({id:s.id,product:s._prod.like,start:s.date,end:s._end}));
+      const items=rows.filter(s=>s._prod).map(s=>({id:s.id,product:s._prod.like,start:s.date,end:s._end}));
       if(!items.length) return;
       fetch("/api/event-perf",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({items})})
         .then(r=>r.json()).then(j=>setPerf(p=>({...p,...(j.results||{})}))).catch(()=>{});
     // eslint-disable-next-line
     },[reqKey]);
     const won=v=>v>=1e8?(v/1e8).toFixed(2)+"억":Math.round(v/1e4).toLocaleString()+"만";
+    // 종료된 공구·행사 성과를 일정 메모에 한 번만 기록 (5)
+    useEffect(()=>{
+      rows.forEach(s=>{ const pf=perf[s.id]; if(s._state!=="종료"||!pf||pf.error||pf.upcoming) return; if((s.memo||"").includes("[성과]")||recordedRef.current.has(s.id)||/^local_|^csv_|^temp_/.test(s.id)) return;
+        recordedRef.current.add(s.id);
+        const line=`[성과] ${pf.q.toLocaleString()}대 · ${won(pf.amt)}원 · 직전7일 대비 ${pf.prePerDay>0?(pf.perDay/pf.prePerDay).toFixed(1)+"배":"—"} · 작년 같은 날짜 ${pf.lyQ.toLocaleString()}대 (자동 기록)`;
+        const memo=((s.memo||"").trim()+"\n"+line).trim();
+        fetch("/api/notion",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"update",pageId:s.id,data:{memo}})}).then(()=>setEvItems(prev=>prev.map(x=>x.id===s.id?{...x,memo}:x))).catch(()=>{});
+      });
+    // eslint-disable-next-line
+    },[perf]);
     const dday=d=>{const n=Math.round((new Date(d+"T00:00:00")-new Date(today+"T00:00:00"))/864e5);return n===0?"오늘":`D-${n}`;};
     const stCol={"진행중":C.rose,"예정":"#2563eb","종료":C.inkLt};
     const live=rows.filter(s=>s._state==="진행중").length, up=rows.filter(s=>s._state==="예정").length;
@@ -13542,7 +13608,12 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
                 </div>
                 <div style={{minWidth:0}}>
                   {!s._prod?<span style={{fontSize:12,color:C.inkLt}}>제품을 고르면 성과가 나와요</span>
-                  :s._state==="예정"?<span style={{fontSize:12,color:C.inkLt}}>시작하면 자동 집계 · 작년 같은 날짜와 비교</span>
+                  :s._state==="예정"?(()=>{ const st=stockOf(s._prod); const ly=pf&&pf.lyQ!=null?pf.lyQ:null; const low=st!=null&&ly!=null&&st<ly*1.2;
+                    return <div style={{display:"flex",gap:16,flexWrap:"wrap",alignItems:"baseline"}}>
+                      <div><div style={{fontSize:18,fontWeight:900,color:st==null?C.inkLt:low?C.bad:C.ink,lineHeight:1.1}}>{st==null?"재고 —":st.toLocaleString()+"대"}</div><div style={{fontSize:11,color:C.inkLt}}>{st==null?"재고 데이터에 제품 없음":"현재 재고 (전산 동기화)"}</div></div>
+                      <div><div style={{fontSize:16,fontWeight:900,color:C.ink,lineHeight:1.1}}>{ly==null?"—":ly.toLocaleString()+"대"}</div><div style={{fontSize:11,color:C.inkLt}}>작년 같은 날짜 판매</div></div>
+                      {low&&<span style={{fontSize:11,fontWeight:800,color:C.white,background:C.bad,borderRadius:4,padding:"2px 6px"}}>재고 부족 주의</span>}
+                    </div>; })()
                   :!pf?<span style={{fontSize:12,color:C.inkLt}}>집계 중...</span>
                   :pf.error?<span style={{fontSize:12,color:C.bad}}>집계 실패 (전산 연결) · 새로고침</span>
                   :<div style={{display:"flex",gap:16,flexWrap:"wrap",alignItems:"baseline"}}>
@@ -13705,6 +13776,10 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
                 </button>
               );
             })}
+            <button onClick={()=>{ let me=""; try{ me=localStorage.getItem("oa_board_me")||""; }catch(e){} if(!me){ me=prompt("내 이름(경은·소리·영서·동욱)")||""; if(me){ try{ localStorage.setItem("oa_board_me",me); }catch(e){} } } if(me) setAssigneeFilter(me); }}
+              style={{fontSize:12,padding:"4px 12px",borderRadius:20,border:`1px solid ${C.border}`,background:C.white,color:C.inkMid,cursor:"pointer",fontFamily:"inherit",fontWeight:700,whiteSpace:"nowrap"}}>
+              <MI n="person" size={12}/> 내 것
+            </button>
             <div style={{width:1,background:C.border,margin:"0 4px",flexShrink:0}}/>
             {/* 완료 필터 */}
             {["미완료","전체"].map(f=>(

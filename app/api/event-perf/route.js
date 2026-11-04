@@ -40,7 +40,13 @@ export async function POST(request) {
       let end = it.end || it.start;
       if (!id || !product || !okDate(start) || !okDate(end)) continue;
       const endCut = end > todayKST ? todayKST : end; // 진행 중이면 오늘까지
-      if (start > todayKST) { results[id] = { upcoming: true }; continue; }
+      if (start > todayKST) {
+        const ly0 = lastYear(start), ly1 = lastYear(end); const p0 = esc(product);
+        try { const [r] = await mcpQuery(`SELECT SUM(수량) ly_q, SUM(판매금액) ly_amt FROM db_for_ai_sm.v_daily_order_detail WHERE 매출처명 IN ${CHANNELS} AND 제품명 LIKE '${p0}' AND 주문등록일시 BETWEEN '${ly0}' AND '${ly1} 23:59:59'`);
+          results[id] = { upcoming: true, lyQ: Number(r?.ly_q || 0), lyAmt: Math.round(Number(r?.ly_amt || 0)) };
+        } catch (e) { results[id] = { upcoming: true, error: String(e.message || e).slice(0, 120) }; }
+        continue;
+      }
       const days = Math.round((new Date(endCut) - new Date(start)) / 864e5) + 1;
       const pre0 = addDays(start, -7), pre1 = addDays(start, -1);
       const ly0 = lastYear(start), ly1 = lastYear(endCut);
