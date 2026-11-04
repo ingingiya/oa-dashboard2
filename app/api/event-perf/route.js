@@ -54,19 +54,32 @@ export async function POST(request) {
       return Response.json({ results });
     }
     if (Array.isArray(body.stock) && body.stock.length) {
-      // 재고 소진 예측(3): 발송가능재고(v_stock_status, 전 창고) + 최근 14일 판매(전 채널) → 남은 일수는 클라이언트에서
+      // 재고 소진 예측(3): 발송가능재고(v_stock_status) + 최근 14일 판매(전 채널). 한 번에 조회 + 60분 캐시(oa_stock_cache_v1)
       const PARTS = /케이블|배터리|박스|노즐|필터|파우치|부레|분무관|수조|어댑터|거치대|스트랩|커버|물통|케이스|와블러|패드|전원선|온도조절|리테일|날개|증정/;
-      const todayKST = new Date(Date.now() + 9 * 3600e3).toISOString().slice(0, 10); const d14 = addDays(todayKST, -14), d1 = addDays(todayKST, -1);
-      const results = {};
-      for (const m of body.stock.slice(0, 15)) {
-        const p = esc(m.product);
+      const SU = process.env.NEXT_PUBLIC_SUPABASE_URL, SK = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+      const h = { apikey: SK, Authorization: `Bearer ${SK}`, 'Content-Type': 'application/json' };
+      const likes = body.stock.slice(0, 20).map((m) => esc(m.product));
+      const rx = (like) => new RegExp('^' + like.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/%/g, '.*') + '$');
+      let cache = null;
+      try { cache = await fetch(`${SU}/rest/v1/settings?key=eq.oa_stock_cache_v1&select=value`, { headers: h }).then(r => r.json()).then(d => d?.[0]?.value || null); } catch {}
+      let rowsSt, rowsSv;
+      if (cache && Date.now() - new Date(cache.at).getTime() < 60 * 60e3 && likes.every((l) => cache.likes.includes(l))) { rowsSt = cache.st; rowsSv = cache.sv; }
+      else {
+        const todayKST = new Date(Date.now() + 9 * 3600e3).toISOString().slice(0, 10); const d14 = addDays(todayKST, -14), d1 = addDays(todayKST, -1);
+        const where = likes.map((l) => `제품명 LIKE '${l}'`).join(' OR ');
         try {
-          const st = await mcpQuery(`SELECT 제품명, SUM(발송가능재고) q FROM db_for_ai_sm.v_stock_status WHERE 제품명 LIKE '${p}' GROUP BY 제품명`);
-          const sv = await mcpQuery(`SELECT 제품명, SUM(판매수량) q FROM db_for_ai_sm.v_daily_sales_detail WHERE 제품명 LIKE '${p}' AND 판매날짜 BETWEEN '${d14}' AND '${d1}' GROUP BY 제품명`);
-          const keep = (r) => !PARTS.test(String(r['제품명'] || ''));
-          const stock = st.filter(keep).reduce((a, r) => a + Number(r.q || 0), 0); const sold14 = sv.filter(keep).reduce((a, r) => a + Number(r.q || 0), 0);
-          results[m.id] = { stock, sold14, perDay: sold14 / 14, daysLeft: sold14 > 0 ? Math.round(stock / (sold14 / 14)) : null, names: st.filter(keep).map((r) => r['제품명']) };
-        } catch (err) { results[m.id] = { error: String(err.message || err).slice(0, 120) }; }
+          [rowsSt, rowsSv] = await Promise.all([
+            mcpQuery(`SELECT 제품명, SUM(발송가능재고) q FROM db_for_ai_sm.v_stock_status WHERE ${where} GROUP BY 제품명`, 2),
+            mcpQuery(`SELECT 제품명, SUM(판매수량) q FROM db_for_ai_sm.v_daily_sales_detail WHERE (${where}) AND 판매날짜 BETWEEN '${d14}' AND '${d1}' GROUP BY 제품명`, 2),
+          ]);
+          fetch(`${SU}/rest/v1/settings`, { method: 'POST', headers: { ...h, Prefer: 'resolution=merge-duplicates' }, body: JSON.stringify({ key: 'oa_stock_cache_v1', value: { at: new Date().toISOString(), likes, st: rowsSt, sv: rowsSv }, updated_at: new Date().toISOString() }) }).catch(() => {});
+        } catch (err) { const results = {}; body.stock.forEach((m) => results[m.id] = { error: String(err.message || err).slice(0, 120) }); return Response.json({ results }); }
+      }
+      const results = {};
+      for (const m of body.stock.slice(0, 20)) {
+        const r = rx(esc(m.product)); const keep = (row) => r.test(String(row['제품명'] || '')) && !PARTS.test(String(row['제품명'] || ''));
+        const stock = rowsSt.filter(keep).reduce((a, x) => a + Number(x.q || 0), 0); const sold14 = rowsSv.filter(keep).reduce((a, x) => a + Number(x.q || 0), 0);
+        results[m.id] = { stock, sold14, perDay: sold14 / 14, daysLeft: sold14 > 0 ? Math.round(stock / (sold14 / 14)) : null, cached: !!cache && rowsSt === cache.st };
       }
       return Response.json({ results });
     }
@@ -88,17 +101,18 @@ export async function POST(request) {
     if (!Array.isArray(items) || !items.length) return Response.json({ results: {} });
     const todayKST = new Date(Date.now() + 9 * 3600e3).toISOString().slice(0, 10);
     const results = {};
-    for (const it of items.slice(0, 20)) {
+    const todo = items.slice(0, 20);
+    const worker = async (it) => {
       const { id, product, start } = it;
       let end = it.end || it.start;
-      if (!id || !product || !okDate(start) || !okDate(end)) continue;
+      if (!id || !product || !okDate(start) || !okDate(end)) return;
       const endCut = end > todayKST ? todayKST : end; // 진행 중이면 오늘까지
       if (start > todayKST) {
         const ly0 = lastYear(start), ly1 = lastYear(end); const p0 = esc(product);
         try { const [r] = await mcpQuery(`SELECT SUM(수량) ly_q, SUM(판매금액) ly_amt FROM db_for_ai_sm.v_daily_order_detail WHERE 매출처명 IN ${CHANNELS} AND 제품명 LIKE '${p0}' AND 주문등록일시 BETWEEN '${ly0}' AND '${ly1} 23:59:59'`);
           results[id] = { upcoming: true, lyQ: Number(r?.ly_q || 0), lyAmt: Math.round(Number(r?.ly_amt || 0)) };
         } catch (e) { results[id] = { upcoming: true, error: String(e.message || e).slice(0, 120) }; }
-        continue;
+        return;
       }
       const days = Math.round((new Date(endCut) - new Date(start)) / 864e5) + 1;
       const pre0 = addDays(start, -7), pre1 = addDays(start, -1);
@@ -123,7 +137,8 @@ export async function POST(request) {
           lyQ: Number(r?.ly_q || 0), lyAmt: Math.round(Number(r?.ly_amt || 0)),
         };
       } catch (e) { results[id] = { error: String(e.message || e).slice(0, 120) }; }
-    }
+    };
+    for (let i = 0; i < todo.length; i += 4) await Promise.all(todo.slice(i, i + 4).map(worker));
     return Response.json({ results });
   } catch (e) {
     return Response.json({ error: e.message }, { status: 500 });
