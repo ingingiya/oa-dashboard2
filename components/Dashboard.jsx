@@ -19335,7 +19335,7 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
           {sec==="portfolio"   && PortfolioSection}
           {sec==="gfa"         && GfaSection}
           {sec==="priority"    && PrioritySection}
-          {sec==="guide"       && <iframe src="/oa-guide.html" title="업무 가이드" style={{width:"100%",height:"calc(100vh - 150px)",border:`1px solid ${C.border}`,borderRadius:14,background:"#fff"}}/>}
+          {sec==="guide"       && <iframe src="/boosters-guide.html" title="업무 가이드" style={{width:"100%",height:"calc(100vh - 150px)",border:`1px solid ${C.border}`,borderRadius:14,background:"#fff"}}/>}
         </main>
       </div>
 
