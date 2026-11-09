@@ -5,7 +5,7 @@ import useShared, { me } from "./useShared";
 
 const STAGES = ["조사", "후보 선정", "채널 개설", "상품 등록", "첫 판매", "운영 중"];
 const SEED = { countries: [
-  { id: "jp", name: "일본", flag: "🇯🇵", stage: 4, owner: "경은", next: "12월 초 첫 입고(USB 무선 5종 × 50~150개, 일본 창고 국내배송) → 그 전에 KC-INTL 운송 견적·국내관리인·수입자(ONEMAKE) 확정. 콘센트 고데기는 FOREST ○PSE로 오마컬 1종 먼저", due: "2026-12-01", notes: ["10/23 보고 덱: 큐텐 직송 조건·보다나 해부", "11/05 판매 방식 결정: 일본 창고 + 국내배송", "11/06 큐텐 상세 일본어판 51·설명서 50종·썸네일 50 교체", "11/09 라쿠텐 입점 심사 통과·판매가 계산(큐텐가 그대로 개당 ¥1,800~4,000)", "11/09 인증 정리(BV·FOREST·ONEMAKE·Qxpress) → FOREST·ONEMAKE 미팅 요청, BV 회신(VCCI 생략)"], links: [["인증 정리", "https://oa-japan-cert.vercel.app"], ["진출 보고서", "https://oa-global-report.vercel.app"], ["1차 라인업", "https://oa-japan-lineup.vercel.app"], ["상세 검수", "https://oa-qoo10-jp.vercel.app"], ["설명서", "https://oa-manual-jp.vercel.app"], ["도구 모음", "https://oa-overseas-toolkit.vercel.app"]] },
+  { id: "jp", name: "일본", flag: "🇯🇵", stage: 4, owner: "경은", next: "12월 초 첫 입고(USB 무선 5종 × 50~150개, 일본 창고 국내배송) → 그 전에 KC-INTL 운송 견적·국내관리인·수입자(ONEMAKE) 확정. 콘센트 고데기는 FOREST ○PSE로 오마컬 1종 먼저", due: "2026-12-01", notes: ["10/23 보고 덱: 큐텐 직송 조건·보다나 해부", "11/05 판매 방식 결정: 일본 창고 + 국내배송", "11/06 큐텐 상세 일본어판 51·설명서 50종·썸네일 50 교체", "11/09 라쿠텐 입점 심사 통과·판매가 계산(큐텐가 그대로 개당 ¥1,800~4,000)", "11/09 인증 정리(BV·FOREST·ONEMAKE·Qxpress) → FOREST·ONEMAKE 미팅 요청, BV 회신(VCCI 생략)"], links: [["인증 정리", "https://oa-japan-cert.vercel.app"], ["설명서", "https://oa-manual-jp.vercel.app"], ["상세 검수", "https://oa-qoo10-jp.vercel.app"], ["광고·순위 리포트", "https://oa-qoo10-ads.vercel.app"]] },
 ] };
 
 const OPS_SEED = {
@@ -38,13 +38,34 @@ const OPS_SEED = {
 const CAL_SEED = [
   { id: "c1", date: "2026-11-13", end: "", title: "큐텐 메가와리 4회차 신청 마감", kind: "행사", note: "우리는 자격 미달(7~9월 주문 0) → 불참. 행사 문구 「メガ割」 사용 금지" },
   { id: "c2", date: "2026-11-20", end: "2026-12-02", title: "큐텐 메가와리 4회차 (예상)", kind: "행사", note: "불참. 다음 회차 자격용 주문 이력 쌓기" },
+  { id: "c8", date: "2026-11-09", end: "2026-11-16", title: "큐텐 키워드플러스 8건", kind: "광고", note: "11/9 18:00~11/16 · 하루 2,600 Q캐시" },
+  { id: "c9", date: "2026-11-10", end: "2026-11-16", title: "큐텐 파워랭크업 8상품", kind: "광고", note: "7일 · 상품당 700 · 자동연장 OFF" },
+  { id: "c10", date: "2026-11-16", end: "", title: "큐텐 광고 종료 → 연장 여부 결정", kind: "광고", note: "순위 변화 보고 판단" },
   { id: "c3", date: "2026-12-01", end: "", title: "일본 창고 첫 입고 목표", kind: "물류", note: "USB 무선 5종 × 50~150개. 운송 견적·국내관리인·수입자 정해져야 진행" },
   { id: "c4", date: "2026-12-15", end: "", title: "큐텐 일본 국내배송 판매 시작 (목표)", kind: "판매", note: "12월 중순" },
   { id: "c5", date: "2027-01-31", end: "", title: "라쿠텐 계약 기한", kind: "계약", note: "27년 2월 출점료 인상 전" },
   { id: "c6", date: "2027-02-01", end: "2027-02-09", title: "큐텐 메가포 (예상)", kind: "행사", note: "신상품·세트 테스트장. 10% 쿠폰+10% 포인트" },
   { id: "c7", date: "2027-02-27", end: "2027-03-11", title: "큐텐 메가와리 1회차 (예상)", kind: "행사", note: "실질 목표. 신청 4~1주 전, 2주 전부터 가격 유지. 취소율 10% 이하 필수" },
 ];
-const KIND_C = { "행사": "#e11d48", "물류": "#2563eb", "판매": "#16a34a", "계약": "#9333ea", "인증": "#d97706", "기타": "#6b7280" };
+const GOALS_SEED = {
+  shops: [
+    { id: "qoo10", name: "큐텐", status: "완료", note: "oaworld 스토어 운영 중 · 50상품" },
+    { id: "rakuten", name: "라쿠텐", status: "진행", note: "입점 심사 통과 → 계약(27년 2월 출점료 인상 전)" },
+    { id: "amazon", name: "아마존", status: "준비", note: "미국 계정에 일본 추가 → 무선 제품부터" },
+  ],
+  daily: { goal: 10, now: 0, at: "2026-11-09", note: "지금은 행사 없으면 0건 · 기획: 11월 3→7건, 12~1월 5건, 2월 12건, 3월 15건 → 월평균 10건" },
+};
+const ADS_SEED = {
+  qcash: { start: 116500, used: 23800 },
+  kwplus: { period: "11/09 18:00 ~ 11/16", end: "2026-11-16", items: [
+    { kw: "ホットビューラー", name: "업컬 뷰러", search: 596, bid: 300 }, { kw: "ヘアアイロン", name: "무선고데기S", search: 652, bid: 1100 },
+    { kw: "ストレートアイロン", name: "볼륨업 빗고데기", search: 326, bid: 300 }, { kw: "コードレスヘアアイロン", name: "뿌리볼륨 고데기", search: 221, bid: 200 },
+    { kw: "カールアイロン", name: "물결고데기", search: 356, bid: 200 }, { kw: "ホットアイマスク", name: "눈편한세상", search: 387, bid: 300 },
+    { kw: "マッサージ器", name: "듀얼포켓건", search: 138, bid: 100 }, { kw: "マッサージ", name: "히트스팟S", search: 81, bid: 100 } ] },
+  powerup: { period: "11/10 ~ 11/16", end: "2026-11-16", price: 700, items: ["업컬 뷰러", "무선고데기S", "볼륨업 빗고데기", "뿌리볼륨 고데기", "물결고데기", "눈편한세상", "듀얼포켓건", "히트스팟S"] },
+  note: "큐텐엔 클릭당 과금(CPC)이 없음 — 키워드플러스=하루 고정가 경매, 파워랭크업=정액, 스마트세일즈=판매 수수료형",
+};
+const KIND_C = { "광고": "#0891b2", "행사": "#e11d48", "물류": "#2563eb", "판매": "#16a34a", "계약": "#9333ea", "인증": "#d97706", "기타": "#6b7280" };
 const INF_STAGES = ["후보", "연락", "수락", "발송", "업로드", "성과"];
 const INF_SEED = { accounts: [["인스타 @oa_world_japan", "11/09 메타 비즈니스(Cmpny Oa) 연결"], ["페이스북 페이지 Oa オア", "11/09 메타 비즈니스 연결"]], ref: ["크몽 일본 시딩: 1명 15만 원 / 10명 130만 원", "발렌라이프: 단건 시딩 실비 + 20% / 기프팅 100건 300만 원", "큐텐 대학: 리뷰 부족 제품은 샘플마켓 5회+ 권장"], people: [] };
 const HISTORY = [
@@ -65,6 +86,9 @@ export default function GlobalSection({ C, Card }) {
   const [cal, setCal] = useShared("oa_global_cal_v1", CAL_SEED);
   const [inf, setInf] = useShared("oa_global_inf_v1", INF_SEED);
   const [hist, setHist] = useShared("oa_global_hist_v1", HISTORY);
+  const [ads] = useShared("oa_global_ads_v1", ADS_SEED);
+  const [goals, setGoals] = useShared("oa_global_goals_v1", GOALS_SEED);
+  const [rk] = useShared("oa_global_qoo10_rank_v1", { updated: "", rows: [] });
   const upd = (list, id, p) => setOps((prev) => ({ ...prev, [list]: (prev[list] || []).map((x) => x.id === id ? { ...x, ...p } : x) }));
   const Chip = ({ v, opts, onPick }) => { const [bg, fg] = ST_COLOR[v] || ["#f3f4f6", "#374151"]; return <select value={v} onChange={(e) => onPick(e.target.value)} style={{ fontSize: 11, fontWeight: 800, padding: "2px 6px", borderRadius: 20, border: 0, background: bg, color: fg, cursor: "pointer" }}>{opts.map((o) => <option key={o}>{o}</option>)}</select>; };
   const [view, setView0] = useState("glance");
@@ -111,14 +135,14 @@ export default function GlobalSection({ C, Card }) {
           <div style={{ flex: 1 }} />
           <span style={{ fontSize: 11, color: C.inkLt }}>{Object.entries(KIND_C).map(([k, c]) => <span key={k} style={{ marginLeft: 8 }}><span style={{ display: "inline-block", width: 7, height: 7, borderRadius: 7, background: c, marginRight: 3 }} />{k}</span>)}<span style={{ marginLeft: 8 }}>☐ 할 일 마감</span></span>
         </div>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)", border: `1px solid ${C.border}`, borderRadius: 10, overflow: "hidden" }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(7,minmax(0,1fr))", border: `1px solid ${C.border}`, borderRadius: 10, overflow: "hidden" }}>
           {["일", "월", "화", "수", "목", "금", "토"].map((w, i) => <div key={w} style={{ fontSize: 11, fontWeight: 800, textAlign: "center", padding: "5px 0", background: C.cream, color: i === 0 ? "#dc2626" : i === 6 ? "#2563eb" : C.inkMid, borderBottom: `1px solid ${C.border}` }}>{w}</div>)}
           {cells.map((d, i) => { const its = d ? items(d) : []; const isT = d === today; return (
             <div key={i} onDoubleClick={() => { if (!d) return; const title = prompt(`${md(d)} 일정 이름`); if (!title) return; const kind = prompt("종류: 행사/물류/판매/계약/인증/기타", "기타") || "기타"; setCal((p) => [...(p || []), { id: "c" + Date.now(), date: d, end: "", title, kind, note: "", owner: who }]); }}
               style={{ minHeight: compact ? 64 : 92, padding: 4, borderRight: (i % 7) < 6 ? `1px solid ${C.border}` : 0, borderBottom: `1px solid ${C.border}`, background: !d ? "#fafafa" : isT ? "#EAF3FF" : C.white, cursor: d ? "copy" : "default" }}>
               {d && <div style={{ fontSize: 11, fontWeight: isT ? 900 : 600, color: isT ? C.rose : (i % 7 === 0 ? "#dc2626" : C.inkMid) }}>{+d.slice(8)}{isT ? " 오늘" : ""}</div>}
-              {its.slice(0, compact ? 2 : 4).map((x) => <div key={x.k} title={`${x.t}${x.own ? ` · ${x.own}` : ""}${x.note ? "\n" + x.note : ""}`} style={{ marginTop: 2, fontSize: 10.5, lineHeight: 1.25, fontWeight: 700, borderRadius: 4, padding: "1px 4px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", background: x.todo ? (x.own && x.own === who ? "#fde68a" : "#f1f5f9") : x.c + "22", color: x.todo ? "#0f172a" : x.c, borderLeft: x.todo ? 0 : `3px solid ${x.c}` }}>{x.start === false ? "↳ " : ""}{x.t}</div>)}
-              {its.length > (compact ? 2 : 4) && <div style={{ fontSize: 10, color: C.inkLt }}>+{its.length - (compact ? 2 : 4)}</div>}
+              {its.slice(0, compact ? 3 : 5).map((x) => x.start === false ? <div key={x.k} title={x.t} style={{ marginTop: 2, height: 5, borderRadius: 3, background: x.c, opacity: 0.55 }} /> : <div key={x.k} title={`${x.t}${x.own ? ` · ${x.own}` : ""}${x.note ? "\n" + x.note : ""}`} style={{ marginTop: 2, fontSize: 10.5, lineHeight: 1.25, fontWeight: 700, borderRadius: 4, padding: "1px 4px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", background: x.todo ? (x.own && x.own === who ? "#fde68a" : "#f1f5f9") : x.c + "22", color: x.todo ? "#0f172a" : x.c, borderLeft: x.todo ? 0 : `3px solid ${x.c}` }}>{x.t}</div>)}
+              {its.length > (compact ? 3 : 5) && <div style={{ fontSize: 10, color: C.inkLt }}>+{its.length - (compact ? 3 : 5)}</div>}
             </div>); })}
         </div>
         <div style={{ fontSize: 11, color: C.inkLt, marginTop: 6 }}>날짜를 더블클릭하면 일정을 추가해요. 할 일에 마감일을 넣으면 달력에도 떠요.</div>
@@ -153,6 +177,72 @@ export default function GlobalSection({ C, Card }) {
             {!myCal.length && <div style={{ fontSize: 13, color: C.inkLt, padding: "6px 0" }}>2주 안 일정 없음</div>}
             {free.length > 0 && <><div style={{ fontSize: 12, fontWeight: 800, color: "#dc2626", margin: "10px 0 2px" }}>담당 없는 일 {free.length} — 가져가기</div>
               {free.map((t) => <Row key={t.id} right={null} left={<button onClick={() => upd("todos", t.id, { owner: who })} style={{ fontSize: 11, fontWeight: 800, border: `1px solid ${C.rose}`, color: C.rose, background: C.white, borderRadius: 20, padding: "1px 8px", cursor: "pointer", whiteSpace: "nowrap" }}>내가 할게</button>}>{t.text}{t.due ? <span style={{ color: C.inkLt }}> · {md(t.due)}까지</span> : ""}</Row>)}</>}
+          </div>
+        </div>
+      </Card>
+    );
+  };
+  const rankSeries = () => { const by = {}; for (const r of rk.rows || []) { (by[r.kw + "|" + r.gd] ||= []).push(r); } return Object.values(by).map((a) => a.sort((x, y) => x.t.localeCompare(y.t))); };
+  const rkTxt = (r) => r.rank ? `${r.rank}위` : `${r.scanned}위 밖`;
+  const Spark = ({ a }) => { const pts = a.map((r) => r.rank || r.scanned + 20); if (pts.length < 2) return <span style={{ fontSize: 11, color: C.inkLt }}>기록 1회</span>; const mx = Math.max(...pts), mn = Math.min(...pts); const W = 90, Hh = 24; return <svg width={W} height={Hh}><polyline fill="none" stroke={C.rose} strokeWidth="2" points={pts.map((v, i) => `${(i / (pts.length - 1)) * (W - 4) + 2},${mx === mn ? Hh / 2 : 2 + ((v - mn) / (mx - mn)) * (Hh - 4)}`).join(" ")} /></svg>; };
+  const AdsView = ({ compact }) => {
+    const ser = rankSeries(); const q = ads.qcash || {}; const left = (q.start || 0) - (q.used || 0);
+    const live = (e) => e && -daysSince(e) >= 0;
+    return (
+      <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(180px,1fr))", gap: 12 }}>
+          {[["키워드플러스", `${(ads.kwplus?.items || []).length}건`, `${ads.kwplus?.period} · ${live(ads.kwplus?.end) ? `종료 D-${-daysSince(ads.kwplus.end)}` : "종료"}`],
+            ["파워랭크업", `${(ads.powerup?.items || []).length}상품`, `${ads.powerup?.period} · ${live(ads.powerup?.end) ? `종료 D-${-daysSince(ads.powerup.end)}` : "종료"}`],
+            ["남은 Q캐시", left.toLocaleString(), `시작 ${(q.start || 0).toLocaleString()} · 사용 ${(q.used || 0).toLocaleString()}`],
+            ["순위 갱신", rk.updated ? md(rk.updated.slice(0, 10)) + " " + rk.updated.slice(11) : "—", "하루 2번 자동 (10:00·19:30)"]].map(([k, v, sub]) => (
+            <div key={k} style={{ border: `1px solid ${C.border}`, background: C.white, borderRadius: 14, padding: "12px 14px" }}><div style={{ fontSize: 12, fontWeight: 700, color: C.inkLt }}>{k}</div><div style={{ fontSize: 24, fontWeight: 900, color: C.ink, marginTop: 2 }}>{v}</div><div style={{ fontSize: 12, color: C.inkMid, marginTop: 2 }}>{sub}</div></div>))}
+        </div>
+        <Card style={{ padding: "14px 16px" }}>
+          <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}><div style={{ fontSize: 15, fontWeight: 900, color: C.ink }}>큐텐 검색 순위</div><span style={{ fontSize: 12, color: C.inkLt }}>자연검색 순위 · 광고 구좌 노출 · 첫 기록(11/09 15:51)은 광고 시작 전</span><div style={{ flex: 1 }} /><a href="https://oa-qoo10-ads.vercel.app" target="_blank" rel="noreferrer" style={{ fontSize: 12, color: C.rose, fontWeight: 700 }}>리포트 ↗</a></div>
+          <div style={{ overflowX: "auto" }}><table style={{ width: "100%", borderCollapse: "collapse", marginTop: 8, fontSize: 13 }}>
+            <thead><tr style={{ color: C.inkLt, fontSize: 11, textAlign: "left" }}>{["검색어", "상품", "지금", "변화", "광고 구좌", "추이", "검색/일", "입찰/일"].map((h) => <th key={h} style={{ padding: "6px 6px", borderBottom: `1px solid ${C.border}`, fontWeight: 800 }}>{h}</th>)}</tr></thead>
+            <tbody>{ser.map((a) => { const last = a[a.length - 1], prev = a[a.length - 2]; const kw = (ads.kwplus?.items || []).find((x) => x.kw === last.kw); let ch = null; if (prev) { const p0 = prev.rank || prev.scanned + 1, p1 = last.rank || last.scanned + 1; ch = p0 - p1; } return (
+              <tr key={last.kw + last.gd} style={{ borderBottom: `1px solid ${C.border}` }}>
+                <td style={{ padding: "7px 6px", fontWeight: 700, color: C.ink }}>{last.kw}</td>
+                <td style={{ padding: "7px 6px", color: C.inkMid }}>{last.name}</td>
+                <td style={{ padding: "7px 6px", fontWeight: 900, color: last.rank && last.rank <= 40 ? "#16a34a" : last.rank ? C.ink : C.inkLt }}>{rkTxt(last)}</td>
+                <td style={{ padding: "7px 6px", fontWeight: 800, color: ch > 0 ? "#16a34a" : ch < 0 ? "#dc2626" : C.inkLt }}>{ch === null ? "—" : ch > 0 ? `▲${ch}` : ch < 0 ? `▼${-ch}` : "–"}</td>
+                <td style={{ padding: "7px 6px", color: last.ad ? C.rose : C.inkLt, fontWeight: 700 }}>{last.ad ? `광고 ${last.ad}번째` : `미노출 (구좌 ${last.adn})`}</td>
+                <td style={{ padding: "4px 6px" }}><Spark a={a} /></td>
+                <td style={{ padding: "7px 6px", color: C.inkMid }}>{kw ? kw.search.toLocaleString() : "—"}</td>
+                <td style={{ padding: "7px 6px", color: C.inkMid }}>{kw ? `¥${kw.bid.toLocaleString()}` : "—"}</td>
+              </tr>); })}</tbody></table></div>
+          {!ser.length && <div style={{ fontSize: 13, color: C.inkLt, padding: 12 }}>순위 기록이 아직 없어요.</div>}
+          <div style={{ fontSize: 11, color: C.inkLt, marginTop: 8 }}>「N위 밖」= 검색 결과를 N개까지 내려봐도 없었음. 40위 안이면 초록. {ads.note}</div>
+        </Card>
+      </div>
+    );
+  };
+  const Goals = () => {
+    const dl = goals.daily || {}; const pct = Math.min(100, Math.round(((+dl.now || 0) / (+dl.goal || 10)) * 100));
+    const SC = { "완료": ["#16a34a", "#dcfce7"], "진행": ["#d97706", "#fef3c7"], "준비": ["#6b7280", "#f3f4f6"] };
+    const cycle = (st) => ({ "준비": "진행", "진행": "완료", "완료": "준비" }[st] || "준비");
+    return (
+      <Card style={{ padding: "16px 18px", background: C.ink }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(320px,1fr))", gap: 18, alignItems: "center" }}>
+          <div>
+            <div style={{ fontSize: 12, fontWeight: 800, color: "#9aa3b2", letterSpacing: ".04em" }}>목표 ① 입점</div>
+            <div style={{ display: "flex", gap: 8, marginTop: 8 }}>{(goals.shops || []).map((x) => { const [fg, bg] = SC[x.status] || SC["준비"]; return (
+              <button key={x.id} title={x.note + " (누르면 상태 변경)"} onClick={() => setGoals((g) => ({ ...g, shops: g.shops.map((y) => y.id === x.id ? { ...y, status: cycle(y.status) } : y) }))} style={{ flex: 1, textAlign: "left", cursor: "pointer", border: 0, borderRadius: 12, padding: "10px 12px", background: x.status === "완료" ? "#16a34a" : "#1f2430" }}>
+                <div style={{ fontSize: 16, fontWeight: 900, color: "#fff" }}>{x.status === "완료" ? "✓ " : ""}{x.name}</div>
+                <div style={{ display: "inline-block", marginTop: 4, fontSize: 11, fontWeight: 800, color: x.status === "완료" ? "#fff" : fg, background: x.status === "완료" ? "rgba(255,255,255,.2)" : bg, borderRadius: 20, padding: "1px 8px" }}>{x.status}</div>
+                <div style={{ fontSize: 11, color: x.status === "완료" ? "#dcfce7" : "#9aa3b2", marginTop: 5, lineHeight: 1.4 }}>{x.note}</div>
+              </button>); })}</div>
+          </div>
+          <div>
+            <div style={{ fontSize: 12, fontWeight: 800, color: "#9aa3b2", letterSpacing: ".04em" }}>목표 ② 큐텐 하루 판매</div>
+            <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginTop: 6 }}>
+              <span style={{ fontSize: 40, fontWeight: 900, color: "#fff", letterSpacing: "-0.03em" }}>{+dl.now || 0}</span><span style={{ fontSize: 18, fontWeight: 800, color: "#9aa3b2" }}>/ {dl.goal || 10}개</span>
+              <div style={{ flex: 1 }} />
+              <button onClick={() => { const v = prompt("최근 하루 판매 개수 (큐텐)", String(dl.now || 0)); if (v === null || isNaN(+v)) return; setGoals((g) => ({ ...g, daily: { ...g.daily, now: +v, at: today } })); }} style={{ fontSize: 12, fontWeight: 800, border: 0, borderRadius: 20, padding: "4px 12px", cursor: "pointer", background: "#fff", color: C.ink }}>판매 수 입력</button>
+            </div>
+            <div style={{ height: 10, borderRadius: 10, background: "#1f2430", marginTop: 6, overflow: "hidden" }}><div style={{ width: `${Math.max(pct, 2)}%`, height: "100%", background: pct >= 100 ? "#16a34a" : "#2997FF", borderRadius: 10 }} /></div>
+            <div style={{ fontSize: 11.5, color: "#9aa3b2", marginTop: 6, lineHeight: 1.5 }}>{pct}% · {md(dl.at)} 기준 · {dl.note}</div>
           </div>
         </div>
       </Card>
@@ -208,6 +298,11 @@ export default function GlobalSection({ C, Card }) {
         </div>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(300px,1fr))", gap: 12 }}>
           <Card style={{ padding: "14px 16px" }}>
+            <H t="큐텐 광고·순위" sub={rk.updated ? `${md(rk.updated.slice(0, 10))} ${rk.updated.slice(11)} 기준` : ""} go="ads" />
+            <div style={{ fontSize: 12, color: C.inkMid, marginBottom: 6 }}>키워드플러스 {(ads.kwplus?.items || []).length}건 · 파워랭크업 {(ads.powerup?.items || []).length}상품 · {-daysSince(ads.kwplus?.end) >= 0 ? `종료 D-${-daysSince(ads.kwplus.end)}` : "종료"} · Q캐시 {((ads.qcash?.start || 0) - (ads.qcash?.used || 0)).toLocaleString()} 남음</div>
+            {rankSeries().map((a) => { const l = a[a.length - 1]; return <div key={l.kw + l.gd} style={{ display: "flex", gap: 8, fontSize: 12.5, padding: "3px 0", borderTop: `1px solid ${C.border}` }}><span style={{ flex: 1, color: C.ink, fontWeight: 700 }}>{l.name}</span><span style={{ color: C.inkLt }}>{l.kw}</span><span style={{ width: 70, textAlign: "right", fontWeight: 900, color: l.rank && l.rank <= 40 ? "#16a34a" : l.rank ? C.ink : C.inkLt }}>{rkTxt(l)}</span></div>; })}
+          </Card>
+          <Card style={{ padding: "14px 16px" }}>
             <H t="인증 신호등" go="ops" />
             <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>{(ops.certs || []).map((c) => { const [bg, fg] = ST_COLOR[c.status] || ["#f3f4f6", "#374151"]; return (
               <div key={c.id} style={{ display: "flex", gap: 8, alignItems: "center" }}><span style={{ width: 44, textAlign: "center", fontSize: 11, fontWeight: 800, background: bg, color: fg, borderRadius: 20, padding: "2px 0", flexShrink: 0 }}>{c.status}</span><span style={{ fontSize: 13, fontWeight: 700, color: C.ink }}>{c.name}</span></div>); })}</div>
@@ -228,14 +323,16 @@ export default function GlobalSection({ C, Card }) {
   };
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+      <Goals />
       <Card style={{ padding: "10px 12px" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
           <div style={{ fontSize: 16, fontWeight: 900, color: C.ink, marginRight: 6 }}>🇯🇵 해외</div>
-          {[["glance", "한눈에"], ["jp", "일본 진행판"], ["ops", "인증·연락·할 일"], ["cal", "캘린더"], ["inf", "인플루언서"], ["hist", "한 일 기록"], ["calc", "판매가 계산"]].map(([k, l]) => <button key={k} onClick={() => setView(k)} style={{ fontSize: 13, fontWeight: 800, padding: "6px 12px", borderRadius: 20, cursor: "pointer", border: 0, background: view === k ? C.ink : "transparent", color: view === k ? "#fff" : C.inkMid }}>{l}</button>)}
+          {[["glance", "한눈에"], ["jp", "일본 진행판"], ["ops", "인증·연락·할 일"], ["ads", "광고·순위"], ["cal", "캘린더"], ["inf", "인플루언서"], ["hist", "한 일 기록"], ["calc", "판매가 계산"]].map(([k, l]) => <button key={k} onClick={() => setView(k)} style={{ fontSize: 13, fontWeight: 800, padding: "6px 12px", borderRadius: 20, cursor: "pointer", border: 0, background: view === k ? C.ink : "transparent", color: view === k ? "#fff" : C.inkMid }}>{l}</button>)}
           <div style={{ flex: 1 }} /><span style={{ fontSize: 12, color: C.inkLt }}>담당 김경은 · 조영서 · 차동욱</span>
         </div>
       </Card>
       {view === "glance" && <Glance />}
+      {view === "ads" && <AdsView />}
       {view === "jp" && (
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(340px,1fr))", gap: 12 }}>
         {(b.countries || []).map((c) => (
