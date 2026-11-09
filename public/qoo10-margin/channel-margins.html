@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>채널 상품 마진 | Overseas Sales Hub</title>
+  <link rel="stylesheet" href="/qoo10-margin/dashboard.css">
+  <link rel="stylesheet" href="/qoo10-margin/sidebar-channels.css">
+  <link rel="stylesheet" href="/qoo10-margin/sidebar-localization.css">
+  <link rel="stylesheet" href="/qoo10-margin/shopee-margins.css">
+<style>html.embed .sidebar,html.embed aside,html.embed nav.sidebar{display:none!important}html.embed .app,html.embed .layout,html.embed main{margin-left:0!important;grid-template-columns:1fr!important}</style><script>if(window.self!==window.top)document.documentElement.classList.add("embed")</script>
+</head>
+<body>
+<div class="layout">
+  <aside class="sidebar">
+    <a class="brand" href="#"><span>OS</span><strong>Overseas<br>Sales Hub</strong></a>
+    <nav></nav>
+    <div class="sideFoot">사내 운영 도구<br><small>데이터는 이 PC에 저장됩니다</small></div>
+  </aside>
+
+  <main class="marginMain">
+    <header class="marginTopbar">
+      <div><p class="kicker" id="pageKicker">PROFIT ANALYTICS</p><h1 id="pageTitle">상품 마진</h1><p>상품별 원가·수수료·배송비·포장비·광고비를 반영해 예상 수익성을 분석합니다.</p></div>
+      <div class="marginTopActions"><button class="ghostBtn" id="openMethod">📖 마진 계산 방법 보기</button><button type="button" class="primaryLink" id="openCostTop">＋ 원가 등록</button></div>
+    </header>
+
+    <section class="marginMetrics" id="marginMetrics"></section>
+
+    <section class="marginPanel filterPanel">
+      <div class="panelHeading"><div><p class="kicker">FILTER & MANAGEMENT</p><h2>필터링 및 관리</h2></div><span id="updatedLabel">데이터 확인 중</span></div>
+      <div class="marginFilters">
+        <label class="searchField">상품 검색<input id="marginSearch" type="search" placeholder="상품명, SKU 검색" autocomplete="off"><div class="erpResults hidden" id="erpQuickResults"></div></label>
+        <label>마진율 필터<select id="marginFilter"><option value="">전체</option><option value="loss">손실</option><option value="0-10">0~10%</option><option value="10-15">10~15%</option><option value="15-20">15~20%</option><option value="20">20% 이상</option><option value="30">30% 이상</option><option value="missing">원가 미설정</option></select></label>
+        <label>정렬 기준<select id="sortBy"><option value="profit">마진액</option><option value="margin">마진율</option><option value="revenue">판매가</option><option value="cost">원가</option><option value="name">상품명</option></select></label>
+        <label>정렬 순서<select id="sortOrder"><option value="desc">높은순</option><option value="asc">낮은순</option></select></label>
+        <button class="syncBtn" id="syncProducts">↻ 상품 동기화</button>
+        <button class="downloadBtn" id="downloadMargins">⇩ 전체 다운로드</button>
+        <button class="downloadBtn qooField" id="pushSheet">⇧ 구글시트로 보내기</button>
+      </div>
+    </section>
+
+    <div class="viewTabs" id="viewTabs"><button type="button" class="viewTab active" data-view="list">상품 마진 목록</button><button type="button" class="viewTab" data-view="event">행사 진행 시 마진</button><button type="button" class="viewTab" data-view="review">리뷰이벤트 진행 시 마진</button></div>
+
+    <section class="marginPanel listPanel hidden" id="eventPanel">
+      <div class="panelHeading"><div><p class="kicker" id="eventKicker">EVENT PROFITABILITY</p><h2 id="eventTitle">행사 진행 시 마진</h2></div><div class="resultCount"><span id="eventCount">0개</span><button type="button" class="evBtn evBtnGhost" id="evClear">행사가 초기화</button></div></div>
+      <div class="evBulkBar">
+        <span class="evBulkTitle">선택 상품 일괄 할인</span>
+        <span class="evSelCount" id="evSelCount">선택 0개</span>
+        <select id="evBulkMode"><option value="pct">할인율 (%)</option><option value="amt" id="evAmtOpt">할인 금액</option></select>
+        <input id="evBulkValue" type="number" min="0" step="0.1" aria-label="할인 값">
+        <span class="evUnit" id="evBulkUnit">%</span>
+        <span id="evQpWrap" class="hidden"><label>Q포인트 지급액 <input id="evBulkQp" type="number" min="0" step="1" placeholder="예: 500"> <span class="evUnit">엔</span></label></span>
+        <button type="button" class="evBtn" id="evBulkApply">선택 상품에 적용</button>
+      </div>
+      <p class="evHint">① 상품 앞 체크박스로 고르고 ② 할인율(%) 또는 금액을 넣어 「적용」하면 정상 판매가에서 깎은 행사가가 채워집니다. 행사가를 직접 입력해도 바로 마진이 계산됩니다. 상품 마진 목록의 실제 판매가는 바뀌지 않으며, 행사가는 이 PC의 브라우저에 저장됩니다.</p>
+      <div class="marginTableWrap">
+        <table>
+          <thead><tr><th style="width:34px"><input type="checkbox" id="evSelAll" title="전체 선택"></th><th data-sort="name">상품 / SKU</th><th data-sort="normal">정상 판매가</th><th data-sort="event">행사 판매가</th><th data-sort="disc">할인율</th><th data-sort="cost">사입원가</th><th data-sort="packaging">택배·포장비</th><th data-sort="shipping">해외 배송비</th><th data-sort="fee">총 수수료</th><th data-sort="ad">광고비</th><th data-sort="profit">순이익</th><th data-sort="margin">마진율</th><th data-sort="delta">정상 대비</th><th data-sort="verdict">판정</th><th></th></tr></thead>
+          <tbody id="eventRows"></tbody>
+        </table>
+        <div class="marginEmpty hidden" id="eventEmpty"><strong>조건에 맞는 상품이 없습니다.</strong></div>
+      </div>
+    </section>
+
+    <section class="marginPanel listPanel" id="listPanel">
+      <div class="panelHeading"><div><p class="kicker">PRODUCT PROFITABILITY</p><h2>상품 마진 목록</h2></div><div class="resultCount"><span id="resultCount">0개</span><button type="button" id="deleteSelected" disabled style="margin:0 12px 0 0;padding:6px 12px;border:1px solid #fecaca;border-radius:8px;background:#fee2e2;color:#b91c1c;font-weight:700;cursor:pointer;opacity:.5">선택 삭제</button><label><input id="lossOnly" type="checkbox"> 손실 상품만 표시</label></div></div>
+      <div class="marginTableWrap">
+        <table>
+          <thead><tr><th style="width:34px"><input type="checkbox" id="selAll" title="전체 선택"></th><th data-sort="name">상품 / SKU</th><th id="listingHead" data-sort="listing">등록가(할인 전)</th><th id="regHead" data-sort="reg">등록 현황</th><th data-sort="sale">실제 판매가</th><th data-sort="cost">사입원가</th><th data-sort="packaging">택배·포장비</th><th data-sort="shipping">해외 배송비</th><th data-sort="fee">총 수수료</th><th data-sort="ad">광고비</th><th data-sort="profit">순이익</th><th data-sort="margin">마진율</th><th data-sort="verdict">판정</th><th></th></tr></thead>
+          <tbody id="marginRows"></tbody>
+        </table>
+        <div class="marginEmpty hidden" id="marginEmpty"><div class="emptyIcon">%</div><strong>조건에 맞는 상품이 없습니다.</strong><span>원가와 판매가격을 등록하면 상품별 마진이 계산됩니다.</span><button type="button" class="emptyAction" id="openCostEmpty">원가 등록하기</button></div>
+      </div>
+    </section>
+    <div class="marginToast" id="marginToast"></div>
+  </main>
+</div>
+
+<dialog id="costDialog">
+  <form id="costForm">
+    <input type="hidden" id="costId">
+    <div class="modalHead"><div><p class="kicker" id="costKicker"></p><h2 id="costTitle">원가 등록</h2></div><button type="button" class="closeBtn" id="closeCost">×</button></div>
+    <div class="formGrid">
+      <select id="costProduct" class="hidden" tabindex="-1" aria-hidden="true"></select>
+      <label class="wide">상품 원가조회 (제품명 검색)<input id="erpCostSearch" type="text" placeholder="제품명을 입력하고 목록에서 선택하세요 (예: 오아눈편한세상)" autocomplete="off"></label>
+      <div class="erpResults hidden wide" id="erpCostResults"></div>
+      <small class="erpHint wide" id="erpCostHint"></small>
+      <label>판매 통화<select id="costCurrency"><option value="JPY">JPY · 엔</option><option value="USD">USD · 달러</option></select></label>
+      <label>환율 (1통화당 원화)<input id="costExchangeRate" type="number" min="0" step="0.001" required></label>
+      <label>사입 원가 (원)<input id="costProductCost" type="number" min="0"></label>
+      <label>실제 판매가 (현지통화)<input id="costSalePrice" type="number" min="0" step="0.01"></label>
+      <label class="genericField">플랫폼 수수료 (%)<input id="costFeeRate" type="number" min="0" max="100" step="0.01"></label>
+      <label class="genericField">해외 배송비/개 (원)<input id="costShipping" type="number" min="0"></label>
+      <label class="qooField">실중량 (kg)<input id="qWeightKg" type="number" min="0" step="0.01"></label>
+      <label class="qooField">가로 (cm)<input id="qW" type="number" min="0" step="0.1"></label>
+      <label class="qooField">세로 (cm)<input id="qL" type="number" min="0" step="0.1"></label>
+      <label class="qooField">높이 (cm)<input id="qH" type="number" min="0" step="0.1"></label>
+      <label class="qooField">카테고리 수수료율 (%)<input id="qCategoryFee" type="number" min="0" max="50" step="0.1"></label>
+      <label class="qooField">광고비 비중 (판매가 대비 %)<input id="qAdRate" type="number" min="0" max="50" step="0.1"></label>
+      <label class="qooField">수출신고 대행비용 (원/건)<input id="qExport" type="number" min="0"></label>
+      <label class="qooField">관세 발생 기준액 (JPY)<input id="qCustomsThreshold" type="number" min="0"></label>
+      <label class="qooField">관세율 (%)<input id="qCustomsRate" type="number" min="0" max="100" step="0.1"></label>
+      <label class="qooField checkRow"><input id="qOverseas" type="checkbox"> 해외상품판매수수료 +2%</label>
+      <label class="qooField checkRow"><input id="qReserve" type="checkbox"> 예약배송상품수수료 +2%</label>
+      <label class="qooField checkRow"><input id="qExtAd" type="checkbox"> 외부광고수수료 +1%</label>
+      <label class="qooField checkRow"><input id="qMega" type="checkbox"> 메가할인 이용료 +1%</label>
+      <label class="qooField checkRow"><input id="qVat" type="checkbox"> 부가세 10% 적용 (사업자등록 시 면제)</label>
+      <label class="qooField checkRow"><input id="qCustoms" type="checkbox"> 관세 셀러 부담</label>
+      <label class="qooField checkRow"><input id="qVatRefund" type="checkbox"> 부가세 환급 적용</label>
+      <label>국내택배비·포장비/개 (원)<input id="costPackaging" type="number" min="0"></label>
+      <label class="genericField">광고비/개 (원)<input id="costAd" type="number" min="0"></label>
+      <label>목표 마진율 (%)<input id="costTargetMargin" type="number" min="0" max="99" step="0.1"></label>
+      <label class="wide">메모<textarea id="costMemo"></textarea></label>
+    </div>
+    <small class="erpHint wide" id="feeNote"></small>
+    <div class="liveCalc" id="costLiveCalc"></div>
+    <p class="formError" id="costError"></p>
+    <div class="modalActions"><button type="button" class="deleteBtn hidden" id="deleteCost">삭제</button><span></span><button type="button" class="cancelBtn" id="cancelCost">취소</button><button class="saveBtn">저장</button></div>
+  </form>
+</dialog>
+
+<dialog id="methodDialog" class="methodDialog">
+  <div class="modalHead"><div><p class="kicker">HOW IT IS CALCULATED</p><h2>마진 계산 방법</h2></div><button type="button" class="closeBtn" id="closeMethod">×</button></div>
+  <ol class="methodSteps">
+    <li><b>① 원화 매출</b><span class="methodFormula">실제 판매가(현지통화) × 환율</span></li>
+    <li><b>② 총 수수료</b><span class="methodFormula">원화 매출 × 플랫폼 수수료율(%)</span></li>
+    <li><b>③ 순이익</b><span class="methodFormula">원화 매출 − 사입원가 − 총 수수료 − 해외 배송비 − 국내택배·포장비 − 광고비</span></li>
+    <li><b>④ 마진율</b><span class="methodFormula">순이익 ÷ 원화 매출</span></li>
+    <li><b>⑤ 판정</b><span class="methodFormula">0% 이하 = 적자 · 목표 마진율 미만 = 목표 미달 · 이상 = 목표 달성</span></li>
+    <li><b>⑥ 권장 판매가</b><span class="methodFormula">(사입원가 + 배송비 + 포장비 + 광고비) ÷ 환율 ÷ (1 − 수수료율 − 목표 마진율)</span></li>
+  </ol>
+  <div class="methodMeta">
+    <div><b>수수료율 기본값은 참고용 임시값입니다.</b> 카테고리·계약 조건에 따라 달라지므로 실제 정산 수수료율로 수정해서 사용하세요. Shopee처럼 공식 배송 요율표 자동계산은 아직 없고, 해외 배송비는 직접 입력합니다.</div>
+    <div><b>계산에 안 들어간 항목</b> 반품·분실률, CS 비용, 재고 폐기, 환율 변동 손실, 관세·소비세 처리.</div>
+  </div>
+</dialog>
+<script src="/qoo10-margin/qoo10-margin-calc.js?v=20261013b"></script>
+<script src="/qoo10-margin/sidebar-nav.js"></script>
+<script src="/qoo10-margin/sidebar-localization.js"></script>
+<script src="/qoo10-margin/table-sort.js"></script>
+<script src="/qoo10-margin/channel-margins.js?v=20261013b"></script>
+</body>
+</html>

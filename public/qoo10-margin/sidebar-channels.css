@@ -1,0 +1,121 @@
+.channelNavTitle {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  margin-top: 8px;
+  padding: 11px 13px 7px;
+  color: #d7deeb;
+  font-size: 13px;
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.channelNavTitle:hover { color: #fff; background: #ffffff08; border-radius: 9px; }
+.channelNavTitle i {
+  width: 21px;
+  color: #71819b;
+  font-style: normal;
+  text-align: center;
+}
+.channelNavTitle strong { font-weight: 800; }
+.channelNavArrow { margin-left: auto; color: #71819b; font-size: 14px; transition: transform .2s ease; }
+.channelNavTitle[aria-expanded="true"] .channelNavArrow { transform: rotate(180deg); }
+.channelNav {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0 0 10px 25px;
+  padding-left: 12px;
+  border-left: 1px solid #ffffff14;
+}
+.channelNav.collapsed { display: none; }
+.sidebar nav .channelNavGroup > a:first-child {
+  padding: 7px 9px;
+  font-size: 12px;
+  font-weight: 650;
+  color: #7f8ba1;
+}
+.sidebar nav .channelNavGroup > a:first-child span {
+  display: grid;
+  place-items: center;
+  width: 19px;
+  height: 19px;
+  border-radius: 6px;
+  background: #ffffff0c;
+  color: #9eacc3;
+  font-size: 9px;
+  font-weight: 900;
+}
+.sidebar nav .channelNavGroup > a:first-child:hover,
+.sidebar nav .channelNavGroup > a:first-child.selected {
+  background: #ffffff0b;
+  color: #fff;
+}
+.sidebar nav .channelNavGroup > a:first-child.selected span {
+  background: #356fea;
+  color: #fff;
+}
+.channelNavGroup { display: flex; flex-direction: column; }
+.sidebar nav .channelNavGroup .onboardingLink {
+  display: none;
+  position: relative;
+  margin: 1px 0 4px 29px;
+  padding: 5px 8px 5px 14px;
+  color: #76849a;
+  font-size: 11px;
+  font-weight: 650;
+}
+.sidebar nav .channelNavGroup .onboardingLink::before {
+  content: "";
+  position: absolute;
+  left: 1px;
+  top: 50%;
+  width: 6px;
+  height: 1px;
+  background: #506078;
+}
+.sidebar nav .channelNavGroup.selected .onboardingLink { display: flex; }
+.sidebar nav .channelNavGroup .onboardingLink:hover,
+.sidebar nav .channelNavGroup .onboardingLink.selected { color: #fff; background: #ffffff08; }
+.externalMark { margin-left: auto; color: #66758e; font-size: 10px; }
+
+/* 판매채널 고유 색상 */
+.channelNavGroup[data-channel-group="Qoo10"] { --channel-color:#ee3e92; --channel-soft:#ee3e9220; }
+.channelNavGroup[data-channel-group="Rakuten"] { --channel-color:#d9232e; --channel-soft:#d9232e20; }
+.channelNavGroup[data-channel-group="Amazon US"] { --channel-color:#f2b516; --channel-soft:#f2b51624; }
+.channelNavGroup[data-channel-group="Shopee"] { --channel-color:#f26b25; --channel-soft:#f26b2522; }
+.channelNavGroup[data-operation-channel="Qoo10"] { --channel-color:#ee3e92; --channel-soft:#ee3e9220; }
+.channelNavGroup[data-operation-channel="Rakuten"] { --channel-color:#d9232e; --channel-soft:#d9232e20; }
+.channelNavGroup[data-operation-channel="Amazon US"] { --channel-color:#f2b516; --channel-soft:#f2b51624; }
+.channelNavGroup[data-operation-channel="Shopee"] { --channel-color:#f26b25; --channel-soft:#f26b2522; }
+.sidebar nav .channelNavGroup > a:first-child span { color:var(--channel-color); background:var(--channel-soft); }
+.sidebar nav .channelNavGroup > a:first-child:hover,
+.sidebar nav .channelNavGroup > a:first-child.selected { color:#fff; box-shadow:inset 2px 0 var(--channel-color); }
+.sidebar nav .channelNavGroup > a:first-child.selected span { background:var(--channel-color); color:#fff; }
+.sidebar nav .channelNavGroup .onboardingLink.selected { color:var(--channel-color); }
+
+.channelCard[data-channel-card="Qoo10"] { --channel-color:#ee3e92; --channel-soft:#fff0f7; }
+.channelCard[data-channel-card="Rakuten"] { --channel-color:#d9232e; --channel-soft:#fff0f1; }
+.channelCard[data-channel-card="Amazon US"] { --channel-color:#e0a300; --channel-soft:#fff8dc; }
+.channelCard[data-channel-card="Shopee"] { --channel-color:#f26b25; --channel-soft:#fff1e9; }
+.channelCard[data-channel-card] { border-top:3px solid var(--channel-color); }
+.channelCard[data-channel-card] .channelCode { color:var(--channel-color); background:var(--channel-soft); }
+.channelCard[data-channel-card] .channelCount { color:var(--channel-color); }
+
+.channelPill[data-channel-pill="Qoo10"] { color:#c92b78; background:#fff0f7; }
+.channelPill[data-channel-pill="Rakuten"] { color:#bd1d27; background:#fff0f1; }
+.channelPill[data-channel-pill="Amazon US"] { color:#9a7000; background:#fff5ce; }
+.channelPill[data-channel-pill="Shopee"] { color:#c95014; background:#fff0e7; }
+@media (max-width: 1050px) {
+  .channelNavTitle { justify-content: center; padding: 9px 7px 5px; }
+  .channelNavTitle strong { display: none; }
+  .channelNav { margin-left: 0; padding-left: 0; border-left: 0; }
+  .sidebar nav .channelNavGroup > a:first-child { justify-content: center; padding: 7px; font-size: 0; }
+  .sidebar nav .channelNavGroup .onboardingLink { display: none; }
+}
+@media (max-width: 700px) {
+  .channelNavTitle, .channelNav { display: none; }
+}
