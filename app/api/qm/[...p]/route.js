@@ -1,4 +1,5 @@
 export const dynamic = 'force-dynamic';
+export const maxDuration = 60;
 // 동욱님 큐텐 마진 계산기(public/qoo10-margin) API — 원본 express(api/index.js) 이식.
 // 저장소: Supabase settings 테이블 키 qm_products / qm_pricing / qm_qoo10_registered / qm_qoo10_manual_codes / qm_erp_cost / qm_erp_package / qm_erp_codes
 import crypto from 'crypto';
@@ -35,10 +36,28 @@ async function pricingEntry(b, ex = {}) {
       ? Object.fromEntries(Object.entries(b.options).filter(([k, v]) => OPT.has(k) && (typeof v === 'boolean' || Number.isFinite(Number(v)))).map(([k, v]) => [k, typeof v === 'boolean' ? v : Number(v)]))
       : (ex.options || {}) };
 }
+// 전산(MySQL 원격 MCP) v_product 실시간 조회: 구매단가(원)·패키지 크기·무게
+async function mcpQuery(sql, tries = 3) {
+  for (let i = 1; ; i++) {
+    try {
+      const res = await fetch('https://mcp-mysql.oa-corp.com/mcp', { method: 'POST', headers: { Authorization: `Bearer ${process.env.MCP_MYSQL_TOKEN}`, 'Content-Type': 'application/json', Accept: 'application/json, text/event-stream' },
+        body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'tools/call', params: { name: 'run_query', arguments: { sql, limit: 30 } } }) });
+      const t = await res.text(); const line = t.split('\n').find((l) => l.startsWith('data: ')); const j = JSON.parse(line ? line.slice(6) : t);
+      const c = j?.result?.content?.[0]?.text; if (j?.result?.isError) throw new Error(c); return JSON.parse(c).rows || [];
+    } catch (e) { if (i >= tries) throw e; await new Promise((r) => setTimeout(r, 2000 * i)); }
+  }
+}
+async function erpLive(q) {
+  const k = String(q || '').replace(/['"\\%_;]/g, '').trim().slice(0, 40); if (!k) return [];
+  const rows = await mcpQuery(`SELECT \`제품ID\`,\`제품명\`,\`제품코드\`,\`제품유형\`,\`판매상태\`,\`구매단가(원)\` AS cost,\`패키지가로\`,\`패키지세로\`,\`패키지높이\`,\`무게\` FROM v_product WHERE \`제품명\` LIKE '%${k}%' OR \`제품코드\` LIKE '%${k}%' ORDER BY (\`판매상태\`='단종'), (\`제품유형\`<>'본품'), \`제품명\` LIMIT 20`);
+  const f = (v) => (v === null || v === undefined || v === '' ? null : Number(v));
+  return rows.map((r) => ({ productId: r['제품ID'], name: r['제품명'], productCode: r['제품코드'], productType: r['제품유형'], status: r['판매상태'], cost: Math.round(f(r.cost) || 0), yearMonth: '전산', merchandiseCode: null,
+    weightKg: f(r['무게']), widthCm: f(r['패키지가로']), lengthCm: f(r['패키지세로']), heightCm: f(r['패키지높이']), packageSuspect: false }));
+}
 async function erpSearch(q) {
   const needle = String(q || '').trim().toLowerCase(); if (!needle) return [];
   const [cost, pkg, codes] = await Promise.all([readKey('erp_cost', null), readKey('erp_package', null), readKey('erp_codes', null)]);
-  if (!cost || !Array.isArray(cost.rows)) throw new Error('ERP 원가 데이터가 아직 없습니다 (동욱님 seed-data 업로드 필요).');
+  if (!cost || !Array.isArray(cost.rows)) return erpLive(q);
   const pm = new Map((pkg?.rows || []).map((r) => [r.productCode, r]));
   const cm = new Map(String(codes?.map || '').split(',').filter(Boolean).map((p) => p.split(':')));
   return cost.rows.filter((r) => r.name.toLowerCase().includes(needle))
@@ -56,7 +75,7 @@ export async function GET(req, ctx) {
     if (p === 'qoo10-manual-codes') return J(await readItems('qoo10_manual_codes'));
     if (p === 'qoo10-sheet-codes') return J({ items: {} });
     if (p === 'erp/products') {
-      try { const cost = await readKey('erp_cost', null); return J({ products: await erpSearch(new URL(req.url).searchParams.get('q')), snapshot: cost ? { asOf: cost.asOf, rowCount: cost.rowCount, source: cost.source } : null }); }
+      try { const cost = await readKey('erp_cost', null); return J({ products: await erpSearch(new URL(req.url).searchParams.get('q')), snapshot: cost ? { asOf: cost.asOf, rowCount: cost.rowCount, source: cost.source } : { asOf: '실시간', source: '전산 v_product (구매단가·패키지)' } }); }
       catch (e) { return J({ error: 'ERP 원가 조회 실패: ' + e.message }, 502); }
     }
     return J({ error: 'Not found' }, 404);
