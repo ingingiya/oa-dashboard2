@@ -5,7 +5,7 @@ import useShared, { me } from "./useShared";
 
 const STAGES = ["조사", "후보 선정", "채널 개설", "상품 등록", "첫 판매", "운영 중"];
 const SEED = { countries: [
-  { id: "jp", name: "일본", flag: "🇯🇵", stage: 4, owner: "경은", next: "12월 초 첫 입고(USB 무선 5종 × 50~150개, 일본 창고 국내배송) → 그 전에 KC-INTL 운송 견적·국내관리인·수입자(ONEMAKE) 확정. 콘센트 고데기는 FOREST ○PSE로 오마컬 1종 먼저", due: "2026-12-01", notes: ["10/23 보고 덱: 큐텐 직송 조건·보다나 해부", "11/05 판매 방식 결정: 일본 창고 + 국내배송", "11/06 큐텐 상세 일본어판 51·설명서 50종·썸네일 50 교체", "11/09 라쿠텐 입점 심사 통과·판매가 계산(큐텐가 그대로 개당 ¥1,800~4,000)", "11/09 인증 정리(BV·FOREST·ONEMAKE·Qxpress) → FOREST·ONEMAKE 미팅 요청, BV 회신(VCCI 생략)"], links: [["인증 정리", "https://oa-japan-cert.vercel.app"], ["설명서", "https://oa-manual-jp.vercel.app"], ["상세 검수", "https://oa-qoo10-jp.vercel.app"], ["광고·순위 리포트", "https://oa-qoo10-ads.vercel.app"], ["큐텐 전략 한 장", "/qoo10-plan/"]] },
+  { id: "jp", name: "일본", flag: "🇯🇵", stage: 4, owner: "경은", next: "12월 초 첫 입고(USB 무선 5종 × 50~150개, 일본 창고 국내배송) → 그 전에 KC-INTL 운송 견적·국내관리인·수입자(ONEMAKE) 확정. 콘센트 고데기는 FOREST ○PSE로 오마컬 1종 먼저", due: "2026-12-01", notes: ["10/23 보고 덱: 큐텐 직송 조건·보다나 해부", "11/05 판매 방식 결정: 일본 창고 + 국내배송", "11/06 큐텐 상세 일본어판 51·설명서 50종·썸네일 50 교체", "11/09 라쿠텐 입점 심사 통과·판매가 계산(큐텐가 그대로 개당 ¥1,800~4,000)", "11/09 인증 정리(BV·FOREST·ONEMAKE·Qxpress) → FOREST·ONEMAKE 미팅 요청, BV 회신(VCCI 생략)"], links: [["인증 정리", "https://oa-japan-cert.vercel.app"], ["설명서", "https://oa-manual-jp.vercel.app"], ["상세 검수", "https://oa-qoo10-jp.vercel.app"], ["광고·순위 리포트", "https://oa-qoo10-ads.vercel.app"], ["큐텐 전략 한 장", "/qoo10-plan/index.html"]] },
 ] };
 
 const OPS_SEED = {
