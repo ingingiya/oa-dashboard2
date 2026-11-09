@@ -17,18 +17,18 @@ const OPS_SEED = {
     { id: "kc", name: "기존 KC 성적서", status: "안 함", note: "일본 인증에 재활용 불가 (BV 확인)", next: "" },
   ],
   waits: [
-    { id: "forest", who: "FOREST", person: "정요한 과장", what: "○PSE 미팅 요청 — 아마존 심사 통과 사례·국내관리인 대행·프리온 배터리·SKU당 기간/비용", sent: "2026-11-09", status: "대기" },
-    { id: "onemake", who: "ONEMAKE", person: "조선형 팀장", what: "수입자(IOR)·창고 조건(11/5 문의) 리마인드 + 국내관리인·고데기 수입 대행", sent: "2026-11-09", status: "대기" },
-    { id: "kcintl", who: "KC-INTL", person: "AIRKR@ / SEAKR@KC-INTL.COM", what: "한국→일본 창고 대량 운송 견적 (지금은 개당 ¥100 가정)", sent: "", status: "보낼 것" },
-    { id: "bv", who: "BV CPS Korea", person: "이원호 과장", what: "VCCI 생략·PSE는 비교 후 회신하겠다고 답장", sent: "2026-11-09", status: "완료" },
+    { id: "forest", who: "FOREST", person: "정요한 과장", what: "○PSE 미팅 요청 — 아마존 심사 통과 사례·국내관리인 대행·프리온 배터리·SKU당 기간/비용", sent: "2026-11-09", status: "대기", owner: "경은" },
+    { id: "onemake", who: "ONEMAKE", person: "조선형 팀장", what: "수입자(IOR)·창고 조건(11/5 문의) 리마인드 + 국내관리인·고데기 수입 대행", sent: "2026-11-09", status: "대기", owner: "경은" },
+    { id: "kcintl", who: "KC-INTL", person: "AIRKR@ / SEAKR@KC-INTL.COM", what: "한국→일본 창고 대량 운송 견적 (지금은 개당 ¥100 가정)", sent: "", status: "보낼 것", owner: "" },
+    { id: "bv", who: "BV CPS Korea", person: "이원호 과장", what: "VCCI 생략·PSE는 비교 후 회신하겠다고 답장", sent: "2026-11-09", status: "완료", owner: "경은" },
     { id: "qx", who: "Qxpress", person: "TracX", what: "리튬 제품 일본 창고 입고·배송 가능 확인", sent: "2026-11-05", status: "완료" },
   ],
   todos: [
     { id: "t1", text: "공장에 USB 무선 제품 UN38.3·SDS 요청", owner: "", done: false },
     { id: "t2", text: "FOREST 미팅 잡기 (정요한)", owner: "", done: false },
-    { id: "t3", text: "KC-INTL 한국→일본 운송 견적 요청", owner: "", done: false },
-    { id: "t4", text: "일본 국내관리인 선임 (25년 12월부터 의무)", owner: "", done: false },
-    { id: "t5", text: "라쿠텐 계약 (27년 2월 출점료 인상 전) + 라쿠텐용 썸네일(글자 20% 이하)·회사정보 페이지", owner: "", done: false },
+    { id: "t3", text: "KC-INTL 한국→일본 운송 견적 요청", owner: "", due: "2026-11-30", done: false },
+    { id: "t4", text: "일본 국내관리인 선임 (25년 12월부터 의무)", owner: "", due: "2026-11-30", done: false },
+    { id: "t5", text: "라쿠텐 계약 (27년 2월 출점료 인상 전) + 라쿠텐용 썸네일(글자 20% 이하)·회사정보 페이지", owner: "", due: "2027-01-31", done: false },
     { id: "t6", text: "아마존 재팬: 미국 계정에 일본 추가, 무선 제품부터", owner: "", done: false },
     { id: "t7", text: "큐텐 광고 1주 ¥20,000 테스트로 CPC 실측", owner: "", done: false },
     { id: "t8", text: "BV에 VCCI 생략 회신", owner: "경은", done: true },
@@ -68,6 +68,10 @@ export default function GlobalSection({ C, Card }) {
   const upd = (list, id, p) => setOps((prev) => ({ ...prev, [list]: (prev[list] || []).map((x) => x.id === id ? { ...x, ...p } : x) }));
   const Chip = ({ v, opts, onPick }) => { const [bg, fg] = ST_COLOR[v] || ["#f3f4f6", "#374151"]; return <select value={v} onChange={(e) => onPick(e.target.value)} style={{ fontSize: 11, fontWeight: 800, padding: "2px 6px", borderRadius: 20, border: 0, background: bg, color: fg, cursor: "pointer" }}>{opts.map((o) => <option key={o}>{o}</option>)}</select>; };
   const [view, setView0] = useState("glance");
+  const [who, setWho0] = useState("");
+  useEffect(() => { setWho0(me()); }, []);
+  const setWho = (m) => { setWho0(m); try { localStorage.setItem("oa_board_me", m); } catch {} };
+  const [mOff, setMOff] = useState(0);
   useEffect(() => { try { const v = localStorage.getItem("oa_global_view"); if (v) setView0(v); } catch {} }, []);
   const setView = (v) => { setView0(v); try { localStorage.setItem("oa_global_view", v); } catch {} };
   const [fx, setFx] = useState(null);
@@ -85,6 +89,75 @@ export default function GlobalSection({ C, Card }) {
   const dd = (d) => { const n = -daysSince(d); return n === 0 ? "오늘" : n > 0 ? `D-${n}` : `${-n}일 지남`; };
   const H = ({ t, sub, go }) => <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 8 }}><div style={{ fontSize: 14, fontWeight: 900, color: C.ink }}>{t}</div>{sub && <span style={{ fontSize: 12, color: C.inkLt }}>{sub}</span>}<div style={{ flex: 1 }} />{go && <button onClick={() => setView(go)} style={{ fontSize: 12, border: 0, background: "none", color: C.rose, cursor: "pointer", fontWeight: 700 }}>전체 →</button>}</div>;
   const Tile = ({ k, v, sub, warn, go }) => <button onClick={() => go && setView(go)} style={{ textAlign: "left", cursor: go ? "pointer" : "default", border: `1px solid ${C.border}`, background: C.white, borderRadius: 14, padding: "12px 14px" }}><div style={{ fontSize: 12, fontWeight: 700, color: C.inkLt }}>{k}</div><div style={{ fontSize: 26, fontWeight: 900, color: warn ? "#dc2626" : C.ink, letterSpacing: "-0.02em", marginTop: 2 }}>{v}</div><div style={{ fontSize: 12, color: C.inkMid, marginTop: 2, lineHeight: 1.4 }}>{sub}</div></button>;
+  const today = new Date(Date.now() + 9 * 36e5).toISOString().slice(0, 10);
+  const md = (d) => d ? d.slice(5).replace("-", "/") : "";
+  const Who = () => <div style={{ display: "flex", gap: 4, alignItems: "center" }}><span style={{ fontSize: 12, fontWeight: 700, color: C.inkLt, marginRight: 2 }}>나는</span>{TEAM.map((m) => <button key={m} onClick={() => setWho(m)} style={{ fontSize: 13, fontWeight: 800, padding: "4px 12px", borderRadius: 20, cursor: "pointer", border: `1px solid ${who === m ? C.rose : C.border}`, background: who === m ? C.rose : C.white, color: who === m ? "#fff" : C.inkMid }}>{m}</button>)}</div>;
+  const MonthCal = ({ compact }) => {
+    const base = new Date(today + "T00:00:00"); base.setDate(1); base.setMonth(base.getMonth() + mOff);
+    const y = base.getFullYear(), mo = base.getMonth();
+    const first = new Date(y, mo, 1).getDay(), days = new Date(y, mo + 1, 0).getDate();
+    const cells = []; for (let i = 0; i < first; i++) cells.push(null); for (let d = 1; d <= days; d++) cells.push(`${y}-${String(mo + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`); while (cells.length % 7) cells.push(null);
+    const items = (d) => [
+      ...(cal || []).filter((e) => e.date <= d && d <= (e.end || e.date)).map((e) => ({ k: e.id, t: e.title, c: KIND_C[e.kind] || "#6b7280", note: e.note, start: e.date === d, own: e.owner })),
+      ...(ops.todos || []).filter((t) => t.due === d && !t.done).map((t) => ({ k: t.id, t: "☐ " + t.text, c: "#0f172a", todo: true, own: t.owner })),
+    ];
+    return (
+      <div>
+        <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
+          <button onClick={() => setMOff(mOff - 1)} style={{ border: `1px solid ${C.border}`, background: C.white, borderRadius: 8, cursor: "pointer", padding: "2px 9px" }}>‹</button>
+          <div style={{ fontSize: 15, fontWeight: 900, color: C.ink, minWidth: 92, textAlign: "center" }}>{y}년 {mo + 1}월</div>
+          <button onClick={() => setMOff(mOff + 1)} style={{ border: `1px solid ${C.border}`, background: C.white, borderRadius: 8, cursor: "pointer", padding: "2px 9px" }}>›</button>
+          {mOff !== 0 && <button onClick={() => setMOff(0)} style={{ fontSize: 12, border: 0, background: "none", color: C.rose, cursor: "pointer", fontWeight: 700 }}>오늘</button>}
+          <div style={{ flex: 1 }} />
+          <span style={{ fontSize: 11, color: C.inkLt }}>{Object.entries(KIND_C).map(([k, c]) => <span key={k} style={{ marginLeft: 8 }}><span style={{ display: "inline-block", width: 7, height: 7, borderRadius: 7, background: c, marginRight: 3 }} />{k}</span>)}<span style={{ marginLeft: 8 }}>☐ 할 일 마감</span></span>
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)", border: `1px solid ${C.border}`, borderRadius: 10, overflow: "hidden" }}>
+          {["일", "월", "화", "수", "목", "금", "토"].map((w, i) => <div key={w} style={{ fontSize: 11, fontWeight: 800, textAlign: "center", padding: "5px 0", background: C.cream, color: i === 0 ? "#dc2626" : i === 6 ? "#2563eb" : C.inkMid, borderBottom: `1px solid ${C.border}` }}>{w}</div>)}
+          {cells.map((d, i) => { const its = d ? items(d) : []; const isT = d === today; return (
+            <div key={i} onDoubleClick={() => { if (!d) return; const title = prompt(`${md(d)} 일정 이름`); if (!title) return; const kind = prompt("종류: 행사/물류/판매/계약/인증/기타", "기타") || "기타"; setCal((p) => [...(p || []), { id: "c" + Date.now(), date: d, end: "", title, kind, note: "", owner: who }]); }}
+              style={{ minHeight: compact ? 64 : 92, padding: 4, borderRight: (i % 7) < 6 ? `1px solid ${C.border}` : 0, borderBottom: `1px solid ${C.border}`, background: !d ? "#fafafa" : isT ? "#EAF3FF" : C.white, cursor: d ? "copy" : "default" }}>
+              {d && <div style={{ fontSize: 11, fontWeight: isT ? 900 : 600, color: isT ? C.rose : (i % 7 === 0 ? "#dc2626" : C.inkMid) }}>{+d.slice(8)}{isT ? " 오늘" : ""}</div>}
+              {its.slice(0, compact ? 2 : 4).map((x) => <div key={x.k} title={`${x.t}${x.own ? ` · ${x.own}` : ""}${x.note ? "\n" + x.note : ""}`} style={{ marginTop: 2, fontSize: 10.5, lineHeight: 1.25, fontWeight: 700, borderRadius: 4, padding: "1px 4px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", background: x.todo ? (x.own && x.own === who ? "#fde68a" : "#f1f5f9") : x.c + "22", color: x.todo ? "#0f172a" : x.c, borderLeft: x.todo ? 0 : `3px solid ${x.c}` }}>{x.start === false ? "↳ " : ""}{x.t}</div>)}
+              {its.length > (compact ? 2 : 4) && <div style={{ fontSize: 10, color: C.inkLt }}>+{its.length - (compact ? 2 : 4)}</div>}
+            </div>); })}
+        </div>
+        <div style={{ fontSize: 11, color: C.inkLt, marginTop: 6 }}>날짜를 더블클릭하면 일정을 추가해요. 할 일에 마감일을 넣으면 달력에도 떠요.</div>
+      </div>
+    );
+  };
+  const Mine = () => {
+    if (!who) return <Card style={{ padding: "16px 18px", border: `2px solid ${C.rose}` }}><div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}><div style={{ fontSize: 15, fontWeight: 900, color: C.ink }}>내가 챙길 것</div><span style={{ fontSize: 13, color: C.inkMid }}>이름을 고르면 내 할 일만 모아 보여줘요 →</span><Who /></div></Card>;
+    const myTodos = openTodos.filter((t) => t.owner === who).sort((a, b2) => (a.due || "9").localeCompare(b2.due || "9"));
+    const myWaits = (ops.waits || []).filter((w) => w.owner === who && (w.status === "대기" || w.status === "보낼 것" || w.status === "회신"));
+    const myCal = upcoming.filter((e) => e.owner === who || !e.owner).filter((e) => -daysSince(e.date) <= 14);
+    const myInf = (inf.people || []).filter((x) => x.owner === who && x.stage < 5);
+    const free = openTodos.filter((t) => !t.owner);
+    const Row = ({ left, children, right, warn }) => <div style={{ display: "flex", gap: 8, alignItems: "flex-start", padding: "7px 0", borderTop: `1px solid ${C.border}` }}>{left}<div style={{ flex: 1, fontSize: 13, color: C.ink, lineHeight: 1.45 }}>{children}</div>{right && <span style={{ fontSize: 11, fontWeight: 800, color: warn ? "#dc2626" : C.inkLt, whiteSpace: "nowrap" }}>{right}</span>}</div>;
+    const total = myTodos.length + myWaits.length + myInf.length;
+    return (
+      <Card style={{ padding: "16px 18px", border: `2px solid ${C.rose}` }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}><div style={{ fontSize: 17, fontWeight: 900, color: C.ink }}>{who}님이 챙길 것</div><span style={{ fontSize: 13, fontWeight: 800, color: total ? C.rose : C.inkLt }}>{total}건</span><div style={{ flex: 1 }} /><Who /></div>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(260px,1fr))", gap: 16, marginTop: 10 }}>
+          <div>
+            <div style={{ fontSize: 12, fontWeight: 800, color: C.inkLt, marginBottom: 2 }}>내 할 일 {myTodos.length}</div>
+            {myTodos.map((t) => { const n = t.due ? -daysSince(t.due) : null; return <Row key={t.id} left={<input type="checkbox" checked={false} onChange={() => upd("todos", t.id, { done: true })} style={{ marginTop: 3, cursor: "pointer" }} />} right={t.due ? (n < 0 ? `${-n}일 지남` : n === 0 ? "오늘" : `D-${n}`) : "마감 없음"} warn={n !== null && n <= 3}>{t.text}</Row>; })}
+            {!myTodos.length && <div style={{ fontSize: 13, color: C.inkLt, padding: "6px 0" }}>맡은 할 일이 없어요. 아래에서 가져가세요.</div>}
+            {myWaits.length > 0 && <div style={{ fontSize: 12, fontWeight: 800, color: C.inkLt, margin: "10px 0 2px" }}>내가 연락한 곳 {myWaits.length}</div>}
+            {myWaits.map((w) => { const d = daysSince(w.sent); return <Row key={w.id} left={<span style={{ fontSize: 11, fontWeight: 800, background: ST_COLOR[w.status][0], color: ST_COLOR[w.status][1], borderRadius: 20, padding: "1px 7px", whiteSpace: "nowrap" }}>{w.status}</span>} right={w.status === "대기" && w.sent ? (d ? `${d}일째` : "오늘 보냄") : w.status === "회신" ? "답 확인하기" : "보내기"} warn={(w.status === "대기" && d >= 5) || w.status !== "대기"}><b>{w.who}</b> {w.person}</Row>; })}
+            {myInf.length > 0 && <div style={{ fontSize: 12, fontWeight: 800, color: C.inkLt, margin: "10px 0 2px" }}>내 인플루언서 {myInf.length}</div>}
+            {myInf.map((x) => <Row key={x.id} left={<span style={{ fontSize: 11, fontWeight: 800, color: C.rose }}>{INF_STAGES[x.stage]}</span>}>{x.name} <span style={{ color: C.inkLt }}>{x.product}</span></Row>)}
+          </div>
+          <div>
+            <div style={{ fontSize: 12, fontWeight: 800, color: C.inkLt, marginBottom: 2 }}>2주 안에 있는 일정</div>
+            {myCal.map((e) => <Row key={e.id} left={<span style={{ display: "inline-block", width: 7, height: 7, borderRadius: 7, background: KIND_C[e.kind] || "#6b7280", marginTop: 6 }} />} right={-daysSince(e.date) <= 0 ? "진행 중" : `D-${-daysSince(e.date)}`} warn={-daysSince(e.date) <= 3}>{e.title}</Row>)}
+            {!myCal.length && <div style={{ fontSize: 13, color: C.inkLt, padding: "6px 0" }}>2주 안 일정 없음</div>}
+            {free.length > 0 && <><div style={{ fontSize: 12, fontWeight: 800, color: "#dc2626", margin: "10px 0 2px" }}>담당 없는 일 {free.length} — 가져가기</div>
+              {free.map((t) => <Row key={t.id} right={null} left={<button onClick={() => upd("todos", t.id, { owner: who })} style={{ fontSize: 11, fontWeight: 800, border: `1px solid ${C.rose}`, color: C.rose, background: C.white, borderRadius: 20, padding: "1px 8px", cursor: "pointer", whiteSpace: "nowrap" }}>내가 할게</button>}>{t.text}{t.due ? <span style={{ color: C.inkLt }}> · {md(t.due)}까지</span> : ""}</Row>)}</>}
+          </div>
+        </div>
+      </Card>
+    );
+  };
   const Glance = () => {
     const oldest = waiting.filter((w) => w.sent).map((w) => daysSince(w.sent)).sort((a, b2) => b2 - a)[0];
     const toSend = waiting.filter((w) => w.status === "보낼 것").length;
@@ -103,19 +176,21 @@ export default function GlobalSection({ C, Card }) {
           <div style={{ display: "flex", gap: 4, marginTop: 12 }}>{STAGES.map((st, i) => <div key={st} style={{ flex: 1 }}><div style={{ height: 6, borderRadius: 6, background: i <= jp.stage ? C.rose : C.border }} /><div style={{ fontSize: 11, fontWeight: i === jp.stage ? 900 : 600, color: i === jp.stage ? C.ink : C.inkLt, marginTop: 4 }}>{st}</div></div>)}</div>
           <div style={{ marginTop: 12, fontSize: 14, color: C.ink, lineHeight: 1.6 }}><b>다음:</b> {jp.next}</div>
         </Card>
+        <Mine />
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(200px,1fr))", gap: 12 }}>
           <Tile k="첫 입고까지" v={jp.due ? dd(jp.due) : "—"} sub={jp.due ? `${jp.due.slice(5).replace("-", "/")} 목표 · USB 무선 5종` : "기한 미정"} warn={jp.due && -daysSince(jp.due) <= 14} go="jp" />
           <Tile k="답 기다리는 곳" v={`${waiting.filter((w) => w.status === "대기").length}곳`} sub={`${oldest != null ? `가장 오래 ${oldest}일째` : ""}${toSend ? ` · 보낼 것 ${toSend}건` : ""}`} warn={oldest >= 5 || toSend > 0} go="ops" />
           <Tile k="남은 할 일" v={`${openTodos.length}개`} sub={unassigned ? `담당 없음 ${unassigned}개` : "모두 담당 지정됨"} warn={unassigned > 0} go="ops" />
           <Tile k="다음 일정" v={next ? dd(next.date) : "—"} sub={next ? next.title : "예정 없음"} go="cal" />
         </div>
+        <Card style={{ padding: "14px 16px" }}><MonthCal compact /></Card>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(300px,1fr))", gap: 12 }}>
           <Card style={{ padding: "14px 16px" }}>
-            <H t="할 일" sub={`${openTodos.length}개 남음`} go="ops" />
+            <H t="팀 전체 할 일" sub={`${openTodos.length}개 남음`} go="ops" />
             {openTodos.map((t) => (
               <div key={t.id} style={{ display: "flex", gap: 8, alignItems: "flex-start", padding: "6px 0", borderTop: `1px solid ${C.border}` }}>
                 <input type="checkbox" checked={false} onChange={() => upd("todos", t.id, { done: true })} style={{ marginTop: 3, cursor: "pointer" }} />
-                <span style={{ flex: 1, fontSize: 13, color: C.ink, lineHeight: 1.45 }}>{t.text}</span>
+                <span style={{ flex: 1, fontSize: 13, color: C.ink, lineHeight: 1.45 }}>{t.text}{t.due ? <span style={{ fontSize: 11, color: C.inkLt }}> · {md(t.due)}까지</span> : ""}</span>
                 <select value={t.owner || ""} onChange={(e) => upd("todos", t.id, { owner: e.target.value })} style={{ fontSize: 11, fontWeight: 700, padding: "1px 4px", border: `1px solid ${t.owner ? C.border : "#fca5a5"}`, borderRadius: 6, color: t.owner ? C.ink : "#dc2626", background: C.white }}><option value="">담당?</option>{TEAM.map((m) => <option key={m}>{m}</option>)}</select>
               </div>))}
             {!openTodos.length && <div style={{ fontSize: 13, color: C.inkLt }}>다 했어요 🎉</div>}
@@ -129,14 +204,6 @@ export default function GlobalSection({ C, Card }) {
                 {w.status === "대기" && <button onClick={() => upd("waits", w.id, { status: "회신" })} style={{ marginTop: 4, fontSize: 11, fontWeight: 700, border: `1px solid ${C.border}`, background: C.white, borderRadius: 20, padding: "2px 8px", cursor: "pointer", color: C.inkMid }}>답 왔어요</button>}
               </div>); })}
             {!waiting.length && <div style={{ fontSize: 13, color: C.inkLt }}>기다리는 답이 없어요</div>}
-          </Card>
-          <Card style={{ padding: "14px 16px" }}>
-            <H t="다가오는 일정" go="cal" />
-            {upcoming.slice(0, 6).map((e) => { const n = -daysSince(e.date); return (
-              <div key={e.id} style={{ display: "flex", gap: 10, padding: "7px 0", borderTop: `1px solid ${C.border}`, alignItems: "flex-start" }}>
-                <div style={{ width: 48, flexShrink: 0, textAlign: "center", borderRadius: 8, background: n <= 7 ? "#fee2e2" : C.cream, padding: "3px 0" }}><div style={{ fontSize: 11, fontWeight: 900, color: n <= 7 ? "#dc2626" : C.inkMid }}>{n <= 0 ? "진행 중" : `D-${n}`}</div><div style={{ fontSize: 10, color: C.inkLt }}>{e.date.slice(5).replace("-", "/")}</div></div>
-                <div style={{ flex: 1 }}><div style={{ fontSize: 13, fontWeight: 700, color: C.ink }}><span style={{ display: "inline-block", width: 7, height: 7, borderRadius: 7, background: KIND_C[e.kind] || "#6b7280", marginRight: 6, verticalAlign: "middle" }} />{e.title}</div><div style={{ fontSize: 12, color: C.inkMid, lineHeight: 1.4 }}>{e.note}</div></div>
-              </div>); })}
           </Card>
         </div>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(300px,1fr))", gap: 12 }}>
@@ -207,19 +274,20 @@ export default function GlobalSection({ C, Card }) {
           <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 10 }}>
             {(ops.waits || []).map((w) => { const d = daysSince(w.sent); const late = w.status === "대기" && d !== null && d >= 5; return (
               <div key={w.id} style={{ borderTop: `1px solid ${C.border}`, paddingTop: 8 }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}><Chip v={w.status} opts={["보낼 것", "대기", "회신", "완료"]} onPick={(v) => upd("waits", w.id, { status: v, sent: v === "대기" && !w.sent ? new Date(Date.now() + 9 * 36e5).toISOString().slice(0, 10) : w.sent })} /><span style={{ fontSize: 13, fontWeight: 800, color: C.ink }}>{w.who}</span><span style={{ fontSize: 12, color: C.inkLt }}>{w.person}</span><div style={{ flex: 1 }} />{w.sent && <span style={{ fontSize: 11, fontWeight: 700, color: late ? "#dc2626" : C.inkLt }}>{w.sent.slice(5).replace("-", "/")} 보냄{w.status === "대기" ? ` · ${d}일째` : ""}</span>}</div>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}><Chip v={w.status} opts={["보낼 것", "대기", "회신", "완료"]} onPick={(v) => upd("waits", w.id, { status: v, sent: v === "대기" && !w.sent ? new Date(Date.now() + 9 * 36e5).toISOString().slice(0, 10) : w.sent })} /><span style={{ fontSize: 13, fontWeight: 800, color: C.ink }}>{w.who}</span><span style={{ fontSize: 12, color: C.inkLt }}>{w.person}</span><div style={{ flex: 1 }} /><select value={w.owner || ""} onChange={(e) => upd("waits", w.id, { owner: e.target.value })} style={{ fontSize: 11, padding: "1px 4px", border: `1px solid ${C.border}`, borderRadius: 6 }}><option value="">담당 —</option>{TEAM.map((m) => <option key={m}>{m}</option>)}</select>{w.sent && <span style={{ fontSize: 11, fontWeight: 700, color: late ? "#dc2626" : C.inkLt }}>{w.sent.slice(5).replace("-", "/")} 보냄{w.status === "대기" ? ` · ${d}일째` : ""}</span>}</div>
                 <div style={{ fontSize: 12, color: C.inkMid, marginTop: 4, lineHeight: 1.5 }}>{w.what}</div>
               </div>); })}
           </div>
         </Card>
         <Card style={{ padding: "14px 16px" }}>
           <div style={{ display: "flex", alignItems: "center" }}><div style={{ fontSize: 15, fontWeight: 900, color: C.ink }}>해외 할 일</div><span style={{ fontSize: 12, color: C.inkLt, marginLeft: 8 }}>{(ops.todos || []).filter((t) => !t.done).length}개 남음</span><div style={{ flex: 1 }} />
-            <button onClick={() => { const t = prompt("할 일"); if (t) setOps((p) => ({ ...p, todos: [...(p.todos || []), { id: "t" + Date.now(), text: t, owner: me() || "", done: false }] })); }} style={{ fontSize: 12, fontWeight: 700, border: `1px solid ${C.border}`, background: C.white, borderRadius: 20, padding: "4px 10px", cursor: "pointer" }}>+ 할 일</button></div>
+            <button onClick={() => { const t = prompt("할 일"); if (!t) return; const due = prompt("마감일 (예: 2026-11-20, 없으면 비워두기)", "") || ""; setOps((p) => ({ ...p, todos: [...(p.todos || []), { id: "t" + Date.now(), text: t, owner: who || "", due, done: false }] })); }} style={{ fontSize: 12, fontWeight: 700, border: `1px solid ${C.border}`, background: C.white, borderRadius: 20, padding: "4px 10px", cursor: "pointer" }}>+ 할 일</button></div>
           <div style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: 10 }}>
             {[...(ops.todos || [])].sort((x, y) => x.done - y.done).map((t) => (
               <label key={t.id} style={{ display: "flex", gap: 8, alignItems: "flex-start", fontSize: 13, color: t.done ? C.inkLt : C.ink, textDecoration: t.done ? "line-through" : "none", lineHeight: 1.5, cursor: "pointer" }}>
                 <input type="checkbox" checked={!!t.done} onChange={(e) => upd("todos", t.id, { done: e.target.checked })} style={{ marginTop: 3 }} />
                 <span style={{ flex: 1 }}>{t.text}</span>
+                <input type="date" value={t.due || ""} onClick={(e) => e.stopPropagation()} onChange={(e) => upd("todos", t.id, { due: e.target.value })} title="마감일" style={{ fontSize: 11, padding: "1px 4px", border: `1px solid ${C.border}`, borderRadius: 6, width: 118 }} />
                 <select value={t.owner || ""} onChange={(e) => upd("todos", t.id, { owner: e.target.value })} onClick={(e) => e.preventDefault()} style={{ fontSize: 11, padding: "1px 4px", border: `1px solid ${C.border}`, borderRadius: 6 }}><option value="">—</option>{TEAM.map((m) => <option key={m}>{m}</option>)}</select>
               </label>
             ))}
@@ -227,8 +295,9 @@ export default function GlobalSection({ C, Card }) {
         </Card>
       </div>
       )}
-      <div style={{ display: view === "cal" || view === "inf" ? "grid" : "none", gridTemplateColumns: "1fr", gap: 12, maxWidth: 900 }}>
+      <div style={{ display: view === "cal" || view === "inf" ? "grid" : "none", gridTemplateColumns: "1fr", gap: 12, maxWidth: view === "cal" ? "none" : 900 }}>
         <Card style={{ padding: "14px 16px", display: view === "cal" ? "block" : "none" }}>
+          {view === "cal" && <div style={{ marginBottom: 16 }}><MonthCal /></div>}
           <div style={{ display: "flex", alignItems: "center" }}><div style={{ fontSize: 15, fontWeight: 900, color: C.ink }}>해외 캘린더</div><span style={{ fontSize: 12, color: C.inkLt, marginLeft: 8 }}>행사·입고·계약 일정</span><div style={{ flex: 1 }} />
             <button onClick={() => { const date = prompt("날짜 (예: 2026-12-10)"); if (!date) return; const title = prompt("일정 이름"); if (!title) return; const kind = prompt("종류: 행사/물류/판매/계약/인증/기타", "기타") || "기타"; setCal((p) => [...(p || []), { id: "c" + Date.now(), date, end: "", title, kind, note: "" }]); }} style={{ fontSize: 12, fontWeight: 700, border: `1px solid ${C.border}`, background: C.white, borderRadius: 20, padding: "4px 10px", cursor: "pointer" }}>+ 일정</button></div>
           <div style={{ display: "flex", flexDirection: "column", marginTop: 8 }}>
