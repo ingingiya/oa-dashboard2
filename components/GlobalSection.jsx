@@ -198,7 +198,7 @@ export default function GlobalSection({ C, Card }) {
           {[["키워드플러스", `${(ads.kwplus?.items || []).length}건`, `${ads.kwplus?.period} · ${live(ads.kwplus?.end) ? `종료 D-${-daysSince(ads.kwplus.end)}` : "종료"}`],
             ["파워랭크업", `${(ads.powerup?.items || []).length}상품`, `${ads.powerup?.period} · ${live(ads.powerup?.end) ? `종료 D-${-daysSince(ads.powerup.end)}` : "종료"}`],
             ["남은 Q캐시", left.toLocaleString(), `시작 ${(q.start || 0).toLocaleString()} · 사용 ${(q.used || 0).toLocaleString()}`],
-            ["순위 갱신", rk.updated ? md(rk.updated.slice(0, 10)) + " " + rk.updated.slice(11) : "—", "하루 2번 자동 (10:00·19:30)"]].map(([k, v, sub]) => (
+            ["순위 갱신", rk.updated ? md(rk.updated.slice(0, 10)) + " " + rk.updated.slice(11) : "—", "매일 09:00 자동"]].map(([k, v, sub]) => (
             <div key={k} style={{ border: `1px solid ${C.border}`, background: C.white, borderRadius: 14, padding: "12px 14px" }}><div style={{ fontSize: 12, fontWeight: 700, color: C.inkLt }}>{k}</div><div style={{ fontSize: 24, fontWeight: 900, color: C.ink, marginTop: 2 }}>{v}</div><div style={{ fontSize: 12, color: C.inkMid, marginTop: 2 }}>{sub}</div></div>))}
         </div>
         <Card style={{ padding: "14px 16px" }}>
