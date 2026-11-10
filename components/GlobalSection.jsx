@@ -260,16 +260,19 @@ export default function GlobalSection({ C, Card }) {
   const PriceView = () => {
     const items = (qprod.items || []).filter((x) => x.stat !== "S4");
     const f = pf;
-    const open = (x, kind) => setPf({ gdno: x.gd_no, name: x.name || x.jp, cur: x.sell_price, kind, price: x.sell_price, unit: "R", value: 10, start: today, end: "", memo: "" });
+    const yearLater = new Date(Date.now() + 9 * 36e5 + 365 * 864e5).toISOString().slice(0, 10);
+    const open = (x, kind) => setPf({ gdno: x.gd_no, name: x.name || x.jp, cur: x.sell_price, kind, price: x.final_price && x.final_price < x.sell_price ? x.final_price : x.sell_price, unit: "R", value: 10, start: today, end: kind === "price" ? yearLater : "", memo: "" });
     const submit = () => {
-      if (f.kind === "discount" && (!f.end || f.end < f.start)) return alert("행사 종료일을 넣어 주세요.");
+      if (!f.end || f.end < f.start) return alert("종료일을 넣어 주세요.");
+      if (f.kind === "price" && !(+f.price > 0 && +f.price < +f.cur)) return alert(`큐텐은 판매가(¥${(+f.cur).toLocaleString()})를 그대로 두고 할인으로 가격을 바꿔요. 판매가보다 낮은 금액을 넣어 주세요.`);
       const after = f.kind === "price" ? +f.price : f.unit === "R" ? Math.round(f.cur * (1 - f.value / 100)) : f.cur - f.value;
       const megaWarn = (cal || []).some((e) => /메가와리/.test(e.title) && !/신청/.test(e.title) && -daysSince(e.date) >= 0 && -daysSince(e.date) <= 14) ? "\n⚠ 메가와리 2주 전 가격 유지 기간일 수 있어요(행사 제외 위험)." : "";
-      const msg = f.kind === "price" ? `「${f.name}」 판매가를 ¥${(+f.cur).toLocaleString()} → ¥${(+f.price).toLocaleString()}로 큐텐에 바로 바꿀까요?` : `「${f.name}」 할인 행사 ${f.unit === "R" ? f.value + "%" : "¥" + f.value} (${md(f.start)}~${md(f.end)})\n고객가 약 ¥${after.toLocaleString()} — 큐텐에 등록할까요?`;
+      const msg = f.kind === "price" ? `「${f.name}」 고객가를 ¥${(+f.price).toLocaleString()}로 바꿀까요?\n판매가 ¥${(+f.cur).toLocaleString()}는 그대로 두고 정액 할인 ¥${(+f.cur - +f.price).toLocaleString()} (${md(f.start)}~${md(f.end)})으로 큐텐에 설정해요.` : `「${f.name}」 할인 행사 ${f.unit === "R" ? f.value + "%" : "¥" + f.value} (${md(f.start)}~${md(f.end)})\n고객가 약 ¥${after.toLocaleString()} — 큐텐에 등록할까요?`;
       if (!confirm(msg + megaWarn + "\n\n5분 안에 큐텐 판매자센터에 반영돼요.")) return;
       const id = "j" + Date.now();
-      setJobs((p) => [{ id, ...f, by: who || "", status: "요청됨", at: new Date(Date.now() + 9 * 36e5).toISOString().slice(0, 16).replace("T", " ") }, ...(p || [])]);
-      setCal((p) => [...(p || []), f.kind === "price" ? { id: "c" + id, date: f.start, end: "", title: `가격 변경: ${f.name} ¥${(+f.cur).toLocaleString()}→¥${(+f.price).toLocaleString()}`, kind: "가격", note: f.memo, owner: who } : { id: "c" + id, date: f.start, end: f.end, title: `할인 행사: ${f.name} ${f.unit === "R" ? f.value + "%" : "¥" + f.value}`, kind: "행사", note: `고객가 약 ¥${after.toLocaleString()}${f.memo ? " · " + f.memo : ""}`, owner: who }]);
+      const job = f.kind === "price" ? { ...f, kind: "discount", mode: "price", unit: "M", value: +f.cur - +f.price } : f;
+      setJobs((p) => [{ id, ...job, by: who || "", status: "요청됨", at: new Date(Date.now() + 9 * 36e5).toISOString().slice(0, 16).replace("T", " ") }, ...(p || [])]);
+      setCal((p) => [...(p || []), f.kind === "price" ? { id: "c" + id, date: f.start, end: f.end, title: `가격 변경(할인): ${f.name} → ¥${(+f.price).toLocaleString()}`, kind: "가격", note: `판매가 ¥${(+f.cur).toLocaleString()} 유지, 정액 할인 ¥${(+f.cur - +f.price).toLocaleString()}${f.memo ? " · " + f.memo : ""}`, owner: who } : { id: "c" + id, date: f.start, end: f.end, title: `할인 행사: ${f.name} ${f.unit === "R" ? f.value + "%" : "¥" + f.value}`, kind: "행사", note: `고객가 약 ¥${after.toLocaleString()}${f.memo ? " · " + f.memo : ""}`, owner: who }]);
       setPf(null);
     };
     const inp = { fontSize: 13, padding: "5px 8px", border: `1px solid ${C.border}`, borderRadius: 8, background: C.cream };
@@ -277,9 +280,12 @@ export default function GlobalSection({ C, Card }) {
     return (
       <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
         {f && <Card style={{ padding: "14px 16px", border: `2px solid ${C.rose}` }}>
-          <div style={{ fontSize: 15, fontWeight: 900, color: C.ink }}>{f.kind === "price" ? "판매가 변경" : "할인 행사 등록"} · {f.name} <span style={{ fontSize: 12, color: C.inkLt, fontWeight: 600 }}>지금 ¥{(+f.cur).toLocaleString()}</span></div>
+          <div style={{ fontSize: 15, fontWeight: 900, color: C.ink }}>{f.kind === "price" ? "가격 변경 (할인으로 설정)" : "할인 행사 등록"} · {f.name} <span style={{ fontSize: 12, color: C.inkLt, fontWeight: 600 }}>지금 ¥{(+f.cur).toLocaleString()}</span></div>
           <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "end", marginTop: 10 }}>
-            {f.kind === "price" ? <label style={{ fontSize: 11, fontWeight: 700, color: C.inkLt, display: "flex", flexDirection: "column", gap: 3 }}>새 판매가(円)<input type="number" defaultValue={f.price} onBlur={(e) => setPf({ ...f, price: +e.target.value })} style={{ ...inp, width: 110 }} /></label> : <>
+            {f.kind === "price" ? <>
+              <label style={{ fontSize: 11, fontWeight: 700, color: C.inkLt, display: "flex", flexDirection: "column", gap: 3 }}>바꿀 고객가(円)<input type="number" defaultValue={f.price} onBlur={(e) => setPf({ ...f, price: +e.target.value })} style={{ ...inp, width: 110 }} /></label>
+              <label style={{ fontSize: 11, fontWeight: 700, color: C.inkLt, display: "flex", flexDirection: "column", gap: 3 }}>시작<input type="date" value={f.start} onChange={(e) => setPf({ ...f, start: e.target.value })} style={inp} /></label>
+              <label style={{ fontSize: 11, fontWeight: 700, color: C.inkLt, display: "flex", flexDirection: "column", gap: 3 }}>종료<input type="date" value={f.end} onChange={(e) => setPf({ ...f, end: e.target.value })} style={inp} /></label></> : <>
               <label style={{ fontSize: 11, fontWeight: 700, color: C.inkLt, display: "flex", flexDirection: "column", gap: 3 }}>방식<select value={f.unit} onChange={(e) => setPf({ ...f, unit: e.target.value })} style={inp}><option value="R">정률(%)</option><option value="M">정액(円)</option></select></label>
               <label style={{ fontSize: 11, fontWeight: 700, color: C.inkLt, display: "flex", flexDirection: "column", gap: 3 }}>{f.unit === "R" ? "할인율 %" : "할인액 円"}<input type="number" defaultValue={f.value} onBlur={(e) => setPf({ ...f, value: +e.target.value })} style={{ ...inp, width: 90 }} /></label>
               <label style={{ fontSize: 11, fontWeight: 700, color: C.inkLt, display: "flex", flexDirection: "column", gap: 3 }}>시작<input type="date" value={f.start} onChange={(e) => setPf({ ...f, start: e.target.value })} style={inp} /></label>
@@ -288,7 +294,7 @@ export default function GlobalSection({ C, Card }) {
             <button onClick={submit} style={{ fontSize: 13, fontWeight: 800, border: 0, borderRadius: 20, padding: "7px 16px", cursor: "pointer", background: C.rose, color: "#fff" }}>큐텐에 반영</button>
             <button onClick={() => setPf(null)} style={{ fontSize: 13, fontWeight: 700, border: `1px solid ${C.border}`, borderRadius: 20, padding: "6px 14px", cursor: "pointer", background: C.white }}>취소</button>
           </div>
-          <div style={{ fontSize: 11.5, color: C.inkLt, marginTop: 8 }}>마진은 「마진 계산」 탭에서 먼저 확인하세요. 등록하면 캘린더에도 자동으로 들어가요. 할인은 큐텐이 기간에 맞춰 알아서 켜고 꺼요.</div>
+          <div style={{ fontSize: 11.5, color: C.inkLt, marginTop: 8 }}>판매가는 건드리지 않고 큐텐 할인 설정으로만 바꿔요. 마진은 「마진 계산」 탭에서 먼저 확인하세요. 등록하면 캘린더에도 자동으로 들어가요. 할인은 큐텐이 기간에 맞춰 알아서 켜고 꺼요.</div>
         </Card>}
         <Card style={{ padding: "14px 16px" }}>
           <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}><div style={{ fontSize: 15, fontWeight: 900, color: C.ink }}>큐텐 상품 가격</div><span style={{ fontSize: 12, color: C.inkLt }}>{items.length}개 · {qprod.updated ? `${md(qprod.updated.slice(0, 10))} ${qprod.updated.slice(11)} 기준` : ""} (매시 자동)</span></div>
@@ -313,7 +319,7 @@ export default function GlobalSection({ C, Card }) {
             <div key={j.id} style={{ display: "flex", gap: 8, alignItems: "center", padding: "7px 0", borderTop: `1px solid ${C.border}`, fontSize: 13, flexWrap: "wrap" }}>
               <span style={{ fontSize: 11, fontWeight: 800, background: bg, color: fg, borderRadius: 20, padding: "1px 8px" }}>{j.status}</span>
               <b style={{ color: C.ink }}>{j.name}</b>
-              <span style={{ color: C.inkMid }}>{j.kind === "price" ? `판매가 ¥${(+j.cur).toLocaleString()} → ¥${(+j.price).toLocaleString()}` : `할인 ${j.unit === "R" ? j.value + "%" : "¥" + j.value} · ${md(j.start)}~${md(j.end)}`}</span>
+              <span style={{ color: C.inkMid }}>{j.mode === "price" || j.kind === "price" ? `가격 변경(할인) → ¥${(+j.price).toLocaleString()} · ${md(j.start)}~${md(j.end)}` : `할인 ${j.unit === "R" ? j.value + "%" : "¥" + j.value} · ${md(j.start)}~${md(j.end)}`}</span>
               <div style={{ flex: 1 }} /><span style={{ fontSize: 11, color: C.inkLt }}>{j.by} · {j.at}{j.result ? ` · ${j.result}` : ""}</span>
               {j.status === "요청됨" && <button onClick={() => setJobs((p) => p.filter((y) => y.id !== j.id))} style={{ fontSize: 11, border: 0, background: "none", color: C.inkLt, cursor: "pointer" }}>취소</button>}
             </div>); })}
