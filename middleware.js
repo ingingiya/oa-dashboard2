@@ -9,6 +9,7 @@ const ALLOWED_EMAILS = [
   'thdwldnjs321@gmail.com',
   '120312yss@gmail.com',
   'hyyoon33@gmail.com', // 윤혜영(패키지 자동화, 09-21 추가)
+  'lovecha920225@gmail.com', // 11-10 추가
 ]
 
 export async function middleware(request) {
