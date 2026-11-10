@@ -96,6 +96,8 @@ export default function GlobalSection({ C, Card }) {
   const [pfAsk, setPfAsk] = useState("");
   const [offAsk, setOffAsk] = useState(""); // 화면 안 확인 문구 (브라우저 confirm은 자동화 크롬에서 자동 취소됨)
   const [rk] = useShared("oa_global_qoo10_rank_v1", { updated: "", rows: [] });
+  const [mega, setMega] = useShared("oa_global_mega_plan_v1", { title: "2027 1회차 메가와리 안 (2/27~3/11) · 20% 쿠폰 · 큐텐 10% + 셀러 10% 반반", note: "11/10 접수. 최종가 = 쿠폰 적용 후 고객가(엔). 등록가 = 최종가 ÷ 0.8. 셀러 부담 = 쿠폰 10% + 시스템 이용료 1% + 할인지원 0.5% = 11.5%. 등록가는 모니터링(세일 약 10일 전~3일 전) 전에 맞출 것.", rows: [
+    ["듀얼포그", 2960], ["뮤직씽크가습기", 3440], ["냉온진동클렌저", 3790], ["무선뿌리볼륨고데기5000", 4560], ["아이케어", 4720], ["온열찜질기", 4050], ["플랜티플렛", 7110], ["히트스팟S", 4500], ["물결고데기", 4990], ["볼륨업무선고데기", 3900], ["듀얼포켓건", 3300], ["무선고데기", 3890]].map(([n, f]) => ({ n, f })) });
   const upd = (list, id, p) => setOps((prev) => ({ ...prev, [list]: (prev[list] || []).map((x) => x.id === id ? { ...x, ...p } : x) }));
   const Chip = ({ v, opts, onPick }) => { const [bg, fg] = ST_COLOR[v] || ["#f3f4f6", "#374151"]; return <select value={v} onChange={(e) => onPick(e.target.value)} style={{ fontSize: 11, fontWeight: 800, padding: "2px 6px", borderRadius: 20, border: 0, background: bg, color: fg, cursor: "pointer" }}>{opts.map((o) => <option key={o}>{o}</option>)}</select>; };
   const [view, setView0] = useState("glance");
@@ -287,6 +289,16 @@ export default function GlobalSection({ C, Card }) {
     const SJ = { "요청됨": ["#fef3c7", "#92400e"], "적용 중": ["#dbeafe", "#1e40af"], "적용 완료": ["#dcfce7", "#166534"], "확인 필요": ["#fee2e2", "#991b1b"], "실패": ["#fee2e2", "#991b1b"], "끝남": ["#f3f4f6", "#6b7280"] };
     return (
       <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+        <Card style={{ padding: "12px 14px", border: `1px solid ${C.border}` }}>
+          <div style={{ display: "flex", alignItems: "baseline", gap: 8, flexWrap: "wrap" }}><b style={{ fontSize: 14, color: C.ink }}>메가와리 행사안</b><span style={{ fontSize: 12, color: C.inkMid }}>{mega.title}</span><div style={{ flex: 1 }} /><a href="/qoo10-margin/channel-margins.html?channel=Qoo10" target="_blank" rel="noreferrer" style={{ fontSize: 12, color: C.rose, fontWeight: 700 }}>마진 계산기에서 원가 대조 ↗</a></div>
+          <div style={{ fontSize: 12, color: C.inkLt, margin: "4px 0 8px" }}>{mega.note}</div>
+          <div style={{ overflowX: "auto" }}><table style={{ borderCollapse: "collapse", fontSize: 13, width: "100%" }}>
+            <thead><tr style={{ color: C.inkLt, fontSize: 11 }}>{["상품", "최종가(쿠폰 후)", "등록가(÷0.8)", "셀러 부담 11.5%", "셀러 실수령(수수료 전)", "현재 큐텐 판매가", "차이"].map((h, i) => <th key={h} style={{ textAlign: i ? "right" : "left", padding: "4px 6px", borderBottom: `1px solid ${C.border}`, fontWeight: 700 }}>{h}</th>)}</tr></thead>
+            <tbody>{(mega.rows || []).map((r) => { const reg = Math.ceil(r.f / 0.8); const burden = Math.round(reg * 0.115); const q = items.find((x) => (x.name || "").replace(/\s/g, "").includes(r.n.replace(/5000$/, "").replace(/\s/g, "").slice(0, 5))); const cur = q ? +q.sell_price : null; const diff = cur != null ? reg - cur : null;
+              return <tr key={r.n} style={{ borderBottom: `1px dashed ${C.border}` }}><td style={{ padding: "5px 6px", fontWeight: 700, color: C.ink }}>{r.n}</td><td style={{ textAlign: "right", padding: "5px 6px" }}>¥{r.f.toLocaleString()}</td><td style={{ textAlign: "right", padding: "5px 6px", fontWeight: 800 }}>¥{reg.toLocaleString()}</td><td style={{ textAlign: "right", padding: "5px 6px", color: "#b45309" }}>−¥{burden.toLocaleString()}</td><td style={{ textAlign: "right", padding: "5px 6px" }}>¥{(reg - burden).toLocaleString()}</td><td style={{ textAlign: "right", padding: "5px 6px", color: C.inkMid }}>{cur != null ? `¥${cur.toLocaleString()}` : "—"}</td><td style={{ textAlign: "right", padding: "5px 6px", fontWeight: 800, color: diff == null ? C.inkLt : diff > 0 ? "#dc2626" : "#16a34a" }}>{diff == null ? "" : (diff > 0 ? "+" : "") + "¥" + diff.toLocaleString()}</td></tr>; })}</tbody>
+          </table></div>
+          <div style={{ fontSize: 11, color: C.inkLt, marginTop: 6 }}>차이가 +면 현재 판매가보다 올려 등록해야 최종가가 맞음 → 모니터링 기간 전에 올릴 것(기간 중 인상은 제외 사유). 이 표는 기록용이며 큐텐에 자동 반영되지 않음.</div>
+        </Card>
         {f && <div id="qoo10-price-form"><Card style={{ padding: "14px 16px", border: `2px solid ${C.rose}` }}>
           <div style={{ fontSize: 15, fontWeight: 900, color: C.ink }}>{f.kind === "price" ? "가격 변경 (할인으로 설정)" : "할인 행사 등록"} · {f.name} <span style={{ fontSize: 12, color: C.inkLt, fontWeight: 600 }}>지금 ¥{(+f.cur).toLocaleString()}</span></div>
           <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "end", marginTop: 10 }}>
