@@ -4,8 +4,13 @@ const sb = () => { const url = process.env.NEXT_PUBLIC_SUPABASE_URL, key = proce
 export async function GET(req) {
   try {
     const { url, h } = sb(); const q = new URL(req.url).searchParams; const all = q.get("all") === "1";
-    const r = await fetch(`${url}/rest/v1/ad_monitor_ads?select=id,page_name,creative_body,link_title,link_url,snapshot_url,platforms,started_at,first_seen,last_seen,search_term,is_active${all ? "" : "&is_active=eq.true"}&order=first_seen.desc&limit=2000`, { headers: h, cache: "no-store" });
-    const rows = await r.json(); if (!Array.isArray(rows)) throw new Error(JSON.stringify(rows).slice(0, 200));
+    // Supabase 응답은 1회 최대 1,000행 → 페이지로 나눠 모두 받음 (11/10 일본 광고 추가로 1,000 초과)
+    const rows = [];
+    for (let off = 0; off < 6000; off += 1000) {
+      const r = await fetch(`${url}/rest/v1/ad_monitor_ads?select=id,page_name,creative_body,link_title,link_url,snapshot_url,platforms,started_at,first_seen,last_seen,search_term,is_active${all ? "" : "&is_active=eq.true"}&order=first_seen.desc,id.asc&limit=1000&offset=${off}`, { headers: h, cache: "no-store" });
+      const page = await r.json(); if (!Array.isArray(page)) throw new Error(JSON.stringify(page).slice(0, 200));
+      rows.push(...page); if (page.length < 1000) break;
+    }
     const rep = await (await fetch(`${url}/rest/v1/ad_monitor_reports?select=created_at,total_active,new_count,gone_count&order=created_at.desc&limit=1`, { headers: h, cache: "no-store" })).json();
     const byTerm = {}; for (const a of rows) (byTerm[a.search_term || "기타"] ||= []).push(a);
     const week = Date.now() - 7 * 86400e3;
