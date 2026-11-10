@@ -93,6 +93,7 @@ export default function GlobalSection({ C, Card }) {
   const [jobs, setJobs] = useShared("oa_global_price_jobs_v1", []);
   const [pf, setPf] = useState(null); // 가격·행사 입력 폼
   const [pfErr, setPfErr] = useState("");
+  const [pfAsk, setPfAsk] = useState(""); // 화면 안 확인 문구 (브라우저 confirm은 자동화 크롬에서 자동 취소됨)
   const [rk] = useShared("oa_global_qoo10_rank_v1", { updated: "", rows: [] });
   const upd = (list, id, p) => setOps((prev) => ({ ...prev, [list]: (prev[list] || []).map((x) => x.id === id ? { ...x, ...p } : x) }));
   const Chip = ({ v, opts, onPick }) => { const [bg, fg] = ST_COLOR[v] || ["#f3f4f6", "#374151"]; return <select value={v} onChange={(e) => onPick(e.target.value)} style={{ fontSize: 11, fontWeight: 800, padding: "2px 6px", borderRadius: 20, border: 0, background: bg, color: fg, cursor: "pointer" }}>{opts.map((o) => <option key={o}>{o}</option>)}</select>; };
@@ -263,8 +264,8 @@ export default function GlobalSection({ C, Card }) {
     const f = pf;
     const yearLater = new Date(Date.now() + 9 * 36e5 + 365 * 864e5).toISOString().slice(0, 10);
     const weekLater = new Date(Date.now() + 9 * 36e5 + 7 * 864e5).toISOString().slice(0, 10);
-    const open = (x, kind) => { setPfErr(""); setPf({ gdno: x.gd_no, name: x.name || x.jp, cur: x.sell_price, kind, price: kind === "price" ? Math.round(x.sell_price * 0.9) : x.sell_price, unit: "R", value: 10, start: today, end: kind === "price" ? yearLater : weekLater, memo: "" }); setTimeout(() => document.getElementById("qoo10-price-form")?.scrollIntoView({ behavior: "smooth", block: "center" }), 50); };
-    const submit = () => {
+    const open = (x, kind) => { setPfErr(""); setPfAsk(""); setPf({ gdno: x.gd_no, name: x.name || x.jp, cur: x.sell_price, kind, price: kind === "price" ? Math.round(x.sell_price * 0.9) : x.sell_price, unit: "R", value: 10, start: today, end: kind === "price" ? yearLater : weekLater, memo: "" }); setTimeout(() => document.getElementById("qoo10-price-form")?.scrollIntoView({ behavior: "smooth", block: "center" }), 50); };
+    const submit = (confirmed) => {
       if (!f.end || f.end < f.start) return setPfErr("종료일을 시작일 이후로 넣어 주세요.");
       if (f.kind === "price" && !(+f.price > 0 && +f.price < +f.cur)) return setPfErr(`판매가(¥${(+f.cur).toLocaleString()})보다 낮은 금액을 넣어 주세요. 큐텐은 판매가는 두고 할인으로 가격을 바꿔요.`);
       if (f.kind === "discount" && !(+f.value > 0) ) return setPfErr("할인율이나 할인액을 넣어 주세요.");
@@ -272,7 +273,8 @@ export default function GlobalSection({ C, Card }) {
       const after = f.kind === "price" ? +f.price : f.unit === "R" ? Math.round(f.cur * (1 - f.value / 100)) : f.cur - f.value;
       const megaWarn = (cal || []).some((e) => /메가와리/.test(e.title) && !/신청/.test(e.title) && -daysSince(e.date) >= 0 && -daysSince(e.date) <= 14) ? "\n⚠ 메가와리 2주 전 가격 유지 기간일 수 있어요(행사 제외 위험)." : "";
       const msg = f.kind === "price" ? `「${f.name}」 고객가를 ¥${(+f.price).toLocaleString()}로 바꿀까요?\n판매가 ¥${(+f.cur).toLocaleString()}는 그대로 두고 정액 할인 ¥${(+f.cur - +f.price).toLocaleString()} (${md(f.start)}~${md(f.end)})으로 큐텐에 설정해요.` : `「${f.name}」 할인 행사 ${f.unit === "R" ? f.value + "%" : "¥" + f.value} (${md(f.start)}~${md(f.end)})\n고객가 약 ¥${after.toLocaleString()} — 큐텐에 등록할까요?`;
-      if (!confirm(msg + megaWarn + "\n\n5분 안에 큐텐 판매자센터에 반영돼요.")) return;
+      if (!confirmed) { setPfAsk(msg + megaWarn); return; }
+      setPfAsk("");
       const id = "j" + Date.now();
       const job = f.kind === "price" ? { ...f, kind: "discount", mode: "price", unit: "M", value: +f.cur - +f.price } : f;
       setJobs((p) => [{ id, ...job, by: who || "", status: "요청됨", at: new Date(Date.now() + 9 * 36e5).toISOString().slice(0, 16).replace("T", " ") }, ...(p || [])]);
@@ -296,10 +298,18 @@ export default function GlobalSection({ C, Card }) {
               <label style={{ fontSize: 11, fontWeight: 700, color: C.inkLt, display: "flex", flexDirection: "column", gap: 3 }}>시작<input type="date" value={f.start} onChange={(e) => setPf({ ...f, start: e.target.value })} style={inp} /></label>
               <label style={{ fontSize: 11, fontWeight: 700, color: C.inkLt, display: "flex", flexDirection: "column", gap: 3 }}>종료<input type="date" value={f.end} onChange={(e) => setPf({ ...f, end: e.target.value })} style={inp} /></label></>}
             <label style={{ fontSize: 11, fontWeight: 700, color: C.inkLt, display: "flex", flexDirection: "column", gap: 3, flex: 1, minWidth: 160 }}>메모(이유)<input defaultValue={f.memo} onBlur={(e) => setPf({ ...f, memo: e.target.value })} style={inp} /></label>
-            <button onClick={submit} style={{ fontSize: 13, fontWeight: 800, border: 0, borderRadius: 20, padding: "7px 16px", cursor: "pointer", background: C.rose, color: "#fff" }}>큐텐에 반영</button>
+            <button onClick={() => submit(false)} style={{ fontSize: 13, fontWeight: 800, border: 0, borderRadius: 20, padding: "7px 16px", cursor: "pointer", background: C.rose, color: "#fff" }}>큐텐에 반영</button>
             <button onClick={() => setPf(null)} style={{ fontSize: 13, fontWeight: 700, border: `1px solid ${C.border}`, borderRadius: 20, padding: "6px 14px", cursor: "pointer", background: C.white }}>취소</button>
           </div>
           {pfErr && <div style={{ marginTop: 8, fontSize: 13, fontWeight: 800, color: "#dc2626" }}>⚠ {pfErr}</div>}
+          {pfAsk && <div style={{ marginTop: 10, padding: "12px 14px", borderRadius: 12, background: "#fff7d6", border: "1px solid #fcd34d" }}>
+            <div style={{ fontSize: 13.5, color: C.ink, whiteSpace: "pre-line", lineHeight: 1.55 }}>{pfAsk}</div>
+            <div style={{ fontSize: 12, color: C.inkMid, marginTop: 4 }}>반영하기를 누르면 5분 안에 큐텐 판매자센터에 들어가요.</div>
+            <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+              <button onClick={() => submit(true)} style={{ fontSize: 13, fontWeight: 900, border: 0, borderRadius: 20, padding: "7px 18px", cursor: "pointer", background: "#16a34a", color: "#fff" }}>반영하기</button>
+              <button onClick={() => setPfAsk("")} style={{ fontSize: 13, fontWeight: 700, border: `1px solid ${C.border}`, borderRadius: 20, padding: "6px 14px", cursor: "pointer", background: C.white }}>다시 볼게요</button>
+            </div>
+          </div>}
           <div style={{ fontSize: 11.5, color: C.inkLt, marginTop: 8 }}>판매가는 건드리지 않고 큐텐 할인 설정으로만 바꿔요. 마진은 「마진 계산」 탭에서 먼저 확인하세요. 등록하면 캘린더에도 자동으로 들어가요. 할인은 큐텐이 기간에 맞춰 알아서 켜고 꺼요.</div>
         </Card></div>}
         <div id="qoo10-promo-status"><Card style={{ padding: "14px 16px" }}>
