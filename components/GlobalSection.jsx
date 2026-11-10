@@ -92,6 +92,7 @@ export default function GlobalSection({ C, Card }) {
   const [qprod] = useShared("oa_global_qoo10_products_v1", { updated: "", items: [] });
   const [jobs, setJobs] = useShared("oa_global_price_jobs_v1", []);
   const [pf, setPf] = useState(null); // 가격·행사 입력 폼
+  const [pfErr, setPfErr] = useState("");
   const [rk] = useShared("oa_global_qoo10_rank_v1", { updated: "", rows: [] });
   const upd = (list, id, p) => setOps((prev) => ({ ...prev, [list]: (prev[list] || []).map((x) => x.id === id ? { ...x, ...p } : x) }));
   const Chip = ({ v, opts, onPick }) => { const [bg, fg] = ST_COLOR[v] || ["#f3f4f6", "#374151"]; return <select value={v} onChange={(e) => onPick(e.target.value)} style={{ fontSize: 11, fontWeight: 800, padding: "2px 6px", borderRadius: 20, border: 0, background: bg, color: fg, cursor: "pointer" }}>{opts.map((o) => <option key={o}>{o}</option>)}</select>; };
@@ -261,10 +262,13 @@ export default function GlobalSection({ C, Card }) {
     const items = (qprod.items || []).filter((x) => x.stat !== "S4");
     const f = pf;
     const yearLater = new Date(Date.now() + 9 * 36e5 + 365 * 864e5).toISOString().slice(0, 10);
-    const open = (x, kind) => setPf({ gdno: x.gd_no, name: x.name || x.jp, cur: x.sell_price, kind, price: x.final_price && x.final_price < x.sell_price ? x.final_price : x.sell_price, unit: "R", value: 10, start: today, end: kind === "price" ? yearLater : "", memo: "" });
+    const weekLater = new Date(Date.now() + 9 * 36e5 + 7 * 864e5).toISOString().slice(0, 10);
+    const open = (x, kind) => { setPfErr(""); setPf({ gdno: x.gd_no, name: x.name || x.jp, cur: x.sell_price, kind, price: kind === "price" ? Math.round(x.sell_price * 0.9) : x.sell_price, unit: "R", value: 10, start: today, end: kind === "price" ? yearLater : weekLater, memo: "" }); setTimeout(() => document.getElementById("qoo10-price-form")?.scrollIntoView({ behavior: "smooth", block: "center" }), 50); };
     const submit = () => {
-      if (!f.end || f.end < f.start) return alert("종료일을 넣어 주세요.");
-      if (f.kind === "price" && !(+f.price > 0 && +f.price < +f.cur)) return alert(`큐텐은 판매가(¥${(+f.cur).toLocaleString()})를 그대로 두고 할인으로 가격을 바꿔요. 판매가보다 낮은 금액을 넣어 주세요.`);
+      if (!f.end || f.end < f.start) return setPfErr("종료일을 시작일 이후로 넣어 주세요.");
+      if (f.kind === "price" && !(+f.price > 0 && +f.price < +f.cur)) return setPfErr(`판매가(¥${(+f.cur).toLocaleString()})보다 낮은 금액을 넣어 주세요. 큐텐은 판매가는 두고 할인으로 가격을 바꿔요.`);
+      if (f.kind === "discount" && !(+f.value > 0) ) return setPfErr("할인율이나 할인액을 넣어 주세요.");
+      setPfErr("");
       const after = f.kind === "price" ? +f.price : f.unit === "R" ? Math.round(f.cur * (1 - f.value / 100)) : f.cur - f.value;
       const megaWarn = (cal || []).some((e) => /메가와리/.test(e.title) && !/신청/.test(e.title) && -daysSince(e.date) >= 0 && -daysSince(e.date) <= 14) ? "\n⚠ 메가와리 2주 전 가격 유지 기간일 수 있어요(행사 제외 위험)." : "";
       const msg = f.kind === "price" ? `「${f.name}」 고객가를 ¥${(+f.price).toLocaleString()}로 바꿀까요?\n판매가 ¥${(+f.cur).toLocaleString()}는 그대로 두고 정액 할인 ¥${(+f.cur - +f.price).toLocaleString()} (${md(f.start)}~${md(f.end)})으로 큐텐에 설정해요.` : `「${f.name}」 할인 행사 ${f.unit === "R" ? f.value + "%" : "¥" + f.value} (${md(f.start)}~${md(f.end)})\n고객가 약 ¥${after.toLocaleString()} — 큐텐에 등록할까요?`;
@@ -273,13 +277,14 @@ export default function GlobalSection({ C, Card }) {
       const job = f.kind === "price" ? { ...f, kind: "discount", mode: "price", unit: "M", value: +f.cur - +f.price } : f;
       setJobs((p) => [{ id, ...job, by: who || "", status: "요청됨", at: new Date(Date.now() + 9 * 36e5).toISOString().slice(0, 16).replace("T", " ") }, ...(p || [])]);
       setCal((p) => [...(p || []), f.kind === "price" ? { id: "c" + id, date: f.start, end: f.end, title: `가격 변경(할인): ${f.name} → ¥${(+f.price).toLocaleString()}`, kind: "가격", note: `판매가 ¥${(+f.cur).toLocaleString()} 유지, 정액 할인 ¥${(+f.cur - +f.price).toLocaleString()}${f.memo ? " · " + f.memo : ""}`, owner: who } : { id: "c" + id, date: f.start, end: f.end, title: `할인 행사: ${f.name} ${f.unit === "R" ? f.value + "%" : "¥" + f.value}`, kind: "행사", note: `고객가 약 ¥${after.toLocaleString()}${f.memo ? " · " + f.memo : ""}`, owner: who }]);
-      setPf(null);
+      setPf(null); setPfErr("");
+      setTimeout(() => document.getElementById("qoo10-promo-status")?.scrollIntoView({ behavior: "smooth", block: "start" }), 100);
     };
     const inp = { fontSize: 13, padding: "5px 8px", border: `1px solid ${C.border}`, borderRadius: 8, background: C.cream };
     const SJ = { "요청됨": ["#fef3c7", "#92400e"], "적용 중": ["#dbeafe", "#1e40af"], "적용 완료": ["#dcfce7", "#166534"], "확인 필요": ["#fee2e2", "#991b1b"], "실패": ["#fee2e2", "#991b1b"] };
     return (
       <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-        {f && <Card style={{ padding: "14px 16px", border: `2px solid ${C.rose}` }}>
+        {f && <div id="qoo10-price-form"><Card style={{ padding: "14px 16px", border: `2px solid ${C.rose}` }}>
           <div style={{ fontSize: 15, fontWeight: 900, color: C.ink }}>{f.kind === "price" ? "가격 변경 (할인으로 설정)" : "할인 행사 등록"} · {f.name} <span style={{ fontSize: 12, color: C.inkLt, fontWeight: 600 }}>지금 ¥{(+f.cur).toLocaleString()}</span></div>
           <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "end", marginTop: 10 }}>
             {f.kind === "price" ? <>
@@ -294,8 +299,37 @@ export default function GlobalSection({ C, Card }) {
             <button onClick={submit} style={{ fontSize: 13, fontWeight: 800, border: 0, borderRadius: 20, padding: "7px 16px", cursor: "pointer", background: C.rose, color: "#fff" }}>큐텐에 반영</button>
             <button onClick={() => setPf(null)} style={{ fontSize: 13, fontWeight: 700, border: `1px solid ${C.border}`, borderRadius: 20, padding: "6px 14px", cursor: "pointer", background: C.white }}>취소</button>
           </div>
+          {pfErr && <div style={{ marginTop: 8, fontSize: 13, fontWeight: 800, color: "#dc2626" }}>⚠ {pfErr}</div>}
           <div style={{ fontSize: 11.5, color: C.inkLt, marginTop: 8 }}>판매가는 건드리지 않고 큐텐 할인 설정으로만 바꿔요. 마진은 「마진 계산」 탭에서 먼저 확인하세요. 등록하면 캘린더에도 자동으로 들어가요. 할인은 큐텐이 기간에 맞춰 알아서 켜고 꺼요.</div>
-        </Card>}
+        </Card></div>}
+        <div id="qoo10-promo-status"><Card style={{ padding: "14px 16px" }}>
+          <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}><div style={{ fontSize: 15, fontWeight: 900, color: C.ink }}>행사 현황</div><span style={{ fontSize: 12, color: C.inkLt }}>요청한 행사·가격 변경과 큐텐에 지금 걸린 할인</span></div>
+          {(() => {
+            const live = items.filter((x) => x.final_price && x.final_price < x.sell_price);
+            const js = jobs || [];
+            const groups = [["진행·예정", js.filter((j) => ["요청됨", "적용 중", "적용 완료", "확인 필요"].includes(j.status) && (!j.end || j.end >= today))], ["실패", js.filter((j) => j.status === "실패")], ["끝난 것", js.filter((j) => j.status === "적용 완료" && j.end && j.end < today)]];
+            const Row = ({ j }) => { const [bg, fg] = SJ[j.status] || ["#f3f4f6", "#374151"]; const left = j.end ? -daysSince(j.end) : null; return (
+              <div style={{ display: "flex", gap: 8, alignItems: "center", padding: "7px 0", borderTop: `1px solid ${C.border}`, fontSize: 13, flexWrap: "wrap" }}>
+                <span style={{ fontSize: 11, fontWeight: 800, background: bg, color: fg, borderRadius: 20, padding: "1px 8px" }}>{j.status}</span>
+                <b style={{ color: C.ink }}>{j.name}</b>
+                <span style={{ color: C.inkMid }}>{j.mode === "price" ? `가격 변경 → ¥${(+j.price).toLocaleString()}` : `할인 ${j.unit === "R" ? j.value + "%" : "¥" + j.value}`} · {md(j.start)}~{md(j.end)}</span>
+                {left !== null && left >= 0 && <span style={{ fontSize: 11, fontWeight: 800, color: left <= 2 ? "#dc2626" : C.inkLt }}>{left === 0 ? "오늘 종료" : `종료 D-${left}`}</span>}
+                <div style={{ flex: 1 }} /><span style={{ fontSize: 11, color: C.inkLt }}>{j.by}{j.by ? " · " : ""}{j.at}{j.result ? ` · ${j.result}` : ""}</span>
+                {j.status === "요청됨" && <button onClick={() => setJobs((p) => p.filter((y) => y.id !== j.id))} style={{ fontSize: 11, border: 0, background: "none", color: C.inkLt, cursor: "pointer" }}>취소</button>}
+              </div>); };
+            return (<div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(360px,1fr))", gap: 16, marginTop: 8 }}>
+              <div>
+                {groups.map(([t, arr]) => arr.length > 0 && <div key={t} style={{ marginBottom: 8 }}><div style={{ fontSize: 12, fontWeight: 800, color: t === "실패" ? "#dc2626" : C.inkLt }}>{t} {arr.length}</div>{arr.slice(0, 20).map((j) => <Row key={j.id} j={j} />)}</div>)}
+                {!js.length && <div style={{ fontSize: 13, color: C.inkLt, padding: "6px 0" }}>아직 요청한 행사가 없어요. 아래 표에서 「행사」나 「가격」을 누르세요.</div>}
+              </div>
+              <div>
+                <div style={{ fontSize: 12, fontWeight: 800, color: C.inkLt }}>큐텐에 지금 걸린 할인 {live.length} <span style={{ fontWeight: 500 }}>({qprod.updated ? md(qprod.updated.slice(0, 10)) + " " + qprod.updated.slice(11) : ""} 기준)</span></div>
+                {live.map((x) => <div key={x.gd_no} style={{ display: "flex", gap: 8, padding: "7px 0", borderTop: `1px solid ${C.border}`, fontSize: 13 }}><b style={{ flex: 1, color: C.ink }}>{x.name || x.jp}</b><span style={{ color: C.inkLt, textDecoration: "line-through" }}>¥{(+x.sell_price).toLocaleString()}</span><span style={{ fontWeight: 900, color: "#dc2626" }}>¥{(+x.final_price).toLocaleString()}</span><span style={{ fontSize: 11, color: C.inkLt }}>{x.discount_end_dt ? "~" + String(x.discount_end_dt).slice(5, 10).replace("-", "/") : ""}</span></div>)}
+                {!live.length && <div style={{ fontSize: 13, color: C.inkLt, padding: "6px 0" }}>지금 할인 중인 상품이 없어요.</div>}
+              </div>
+            </div>);
+          })()}
+        </Card></div>
         <Card style={{ padding: "14px 16px" }}>
           <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}><div style={{ fontSize: 15, fontWeight: 900, color: C.ink }}>큐텐 상품 가격</div><span style={{ fontSize: 12, color: C.inkLt }}>{items.length}개 · {qprod.updated ? `${md(qprod.updated.slice(0, 10))} ${qprod.updated.slice(11)} 기준` : ""} (매시 자동)</span></div>
           <div style={{ overflowX: "auto" }}><table style={{ width: "100%", borderCollapse: "collapse", marginTop: 8, fontSize: 13 }}>
@@ -312,18 +346,6 @@ export default function GlobalSection({ C, Card }) {
                 <td style={{ padding: "6px", whiteSpace: "nowrap" }}><button onClick={() => open(x, "discount")} style={{ fontSize: 11, fontWeight: 800, border: `1px solid ${C.rose}`, color: C.rose, background: C.white, borderRadius: 20, padding: "2px 9px", cursor: "pointer", marginRight: 4 }}>행사</button><button onClick={() => open(x, "price")} style={{ fontSize: 11, fontWeight: 800, border: `1px solid ${C.border}`, color: C.inkMid, background: C.white, borderRadius: 20, padding: "2px 9px", cursor: "pointer" }}>가격</button></td>
               </tr>); })}</tbody></table></div>
           {!items.length && <div style={{ fontSize: 13, color: C.inkLt, padding: 12 }}>상품 목록을 불러오는 중이에요 (매시 10분 자동).</div>}
-        </Card>
-        <Card style={{ padding: "14px 16px" }}>
-          <div style={{ fontSize: 15, fontWeight: 900, color: C.ink }}>요청 기록</div>
-          {(jobs || []).slice(0, 30).map((j) => { const [bg, fg] = SJ[j.status] || ["#f3f4f6", "#374151"]; return (
-            <div key={j.id} style={{ display: "flex", gap: 8, alignItems: "center", padding: "7px 0", borderTop: `1px solid ${C.border}`, fontSize: 13, flexWrap: "wrap" }}>
-              <span style={{ fontSize: 11, fontWeight: 800, background: bg, color: fg, borderRadius: 20, padding: "1px 8px" }}>{j.status}</span>
-              <b style={{ color: C.ink }}>{j.name}</b>
-              <span style={{ color: C.inkMid }}>{j.mode === "price" || j.kind === "price" ? `가격 변경(할인) → ¥${(+j.price).toLocaleString()} · ${md(j.start)}~${md(j.end)}` : `할인 ${j.unit === "R" ? j.value + "%" : "¥" + j.value} · ${md(j.start)}~${md(j.end)}`}</span>
-              <div style={{ flex: 1 }} /><span style={{ fontSize: 11, color: C.inkLt }}>{j.by} · {j.at}{j.result ? ` · ${j.result}` : ""}</span>
-              {j.status === "요청됨" && <button onClick={() => setJobs((p) => p.filter((y) => y.id !== j.id))} style={{ fontSize: 11, border: 0, background: "none", color: C.inkLt, cursor: "pointer" }}>취소</button>}
-            </div>); })}
-          {!(jobs || []).length && <div style={{ fontSize: 13, color: C.inkLt, padding: "8px 0" }}>아직 요청이 없어요. 위 표에서 「행사」나 「가격」을 누르세요.</div>}
         </Card>
       </div>
     );
