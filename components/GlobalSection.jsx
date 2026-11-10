@@ -93,7 +93,8 @@ export default function GlobalSection({ C, Card }) {
   const [jobs, setJobs] = useShared("oa_global_price_jobs_v1", []);
   const [pf, setPf] = useState(null); // 가격·행사 입력 폼
   const [pfErr, setPfErr] = useState("");
-  const [pfAsk, setPfAsk] = useState(""); // 화면 안 확인 문구 (브라우저 confirm은 자동화 크롬에서 자동 취소됨)
+  const [pfAsk, setPfAsk] = useState("");
+  const [offAsk, setOffAsk] = useState(""); // 화면 안 확인 문구 (브라우저 confirm은 자동화 크롬에서 자동 취소됨)
   const [rk] = useShared("oa_global_qoo10_rank_v1", { updated: "", rows: [] });
   const upd = (list, id, p) => setOps((prev) => ({ ...prev, [list]: (prev[list] || []).map((x) => x.id === id ? { ...x, ...p } : x) }));
   const Chip = ({ v, opts, onPick }) => { const [bg, fg] = ST_COLOR[v] || ["#f3f4f6", "#374151"]; return <select value={v} onChange={(e) => onPick(e.target.value)} style={{ fontSize: 11, fontWeight: 800, padding: "2px 6px", borderRadius: 20, border: 0, background: bg, color: fg, cursor: "pointer" }}>{opts.map((o) => <option key={o}>{o}</option>)}</select>; };
@@ -283,7 +284,7 @@ export default function GlobalSection({ C, Card }) {
       setTimeout(() => document.getElementById("qoo10-promo-status")?.scrollIntoView({ behavior: "smooth", block: "start" }), 100);
     };
     const inp = { fontSize: 13, padding: "5px 8px", border: `1px solid ${C.border}`, borderRadius: 8, background: C.cream };
-    const SJ = { "요청됨": ["#fef3c7", "#92400e"], "적용 중": ["#dbeafe", "#1e40af"], "적용 완료": ["#dcfce7", "#166534"], "확인 필요": ["#fee2e2", "#991b1b"], "실패": ["#fee2e2", "#991b1b"] };
+    const SJ = { "요청됨": ["#fef3c7", "#92400e"], "적용 중": ["#dbeafe", "#1e40af"], "적용 완료": ["#dcfce7", "#166534"], "확인 필요": ["#fee2e2", "#991b1b"], "실패": ["#fee2e2", "#991b1b"], "끝남": ["#f3f4f6", "#6b7280"] };
     return (
       <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
         {f && <div id="qoo10-price-form"><Card style={{ padding: "14px 16px", border: `2px solid ${C.rose}` }}>
@@ -317,12 +318,12 @@ export default function GlobalSection({ C, Card }) {
           {(() => {
             const live = items.filter((x) => x.final_price && x.final_price < x.sell_price);
             const js = jobs || [];
-            const groups = [["진행·예정", js.filter((j) => ["요청됨", "적용 중", "적용 완료", "확인 필요"].includes(j.status) && (!j.end || j.end >= today))], ["실패", js.filter((j) => j.status === "실패")], ["끝난 것", js.filter((j) => j.status === "적용 완료" && j.end && j.end < today)]];
+            const groups = [["진행·예정", js.filter((j) => ["요청됨", "적용 중", "적용 완료", "확인 필요"].includes(j.status) && (!j.end || j.end >= today))], ["실패", js.filter((j) => j.status === "실패")], ["끝난 것", js.filter((j) => j.status === "끝남" || (j.status === "적용 완료" && j.end && j.end < today))]];
             const Row = ({ j }) => { const [bg, fg] = SJ[j.status] || ["#f3f4f6", "#374151"]; const left = j.end ? -daysSince(j.end) : null; return (
               <div style={{ display: "flex", gap: 8, alignItems: "center", padding: "7px 0", borderTop: `1px solid ${C.border}`, fontSize: 13, flexWrap: "wrap" }}>
                 <span style={{ fontSize: 11, fontWeight: 800, background: bg, color: fg, borderRadius: 20, padding: "1px 8px" }}>{j.status}</span>
                 <b style={{ color: C.ink }}>{j.name}</b>
-                <span style={{ color: C.inkMid }}>{j.mode === "price" ? `가격 변경 → ¥${(+j.price).toLocaleString()}` : `할인 ${j.unit === "R" ? j.value + "%" : "¥" + j.value}`} · {md(j.start)}~{md(j.end)}</span>
+                <span style={{ color: C.inkMid }}>{j.kind === "cancel" ? "할인 끄기" : j.mode === "price" ? `가격 변경 → ¥${(+j.price).toLocaleString()}` : `할인 ${j.unit === "R" ? j.value + "%" : "¥" + j.value}`}{j.kind === "cancel" ? "" : ` · ${md(j.start)}~${md(j.end)}`}</span>
                 {left !== null && left >= 0 && <span style={{ fontSize: 11, fontWeight: 800, color: left <= 2 ? "#dc2626" : C.inkLt }}>{left === 0 ? "오늘 종료" : `종료 D-${left}`}</span>}
                 <div style={{ flex: 1 }} /><span style={{ fontSize: 11, color: C.inkLt }}>{j.by}{j.by ? " · " : ""}{j.at}{j.result ? ` · ${j.result}` : ""}</span>
                 {j.status === "요청됨" && <button onClick={() => setJobs((p) => p.filter((y) => y.id !== j.id))} style={{ fontSize: 11, border: 0, background: "none", color: C.inkLt, cursor: "pointer" }}>취소</button>}
@@ -334,7 +335,11 @@ export default function GlobalSection({ C, Card }) {
               </div>
               <div>
                 <div style={{ fontSize: 12, fontWeight: 800, color: C.inkLt }}>큐텐에 지금 걸린 할인 {live.length} <span style={{ fontWeight: 500 }}>({qprod.updated ? md(qprod.updated.slice(0, 10)) + " " + qprod.updated.slice(11) : ""} 기준)</span></div>
-                {live.map((x) => <div key={x.gd_no} style={{ display: "flex", gap: 8, padding: "7px 0", borderTop: `1px solid ${C.border}`, fontSize: 13 }}><b style={{ flex: 1, color: C.ink }}>{x.name || x.jp}</b><span style={{ color: C.inkLt, textDecoration: "line-through" }}>¥{(+x.sell_price).toLocaleString()}</span><span style={{ fontWeight: 900, color: "#dc2626" }}>¥{(+x.final_price).toLocaleString()}</span><span style={{ fontSize: 11, color: C.inkLt }}>{x.discount_end_dt ? "~" + String(x.discount_end_dt).slice(5, 10).replace("-", "/") : ""}</span></div>)}
+                {live.map((x) => <div key={x.gd_no} style={{ display: "flex", gap: 8, alignItems: "center", padding: "7px 0", borderTop: `1px solid ${C.border}`, fontSize: 13 }}><b style={{ flex: 1, color: C.ink }}>{x.name || x.jp}</b><span style={{ color: C.inkLt, textDecoration: "line-through" }}>¥{(+x.sell_price).toLocaleString()}</span><span style={{ fontWeight: 900, color: "#dc2626" }}>¥{(+x.final_price).toLocaleString()}</span><span style={{ fontSize: 11, color: C.inkLt }}>{x.discount_end_dt ? "~" + String(x.discount_end_dt).slice(5, 10).replace("-", "/") : ""}</span>
+                  {(jobs || []).some((j) => j.kind === "cancel" && j.gdno === x.gd_no && ["요청됨", "적용 중"].includes(j.status)) ? <span style={{ fontSize: 11, fontWeight: 800, color: "#92400e" }}>끄는 중</span>
+                    : offAsk === x.gd_no ? <><button onClick={() => { setOffAsk(""); setJobs((p) => [{ id: "j" + Date.now(), kind: "cancel", gdno: x.gd_no, name: x.name || x.jp, cur: x.sell_price, start: today, end: today, by: who || "", status: "요청됨", at: new Date(Date.now() + 9 * 36e5).toISOString().slice(0, 16).replace("T", " ") }, ...(p || [])]); }} style={{ fontSize: 11, fontWeight: 900, border: 0, borderRadius: 20, padding: "2px 9px", cursor: "pointer", background: "#dc2626", color: "#fff" }}>정말 끄기</button><button onClick={() => setOffAsk("")} style={{ fontSize: 11, border: 0, background: "none", color: C.inkLt, cursor: "pointer" }}>아니요</button></>
+                    : <button onClick={() => setOffAsk(x.gd_no)} style={{ fontSize: 11, fontWeight: 800, border: `1px solid ${C.border}`, borderRadius: 20, padding: "2px 9px", cursor: "pointer", background: C.white, color: C.inkMid }}>할인 끄기</button>}
+                </div>)}
                 {!live.length && <div style={{ fontSize: 13, color: C.inkLt, padding: "6px 0" }}>지금 할인 중인 상품이 없어요.</div>}
               </div>
             </div>);
