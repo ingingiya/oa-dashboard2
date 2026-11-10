@@ -47,17 +47,30 @@ async function mcpQuery(sql, tries = 3) {
     } catch (e) { if (i >= tries) throw e; await new Promise((r) => setTimeout(r, 2000 * i)); }
   }
 }
-async function erpLive(q) {
+async function erpLive(q, codes, pkg) {
   const k = String(q || '').replace(/['"\\%_;]/g, '').trim().slice(0, 40); if (!k) return [];
-  const rows = await mcpQuery(`SELECT \`제품ID\`,\`제품명\`,\`제품코드\`,\`제품유형\`,\`판매상태\`,\`구매단가(원)\` AS cost,\`패키지가로\`,\`패키지세로\`,\`패키지높이\`,\`무게\` FROM v_product WHERE \`제품명\` LIKE '%${k}%' OR \`제품코드\` LIKE '%${k}%' ORDER BY (\`판매상태\`='단종'), (\`제품유형\`<>'본품'), \`제품명\` LIMIT 20`);
+  // 원가 = 월별 재고 원가(v_purchase_stock_cost_monthly) 제품별 최신 연월의 적용단가, 0이면 v_product 구매단가(원)
+  const rows = await mcpQuery(`SELECT p.\`제품ID\` AS pid, p.\`제품명\` AS nm, p.\`제품코드\` AS code, p.\`제품유형\` AS typ, p.\`판매상태\` AS st, p.\`구매단가(원)\` AS buy,
+    p.\`패키지가로\` AS w, p.\`패키지세로\` AS l, p.\`패키지높이\` AS h, p.\`무게\` AS kg,
+    (SELECT c.\`적용단가\` FROM v_purchase_stock_cost_monthly c WHERE c.\`제품ID\`=p.\`제품ID\` ORDER BY c.\`연월\` DESC LIMIT 1) AS cost,
+    (SELECT c.\`연월\` FROM v_purchase_stock_cost_monthly c WHERE c.\`제품ID\`=p.\`제품ID\` ORDER BY c.\`연월\` DESC LIMIT 1) AS ym
+    FROM v_product p WHERE (p.\`제품명\` LIKE '%${k}%' OR p.\`제품코드\` LIKE '%${k}%') AND p.\`브랜드\`='오아'
+    ORDER BY (p.\`판매상태\`='단종'), (p.\`제품유형\`<>'본품'), p.\`제품명\` LIMIT 20`);
   const f = (v) => (v === null || v === undefined || v === '' ? null : Number(v));
-  return rows.map((r) => ({ productId: r['제품ID'], name: r['제품명'], productCode: r['제품코드'], productType: r['제품유형'], status: r['판매상태'], cost: Math.round(f(r.cost) || 0), yearMonth: '전산', merchandiseCode: null,
-    weightKg: f(r['무게']), widthCm: f(r['패키지가로']), lengthCm: f(r['패키지세로']), heightCm: f(r['패키지높이']), packageSuspect: false }));
+  const pm = new Map((pkg?.rows || []).map((r) => [r.productCode, r]));
+  const cm = new Map(String(codes?.map || '').split(',').filter(Boolean).map((x) => x.split(':')));
+  return rows.map((r) => { const sp = pm.get(r.code) || {}; const cost = f(r.cost) || f(r.buy) || 0; return {
+    productId: r.pid, name: r.nm, productCode: r.code, productType: r.typ, status: r.st, cost: Math.round(cost), yearMonth: f(r.cost) ? r.ym : '구매단가',
+    merchandiseCode: cm.get(String(r.pid)) || null,
+    weightKg: f(r.kg) ?? sp.weightKg ?? null, widthCm: f(r.w) ?? sp.widthCm ?? null, lengthCm: f(r.l) ?? sp.lengthCm ?? null, heightCm: f(r.h) ?? sp.heightCm ?? null,
+    packageSuspect: !!sp.suspect }; });
 }
 async function erpSearch(q) {
   const needle = String(q || '').trim().toLowerCase(); if (!needle) return [];
   const [cost, pkg, codes] = await Promise.all([readKey('erp_cost', null), readKey('erp_package', null), readKey('erp_codes', null)]);
-  if (!cost || !Array.isArray(cost.rows)) return erpLive(q);
+  // 전산 실시간 우선, 실패(전산 연결 끊김)하면 동욱님 스냅샷(qm_erp_cost)
+  try { const live = await erpLive(q, codes, pkg); if (live.length) return live; } catch (e) { /* fall back */ }
+  if (!cost || !Array.isArray(cost.rows)) throw new Error('전산 연결이 안 되고 원가 스냅샷도 없습니다.');
   const pm = new Map((pkg?.rows || []).map((r) => [r.productCode, r]));
   const cm = new Map(String(codes?.map || '').split(',').filter(Boolean).map((p) => p.split(':')));
   return cost.rows.filter((r) => r.name.toLowerCase().includes(needle))
@@ -75,7 +88,7 @@ export async function GET(req, ctx) {
     if (p === 'qoo10-manual-codes') return J(await readItems('qoo10_manual_codes'));
     if (p === 'qoo10-sheet-codes') return J({ items: {} });
     if (p === 'erp/products') {
-      try { const cost = await readKey('erp_cost', null); return J({ products: await erpSearch(new URL(req.url).searchParams.get('q')), snapshot: cost ? { asOf: cost.asOf, rowCount: cost.rowCount, source: cost.source } : { asOf: '실시간', source: '전산 v_product (구매단가·패키지)' } }); }
+      try { const cost = await readKey('erp_cost', null); return J({ products: await erpSearch(new URL(req.url).searchParams.get('q')), snapshot: { asOf: '실시간 (실패 시 ' + (cost?.asOf || '').slice(0, 10) + ' 스냅샷)', rowCount: cost?.rowCount, source: '전산 월별 재고 원가(적용단가) + 제품 패키지' } }); }
       catch (e) { return J({ error: 'ERP 원가 조회 실패: ' + e.message }, 502); }
     }
     return J({ error: 'Not found' }, 404);
