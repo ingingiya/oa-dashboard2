@@ -1,0 +1,185 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>큐텐 영상에서 배운 것</title>
+<style>
+:root{--ink:#1e1518;--wine:#7a2740;--rose:#e0718f;--pink:#fde7ed;--cream:#fff9f5;--grey:#8a7a7e;--ok:#2e7d4f;--ng:#b3261e;--gold:#b58a3c}
+*{box-sizing:border-box}body{margin:0;background:var(--cream);color:var(--ink);font-family:-apple-system,"Hiragino Sans","Apple SD Gothic Neo","Noto Sans KR",sans-serif;line-height:1.5}
+.wrap{max-width:1060px;margin:0 auto;padding:48px 24px 90px}
+.kicker{color:var(--rose);letter-spacing:.3em;font-weight:800;font-size:14px}
+h1{font-size:54px;line-height:1.05;margin:6px 0 28px;font-weight:900;letter-spacing:-.02em}
+h1 em{font-style:normal;color:var(--wine)}
+h2{font-size:14px;letter-spacing:.3em;color:var(--rose);margin:46px 0 14px;font-weight:800}
+h2 small{color:var(--grey);letter-spacing:0;font-weight:600;margin-left:10px}
+.hero{display:grid;grid-template-columns:1.25fr 1fr 1fr;gap:18px}
+.hero>div{background:#fff;border-radius:14px;padding:28px 26px 22px;border:1px solid #f0d9e0;position:relative}
+.hero b{display:block;font-size:66px;line-height:.95;font-weight:900;color:var(--wine);letter-spacing:-.03em;white-space:nowrap}
+.hero b i{font-style:normal;font-size:24px;letter-spacing:0}
+.hero small{display:block;margin-top:12px;font-size:15px;color:var(--grey);line-height:1.5}
+.hero .tag{position:absolute;top:-12px;left:22px;background:var(--rose);color:#fff;font-weight:900;font-size:12px;letter-spacing:.15em;padding:4px 10px;border-radius:6px}
+.hero .big{background:var(--wine);color:#fff;border:0}.hero .big b,.hero .big small{color:#fff}.hero .big small{opacity:.9}
+/* 진단판 */
+.diag{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+.diag>div{background:#fff;border:1px solid #f0d9e0;border-radius:12px;padding:16px 18px}
+.diag b{display:block;font-size:34px;font-weight:900;line-height:1;color:var(--ink)}
+.diag .ng b{color:var(--ng)}.diag .ok b{color:var(--ok)}
+.diag span{display:block;font-size:13px;color:var(--grey);margin-top:6px}
+.diag em{font-style:normal;display:inline-block;font-size:11px;font-weight:900;letter-spacing:.1em;padding:1px 6px;border-radius:4px;margin-bottom:8px}
+.diag .ng em{background:#fde3e1;color:var(--ng)}.diag .ok em{background:#e3f3e9;color:var(--ok)}.diag .mid em{background:#fff1cc;color:#8a6a00}
+/* 보드 */
+.board{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
+.col{background:#fff;border-radius:14px;border:1px solid #f0d9e0;overflow:hidden}
+.col h3{margin:0;padding:16px 20px;font-size:20px;font-weight:900;background:var(--pink);color:var(--wine)}
+.col h3 span{display:block;font-size:12px;letter-spacing:.2em;color:var(--rose);font-weight:800;margin-bottom:2px}
+.col ol{list-style:none;margin:0;padding:8px 18px 14px;counter-reset:n}
+.col li{counter-increment:n;position:relative;padding:9px 0 9px 30px;border-bottom:1px dashed #efd8de;font-size:15px;line-height:1.45}
+.col li:last-child{border:0}
+.col li::before{content:counter(n);position:absolute;left:0;top:9px;width:22px;height:22px;border-radius:50%;background:var(--rose);color:#fff;font-size:12px;font-weight:900;text-align:center;line-height:22px}
+.col li b{font-weight:900}
+.col .free{display:inline-block;color:var(--ok);font-size:11px;font-weight:900;border:1.5px solid var(--ok);border-radius:4px;padding:0 5px;margin-left:6px;vertical-align:middle}
+.col .done{display:inline-block;color:var(--grey);font-size:11px;font-weight:900;border:1.5px solid #cbb;border-radius:4px;padding:0 5px;margin-left:6px;vertical-align:middle}
+/* 광고 계단 */
+.ladder{display:grid;grid-template-columns:repeat(4,1fr);gap:0;margin-top:6px;align-items:end}
+.step{background:#fff;border:1px solid #f0d9e0;border-radius:12px 12px 0 0;padding:18px 16px 14px;margin-right:-1px}
+.step:nth-child(1){height:165px}.step:nth-child(2){height:200px}.step:nth-child(3){height:235px}.step:nth-child(4){height:270px;background:var(--pink)}
+.step .n{font-size:12px;letter-spacing:.2em;color:var(--rose);font-weight:800}
+.step .name{font-size:19px;font-weight:900;margin:2px 0 6px}
+.step .price{font-size:24px;font-weight:900;color:var(--wine);line-height:1.1}
+.step .how{font-size:13px;color:var(--grey);margin-top:6px}
+.rail{height:6px;background:var(--wine);border-radius:0 0 6px 6px}
+.money{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-top:14px}
+.money div{background:#fff;border:1px solid #f0d9e0;border-radius:12px;padding:14px 18px}
+.money b{display:block;font-size:28px;font-weight:900;color:var(--wine);line-height:1}
+.money small{color:var(--grey);font-size:12.5px;display:block;margin-top:4px}
+/* 키워드 */
+table{width:100%;border-collapse:collapse;background:#fff;border-radius:12px;overflow:hidden;font-size:14.5px}
+th{text-align:left;font-size:11px;letter-spacing:.15em;color:var(--rose);padding:10px 14px;border-bottom:2px solid var(--ink)}
+td{padding:10px 14px;border-bottom:1px solid #f0dde3}
+td:first-child{font-weight:900}
+td.hot{color:var(--wine);font-weight:900}
+.yesno{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+.yesno>div{border-radius:14px;padding:20px 24px;border:1px solid #f0d9e0;background:#fff}
+.yesno h3{margin:0 0 10px;font-size:20px;font-weight:900}
+.yesno .no h3{color:var(--ng)}.yesno .yes h3{color:var(--ok)}
+.yesno li{margin:7px 0;font-size:15px}.yesno ul{margin:0;padding-left:20px}
+.line{position:relative;margin-top:30px;padding-top:34px}
+.line::before{content:"";position:absolute;left:0;right:0;top:12px;height:6px;background:linear-gradient(90deg,#f3c9d4,var(--wine));border-radius:6px}
+.marks{display:grid;grid-template-columns:repeat(6,1fr);gap:10px}
+.mark{position:relative;font-size:13.5px}
+.mark::before{content:"";position:absolute;top:-34px;left:0;width:18px;height:18px;border-radius:50%;background:#fff;border:5px solid var(--wine)}
+.mark b{display:block;font-size:17px;font-weight:900;color:var(--wine)}
+.mark span{display:block;color:var(--grey);font-size:12px;letter-spacing:.1em;font-weight:800;margin-bottom:4px}
+.foot{margin-top:46px;color:var(--grey);font-size:12.5px;border-top:1px solid #eed7dd;padding-top:14px}
+.foot a{color:var(--wine)}
+@media(max-width:860px){.hero,.board,.yesno,.marks,.diag,.money{grid-template-columns:1fr 1fr}.ladder{grid-template-columns:1fr 1fr}.step{height:auto!important}h1{font-size:40px}.hero b{font-size:52px}}
+@media(max-width:560px){.hero,.board,.yesno,.marks,.diag,.money,.ladder{grid-template-columns:1fr}}
+
+.sec{background:#fff;border:1px solid #f0d9e0;border-radius:14px;padding:22px 26px;margin-bottom:16px}
+.sec h3{margin:0 0 10px;font-size:21px;font-weight:900;color:var(--wine)}
+.sec h3 span{display:inline-block;background:var(--rose);color:#fff;font-size:11px;letter-spacing:.15em;padding:2px 8px;border-radius:5px;vertical-align:middle;margin-right:8px}
+.sec ul{margin:0;padding-left:20px;font-size:15px;line-height:1.55}
+.sec li{margin:5px 0}
+.sec .do{margin-top:12px;background:var(--pink);border-radius:10px;padding:10px 14px;font-size:14.5px}
+.sec .do b{color:var(--wine)}
+.warn{background:#fff4f2;border-color:#f3c7c0}.warn h3{color:var(--ng)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media(max-width:800px){.grid2{grid-template-columns:1fr}}
+</style></head><body><div class="wrap">
+<div class="kicker">큐텐 대학 영상 234편 (유튜브 자막) · 11/10 정독</div>
+<h1>글에는 없고 <em>영상에만</em> 있던 것.</h1>
+<p style="font-size:16px;color:var(--grey);margin:-10px 0 30px">세미나·강의 234편을 다 읽어서, <a href="index.html">한 장 요약</a>에 없던 룰·숫자·설정 함정만 모았습니다. 전부 영상에서 강사가 말한 내용이고, 추측은 없습니다. 원문은 <a href="digests/index.html">묶음별 요약 V1~V8</a>.</p>
+
+<h2>지금 당장 확인할 것 <small>잘못돼 있으면 돈이 새거나 자격을 잃음</small></h2>
+<div class="grid2">
+<div class="sec warn"><h3><span>확인</span>사업자번호 미입력 = 수수료에 부가세 10%</h3><ul>
+<li>QSM에 한국 사업자번호가 안 들어가 있으면 판매 수수료에 한국 부가세 10%가 추가로 붙음.</li>
+<li>oaworld 계정에 입력돼 있는지 확인 필요. (V8)</li></ul></div>
+<div class="sec warn"><h3><span>확인</span>신규 주문은 들어오자마자 발송예정일 입력</h3><ul>
+<li>新規注文·入金待ち·配送遅延 상태에선 고객이 판매자 승인 없이 즉시 취소 가능 → 그대로 취소율에 잡힘.</li>
+<li>発送予定日을 입력하는 순간 임의취소가 막힘. 예정일은 수정 불가.</li>
+<li>셀러가 직접 처리하는 취소는 전부 "판매자 사유"(클레임 −3점). 고객 사유 취소는 마이큐텐 요청 유도 또는 큐텐 문의로. (V1·V3)</li></ul></div>
+<div class="sec warn"><h3><span>확인</span>취소율 10%는 "건수"로 희석해야 함</h3><ul>
+<li>메가와리 자격 = 직전 분기 샵 전체 주문 1건 이상 + 취소율 10% 미만 + 페널티 없음. 상품별이 아니라 아이디 기준.</li>
+<li>10건 중 1건 취소면 바로 탈락. 미끼 저단가 상품 5~10개로 분모를 키우고, 재고는 확보분의 80%만 오픈. (V4·V6)</li></ul></div>
+<div class="sec warn"><h3><span>확인</span>배송 지연 페널티는 등록 때 적은 "발송가능일" 기준</h3><ul>
+<li>일반상품: 입금 +3영업일 메일, +5 경고(−2점), +6 판매·프로모션 정지(31일). 예약상품은 토일 포함이라 더 가혹.</li>
+<li>配送管理 그리드에 発送開始日 열을 추가해 보고, 고객 사유 지연은 큐텐 문의로 해제 요청 가능. (V1)</li></ul></div>
+</div>
+
+<h2>메가와리·메가포 룰 <small>글 요약보다 정확한 버전</small></h2>
+<div class="grid2">
+<div class="sec"><h3><span>룰</span>가격 모니터링 기간과 대상</h3><ul>
+<li>세일 시작 약 10일 전~3일 전, 1주일. 이 기간 "쿠폰 적용 전 판매가(기본가−할인설정)"를 종료까지 유지.</li>
+<li>대상: 판매가·옵션가·배송비 인상, 상품할인 축소, 타임세일·데일리딜·단골할인. <b>샵쿠폰·포인트는 대상 아님.</b></li>
+<li>위반 시 통지 없이 제외 + 그 회차 재참가 불가. 모니터링 종료~개시 사이엔 가격 변경 가능.</li></ul>
+<div class="do"><b>그래서</b> 프리메가(예고 기간) 기획은 샵쿠폰으로 하는 것이 정석. 메가와리 참가 상품엔 공동구매를 동시에 걸 수 없음.</div></div>
+<div class="sec"><h3><span>룰</span>메가포는 참가 조건이 없다</h3><ul>
+<li>메가포(연 8회)는 신규 셀러도 바로 참가. 메가와리만 직전 분기 실적 조건.</li>
+<li>메가포 TOP50 평균 2,600엔(메가와리 3,836엔) → 중저가 단품·신상품에 유리. 메가포는 메가와리의 테스트장(2~3배 vs 10~20배).</li>
+<li>쿠폰 1·2·3차 발행 첫날/마지막날에 광고 집중. 첫날 랭킹 진입이 기간 매출을 결정. (V5·V7·V8)</li></ul></div>
+<div class="sec"><h3><span>룰</span>쿠폰 적용 순서와 배송비</h3><ul>
+<li>아이템 쿠폰(메가포/메가와리) → 카트 쿠폰(샵쿠폰 + 큐텐 카트쿠폰 동시) → 잔액에 포인트. 메가 쿠폰과 큐텐 카트쿠폰은 중복 불가, 샵쿠폰만 전부 중복.</li>
+<li>조건부 쿠폰·메가포 할인·포인트백 전부 <b>배송비 제외 상품가</b> 기준. 카트쿠폰(¥3,000·¥10,000)은 큐텐 전액 부담.</li></ul>
+<div class="do"><b>그래서</b> 배송비를 상품가에 녹여 송료무료로 만들고 3,000엔 문턱에 맞출 것. 메가와리 셀러 부담 10%+시스템 이용료 1%+할인지원 수수료 0.5%를 처음 가격 설계에 반영.</div></div>
+<div class="sec"><h3><span>룰</span>랭킹은 두 종류</h3><ul>
+<li>통상 랭킹 = 직근 판매 + 서비스포인트, 1시간 갱신. 세일 중 랭킹 = 누적.</li>
+<li>티저 기간엔 사재기 대기로 999/1,999엔 끝수 저가 상품이 통상 랭킹에 쉽게 진입 → 1상품 랭킹 캡처를 서브이미지·SNS에 활용.</li>
+<li>리뷰수·팔로워수는 검색순위 직접 요소 아님. 최근 판매 건수가 핵심. (V2·V7)</li></ul></div>
+</div>
+
+<h2>광고 운용 숫자 <small>강사들이 실제로 쓴 세팅</small></h2>
+<div class="grid2">
+<div class="sec"><h3><span>광고</span>스마트세일즈: 전 상품 깔고 티저 때 올려라</h3><ul>
+<li>큐텐엔 CPC 광고가 없음. 스마트세일즈는 판매 시에만 수수료(5~30%, 할인 후 결제가 기준). 카트/즐겨찾기 담은 뒤 30일 내 결제분에 과금, 환불 시 광고비도 환불.</li>
+<li>경쟁사 상품 페이지 하단 "이런 상품은?"(최대 10)에도 노출. 샵쿠폰 있으면 그 10개 중 클릭 우위.</li>
+<li>수수료 11%면 상위 19%. 평시 5~15%, <b>메가 직전 1주일 20~30%</b>로 올려 적게 팔려도 첫날 랭킹 진입 → 캡처를 상세에 삽입.</li>
+<li>캠페인 삭제 불가. 종료일 없음으로 두고 ON/OFF. 1상품 1캠페인. (V2·V3·V5)</li></ul></div>
+<div class="sec"><h3><span>광고</span>키워드플러스(플러스전시): 입찰가 순, 선착순</h3><ul>
+<li>노출 순서는 입찰가 순(실적·리뷰 무관), 동가면 선착순. 전일 19:00~당일 17:50 입찰 → 18:00부터 24시간. 메가와리 첫날은 14:50 마감. 낙찰 실패 시 환불.</li>
+<li>빅워드 대신 서제스트 워드가 절반 가격(母の日 ¥1,200~2,500 vs 母の日ギフト ¥1,100~1,300). "韓国+카테고리" 조합은 420회/일에 100~200엔.</li>
+<li>1,000엔 메인 키워드보다 100엔 연관 키워드가 효율 좋았던 사례. 200~300엔이면 대부분 낙찰. 100엔 낙찰 가능 키워드는 파워랭크업 대신 플러스전시.</li>
+<li>파워랭크업(1일 100엔, 90일 9,000캐시)은 켰으면 끄지 말 것. 주력 2~3개. (V1·V2·V5·V6)</li></ul></div>
+<div class="sec"><h3><span>광고</span>광고는 "전략 상품 5~10개"에만</h3><ul>
+<li>한 상품코드에 옵션을 최대한 몰기(광고비 100엔 ÷ 옵션 10개). 메가포 TOP100 옵션 설정률 89%, 서브이미지 평균 14장, Q-only 43%.</li>
+<li>신규 셀러 조합 = 파워랭크업 + 스마트세일즈로 반응 상품 테스트 → Analytics "자세히 보기"에서 광고별·상품별 전환 확인 후 집중. 키워드플러스는 자리 잡은 뒤.</li>
+<li>AD Analytics(2026.2 오픈, 14일 어트리뷰션)로 광고별 ROAS 확인 가능. 원가 30%면 ROAS 333% 미만은 적자. (V2·V4·V8)</li></ul></div>
+<div class="sec"><h3><span>광고</span>타임세일 메뉴가 둘</h3><ul>
+<li>"광고 및 전시"(유료): 프리미엄 0~10시·10~17시 5,000캐시, 17~24시 6,000캐시(PV 최고), 데일리딜 3,000, 스탠더드 1,000. 3,000엔 이하 상품에 적합.</li>
+<li>"스페셜 할인 관리"(무료): 특집페이지 노출 전무. 팔로워 푸시쿠폰 예고와 묶어야 의미.</li>
+<li>유료 타임세일 5일 이상 연속 = 리뷰 시드 최적 수단(강사 의견). 고가 아이론은 검색형 + 공동구매. (V3·V4)</li></ul></div>
+</div>
+
+<h2>무료 설정 함정 <small>켜놓고도 안 보이는 이유</small></h2>
+<div class="grid2">
+<div class="sec"><h3><span>함정</span>팔로워 한정 샵쿠폰은 2단계</h3><ul>
+<li>쿠폰 생성(STEP1) 후 "쿠폰 응모 조건"을 기본 "전체" → "내 샵 즐겨찾기 고객만"으로 바꾸고 "초기화"를 눌러 フォローイベント에 연결(STEP2)해야 노출. 미완이 흔한 실수.</li>
+<li>메가 때 전원용(¥3,000/¥100)과 별도로 팔로워 한정 고할인(¥3,000/10%) → 팔로워 4.1배 사례. 발급시점+14일 유효로 두면 재발급 불필요.</li>
+<li>쿠폰푸시는 주 2회 무료(12월부터), 16상품, 10~22시 30분 단위 예약, 17시 이후·주말 권장. 발행만 한 주 대비 매출 4.6배. (V1·V5·V7)</li></ul></div>
+<div class="sec"><h3><span>함정</span>Q스페셜 기획전은 기본값이 "표시 안 함"</h3><ul>
+<li>경로: 기본정보 → 셀러샵관리 → 기획전관리. 배너 1440×676. "상품상세/셀러샵 표시 = 예"가 기본값이 아니오. 서브테마 미설정이면 상품이 안 뜸. 모바일 이미지는 1:1 또는 세로형 가운데 정렬. 3개월 자동 만료, 검색태그 20개.</li>
+<li>메가와리 기간 유입 경로 1위(평시 3위). 샵 메인으로 설정하면 샵쿠폰 버튼 최상단 강조. (V4·V8)</li></ul></div>
+<div class="sec"><h3><span>함정</span>검색 요소는 4개뿐</h3><ul>
+<li>상품명·검색워드(10개)·브랜드·카테고리. <b>홍보문구는 검색 안 됨.</b> 가격·送料無料·クーポン 문구는 "광고문" 란으로.</li>
+<li>브랜드 태그 쓰면 상품명에 브랜드 중복 금지(감점). 영문/가타카나 중복 금지. 상품명 앞 30자에 빅워드.</li>
+<li>소분류 "기타" 금지 → 검색량 큰 소분류로 변경해 판매 5배·2.5배 사례. 아날리틱스 검색어를 큐텐 검색창에 넣어 "나만 나오면 번역 오타".</li>
+<li>상품명·대표이미지 가이드 "적합(녹색)"은 판매 제한이 아니라 서치포인트 가산점. 상품 진단은 상품조회 → "판매중" 클릭해 1주 PV·판매량. (V1·V3·V4·V5·V6)</li></ul></div>
+<div class="sec"><h3><span>함정</span>리뷰 루틴</h3><ul>
+<li>샘플마켓: 매주 월 0시 오픈, 1회 3상품, 최소 30개, 응모 시 즐겨찾기 필수. 당선자 리뷰율 90%+, 포토 60%+. 대기 2~3개월.</li>
+<li>피드백 혜택은 구매확정/텍스트/포토 중 1개만, 25~50P, 설정 이전 주문 미지급. 리뷰 작성 기한 배송완료 후 30일. <b>판매자 댓글 기능 없음</b>(쪽지로).</li>
+<li>저평점 리뷰 주문번호 → "고객 보상" 쿠폰 엑셀 업로드. 리뷰 문구를 썸네일에 반영해 CVR +1%p 사례. 리뷰 작성률 기본 30%(샘플마켓 70%). (V3·V6·V7)</li></ul></div>
+</div>
+
+<h2>오아에 특히 해당되는 것</h2>
+<div class="grid2">
+<div class="sec"><h3><span>물류</span>韓ダッシュ(2025.7.22~)</h3><ul>
+<li>전 상품 페이지에 실적 기반 도착예정일이 자동 노출(한국발 7~9일). "빠르다" 인식은 3일 이내(51%).</li>
+<li>KSE·TracX 등 오피셜 오퍼레이터 창고 재고를 QSM에서 옵션별 한다시 재고로 설정하면 5일 도착 태그·메가와리 특집 하이라이트. 수수료 없음, 14시 전 주문 익일 선적, 택배만.</li>
+<li>배터리 제품(마사지건·무선 아이론)은 KSE 해상 배송 권장. 사업자명·주소를 배송사 등록정보와 토씨까지 일치시켜야 세관 지연 방지. (V1·V5·V7)</li></ul>
+<div class="do"><b>그래서</b> KSE 계약이 있는 오아는 QSM에서 韓ダッシュ 참가 신청 여부를 확인할 것.</div></div>
+<div class="sec"><h3><span>프로그램</span>메가데뷔·메가오시</h3><ul>
+<li>메가데뷔: 최근 1년 등록·연 1억 미만 브랜드, 매주 화 10시 4브랜드, 30% 쿠폰, 500만엔 상당 패키지. 7일 매출의 60~70%가 첫날 1시간 라이브 → 1개월 전부터 리뷰 축적. 현재 뷰티 공식샵 위주, 론칭 시 1회.</li>
+<li>메가오시: 3개월 독점 신제품 프로그램. 주목 브랜드 애드·뷰티 브랜드 애드(CPM) 2025 신규.</li>
+<li>처음 보는 브랜드는 1개·낮은 가격 단품으로 진입(2개 세트는 장벽) → 리뷰 쌓인 뒤 세트. 가전 1위 벤치마크 = 살루니아 스트레이트 고데기. (V8)</li></ul></div>
+</div>
+
+<div class="foot">출처: 큐텐 대학 유튜브 영상 234편 자막(2026-11-10 정독, 8묶음). 숫자·메뉴명은 전부 강사 발언 그대로. 자동 자막이라 세부 수치는 QSM 화면에서 한 번 더 확인할 것. 묶음별 원문 요약: <a href="digests/index.html">V1~V8</a> · <a href="index.html">한 장 요약</a> · <a href="detail.html">상세 보고서</a></div>
+</div></body></html>
