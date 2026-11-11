@@ -100,6 +100,7 @@ export default function GlobalSection({ C, Card }) {
   const [pfAsk, setPfAsk] = useState("");
   const [offAsk, setOffAsk] = useState(""); // 화면 안 확인 문구 (브라우저 confirm은 자동화 크롬에서 자동 취소됨)
   const [rk] = useShared("oa_global_qoo10_rank_v1", { updated: "", rows: [] });
+  const [crk] = useShared("oa_global_qoo10_cat_v1", { updated: "", names: {}, rows: [] });
   const [pv] = useShared("oa_global_qoo10_pv_v1", { items: {}, total: {} });
   const [mega, setMega] = useShared("oa_global_mega_plan_v1", { title: "2027 1회차 메가와리 안 (2/27~3/11) · 20% 쿠폰 · 큐텐 10% + 셀러 10% 반반", note: "11/10 접수. 최종가 = 쿠폰 적용 후 고객가(엔). 등록가 = 최종가 ÷ 0.8. 셀러 부담 = 쿠폰 10% + 시스템 이용료 1% + 할인지원 0.5% = 11.5%. 등록가는 모니터링(세일 약 10일 전~3일 전) 전에 맞출 것.", rows: [
     ["듀얼포그", 2960], ["뮤직씽크가습기", 3440], ["냉온진동클렌저", 3790], ["무선뿌리볼륨고데기5000", 4560], ["아이케어", 4720], ["온열찜질기", 4050], ["플랜티플렛", 7110], ["히트스팟S", 4500], ["물결고데기", 4990], ["볼륨업무선고데기", 3900], ["듀얼포켓건", 3300], ["무선고데기", 3890]].map(([n, f]) => ({ n, f })) });
@@ -224,6 +225,14 @@ export default function GlobalSection({ C, Card }) {
                 {un.map((x) => <div key={x.last.kw} style={{ fontSize: 13, padding: "3px 0", color: C.inkLt }}><b style={{ color: C.inkMid }}>{x.last.kw}</b>({KO[x.last.kw] || ""}) · {x.last.name}: {x.last.scanned}위 밖</div>)}</div>
               <div><div style={{ fontSize: 12, fontWeight: 900, color: C.inkMid, marginBottom: 6 }}>키워드플러스 광고 구좌 (검색 맨 위)</div>
                 {Object.keys(slots).sort((a, b) => a - b).map((k) => <div key={k} style={{ fontSize: 13, padding: "3px 0", color: C.ink }}><b style={{ color: "#1d4ed8", fontSize: 15 }}>{k}번째</b> · {slots[k].join(", ")}</div>)}</div>
+            </div>; })()}
+          {(() => { const rows = crk.rows || []; if (!rows.length) return null; const ct = crk.updated; const latest = rows.filter((r) => r.t === ct); const pts = [...new Set(rows.map((r) => r.t))].sort(); const pt = pts[pts.length - 2]; const prev = {}; for (const r of rows) if (r.t === pt) prev[r.cat] = r;
+            const by = {}; for (const r of latest) for (const [g, rank] of Object.entries(r.hits || {})) (by[g] ||= []).push({ cat: r.cat, rank, prev: prev[r.cat]?.hits?.[g] });
+            const list = Object.entries(by).map(([g, L]) => ({ g, name: crk.names?.[g] || g, L: L.sort((a, b) => a.rank - b.rank) })).sort((a, b) => a.L[0].rank - b.L[0].rank);
+            return <div style={{ margin: "0 0 14px", padding: "12px 14px", background: C.cream, borderRadius: 12 }}>
+              <div style={{ fontSize: 12, fontWeight: 900, color: C.inkMid, marginBottom: 6 }}>카테고리 랭킹 <span style={{ fontWeight: 600, color: C.inkLt }}>{ct ? `${md(ct.slice(0, 10))} ${ct.slice(11)} 기준` : ""} · 큐텐 카테고리 ランキング順 상위 200 안의 오아 상품 (광고 자리 제외)</span></div>
+              {list.map((x) => <div key={x.g} style={{ padding: "5px 0", borderTop: `1px dashed ${C.border}`, fontSize: 13 }}><b style={{ color: C.ink, marginRight: 8 }}>{x.name}</b>
+                {x.L.map((c) => <span key={c.cat} style={{ display: "inline-block", background: C.white, border: `1px solid ${C.border}`, borderRadius: 8, padding: "2px 8px", margin: "2px 6px 2px 0", fontSize: 12.5 }}>{c.cat} <b style={{ color: "#1d4ed8", fontSize: 14 }}>{c.rank}위</b>{c.prev && c.prev !== c.rank ? <span style={{ color: c.prev > c.rank ? "#16a34a" : "#dc2626", fontWeight: 800, marginLeft: 4 }}>{c.prev > c.rank ? "▲" : "▼"}{Math.abs(c.prev - c.rank)}</span> : null}</span>)}</div>)}
             </div>; })()}
           <div style={{ overflowX: "auto" }}><table style={{ width: "100%", borderCollapse: "collapse", marginTop: 8, fontSize: 13 }}>
             <thead><tr style={{ color: C.inkLt, fontSize: 11, textAlign: "left" }}>{["검색어", "상품", "지금", "변화", "광고 구좌", "추이", "검색/일", "입찰/일"].map((h) => <th key={h} style={{ padding: "6px 6px", borderBottom: `1px solid ${C.border}`, fontWeight: 800 }}>{h}</th>)}</tr></thead>
