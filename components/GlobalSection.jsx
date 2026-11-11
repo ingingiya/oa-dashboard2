@@ -88,6 +88,10 @@ export default function GlobalSection({ C, Card }) {
   const [hist, setHist] = useShared("oa_global_hist_v1", HISTORY);
   const [ads] = useShared("oa_global_ads_v1", ADS_SEED);
   const [goals, setGoals] = useShared("oa_global_goals_v1", GOALS_SEED);
+  const [mob] = useShared("oa_global_mobile_v1", { items: [] });
+  const [mobKey, setMobKey] = useState("shop");
+  const [isPhone, setIsPhone] = useState(false);
+  useEffect(() => { try { setIsPhone(/iPhone|Android|Mobile/i.test(navigator.userAgent)); } catch {} }, []);
   const [sales] = useShared("oa_global_qoo10_sales_v1", { updated: "", days: {}, products: [] });
   const [qprod] = useShared("oa_global_qoo10_products_v1", { updated: "", items: [] });
   const [jobs, setJobs] = useShared("oa_global_price_jobs_v1", []);
@@ -377,6 +381,31 @@ export default function GlobalSection({ C, Card }) {
       </div>
     );
   };
+  // 📱 모바일 큐텐: 폰에서 열면 m.qoo10.jp 실시간(iframe), PC는 큐텐이 PC화면으로 바꾸므로 아이폰으로 찍은 최신 화면(하루 5번 자동, ~/oa-qoo10-rank/mobile_shots.py)
+  const MobileQ = () => {
+    const items = (mob && mob.items) || []; const cur = items.find((x) => x.key === mobKey) || items[0];
+    return (
+      <Card style={{ padding: "16px 18px" }}>
+        <div style={{ display: "flex", alignItems: "baseline", gap: 10, flexWrap: "wrap" }}>
+          <span style={{ fontSize: 17, fontWeight: 900, color: C.ink }}>📱 모바일 큐텐 — 손님 폰 화면</span>
+          <span style={{ fontSize: 12, color: C.inkLt }}>{isPhone ? "실시간 (지금 큐텐 그대로)" : `아이폰으로 찍은 화면 · ${mob?.updated || "—"} 기준 · 폰으로 열면 실시간`}</span>
+        </div>
+        <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 10 }}>
+          {items.map((x) => <button key={x.key} onClick={() => setMobKey(x.key)} style={{ fontSize: 12, fontWeight: 700, padding: "5px 10px", borderRadius: 20, cursor: "pointer", border: `1px solid ${x.key === (cur && cur.key) ? C.rose : C.border}`, background: x.key === (cur && cur.key) ? C.rose : "#fff", color: x.key === (cur && cur.key) ? "#fff" : C.ink }}>{x.label}</button>)}
+        </div>
+        {cur ? <div style={{ display: "flex", gap: 16, marginTop: 12, flexWrap: "wrap", alignItems: "flex-start" }}>
+          <div style={{ width: 300, maxWidth: "100%", height: 600, border: "10px solid #141414", borderRadius: 36, overflow: "auto", background: "#fff" }}>
+            {isPhone ? <iframe src={cur.url} title={cur.label} style={{ width: "100%", height: "100%", border: 0 }} /> : <img src={cur.img} alt={cur.label} style={{ width: "100%", display: "block" }} />}
+          </div>
+          <div style={{ fontSize: 13, color: C.ink, lineHeight: 1.7, minWidth: 0, flex: 1 }}>
+            <div><b>{cur.label}</b></div>
+            <a href={cur.url} target="_blank" rel="noreferrer" style={{ color: C.rose, fontWeight: 700 }}>큐텐에서 바로 열기 ↗</a>
+            <div style={{ color: C.inkLt, marginTop: 6 }}>폰(아이폰·안드로이드)에서 이 대시보드를 열면 틀 안에 진짜 큐텐이 실시간으로 떠서 스크롤·검색이 됩니다. PC에서는 큐텐이 PC 화면으로 바꿔 버려서 최신 캡처를 보여줍니다.</div>
+          </div>
+        </div> : <div style={{ fontSize: 13, color: C.inkLt, marginTop: 10 }}>화면을 불러오는 중…</div>}
+      </Card>
+    );
+  };
   const Glance = () => {
     const oldest = waiting.filter((w) => w.sent).map((w) => daysSince(w.sent)).sort((a, b2) => b2 - a)[0];
     const toSend = waiting.filter((w) => w.status === "보낼 것").length;
@@ -396,6 +425,7 @@ export default function GlobalSection({ C, Card }) {
           <div style={{ marginTop: 12, fontSize: 14, color: C.ink, lineHeight: 1.6 }}><b>다음:</b> {jp.next}</div>
         </Card>
         {Mine()}
+        {MobileQ()}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(200px,1fr))", gap: 12 }}>
           <Tile k="첫 입고까지" v={jp.due ? dd(jp.due) : "—"} sub={jp.due ? `${jp.due.slice(5).replace("-", "/")} 목표 · USB 무선 5종` : "기한 미정"} warn={jp.due && -daysSince(jp.due) <= 14} go="jp" />
           <Tile k="답 기다리는 곳" v={`${waiting.filter((w) => w.status === "대기").length}곳`} sub={`${oldest != null ? `가장 오래 ${oldest}일째` : ""}${toSend ? ` · 보낼 것 ${toSend}건` : ""}`} warn={oldest >= 5 || toSend > 0} go="ops" />
