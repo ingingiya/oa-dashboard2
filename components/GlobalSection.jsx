@@ -400,6 +400,14 @@ export default function GlobalSection({ C, Card }) {
           <div style={{ fontSize: 13, color: C.ink, lineHeight: 1.7, minWidth: 0, flex: 1 }}>
             <div><b>{cur.label}</b></div>
             <a href={cur.url} target="_blank" rel="noreferrer" style={{ color: C.rose, fontWeight: 700 }}>큐텐에서 바로 열기 ↗</a>
+            <div style={{ marginTop: 10, padding: "10px 12px", border: `1px solid ${C.border}`, borderRadius: 10 }}>
+              <b>PC에서 실시간 모바일 큐텐 열기</b> — 받아서 더블클릭하면 크롬이 아이폰 모드 창으로 열립니다
+              <div style={{ display: "flex", gap: 8, marginTop: 6, flexWrap: "wrap" }}>
+                <a href="/global/mobile-qoo10/모바일큐텐_열기_맥.zip" download style={{ fontSize: 12, fontWeight: 800, color: "#fff", background: C.ink, borderRadius: 8, padding: "6px 12px", textDecoration: "none" }}>맥용 받기</a>
+                <a href="/global/mobile-qoo10/모바일큐텐_열기_윈도우.bat" download style={{ fontSize: 12, fontWeight: 800, color: "#fff", background: C.ink, borderRadius: 8, padding: "6px 12px", textDecoration: "none" }}>윈도우용 받기</a>
+              </div>
+              <div style={{ fontSize: 12, color: C.inkLt, marginTop: 6 }}>맥: 압축 풀고 처음 한 번은 파일 우클릭 → 열기 (보안 확인). 윈도우: "PC 보호" 창이 뜨면 추가 정보 → 실행. 크롬이 설치돼 있어야 합니다.</div>
+            </div>
             <div style={{ color: C.inkLt, marginTop: 6 }}>폰(아이폰·안드로이드)에서 이 대시보드를 열면 틀 안에 진짜 큐텐이 실시간으로 떠서 스크롤·검색이 됩니다. PC에서는 큐텐이 PC 화면으로 바꿔 버려서 최신 캡처를 보여줍니다.</div>
           </div>
         </div> : <div style={{ fontSize: 13, color: C.inkLt, marginTop: 10 }}>화면을 불러오는 중…</div>}
