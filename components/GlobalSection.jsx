@@ -101,6 +101,19 @@ export default function GlobalSection({ C, Card }) {
   const [offAsk, setOffAsk] = useState(""); // 화면 안 확인 문구 (브라우저 confirm은 자동화 크롬에서 자동 취소됨)
   const [rk] = useShared("oa_global_qoo10_rank_v1", { updated: "", rows: [] });
   const [crk] = useShared("oa_global_qoo10_cat_v1", { updated: "", names: {}, rows: [] });
+  const [seed, setSeed] = useShared("oa_global_seeding_v1", { steps: [
+    { t: "큐텐 샘플마켓 신청 (포켓건·미스트맥스)", sub: "매주 월 0시 오픈 · 1회 3상품 · 최소 30개 · 대기 2~3개월 → 지금 신청해야 12월" },
+    { t: "피드백 혜택 100P → 300P 상향", sub: "구매확정/텍스트/포토 중 1개만 · 설정 이전 주문 미지급" },
+    { t: "동봉 카드 제작", sub: "일본어 리뷰 안내 + 설명서 QR(oa-manual-jp) · 리뷰 요구 문구 ✕" },
+    { t: "구매 7일 뒤 미리뷰 고객 쿠폰 PUSH", sub: "주 2회 무료 · 10~22시 30분 단위 예약" },
+    { t: "기프팅 플랫폼 견적 2곳", sub: "무상 제공형 · 응모자 중 선정 · 파트너십 코드·2차 사용 동의 조건 포함" },
+    { t: "KSE 시딩 발송 (포켓건 배터리 사전 확인)", sub: "1인 1개 · 신고가액 1만엔 이하 · 국내배송 전환(12월) 전이면 +¥1,000/개" }],
+    products: [
+    { key: "gun", name: "듀얼포켓건", wave: "1차 · 12월", kw: "ミニマッサージガン / ハンディマッサージャー / 肩こり デスクワーク / 172g 軽量 / 持ち運び", scene: "데스크에서 승모근 3분 → 어깨 돌리기 전후 · 가방·파우치에서 꺼내는 장면 · 손바닥 사이즈 비교(스마트폰)", offer: "1차 72시간 ¥1,980 → 2차 ¥2,980 · 금 20시 쿠폰 PUSH 동시 · 랜딩 큐텐 1220487546 · 포그 세트(47265)", trust: "「PR」「提供：オア」 표기 · NG: 医療効果·治療·痛みが治る·比較広告(RELX 지칭) · 리뷰 작성 요구 ✕" },
+    { key: "mist", name: "듀얼미스트맥스", wave: "1차 · 12월 첫 주 (시즌)", kw: "卓上加湿器 コードレス / 分解洗浄 / デスク 加湿器 / 3色 / クリスマス ギフト", scene: "책상 위 미스트 나오는 장면(역광) · 분해 세척 컷 · 침대 옆 야간 무드 · 2색 세트 기프트 언박싱", offer: "¥1,980 → ¥2,980 · 2색 세트 ¥6,980 · 「クリスマス ギフト」 키워드 · 랜딩 큐텐 1220121273", trust: "「PR」 표기 · NG: 加湿量 과장·殺菌·ウイルス 표현 · 타사(LUMENA·ALISSA) 지칭 ✕" },
+    { key: "curler", name: "듀얼히팅뷰러", wave: "2차 · 1월 (2종 결과 후)", kw: "ホットビューラー / まつ毛カーラー / 一重 奥二重 / 時短メイク / 両面ヒーター", scene: "一重·奥二重 비포/애프터 · 아침 메이크업 時短 루틴 · 핑크 제품 클로즈업", offer: "¥999 원코인 → ¥1,480 → 2개 세트 ¥3,980 · 時短メイクセット", trust: "「PR」 표기 · NG: まつ毛が伸びる·育毛·火傷しない 단정 ✕" },
+    { key: "waterb", name: "클린이워터B", wave: "2차 · 1월", kw: "口腔洗浄器 携帯 / 矯正 インプラント / ご両親へのプレゼント / お歳暮", scene: "교정 장치 세척 장면 · 여행 파우치 · 부모님 선물 언박싱(OOR-006WHGIFT)", offer: "¥1,980 → ¥2,980 → 선물 패키지 ¥6,980 · UV 모델 상위 라인", trust: "「PR」 표기 · NG: 虫歯予防·歯周病 치료 효과 단정 ✕ (医療機器 표현 주의)" }],
+    creators: [] });
   const [pv] = useShared("oa_global_qoo10_pv_v1", { items: {}, total: {} });
   const [mega, setMega] = useShared("oa_global_mega_plan_v1", { title: "2027 1회차 메가와리 안 (2/27~3/11) · 20% 쿠폰 · 큐텐 10% + 셀러 10% 반반", note: "11/10 접수. 최종가 = 쿠폰 적용 후 고객가(엔). 등록가 = 최종가 ÷ 0.8. 셀러 부담 = 쿠폰 10% + 시스템 이용료 1% + 할인지원 0.5% = 11.5%. 등록가는 모니터링(세일 약 10일 전~3일 전) 전에 맞출 것.", rows: [
     ["듀얼포그", 2960], ["뮤직씽크가습기", 3440], ["냉온진동클렌저", 3790], ["무선뿌리볼륨고데기5000", 4560], ["아이케어", 4720], ["온열찜질기", 4050], ["플랜티플렛", 7110], ["히트스팟S", 4500], ["물결고데기", 4990], ["볼륨업무선고데기", 3900], ["듀얼포켓건", 3300], ["무선고데기", 3890]].map(([n, f]) => ({ n, f })) });
@@ -542,13 +555,71 @@ export default function GlobalSection({ C, Card }) {
       <Card style={{ padding: "10px 12px" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
           <div style={{ fontSize: 16, fontWeight: 900, color: C.ink, marginRight: 6 }}>🇯🇵 해외</div>
-          {[["glance", "한눈에"], ["jp", "일본 진행판"], ["ops", "인증·연락·할 일"], ["ads", "광고·순위"], ["price", "가격·행사"], ["margin", "마진 계산"], ["cal", "캘린더"], ["inf", "인플루언서"], ["hist", "한 일 기록"], ["calc", "판매가 계산"]].map(([k, l]) => <button key={k} onClick={() => setView(k)} style={{ fontSize: 13, fontWeight: 800, padding: "6px 12px", borderRadius: 20, cursor: "pointer", border: 0, background: view === k ? C.ink : "transparent", color: view === k ? "#fff" : C.inkMid }}>{l}</button>)}
+          {[["glance", "한눈에"], ["jp", "일본 진행판"], ["ops", "인증·연락·할 일"], ["ads", "광고·순위"], ["price", "가격·행사"], ["margin", "마진 계산"], ["cal", "캘린더"], ["inf", "인플루언서"], ["seed", "시딩"], ["hist", "한 일 기록"], ["calc", "판매가 계산"]].map(([k, l]) => <button key={k} onClick={() => setView(k)} style={{ fontSize: 13, fontWeight: 800, padding: "6px 12px", borderRadius: 20, cursor: "pointer", border: 0, background: view === k ? C.ink : "transparent", color: view === k ? "#fff" : C.inkMid }}>{l}</button>)}
           <div style={{ flex: 1 }} /><span style={{ fontSize: 12, color: C.inkLt }}>담당 김경은 · 조영서 · 차동욱</span>
         </div>
       </Card>
       {view === "glance" && Glance()}
       {view === "ads" && AdsView({})}
       {view === "price" && PriceView()}
+      {view === "seed" && (() => {
+        const S = seed; const setS = setSeed; const upd = (patch) => setS((p) => ({ ...p, ...patch }));
+        const SC = { "후보": ["#f3f4f6", "#374151"], "컨택": ["#fef3c7", "#92400e"], "수락": ["#dbeafe", "#1e40af"], "발송": ["#e0e7ff", "#3730a3"], "게시": ["#dcfce7", "#166534"], "코드받음": ["#dcfce7", "#166534"], "거절": ["#fee2e2", "#991b1b"] };
+        const rows = S.creators || []; const cnt = (st) => rows.filter((r) => r.status === st).length;
+        const sent = rows.filter((r) => ["발송", "게시", "코드받음"].includes(r.status)).length; const posted = rows.filter((r) => ["게시", "코드받음"].includes(r.status)).length;
+        const addRow = () => upd({ creators: [{ id: "c" + Date.now(), name: "", platform: "IG", handle: "", prod: S.products[0]?.key || "", status: "후보", url: "", code: "", memo: "" }, ...rows] });
+        const setRow = (id, patch) => upd({ creators: rows.map((r) => r.id === id ? { ...r, ...patch } : r) });
+        const inp = { fontSize: 12, padding: "4px 6px", border: `1px solid ${C.border}`, borderRadius: 6, background: C.white, width: "100%" };
+        const Sec = ({ t, sub, children }) => <Card style={{ padding: "14px 16px" }}><div style={{ fontSize: 14, fontWeight: 900, color: C.ink }}>{t}<span style={{ fontSize: 12, fontWeight: 600, color: C.inkLt, marginLeft: 8 }}>{sub}</span></div><div style={{ marginTop: 8 }}>{children}</div></Card>;
+        return <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          <Card style={{ padding: "14px 16px", background: C.ink, color: "#fff" }}>
+            <div style={{ fontSize: 15, fontWeight: 900 }}>큐텐 시딩 운영판 <span style={{ fontSize: 12, fontWeight: 600, opacity: .8 }}>상위권 기획 B안(포켓건·미스트맥스 먼저) · 리뷰는 샘플마켓, UGC는 외부 시딩으로 분리</span></div>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(5,1fr)", gap: 10, marginTop: 10 }}>
+              {[["후보", rows.length], ["컨택", cnt("컨택")], ["수락", cnt("수락")], ["발송", sent], ["게시", posted]].map(([k, v]) => <div key={k} style={{ background: "rgba(255,255,255,.08)", borderRadius: 10, padding: "8px 10px" }}><div style={{ fontSize: 24, fontWeight: 900 }}>{v}</div><div style={{ fontSize: 11, opacity: .8 }}>{k}</div></div>)}
+            </div>
+            <div style={{ fontSize: 12, marginTop: 8, opacity: .85 }}>게시율(발송→게시) <b>{sent ? Math.round(posted / sent * 100) : 0}%</b> · 목표 제품당 50명 · 판정은 매주 월요일</div>
+          </Card>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+            <Sec t="① 큐텐 리뷰 만들기" sub="샘플마켓 + 피드백 혜택 · 리뷰는 여기서만">
+              {(S.steps || []).map((s, i) => <label key={i} style={{ display: "flex", gap: 8, alignItems: "flex-start", fontSize: 13, padding: "5px 0", borderTop: i ? `1px dashed ${C.border}` : 0 }}><input type="checkbox" checked={!!s.done} onChange={(e) => upd({ steps: S.steps.map((x, j) => j === i ? { ...x, done: e.target.checked, at: e.target.checked ? today : "" } : x) })} /><span style={{ textDecoration: s.done ? "line-through" : "none", color: s.done ? C.inkLt : C.ink }}>{s.t}<span style={{ color: C.inkLt, fontSize: 11, marginLeft: 6 }}>{s.sub}{s.at ? ` · ${md(s.at)}` : ""}</span></span></label>)}
+            </Sec>
+            <Sec t="② 크리에이터 고르는 기준" sub="팔로워 수보다 아래 5개 (싱클리 가이드)">
+              {["최근 30~60일에 같은 카테고리 리뷰가 반복되는가", "댓글에 실제 사용 질문이 있는가 (이모지 반응만이면 ✕)", "과장 대신 사용 맥락을 설명하는가", "협찬(PR) 표기가 일관적인가", "큐텐·라쿠텐·아마존 구매 채널 언급이 자연스러운가"].map((t, i) => <div key={i} style={{ fontSize: 13, padding: "4px 0", color: C.ink }}><b style={{ color: C.rose, marginRight: 6 }}>{i + 1}</b>{t}</div>)}
+              <div style={{ fontSize: 12, color: C.inkLt, marginTop: 6 }}>계정 성격: 포켓건=데스크워커·러너 / 미스트맥스=데스크 인테리어 / 뷰러=一重·奥二重 메이크업 / 워터B=교정·임플란트</div>
+            </Sec>
+          </div>
+          <Sec t="③ 제품별 시딩 브리프" sub="검색어 → 상세·상품명에 먼저 반영, 그 다음 발송 (영상 표현과 상세가 다르면 전환 안 됨)">
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(2,1fr)", gap: 10 }}>
+              {(S.products || []).map((p, pi) => <div key={p.key} style={{ border: `1px solid ${C.border}`, borderRadius: 12, padding: "10px 12px", background: C.cream }}>
+                <div style={{ fontSize: 14, fontWeight: 900, color: C.ink }}>{p.name} <span style={{ fontSize: 11, color: C.inkLt }}>{p.wave}</span></div>
+                {[["검색어(일본어 표현)", "kw"], ["사용 장면·전후 비교", "scene"], ["구매 장치(쿠폰·랜딩)", "offer"], ["신뢰 장치(PR 표기·NG)", "trust"]].map(([l, k]) => <div key={k} style={{ marginTop: 6 }}><div style={{ fontSize: 11, fontWeight: 800, color: C.inkMid }}>{l}</div><textarea defaultValue={p[k]} onBlur={(e) => upd({ products: S.products.map((x, j) => j === pi ? { ...x, [k]: e.target.value } : x) })} rows={2} style={{ ...inp, resize: "vertical", fontFamily: "inherit", lineHeight: 1.4 }} /></div>)}
+              </div>)}
+            </div>
+          </Sec>
+          <Sec t="④ 크리에이터 리스트" sub="상태를 바꾸면 위 숫자·게시율이 자동 계산 · 코드 받으면 파트너십 광고로 바로 집행">
+            <button onClick={addRow} style={{ fontSize: 12, fontWeight: 800, border: 0, borderRadius: 20, padding: "5px 12px", cursor: "pointer", background: C.rose, color: "#fff", marginBottom: 8 }}>+ 크리에이터 추가</button>
+            <div style={{ overflowX: "auto" }}><table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
+              <thead><tr style={{ color: C.inkLt, fontSize: 11, textAlign: "left" }}>{["이름", "플랫폼", "핸들", "제품", "상태", "게시 URL", "광고 코드", "메모", ""].map((h) => <th key={h} style={{ padding: "4px 5px", borderBottom: `1px solid ${C.border}` }}>{h}</th>)}</tr></thead>
+              <tbody>{rows.map((r) => <tr key={r.id} style={{ borderBottom: `1px dashed ${C.border}` }}>
+                <td style={{ padding: 4, width: 110 }}><input defaultValue={r.name} onBlur={(e) => setRow(r.id, { name: e.target.value })} style={inp} /></td>
+                <td style={{ padding: 4, width: 70 }}><select value={r.platform} onChange={(e) => setRow(r.id, { platform: e.target.value })} style={inp}>{["IG", "TikTok", "YouTube", "Lemon8", "X"].map((o) => <option key={o}>{o}</option>)}</select></td>
+                <td style={{ padding: 4, width: 130 }}><input defaultValue={r.handle} onBlur={(e) => setRow(r.id, { handle: e.target.value })} style={inp} placeholder="@" /></td>
+                <td style={{ padding: 4, width: 110 }}><select value={r.prod} onChange={(e) => setRow(r.id, { prod: e.target.value })} style={inp}>{(S.products || []).map((p) => <option key={p.key} value={p.key}>{p.name}</option>)}</select></td>
+                <td style={{ padding: 4, width: 90 }}><select value={r.status} onChange={(e) => setRow(r.id, { status: e.target.value, at: today })} style={{ ...inp, fontWeight: 800, background: (SC[r.status] || SC["후보"])[0], color: (SC[r.status] || SC["후보"])[1], borderRadius: 20 }}>{Object.keys(SC).map((o) => <option key={o}>{o}</option>)}</select></td>
+                <td style={{ padding: 4 }}><input defaultValue={r.url} onBlur={(e) => setRow(r.id, { url: e.target.value })} style={inp} placeholder="https://" /></td>
+                <td style={{ padding: 4, width: 150 }}><input defaultValue={r.code} onBlur={(e) => setRow(r.id, { code: e.target.value })} style={inp} placeholder="adcode-…" /></td>
+                <td style={{ padding: 4 }}><input defaultValue={r.memo} onBlur={(e) => setRow(r.id, { memo: e.target.value })} style={inp} /></td>
+                <td style={{ padding: 4 }}><button onClick={() => upd({ creators: rows.filter((x) => x.id !== r.id) })} style={{ border: 0, background: "none", color: C.inkLt, cursor: "pointer" }}>✕</button></td>
+              </tr>)}</tbody></table></div>
+            {!rows.length && <div style={{ fontSize: 12, color: C.inkLt, padding: 8 }}>아직 없음. 기프팅 플랫폼 응모자나 직접 찾은 계정을 추가하세요.</div>}
+          </Sec>
+          <Sec t="⑤ 90일 판정 지표" sub="매주 월요일 · 매출보다 반복 가능한 공식 찾기">
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 8 }}>
+              {[["게시율", "발송 대비 게시 비율 · 60% 미만이면 선정 기준 재점검", `${sent ? Math.round(posted / sent * 100) : 0}%`], ["유효 댓글", "구매·사용감·배송 관련 댓글·DM 수 (이모지 제외)", "수기"], ["상세 유입", "큐텐 애널리틱스 상세 조회 (11/07 47 → 11/10 226)", "자동"], ["쿠폰 사용", "크리에이터별 쿠폰 코드 사용 패턴", "수기"], ["UGC 재활용", "상세·광고에 쓸 수 있는 컷 비율", "수기"], ["검색어 변화", "브랜드·제품명·효능 키워드 검색 순위 (순위 트래커)", "자동"]].map(([k, d, v]) => <div key={k} style={{ border: `1px solid ${C.border}`, borderRadius: 10, padding: "8px 10px" }}><div style={{ fontSize: 12, fontWeight: 900, color: C.ink }}>{k} <span style={{ color: "#1d4ed8" }}>{v}</span></div><div style={{ fontSize: 11, color: C.inkLt, marginTop: 2 }}>{d}</div></div>)}
+            </div>
+            <div style={{ fontSize: 12, color: C.inkMid, marginTop: 8, lineHeight: 1.5 }}>규제: 2023.10부터 ステマ는 景表法 위반. 브리프에 "자연스럽게 써주세요" 금지, 「PR」「提供」 표기 필수, 큐텐 리뷰 작성 요구 금지. 발송은 KSE 시딩 양식·1인 1개·신고가액 1만엔 이하(포켓건은 리튬 배터리라 KSE 사전 확인).</div>
+          </Sec>
+        </div>; })()}
       {view === "margin" && <Card style={{ padding: 0, overflow: "hidden" }}><div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 14px", borderBottom: `1px solid ${C.border}` }}><b style={{ fontSize: 14, color: C.ink }}>큐텐 마진 계산기</b><span style={{ fontSize: 12, color: C.inkLt }}>차동욱 님 제작 · 사내 마진계산기 엑셀 로직</span><div style={{ flex: 1 }} /><a href="/qoo10-margin/channel-margins.html?channel=Qoo10" target="_blank" rel="noreferrer" style={{ fontSize: 12, color: C.rose, fontWeight: 700 }}>새 창 ↗</a></div><iframe src="/qoo10-margin/channel-margins.html?channel=Qoo10" style={{ width: "100%", height: 1400, border: 0, display: "block" }} /></Card>}
       {view === "jp" && (
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(340px,1fr))", gap: 12 }}>
