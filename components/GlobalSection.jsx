@@ -35,6 +35,7 @@ const OPS_SEED = {
   ],
 };
 
+const KW_KO = { "ホットビューラー": "핫 뷰러", "ヘアアイロン": "헤어아이론", "ストレートアイロン": "스트레이트 아이론", "コードレスヘアアイロン": "무선 헤어아이론", "カールアイロン": "컬 아이론", "ホットアイマスク": "온열 아이마스크", "マッサージ器": "마사지기", "マッサージ": "마사지", "ストレートブラシ": "스트레이트 브러시", "ヒートブラシ": "히트 브러시", "ビューラー": "뷰러", "ハンディマッサージャー": "핸디 마사지기", "マッサージガン": "마사지건", "マッサージ機": "마사지기(機)", "ミニヘアアイロン": "미니 헤어아이론", "携帯ヘアアイロン": "휴대용 헤어아이론", "温熱アイマスク": "온열 아이마스크", "加湿器": "가습기", "卓上加湿器": "탁상 가습기", "口腔洗浄器": "구강세정기", "まつ毛カーラー": "속눈썹 컬러", "アイマスク": "아이마스크", "目元ケア": "눈가 케어" };
 const CAL_SEED = [
   { id: "c1", date: "2026-11-13", end: "", title: "큐텐 메가와리 4회차 신청 마감", kind: "행사", note: "우리는 자격 미달(7~9월 주문 0) → 불참. 행사 문구 「メガ割」 사용 금지" },
   { id: "c2", date: "2026-11-20", end: "2026-12-02", title: "큐텐 메가와리 4회차 (예상)", kind: "행사", note: "불참. 다음 회차 자격용 주문 이력 쌓기" },
@@ -227,7 +228,7 @@ export default function GlobalSection({ C, Card }) {
         </div>
         <Card style={{ padding: "14px 16px" }}>
           <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}><div style={{ fontSize: 15, fontWeight: 900, color: C.ink }}>큐텐 검색 순위</div><span style={{ fontSize: 12, color: C.inkLt }}>자연검색 순위 · 광고 구좌 노출 · 첫 기록(11/09 15:51)은 광고 시작 전</span><div style={{ flex: 1 }} /><a href="/m/qoo10" target="_blank" rel="noreferrer" style={{ fontSize: 12, color: C.rose, fontWeight: 700, marginRight: 10 }}>📱 모바일</a><a href="https://oa-qoo10-ads.vercel.app" target="_blank" rel="noreferrer" style={{ fontSize: 12, color: C.rose, fontWeight: 700 }}>리포트 ↗</a></div>
-          {(() => { const KO = { "ホットビューラー": "핫 뷰러", "ヘアアイロン": "헤어아이론", "ストレートアイロン": "스트레이트 아이론", "コードレスヘアアイロン": "무선 헤어아이론", "カールアイロン": "컬 아이론", "ホットアイマスク": "온열 아이마스크", "マッサージ器": "마사지기", "マッサージ": "마사지", "ストレートブラシ": "스트레이트 브러시", "ヒートブラシ": "히트 브러시", "ビューラー": "뷰러" };
+          {(() => { const KO = KW_KO;
             const ser = rankSeries(); const latest = ser.map((a) => ({ first: a[0], last: a[a.length - 1] })).filter((x) => x.last.t === rk.updated);
             const ranked = latest.filter((x) => x.last.rank).sort((a, b) => a.last.rank - b.last.rank); const un = latest.filter((x) => !x.last.rank);
             const slots = {}; for (const x of latest) if (x.last.ad) (slots[x.last.ad] ||= []).push(x.last.kw);
@@ -248,18 +249,18 @@ export default function GlobalSection({ C, Card }) {
                 {x.L.map((c) => <a key={c.cat} href={c.url || undefined} target="_blank" rel="noreferrer" title="큐텐 카테고리 ランキング順 열기" style={{ display: "inline-block", background: C.white, border: `1px solid ${C.border}`, borderRadius: 8, padding: "2px 8px", margin: "2px 6px 2px 0", fontSize: 12.5, color: C.ink, textDecoration: "none", cursor: c.url ? "pointer" : "default" }}>{c.cat} ↗ <b style={{ color: "#1d4ed8", fontSize: 14 }}>{c.rank}위</b>{c.prev && c.prev !== c.rank ? <span style={{ color: c.prev > c.rank ? "#16a34a" : "#dc2626", fontWeight: 800, marginLeft: 4 }}>{c.prev > c.rank ? "▲" : "▼"}{Math.abs(c.prev - c.rank)}</span> : null}</a>)}</div>)}
             </div>; })()}
           <div style={{ overflowX: "auto" }}><table style={{ width: "100%", borderCollapse: "collapse", marginTop: 8, fontSize: 13 }}>
-            <thead><tr style={{ color: C.inkLt, fontSize: 11, textAlign: "left" }}>{["검색어", "상품", "지금", "변화", "광고 구좌", "추이", "검색/일", "입찰/일"].map((h) => <th key={h} style={{ padding: "6px 6px", borderBottom: `1px solid ${C.border}`, fontWeight: 800 }}>{h}</th>)}</tr></thead>
-            <tbody>{ser.map((a) => { const last = a[a.length - 1], prev = a[a.length - 2]; const kw = (ads.kwplus?.items || []).find((x) => x.kw === last.kw); let ch = null; if (prev) { const p0 = prev.rank || prev.scanned + 1, p1 = last.rank || last.scanned + 1; ch = p0 - p1; } return (
+            <thead><tr style={{ color: C.inkLt, fontSize: 11, textAlign: "left" }}>{["검색어", "뜻", "지금", "변화", "광고 구좌", "추이", "검색/일", "입찰/일"].map((h) => <th key={h} style={{ padding: "6px 6px", borderBottom: `1px solid ${C.border}`, fontWeight: 800 }}>{h}</th>)}</tr></thead>
+            <tbody>{(() => { const G = {}; for (const a of ser) (G[a[a.length - 1].name] ||= []).push(a); const rkOf = (a) => a[a.length - 1].rank || a[a.length - 1].scanned + 1; const groups = Object.entries(G).map(([n, L]) => [n, L.sort((x, y) => rkOf(x) - rkOf(y))]).sort((x, y) => rkOf(x[1][0]) - rkOf(y[1][0])); return groups.flatMap(([n, L]) => [<tr key={"g" + n} style={{ background: C.cream }}><td colSpan={8} style={{ padding: "7px 6px", fontWeight: 900, color: C.ink, fontSize: 13 }}>{n} <span style={{ fontWeight: 600, color: C.inkLt, fontSize: 11 }}>검색어 {L.length}개 · 최고 {rkTxt(L[0][L[0].length - 1])}</span></td></tr>, ...L.map((a) => { const last = a[a.length - 1], prev = a[a.length - 2]; const kw = (ads.kwplus?.items || []).find((x) => x.kw === last.kw); let ch = null; if (prev) { const p0 = prev.rank || prev.scanned + 1, p1 = last.rank || last.scanned + 1; ch = p0 - p1; } return (
               <tr key={last.kw + last.gd} style={{ borderBottom: `1px solid ${C.border}` }}>
                 <td style={{ padding: "7px 6px", fontWeight: 700, color: C.ink }}>{last.kw}</td>
-                <td style={{ padding: "7px 6px", color: C.inkMid }}>{last.name}</td>
+                <td style={{ padding: "7px 6px", color: C.inkLt, fontSize: 12 }}>{KW_KO[last.kw] || ""}</td>
                 <td style={{ padding: "7px 6px", fontWeight: 900, color: last.rank && last.rank <= 40 ? "#16a34a" : last.rank ? C.ink : C.inkLt }}>{rkTxt(last)}</td>
                 <td style={{ padding: "7px 6px", fontWeight: 800, color: ch > 0 ? "#16a34a" : ch < 0 ? "#dc2626" : C.inkLt }}>{ch === null ? "—" : ch > 0 ? `▲${ch}` : ch < 0 ? `▼${-ch}` : "–"}</td>
                 <td style={{ padding: "7px 6px", color: last.ad ? C.rose : C.inkLt, fontWeight: 700 }}>{last.ad ? `광고 ${last.ad}번째` : `미노출 (구좌 ${last.adn})`}</td>
                 <td style={{ padding: "4px 6px" }}><Spark a={a} /></td>
                 <td style={{ padding: "7px 6px", color: C.inkMid }}>{kw ? kw.search.toLocaleString() : "—"}</td>
                 <td style={{ padding: "7px 6px", color: C.inkMid }}>{kw ? `¥${kw.bid.toLocaleString()}` : "—"}</td>
-              </tr>); })}</tbody></table></div>
+              </tr>); })]); })()}</tbody></table></div>
           {!ser.length && <div style={{ fontSize: 13, color: C.inkLt, padding: 12 }}>순위 기록이 아직 없어요.</div>}
           <div style={{ fontSize: 11, color: C.inkLt, marginTop: 8 }}>「N위 밖」= 검색 결과를 N개까지 내려봐도 없었음. 40위 안이면 초록. {ads.note}</div>
         </Card>
