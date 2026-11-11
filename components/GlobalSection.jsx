@@ -212,6 +212,18 @@ export default function GlobalSection({ C, Card }) {
         </div>
         <Card style={{ padding: "14px 16px" }}>
           <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}><div style={{ fontSize: 15, fontWeight: 900, color: C.ink }}>큐텐 검색 순위</div><span style={{ fontSize: 12, color: C.inkLt }}>자연검색 순위 · 광고 구좌 노출 · 첫 기록(11/09 15:51)은 광고 시작 전</span><div style={{ flex: 1 }} /><a href="/m/qoo10" target="_blank" rel="noreferrer" style={{ fontSize: 12, color: C.rose, fontWeight: 700, marginRight: 10 }}>📱 모바일</a><a href="https://oa-qoo10-ads.vercel.app" target="_blank" rel="noreferrer" style={{ fontSize: 12, color: C.rose, fontWeight: 700 }}>리포트 ↗</a></div>
+          {(() => { const KO = { "ホットビューラー": "핫 뷰러", "ヘアアイロン": "헤어아이론", "ストレートアイロン": "스트레이트 아이론", "コードレスヘアアイロン": "무선 헤어아이론", "カールアイロン": "컬 아이론", "ホットアイマスク": "온열 아이마스크", "マッサージ器": "마사지기", "マッサージ": "마사지", "ストレートブラシ": "스트레이트 브러시", "ヒートブラシ": "히트 브러시", "ビューラー": "뷰러" };
+            const ser = rankSeries(); const latest = ser.map((a) => ({ first: a[0], last: a[a.length - 1] })).filter((x) => x.last.t === rk.updated);
+            const ranked = latest.filter((x) => x.last.rank).sort((a, b) => a.last.rank - b.last.rank); const un = latest.filter((x) => !x.last.rank);
+            const slots = {}; for (const x of latest) if (x.last.ad) (slots[x.last.ad] ||= []).push(x.last.kw);
+            const before = (x) => x.first.t !== x.last.t ? ` (광고 전 ${x.first.rank ? x.first.rank + "위" : x.first.scanned + "위 밖"})` : "";
+            return <div style={{ display: "grid", gridTemplateColumns: "1.3fr 1fr", gap: 16, margin: "10px 0 14px", padding: "12px 14px", background: C.cream, borderRadius: 12 }}>
+              <div><div style={{ fontSize: 12, fontWeight: 900, color: C.inkMid, marginBottom: 6 }}>지금 위치 한눈에 · 자연검색 (좋은 순)</div>
+                {ranked.map((x) => <div key={x.last.kw} style={{ fontSize: 13, padding: "3px 0", color: C.ink }}><b>{x.last.kw}</b><span style={{ color: C.inkLt }}>({KO[x.last.kw] || ""})</span> · {x.last.name}: <b style={{ color: "#1d4ed8", fontSize: 15 }}>{x.last.rank}위</b><span style={{ color: C.inkLt, fontSize: 12 }}>{before(x)}</span></div>)}
+                {un.map((x) => <div key={x.last.kw} style={{ fontSize: 13, padding: "3px 0", color: C.inkLt }}><b style={{ color: C.inkMid }}>{x.last.kw}</b>({KO[x.last.kw] || ""}) · {x.last.name}: {x.last.scanned}위 밖</div>)}</div>
+              <div><div style={{ fontSize: 12, fontWeight: 900, color: C.inkMid, marginBottom: 6 }}>키워드플러스 광고 구좌 (검색 맨 위)</div>
+                {Object.keys(slots).sort((a, b) => a - b).map((k) => <div key={k} style={{ fontSize: 13, padding: "3px 0", color: C.ink }}><b style={{ color: "#1d4ed8", fontSize: 15 }}>{k}번째</b> · {slots[k].join(", ")}</div>)}</div>
+            </div>; })()}
           <div style={{ overflowX: "auto" }}><table style={{ width: "100%", borderCollapse: "collapse", marginTop: 8, fontSize: 13 }}>
             <thead><tr style={{ color: C.inkLt, fontSize: 11, textAlign: "left" }}>{["검색어", "상품", "지금", "변화", "광고 구좌", "추이", "검색/일", "입찰/일"].map((h) => <th key={h} style={{ padding: "6px 6px", borderBottom: `1px solid ${C.border}`, fontWeight: 800 }}>{h}</th>)}</tr></thead>
             <tbody>{ser.map((a) => { const last = a[a.length - 1], prev = a[a.length - 2]; const kw = (ads.kwplus?.items || []).find((x) => x.kw === last.kw); let ch = null; if (prev) { const p0 = prev.rank || prev.scanned + 1, p1 = last.rank || last.scanned + 1; ch = p0 - p1; } return (
