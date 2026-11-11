@@ -400,7 +400,7 @@ export default function GlobalSection({ C, Card }) {
               <div style={{ display: "flex", gap: 8, alignItems: "center", padding: "7px 0", borderTop: `1px solid ${C.border}`, fontSize: 13, flexWrap: "wrap" }}>
                 <span style={{ fontSize: 11, fontWeight: 800, background: bg, color: fg, borderRadius: 20, padding: "1px 8px" }}>{j.status}</span>
                 <b style={{ color: C.ink }}>{j.name}</b>
-                <span style={{ color: C.inkMid }}>{j.kind === "cancel" ? "할인 끄기" : j.mode === "price" ? `가격 변경 → ¥${(+j.price).toLocaleString()}` : `할인 ${j.unit === "R" ? j.value + "%" : "¥" + j.value}`}{j.kind === "cancel" ? "" : ` · ${md(j.start)}~${md(j.end)}`}</span>
+                <span style={{ color: C.inkMid }}>{j.kind === "cancel" ? "할인 끄기" : j.mode === "price" ? `가격 변경 → ¥${(+j.price).toLocaleString()}` : `할인 ${j.unit === "R" ? j.value + "%" : "¥" + j.value}`}{j.kind === "cancel" ? "" : ` · ${(j.start || "").replace(/-/g, "/")}~${(j.end || "").replace(/-/g, "/")}`}</span>
                 {left !== null && left >= 0 && <span style={{ fontSize: 11, fontWeight: 800, color: left <= 2 ? "#dc2626" : C.inkLt }}>{left === 0 ? "오늘 종료" : `종료 D-${left}`}</span>}
                 <div style={{ flex: 1 }} /><span style={{ fontSize: 11, color: C.inkLt }}>{j.by}{j.by ? " · " : ""}{j.at}{j.result ? ` · ${j.result}` : ""}</span>
                 {j.status === "요청됨" && <button onClick={() => setJobs((p) => p.filter((y) => y.id !== j.id))} style={{ fontSize: 11, border: 0, background: "none", color: C.inkLt, cursor: "pointer" }}>취소</button>}
