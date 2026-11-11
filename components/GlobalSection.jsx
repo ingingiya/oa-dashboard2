@@ -449,7 +449,7 @@ export default function GlobalSection({ C, Card }) {
             <div><b>{cur.label}</b></div>
             <a href={cur.url} target="_blank" rel="noreferrer" style={{ color: C.rose, fontWeight: 700 }}>큐텐에서 바로 열기 ↗</a>
             <div style={{ marginTop: 10, padding: "10px 12px", border: `1px solid ${C.border}`, borderRadius: 10 }}>
-              <b>PC에서 실시간 모바일 큐텐 열기</b> — 받아서 더블클릭하면 크롬이 아이폰 모드 창으로 열립니다
+              <b>PC에서 실시간 모바일 큐텐 열기</b> — 받아서 더블클릭하면 크롬이 아이폰 모드 창으로 열리고 한국어로 자동번역됩니다
               <div style={{ display: "flex", gap: 8, marginTop: 6, flexWrap: "wrap" }}>
                 <a href="/global/mobile-qoo10/모바일큐텐_열기_맥.zip" download style={{ fontSize: 12, fontWeight: 800, color: "#fff", background: C.ink, borderRadius: 8, padding: "6px 12px", textDecoration: "none" }}>맥용 받기</a>
                 <a href="/global/mobile-qoo10/모바일큐텐_열기_윈도우.bat" download style={{ fontSize: 12, fontWeight: 800, color: "#fff", background: C.ink, borderRadius: 8, padding: "6px 12px", textDecoration: "none" }}>윈도우용 받기</a>
