@@ -100,6 +100,7 @@ export default function GlobalSection({ C, Card }) {
   const [pfAsk, setPfAsk] = useState("");
   const [offAsk, setOffAsk] = useState(""); // 화면 안 확인 문구 (브라우저 confirm은 자동화 크롬에서 자동 취소됨)
   const [rk] = useShared("oa_global_qoo10_rank_v1", { updated: "", rows: [] });
+  const [pv] = useShared("oa_global_qoo10_pv_v1", { items: {}, total: {} });
   const [mega, setMega] = useShared("oa_global_mega_plan_v1", { title: "2027 1회차 메가와리 안 (2/27~3/11) · 20% 쿠폰 · 큐텐 10% + 셀러 10% 반반", note: "11/10 접수. 최종가 = 쿠폰 적용 후 고객가(엔). 등록가 = 최종가 ÷ 0.8. 셀러 부담 = 쿠폰 10% + 시스템 이용료 1% + 할인지원 0.5% = 11.5%. 등록가는 모니터링(세일 약 10일 전~3일 전) 전에 맞출 것.", rows: [
     ["듀얼포그", 2960], ["뮤직씽크가습기", 3440], ["냉온진동클렌저", 3790], ["무선뿌리볼륨고데기5000", 4560], ["아이케어", 4720], ["온열찜질기", 4050], ["플랜티플렛", 7110], ["히트스팟S", 4500], ["물결고데기", 4990], ["볼륨업무선고데기", 3900], ["듀얼포켓건", 3300], ["무선고데기", 3890]].map(([n, f]) => ({ n, f })) });
   const upd = (list, id, p) => setOps((prev) => ({ ...prev, [list]: (prev[list] || []).map((x) => x.id === id ? { ...x, ...p } : x) }));
@@ -240,7 +241,33 @@ export default function GlobalSection({ C, Card }) {
           {!ser.length && <div style={{ fontSize: 13, color: C.inkLt, padding: 12 }}>순위 기록이 아직 없어요.</div>}
           <div style={{ fontSize: 11, color: C.inkLt, marginTop: 8 }}>「N위 밖」= 검색 결과를 N개까지 내려봐도 없었음. 40위 안이면 초록. {ads.note}</div>
         </Card>
+        {PvCard()}
       </div>
+    );
+  };
+  // 큐텐 상세페이지 조회(Analytics 일별) — 제목·광고 변경 전후 비교
+  const PvCard = () => {
+    const days = []; for (let i = 8; i >= 1; i--) days.push(new Date(Date.now() + 9 * 36e5 - i * 864e5).toISOString().slice(0, 10));
+    const its = Object.entries(pv.items || {}).map(([gd, x]) => ({ gd, ...x, sum: days.reduce((a, d) => a + ((x.d || {})[d]?.[0] || 0), 0) })).filter((x) => x.sum > 0).sort((a, b) => b.sum - a.sum).slice(0, 15);
+    const chg = (cal || []).filter((e) => e.kind === "광고" && /상품명|제목|키워드플러스|광고 시작|썸네일|홈/.test(e.title || "") && days.includes(e.date));
+    const marks = {}; for (const e of chg) (marks[e.date] ||= []).push(e.title);
+    const tot = pv.total || {}; const y = days[days.length - 1], b3 = days[days.length - 4];
+    const cell = (v, base) => <td style={{ padding: "6px 5px", textAlign: "right", fontWeight: v ? 800 : 400, color: v ? C.ink : C.inkLt, background: v && base != null && v > base * 1.5 && v >= 5 ? "#dcfce7" : "transparent" }}>{v || "·"}</td>;
+    return (
+      <Card style={{ padding: "14px 16px" }}>
+        <div style={{ display: "flex", alignItems: "baseline", gap: 8, flexWrap: "wrap" }}><div style={{ fontSize: 15, fontWeight: 900, color: C.ink }}>큐텐 상세페이지 조회 (일별)</div><span style={{ fontSize: 12, color: C.inkLt }}>큐텐 Analytics · 어제까지 · 하루 1번 갱신{pv.updated ? ` (${pv.updated.slice(5)})` : ""}</span></div>
+        <div style={{ display: "flex", gap: 16, marginTop: 8, fontSize: 13, color: C.inkMid, flexWrap: "wrap" }}>
+          <span>전체 어제 <b style={{ color: C.ink, fontSize: 16 }}>{tot[y]?.[0] || 0}</b> · 3일 전 {tot[b3]?.[0] || 0}</span>
+          <span>검색 유입 {tot[b3]?.[1] || 0} → <b style={{ color: C.ink }}>{tot[y]?.[1] || 0}</b></span>
+          <span>광고 유입 {tot[b3]?.[2] || 0} → <b style={{ color: C.ink }}>{tot[y]?.[2] || 0}</b></span>
+        </div>
+        <div style={{ overflowX: "auto" }}><table style={{ width: "100%", borderCollapse: "collapse", marginTop: 8, fontSize: 13 }}>
+          <thead><tr style={{ color: C.inkLt, fontSize: 11 }}><th style={{ textAlign: "left", padding: "6px 5px", borderBottom: `1px solid ${C.border}` }}>상품</th>{days.map((d) => <th key={d} title={(marks[d] || []).join("\n")} style={{ padding: "6px 5px", textAlign: "right", borderBottom: `1px solid ${C.border}`, color: marks[d] ? C.rose : C.inkLt }}>{d.slice(5).replace("-", "/")}{marks[d] ? " ●" : ""}</th>)}<th style={{ padding: "6px 5px", textAlign: "right", borderBottom: `1px solid ${C.border}` }}>3일 전→어제</th></tr></thead>
+          <tbody>{its.map((x) => { const d = x.d || {}; const a = d[b3]?.[0] || 0, z = d[y]?.[0] || 0; return (
+            <tr key={x.gd} style={{ borderBottom: `1px solid ${C.border}` }}><td style={{ padding: "6px 5px", fontWeight: 700, color: C.ink, whiteSpace: "nowrap" }}>{x.name}</td>{days.map((dd, i) => cell(d[dd]?.[0] || 0, i ? d[days[i - 1]]?.[0] || 0 : null))}<td style={{ padding: "6px 5px", textAlign: "right", fontWeight: 900, color: z > a ? "#16a34a" : z < a ? "#dc2626" : C.inkLt }}>{a} → {z}</td></tr>); })}</tbody>
+        </table></div>
+        <div style={{ fontSize: 11, color: C.inkLt, marginTop: 8, lineHeight: 1.6 }}>● = 그날 제목·광고 변경(해외 캘린더 기준, 날짜에 마우스를 올리면 내용) · 초록 칸 = 전날보다 1.5배↑ · 최근 8일 조회 많은 15개{chg.length ? <><br />{chg.map((e) => `${e.date.slice(5).replace("-", "/")} ${e.title}`).join(" · ")}</> : null}</div>
+      </Card>
     );
   };
   const Goals = () => {

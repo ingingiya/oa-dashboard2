@@ -29,6 +29,9 @@ export default function Qoo10Mobile() {
   const [rk] = useShared("oa_global_qoo10_rank_v1", { rows: [] });
   const [cr] = useShared("oa_global_qoo10_catrank_v1", { rows: [] });
   const [sales] = useShared("oa_global_qoo10_sales_v1", { days: {} });
+  const [pv] = useShared("oa_global_qoo10_pv_v1", { items: {}, total: {} });
+  const pvY = kst(1), pvB = kst(4);
+  const pvOf = (gd, d) => (pv.items?.[gd]?.d || {})[d]?.[0] || 0;
 
   const q = ads.qcash || {};
   const left = (q.start || 0) - (q.used || 0);
@@ -55,7 +58,7 @@ export default function Qoo10Mobile() {
           {[
             ["어제 판매", `${yQty}개`, `목표 하루 ${goal}개 · 오늘 ${tQty}개`, yQty >= goal ? C.green : C.ink],
             ["남은 Q캐시", left.toLocaleString(), `사용 ${(q.used || 0).toLocaleString()}`, C.ink],
-            ["키워드플러스", `${kwItems.length}건`, `하루 ¥${kwItems.reduce((a, x) => a + (x.bid || 0), 0).toLocaleString()}`, C.ink],
+            ["상세 조회 어제", `${(pv.total?.[pvY]?.[0]) || 0}`, `3일 전 ${(pv.total?.[pvB]?.[0]) || 0} · 키워드 광고 ${kwItems.length}건`, C.ink],
             ["광고 종료", dEnd == null ? "—" : dEnd >= 0 ? `D-${dEnd}` : "종료", (ads.kwplus?.end || "").slice(5).replace("-", "/"), dEnd != null && dEnd <= 2 ? C.rose : C.ink],
           ].map(([k, v, s, col]) => (
             <div key={k} style={{ background: C.card, borderRadius: 14, padding: "10px 12px" }}>
@@ -76,6 +79,7 @@ export default function Qoo10Mobile() {
               <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                 <div style={{ fontSize: 16, fontWeight: 900 }}>{name}</div>
                 <div style={{ flex: 1 }} />
+                <span style={{ fontSize: 12, color: C.mid, marginRight: 8 }}>조회 {pvOf(gd, pvB)} → <b style={{ color: pvOf(gd, pvY) > pvOf(gd, pvB) ? C.green : C.ink }}>{pvOf(gd, pvY)}</b></span>
                 <a href={`https://www.qoo10.jp/g/${gd}`} target="_blank" rel="noreferrer" style={{ fontSize: 11, color: C.lt, textDecoration: "none" }}>상품 ↗</a>
               </div>
 
@@ -118,7 +122,7 @@ export default function Qoo10Mobile() {
         })}
 
         <div style={{ fontSize: 11, color: C.lt, marginTop: 14, lineHeight: 1.6 }}>
-          카테고리 순위 = 큐텐 카테고리 페이지 &quot;ランキング順&quot;(광고 구좌 제외) · 검색 순위 = 자연검색 · 「N위 밖」은 N개까지 봐도 없음 · ▲▼는 직전 기록 대비 · 하루 5번 자동 갱신
+          카테고리 순위 = 큐텐 카테고리 페이지 &quot;ランキング順&quot;(광고 구좌 제외) · 검색 순위 = 자연검색 · 「N위 밖」은 N개까지 봐도 없음 · ▲▼는 직전 기록 대비 · 하루 5번 자동 갱신 · 조회 = 상세페이지 조회수(3일 전 → 어제)
         </div>
         <a href="/?sec=global" style={{ display: "block", textAlign: "center", marginTop: 14, fontSize: 13, color: C.blue, textDecoration: "none" }}>PC 대시보드로</a>
       </div>
