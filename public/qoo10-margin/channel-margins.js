@@ -131,7 +131,7 @@ let qooReg = {};
 if (isQoo) fetch('/api/qm/qoo10-registered').then(r => r.json()).then(d => { qooReg = d.items || {}; try { renderRows(); } catch {} }).catch(() => {});
 // 큐텐 등록 완료 상품은 상품명 앞에 상품코드(시트와 동일)를 붙여 보여준다
 let qooSheetCodes = {};
-const qooKey = v => String(v || '').replace(/[\s·\-_]/g, '').replace(/^오아/, '').toLowerCase();
+const qooKey = v => String(v || '').trim().replace(/^오아/, '').replace(/[\s·\-_]/g, '').toLowerCase();
 if (isQoo) fetch('/api/qm/qoo10-sheet-codes').then(r => r.json()).then(d => { qooSheetCodes = {}; Object.entries(d.items || {}).forEach(([k, v]) => { qooSheetCodes[qooKey(k)] = v; }); try { renderRows(); } catch {} }).catch(() => {});
 let qooManual = {};
 if (isQoo) fetch('/api/qm/qoo10-manual-codes').then(r => r.json()).then(d => { qooManual = d.items || {}; try { renderRows(); } catch {} }).catch(() => {});
@@ -145,7 +145,9 @@ function qooSheetCodeOf(row) {
 function qooCodeOf(row) { return qooManual[row.productId] || qooSheetCodeOf(row) || ''; }
 function qooCodeCell(row) {
   if (!isQoo) return '';
-  return `<input type="text" inputmode="numeric" data-qoo-code="${escapeHtml(row.productId)}" value="${escapeHtml(qooCodeOf(row))}" title="${qooManual[row.productId] ? '직접 입력한 값' : '시트 값'} · 수정하면 저장됩니다" placeholder="직접 입력" style="width:104px;padding:5px 7px;border:1px solid #d1d5db;border-radius:6px;font:inherit;font-size:12px">`;
+  const code = qooCodeOf(row);
+  const link = /^\d{9,10}$/.test(code) ? `<a href="https://www.qoo10.jp/g/${code}" target="_blank" rel="noopener" title="큐텐 상품 페이지 열기" style="margin-left:4px;text-decoration:none;font-size:13px">↗</a>` : '';
+  return `<span style="display:inline-flex;align-items:center;white-space:nowrap"><input type="text" inputmode="numeric" data-qoo-code="${escapeHtml(row.productId)}" value="${escapeHtml(code)}" title="${qooManual[row.productId] ? '직접 입력한 값' : code ? '큐텐 목록에서 자동 매칭' : ''} · 수정하면 저장됩니다" placeholder="직접 입력" style="width:104px;padding:5px 7px;border:1px solid #d1d5db;border-radius:6px;font:inherit;font-size:12px${!qooManual[row.productId] && code ? ';color:#2563eb' : ''}">${link}</span>`;
 }
 function qooRegBadge(row) {
   const date = qooReg[row.productId];
@@ -160,7 +162,7 @@ function renderRows() {
   $('#marginRows').innerHTML = rows.map(row => `<tr>
     <td><input type="checkbox" class="rowSel" data-id="${escapeHtml(row.id)}"${selectedRows.has(row.id)?' checked':''}></td>
     ${isQoo?`<td>${qooCodeCell(row)}</td>`:''}
-    <td><div class="marginProduct"><span class="productThumb">${escapeHtml((row.name||'P').slice(0,1))}</span><span><strong>${escapeHtml(row.name)}</strong><small>${escapeHtml(row.sku||'SKU 미입력')}${row.brand?` · ${escapeHtml(row.brand)}`:''}</small></span></div></td>
+    <td><div class="marginProduct"><span class="productThumb">${escapeHtml((row.name||'P').slice(0,1))}</span><span><strong data-copy-name="${escapeHtml(row.name)}" title="클릭하면 상품명 복사" style="cursor:copy">${escapeHtml(row.name)}</strong><small>${escapeHtml(row.sku||'SKU 미입력')}${row.brand?` · ${escapeHtml(row.brand)}`:''}</small></span></div></td>
     ${isQoo?`<td>${row.listingPriceJpy!=null&&Number.isFinite(row.listingPriceJpy)?`<span class="priceMain">${localMoney(Math.round(row.listingPriceJpy),'JPY')}</span>`:'-'}</td><td>${qooRegBadge(row)}</td>`:''}
     <td>${row.calculated?`<span class="priceMain">${localMoneyRed(row.salePrice,row.currency)}</span><span class="cellSub">${money(row.revenue)}</span>`:'<span class="cellSub">판매가 미설정</span>'}</td>
     <td>${row.calculated?money(row.productCost):'-'}</td>
@@ -265,7 +267,7 @@ function eventRowCells(row) {
   return [
     `<td><input type="checkbox" class="evSel" data-id="${escapeHtml(row.id)}"${evSelected.has(row.id)?' checked':''}></td>`,
     `<td>${qooCodeCell(row)}</td>`,
-    `<td><div class="marginProduct"><span class="productThumb">${escapeHtml((row.name||'P').slice(0,1))}</span><span><strong>${escapeHtml(row.name)}</strong><small>${escapeHtml(row.sku||'SKU 미입력')}${row.brand?` · ${escapeHtml(row.brand)}`:''}</small>${evMemoLine(row.id)}</span></div></td>`,
+    `<td><div class="marginProduct"><span class="productThumb">${escapeHtml((row.name||'P').slice(0,1))}</span><span><strong data-copy-name="${escapeHtml(row.name)}" title="클릭하면 상품명 복사" style="cursor:copy">${escapeHtml(row.name)}</strong><small>${escapeHtml(row.sku||'SKU 미입력')}${row.brand?` · ${escapeHtml(row.brand)}`:''}</small>${evMemoLine(row.id)}</span></div></td>`,
     `<td>${row.calculated ? `<span class="priceMain">${localMoney(row.salePrice,row.currency)}</span><span class="cellSub">${money(row.revenue)}</span>` : '<span class="cellSub">판매가 미설정</span>'}</td>`,
     `<td class="evInputCell">${row.calculated ? `<input type="number" class="evPrice" min="0" step="0.01" data-id="${escapeHtml(row.id)}" value="${has ? price : ''}" placeholder="행사가"><span class="cellSub evKrw">${ok ? money(ev.revenue) : ''}</span>${promoLine(ok ? ev : null)}${qpInput(row)}` : '-'}</td>`,
     `<td>${disc != null ? `${disc.toFixed(1)}%` : '-'}</td>`,
@@ -876,6 +878,16 @@ document.addEventListener('change', async e => {
     if (!r.ok) throw 0;
     qooManual = (await r.json()).items || {};
     document.querySelectorAll('[data-qoo-code]').forEach(o => { if (o !== el && o.dataset.qooCode === el.dataset.qooCode) o.value = el.value; });
+    try { renderRows(); } catch {} try { renderEvent(); } catch {}
     toast('상품코드를 저장했습니다.');
   } catch { toast('상품코드를 저장하지 못했습니다.'); }
+});
+
+// 상품명 클릭 → 클립보드 복사
+document.addEventListener('click', async e => {
+  const el = e.target.closest ? e.target.closest('[data-copy-name]') : null;
+  if (!el) return;
+  const t = el.dataset.copyName;
+  try { await navigator.clipboard.writeText(t); toast('상품명 복사: ' + t); }
+  catch { const r = document.createRange(); r.selectNodeContents(el); const sel = getSelection(); sel.removeAllRanges(); sel.addRange(r); toast('상품명을 선택했습니다. Ctrl+C로 복사하세요.'); }
 });
