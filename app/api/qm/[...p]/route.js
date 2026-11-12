@@ -89,9 +89,9 @@ export async function GET(req, ctx) {
     if (p === 'qoo10-sheet-codes') {
       // 큐텐 상품번호 자동 매칭: 해외 탭 QSM 동기화 목록(oa_global_qoo10_products_v1, 매시 갱신)의 상품명 → 상품번호
       const r = await fetch(`${URL_}/rest/v1/settings?key=eq.oa_global_qoo10_products_v1&select=value`, { headers: H, cache: 'no-store' });
-      const v = (await r.json())?.[0]?.value || {}; const items = {};
-      (v.items || []).forEach((x) => { const n = String(x.name || '').trim().replace(/_\d+$/, ''); if (n && x.gd_no) items[n] = String(x.gd_no); });
-      return J({ items, updated: v.updated || '' });
+      const v = (await r.json())?.[0]?.value || {}; const items = {}, jp = {};
+      (v.items || []).forEach((x) => { const n = String(x.name || '').trim().replace(/_\d+$/, ''); if (n && x.gd_no) items[n] = String(x.gd_no); if (x.gd_no && x.jp) jp[String(x.gd_no)] = String(x.jp).trim(); });
+      return J({ items, jp, updated: v.updated || '' });
     }
     if (p === 'erp/products') {
       try { const cost = await readKey('erp_cost', null); return J({ products: await erpSearch(new URL(req.url).searchParams.get('q')), snapshot: { asOf: '실시간 (실패 시 ' + (cost?.asOf || '').slice(0, 10) + ' 스냅샷)', rowCount: cost?.rowCount, source: '전산 월별 재고 원가(적용단가) + 제품 패키지' } }); }

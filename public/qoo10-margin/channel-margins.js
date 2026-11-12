@@ -132,7 +132,8 @@ if (isQoo) fetch('/api/qm/qoo10-registered').then(r => r.json()).then(d => { qoo
 // 큐텐 등록 완료 상품은 상품명 앞에 상품코드(시트와 동일)를 붙여 보여준다
 let qooSheetCodes = {};
 const qooKey = v => String(v || '').trim().replace(/^오아/, '').replace(/[\s·\-_]/g, '').toLowerCase();
-if (isQoo) fetch('/api/qm/qoo10-sheet-codes').then(r => r.json()).then(d => { qooSheetCodes = {}; Object.entries(d.items || {}).forEach(([k, v]) => { qooSheetCodes[qooKey(k)] = v; }); try { renderRows(); } catch {} }).catch(() => {});
+let qooJp = {};
+if (isQoo) fetch('/api/qm/qoo10-sheet-codes').then(r => r.json()).then(d => { qooJp = d.jp || {}; qooSheetCodes = {}; Object.entries(d.items || {}).forEach(([k, v]) => { qooSheetCodes[qooKey(k)] = v; }); try { renderRows(); } catch {} }).catch(() => {});
 let qooManual = {};
 if (isQoo) fetch('/api/qm/qoo10-manual-codes').then(r => r.json()).then(d => { qooManual = d.items || {}; try { renderRows(); } catch {} }).catch(() => {});
 function qooSheetCodeOf(row) {
@@ -143,6 +144,11 @@ function qooSheetCodeOf(row) {
   return code || '';
 }
 function qooCodeOf(row) { return qooManual[row.productId] || qooSheetCodeOf(row) || ''; }
+// 큐텐 일본어 상품명(QSM 등록명) — 상품번호로 찾아 클릭 복사
+function qooJpLine(row) {
+  const jp = isQoo ? qooJp[qooCodeOf(row)] : '';
+  return jp ? `<small data-copy-name="${escapeHtml(jp)}" title="클릭하면 일본어 상품명 복사" style="display:block;cursor:copy;color:#64748b;font-family:'Hiragino Sans','Hiragino Kaku Gothic ProN',sans-serif;max-width:260px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">🇯🇵 ${escapeHtml(jp)}</small>` : '';
+}
 function qooCodeCell(row) {
   if (!isQoo) return '';
   const code = qooCodeOf(row);
@@ -162,7 +168,7 @@ function renderRows() {
   $('#marginRows').innerHTML = rows.map(row => `<tr>
     <td><input type="checkbox" class="rowSel" data-id="${escapeHtml(row.id)}"${selectedRows.has(row.id)?' checked':''}></td>
     ${isQoo?`<td>${qooCodeCell(row)}</td>`:''}
-    <td><div class="marginProduct"><span class="productThumb">${escapeHtml((row.name||'P').slice(0,1))}</span><span><strong data-copy-name="${escapeHtml(row.name)}" title="클릭하면 상품명 복사" style="cursor:copy">${escapeHtml(row.name)}</strong><small>${escapeHtml(row.sku||'SKU 미입력')}${row.brand?` · ${escapeHtml(row.brand)}`:''}</small></span></div></td>
+    <td><div class="marginProduct"><span class="productThumb">${escapeHtml((row.name||'P').slice(0,1))}</span><span><strong data-copy-name="${escapeHtml(row.name)}" title="클릭하면 상품명 복사" style="cursor:copy">${escapeHtml(row.name)}</strong><small>${escapeHtml(row.sku||'SKU 미입력')}${row.brand?` · ${escapeHtml(row.brand)}`:''}</small>${qooJpLine(row)}</span></div></td>
     ${isQoo?`<td>${row.listingPriceJpy!=null&&Number.isFinite(row.listingPriceJpy)?`<span class="priceMain">${localMoney(Math.round(row.listingPriceJpy),'JPY')}</span>`:'-'}</td><td>${qooRegBadge(row)}</td>`:''}
     <td>${row.calculated?`<span class="priceMain">${localMoneyRed(row.salePrice,row.currency)}</span><span class="cellSub">${money(row.revenue)}</span>`:'<span class="cellSub">판매가 미설정</span>'}</td>
     <td>${row.calculated?money(row.productCost):'-'}</td>
@@ -267,7 +273,7 @@ function eventRowCells(row) {
   return [
     `<td><input type="checkbox" class="evSel" data-id="${escapeHtml(row.id)}"${evSelected.has(row.id)?' checked':''}></td>`,
     `<td>${qooCodeCell(row)}</td>`,
-    `<td><div class="marginProduct"><span class="productThumb">${escapeHtml((row.name||'P').slice(0,1))}</span><span><strong data-copy-name="${escapeHtml(row.name)}" title="클릭하면 상품명 복사" style="cursor:copy">${escapeHtml(row.name)}</strong><small>${escapeHtml(row.sku||'SKU 미입력')}${row.brand?` · ${escapeHtml(row.brand)}`:''}</small>${evMemoLine(row.id)}</span></div></td>`,
+    `<td><div class="marginProduct"><span class="productThumb">${escapeHtml((row.name||'P').slice(0,1))}</span><span><strong data-copy-name="${escapeHtml(row.name)}" title="클릭하면 상품명 복사" style="cursor:copy">${escapeHtml(row.name)}</strong><small>${escapeHtml(row.sku||'SKU 미입력')}${row.brand?` · ${escapeHtml(row.brand)}`:''}</small>${qooJpLine(row)}${evMemoLine(row.id)}</span></div></td>`,
     `<td>${row.calculated ? `<span class="priceMain">${localMoney(row.salePrice,row.currency)}</span><span class="cellSub">${money(row.revenue)}</span>` : '<span class="cellSub">판매가 미설정</span>'}</td>`,
     `<td class="evInputCell">${row.calculated ? `<input type="number" class="evPrice" min="0" step="0.01" data-id="${escapeHtml(row.id)}" value="${has ? price : ''}" placeholder="행사가"><span class="cellSub evKrw">${ok ? money(ev.revenue) : ''}</span>${promoLine(ok ? ev : null)}${qpInput(row)}` : '-'}</td>`,
     `<td>${disc != null ? `${disc.toFixed(1)}%` : '-'}</td>`,
