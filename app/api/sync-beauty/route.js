@@ -7,7 +7,8 @@ const SUPA_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const SUPA_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 const sH = { apikey: SUPA_KEY, Authorization: `Bearer ${SUPA_KEY}`, 'Content-Type': 'application/json' };
 
-const BEAUTY_CATS = ['DRY','STR','MSG','GVN','ETB','ORL','TBS','SCA','MUM'];
+// 2026-11-06: 이미용 카테고리 전체 → 플렌티플렛·프리온 두 제품만 (제품명 기준)
+const PRODUCT_PREFIXES = ['오아플렌티플렛%', '오아프리온%'];
 
 function getPool() {
   return mysql.createPool({
@@ -44,14 +45,14 @@ export async function GET(req) {
 
   try {
     // 1. beauty_sales (최근 14일)
-    const ph = BEAUTY_CATS.map(() => '?').join(',');
+    const nameCond = PRODUCT_PREFIXES.map(() => '제품명 LIKE ?').join(' OR ');
     const [salesRows] = await pool.query(`
       SELECT 제품명 as name, 카테고리코드 as cat_id, 매출처명 as channel,
         DATE(판매날짜) as date, SUM(판매수량) as qty, SUM(총매출액) as revenue, SUM(총매출이익) as profit
       FROM v_daily_sales_detail
-      WHERE 판매날짜 >= DATE_SUB(CURDATE(), INTERVAL 14 DAY) AND 카테고리코드 IN (${ph})
+      WHERE 판매날짜 >= DATE_SUB(CURDATE(), INTERVAL 14 DAY) AND (${nameCond})
       GROUP BY 제품명, 카테고리코드, 매출처명, DATE(판매날짜)
-    `, BEAUTY_CATS);
+    `, PRODUCT_PREFIXES);
     const salesData = salesRows.map(r => ({
       name: r.name, cat_id: r.cat_id, channel: r.channel || '',
       date: r.date instanceof Date ? r.date.toISOString().split('T')[0] : String(r.date),

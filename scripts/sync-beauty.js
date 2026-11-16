@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// 이미용 판매 데이터 MySQL → Supabase 동기화
+// 플렌티플렛·프리온 판매 데이터 MySQL → Supabase 동기화 (2026-11-06부터 두 제품만, 이전엔 이미용 카테고리 전체)
 // 실행: node scripts/sync-beauty.js
 // 크론: 매일 오전 7시 자동 실행
 
@@ -10,7 +10,8 @@ const MCP_TOKEN = '256f737e3a5ce9c35588c698ee84b38759c852ac56ce631507110d3f4229a
 const SUPA_URL = 'https://lugqeflqusqsyotdiaxg.supabase.co';
 const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx1Z3FlZmxxdXNxc3lvdGRpYXhnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMxOTkzMzksImV4cCI6MjA4ODc3NTMzOX0.ls7CN3iISLM_JcGEaVRV_JDSvm4BFqYMU6m4iBGiRA0';
 
-const BEAUTY_IDS = ['DRY','STR','MSG','GVN','ETB','ORL','TBS','SCA','MUM'];
+// 2026-11-06: 카테고리 전체 → 제품명 기준 두 제품만 (플렌티플렛4L=UHU, 프리온=STR)
+const PRODUCT_PREFIXES = ['오아플렌티플렛', '오아프리온'];
 // 기본 30일 (과거분은 이미 동기화됨). 백필: node scripts/sync-beauty.js --days 400
 const daysArg = process.argv.indexOf('--days');
 const SYNC_DAYS = daysArg > -1 ? Number(process.argv[daysArg + 1]) || 30 : 30;
@@ -36,7 +37,7 @@ async function mcpQuery(sql, limit = 200) {
 
 // MCP 서버가 결과를 200행으로 하드캡 → OFFSET 페이지네이션
 async function fetchBeautySales() {
-  const ids = BEAUTY_IDS.map(id => `'${id}'`).join(',');
+  const nameCond = PRODUCT_PREFIXES.map(n => `제품명 LIKE '${n}%'`).join(' OR ');
   const PAGE = 200;
   const all = [];
   for (let offset = 0; ; offset += PAGE) {
@@ -51,7 +52,7 @@ async function fetchBeautySales() {
         SUM(총매출이익) as profit
       FROM db_for_ai_sm.v_daily_sales_detail
       WHERE 판매날짜 >= DATE_SUB(CURDATE(), INTERVAL ${SYNC_DAYS} DAY)
-        AND 카테고리코드 IN (${ids})
+        AND (${nameCond})
       GROUP BY 제품명, 카테고리코드, 매출처명, DATE(판매날짜)
       ORDER BY date DESC, 제품명, 매출처명
       LIMIT ${PAGE} OFFSET ${offset}
@@ -100,7 +101,7 @@ async function upsertToSupabase(rows) {
 }
 
 async function main() {
-  console.log(`[${new Date().toLocaleString('ko-KR')}] 이미용 동기화 시작 (MCP 경유, 최근 ${SYNC_DAYS}일)`);
+  console.log(`[${new Date().toLocaleString('ko-KR')}] 플렌티플렛·프리온 동기화 시작 (MCP 경유, 최근 ${SYNC_DAYS}일)`);
   try {
     console.log('MySQL(MCP) 조회 중...');
     const rows = await fetchBeautySales();

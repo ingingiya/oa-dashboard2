@@ -9,7 +9,8 @@ import Anthropic from '@anthropic-ai/sdk';
 const SUPA_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const SUPA_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 const sH = { apikey: SUPA_KEY, Authorization: `Bearer ${SUPA_KEY}`, 'Content-Type': 'application/json' };
-const BEAUTY_CODES = ['DRY', 'STR', 'GVN', 'MUM'];
+// 2026-11-06: 플렌티플렛4L·프리온만 (제품명 기준)
+const PRODUCT_FILTER = 'or=(name.like.오아플렌티플렛4L*,name.like.오아프리온*)';
 const GROUPS = [['소닉플로우', ['소닉플로우']], ['갈바닉', ['갈바닉']], ['화장거울', ['거울']], ['고데기', ['고데기']], ['드라이기', ['드라이', '에어리']]];
 const groupOf = (n) => GROUPS.find(([, kws]) => kws.some(k => String(n || '').includes(k)))?.[0] || null;
 
@@ -37,7 +38,7 @@ export async function GET() {
 
     // 1. 판매: 전전달~지난달 이미용 매출 (그룹×월 집계)
     const sales = await fetchAll(
-      `${SUPA_URL}/rest/v1/beauty_sales?select=name,channel,date,qty,revenue,profit&date=gte.${d(firstPrev)}&date=lt.${d(firstThis)}&cat_id=in.(${BEAUTY_CODES.join(',')})`
+      `${SUPA_URL}/rest/v1/beauty_sales?select=name,channel,date,qty,revenue,profit&date=gte.${d(firstPrev)}&date=lt.${d(firstThis)}&${PRODUCT_FILTER}`
     );
     const agg = {}; // group -> {lastQty,lastRev,lastProfit,prevQty,prevRev}
     let tot = { lastRev: 0, prevRev: 0, lastProfit: 0, lastQty: 0, prevQty: 0 };

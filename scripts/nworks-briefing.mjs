@@ -3,14 +3,15 @@
 // 테스트: node nworks-briefing.mjs --dry-run
 import { kst, fmtW, supa, sendToChannel, sendImageToChannel, telegram, env } from './nworks-lib.mjs';
 
-const BEAUTY_CODES = ['DRY', 'STR', 'GVN', 'MUM']; // 드라이기, 고데기, 갈바닉, 화장거울
+// 2026-11-06: 동기화가 플렌티플렛4L·프리온만 → 집계도 제품명 기준 (cat_id 필터는 과거 행이 섞여 급락 오탐)
+const PRODUCT_FILTER = 'or=(name.like.오아플렌티플렛4L*,name.like.오아프리온*)';
 
 // ── 이미용 매출: 어제 vs 직전 7일 평균, 급등/급락(±40%)일 때만 라인
 async function beautyAnomaly(yday) {
   const by = {};
   // 날짜별 개별 조회 (Supabase 1,000행 제한)
   await Promise.all(Array.from({ length: 8 }, (_, i) => i + 1).map(async (d) => {
-    const rows = await supa(`beauty_sales?date=eq.${kst(d)}&cat_id=in.(${BEAUTY_CODES.join(',')})&select=revenue`);
+    const rows = await supa(`beauty_sales?date=eq.${kst(d)}&${PRODUCT_FILTER}&select=revenue`);
     by[kst(d)] = rows.reduce((s, r) => s + Number(r.revenue || 0), 0);
   }));
   const y = by[yday] || 0;
@@ -21,7 +22,7 @@ async function beautyAnomaly(yday) {
   if (y > 0 && avg > 0) {
     const dev = (y - avg) / avg;
     if (Math.abs(dev) >= 0.4)
-      line = `${dev > 0 ? '📈 이미용 매출 급등' : '📉 이미용 매출 급락'} — 어제 ${fmtW(y)} (7일 평균 ${fmtW(avg)}, ${dev > 0 ? '+' : ''}${Math.round(dev * 100)}%)`;
+      line = `${dev > 0 ? '📈 플렌티플렛·프리온 매출 급등' : '📉 플렌티플렛·프리온 매출 급락'} — 어제 ${fmtW(y)} (7일 평균 ${fmtW(avg)}, ${dev > 0 ? '+' : ''}${Math.round(dev * 100)}%)`;
   }
   return { line, missing: y === 0 };
 }
@@ -140,7 +141,7 @@ async function checkItems(beautyMissing, metaMissing) {
   const items = [];
   if (overdue) items.push(`마감 지난 가설 ${overdue}`);
   if (dueSoon) items.push(`마감 임박 가설 ${dueSoon}`);
-  if (beautyMissing) items.push('이미용 매출데이터 누락');
+  if (beautyMissing) items.push('플렌티플렛·프리온 매출데이터 누락');
   if (metaMissing) items.push('메타광고 데이터 누락');
   return items;
 }

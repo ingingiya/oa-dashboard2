@@ -12,7 +12,8 @@ const sH = {
 };
 
 // 이미용 카테고리 코드 (드라이기, 고데기, 갈바닉, 화장거울)
-const BEAUTY_CODES = ['DRY','STR','GVN','MUM'];
+// 2026-11-06: 플렌티플렛4L·프리온만 (제품명 기준)
+const PRODUCT_FILTER = 'or=(name.like.오아플렌티플렛4L*,name.like.오아프리온*)';
 
 // Supabase beauty_sales에서 최근 28일 이미용 데이터 조회 (매일 MySQL→Supabase 동기화됨)
 // Vercel에서 MySQL 직접 접속이 차단되어 있어 동기화 테이블 사용
@@ -29,7 +30,7 @@ async function fetchSalesData() {
   const PAGE = 1000;
   for (let offset = 0; offset < 50000; offset += PAGE) {
     const res = await fetch(
-      `${SUPA_URL}/rest/v1/beauty_sales?select=name,channel,date,qty,revenue&date=gte.${from28}&cat_id=in.(${BEAUTY_CODES.join(',')})&order=date.desc`,
+      `${SUPA_URL}/rest/v1/beauty_sales?select=name,channel,date,qty,revenue&date=gte.${from28}&${PRODUCT_FILTER}&order=date.desc`,
       { headers: { ...sH, Range: `${offset}-${offset + PAGE - 1}` }, cache: 'no-store' }
     );
     if (!res.ok) throw new Error(`판매 데이터 조회 실패: ${await res.text()}`);
@@ -433,7 +434,7 @@ async function computeStockAlerts() {
     return all;
   };
   const [erp, real] = await Promise.all([
-    fetchAll(`${SUPA_URL}/rest/v1/beauty_sales?select=name,date,qty&date=gte.${from28}&channel=eq.${encodeURIComponent('쿠팡')}&cat_id=in.(${BEAUTY_CODES.join(',')})`),
+    fetchAll(`${SUPA_URL}/rest/v1/beauty_sales?select=name,date,qty&date=gte.${from28}&channel=eq.${encodeURIComponent('쿠팡')}&${PRODUCT_FILTER}`),
     fetchAll(`${SUPA_URL}/rest/v1/channel_daily_sales?select=name,date,qty&date=gte.${from28}&channel=eq.${encodeURIComponent('쿠팡')}`),
   ]);
   if (!real.length) return []; // 실판매 데이터 없으면 판단 불가
