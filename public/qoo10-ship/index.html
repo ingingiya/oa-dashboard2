@@ -35,7 +35,17 @@ code{background:var(--soft);padding:1px 6px;border-radius:5px;font-size:13px}
 <h1>큐텐 발송 준비 (KSE 배대지)</h1>
 <div class="sub">큐텐 주문 파일을 넣으면 전산 업로드 엑셀·작업지시서·KSE 제품 발송 양식을 만들어요. 파일은 이 브라우저 안에서만 처리돼요 (서버로 안 보냄).</div>
 
-<h2>1. 큐텐 주문 파일 넣기</h2>
+
+<h2 style="margin-top:8px">⚡ 자동 실행 (오아 맥에서 처리)</h2>
+<div id="runbox" style="border:1px solid var(--line);border-radius:14px;padding:16px;background:var(--soft)">
+ <div class="row" style="margin:0"><button id="runbtn">큐텐 신규주문 발송 준비 실행</button><span id="runst" class="note"></span></div>
+ <p class="note" style="margin:8px 0 0">누르면 오아 맥이 순서대로 처리해요: 발송예정일 입력 → KSE 주문수집·통관점검·배송접수 → 송장 라벨 PDF → 전산 위탁 주문서 등록 → 마지막 주문에 작업지시서·PDF 첨부. 1분 안에 시작돼요. 맥이 켜져 있고 큐텐·전산이 로그인돼 있어야 해요.</p>
+ <div id="otpbox" class="hide" style="margin-top:12px;padding:12px;border-radius:10px;background:#fff7ed"><b>KSE OTP 필요</b> — 동욱님 인증 앱의 6자리를 넣어 주세요 (30초마다 바뀌어요)<div class="row"><input id="otp" type="text" inputmode="numeric" maxlength="6" style="width:110px;font-size:18px;letter-spacing:3px"><button id="otpbtn">보내기</button></div></div>
+ <ol id="runsteps" class="note" style="margin:10px 0 0;padding-left:18px"></ol>
+ <div id="runfiles" class="row"></div>
+</div>
+
+<h2>수동으로 할 때 · 1. 큐텐 주문 파일 넣기</h2>
 <p class="note">QSM → 배송관리 → <b>배송요청(상세보기)</b> → 신규주문 숫자 클릭 → <b>전체주문 엑셀다운</b> 한 파일 (csv·xlsx 모두 가능)</p>
 <div id="drop" class="drop"><b>여기에 파일을 끌어놓거나 클릭</b><div class="note">DeliveryManagement_detail_….csv</div><input id="file" type="file" accept=".csv,.xlsx,.xls" class="hide"></div>
 
@@ -145,5 +155,34 @@ $("b2").onclick=async()=>{
  const blob=await z.generateAsync({type:"blob"});const a=document.createElement("a");a.href=URL.createObjectURL(blob);
  a.download=`${ymd(d)}_큐텐_작업지시서_KSE 배대지.xlsx`;a.click();
 };
+
+// ---- 자동 실행 (settings oa_qoo10_ship_job_v1 ↔ 맥 run_ship.py) ----
+const SB="https://lugqeflqusqsyotdiaxg.supabase.co",SK="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx1Z3FlZmxxdXNxc3lvdGRpYXhnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMxOTkzMzksImV4cCI6MjA4ODc3NTMzOX0.ls7CN3iISLM_JcGEaVRV_JDSvm4BFqYMU6m4iBGiRA0",JK="oa_qoo10_ship_job_v1";
+const sh={apikey:SK,Authorization:"Bearer "+SK,"Content-Type":"application/json"};
+async function jget(){const r=await fetch(`${SB}/rest/v1/settings?key=eq.${JK}&select=value`,{headers:sh});const d=await r.json();return d?.[0]?.value||{}}
+async function jput(v){await fetch(`${SB}/rest/v1/settings`,{method:"POST",headers:{...sh,Prefer:"resolution=merge-duplicates"},body:JSON.stringify({key:JK,value:v,updated_at:new Date().toISOString()})})}
+const who=()=>{try{return localStorage.getItem("oa_board_me")||""}catch{return ""}};
+const esc=t=>String(t||"").replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));
+async function refresh(){
+ let v;try{v=await jget()}catch{return}
+ const j=v.job||{};const st=j.status||"대기";
+ const busy=["요청됨","진행 중","OTP 필요"].includes(st);
+ $("runbtn").disabled=busy;
+ $("runst").innerHTML=j.id?`<b>${st}</b> · ${esc(j.by)} ${esc((j.at||"").slice(5,16))}`:"";
+ $("otpbox").classList.toggle("hide",st!=="OTP 필요");
+ $("runsteps").innerHTML=(j.steps||[]).map(x=>`<li>${x.t} ${esc(x.m)}</li>`).join("");
+ const r=j.result||{};
+ $("runfiles").innerHTML=(r.files||[]).map(f=>`<a class="pill" href="${f.url}" target="_blank" rel="noreferrer">⬇ ${esc(f.name)}</a>`).join(" ")+(r.erp_order?` <span class="pill">전산 ${r.erp_order}</span>`:"");
+}
+$("runbtn").onclick=async()=>{
+ const v=await jget();const st=v.job?.status;
+ if(["요청됨","진행 중","OTP 필요"].includes(st))return alert("이미 실행 중이에요");
+ if(!confirm("큐텐 신규주문을 KSE 배송접수·전산 등록까지 실제로 처리해요. 실행할까요?"))return;
+ const hist=[...(v.history||[]),...(v.job?.id?[v.job]:[])].slice(-20);
+ await jput({...v,history:hist,job:{id:Date.now().toString(36),status:"요청됨",by:who()||"대시보드",at:new Date(Date.now()+9*3600e3).toISOString().replace("T"," ").slice(0,16),steps:[]}});
+ refresh();
+};
+$("otpbtn").onclick=async()=>{const c=$("otp").value.trim();if(!/^\d{6}$/.test(c))return alert("숫자 6자리");const v=await jget();if(v.job){v.job.otp=c;await jput(v);$("otp").value="";refresh()}};
+refresh();setInterval(refresh,4000);
 </script>
 </body></html>
