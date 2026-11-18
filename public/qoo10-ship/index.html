@@ -40,7 +40,7 @@ code{background:var(--soft);padding:1px 6px;border-radius:5px;font-size:13px}
 <div id="runbox" style="border:1px solid var(--line);border-radius:14px;padding:16px;background:var(--soft)">
  <div class="row" style="margin:0"><button id="runbtn">큐텐 신규주문 발송 준비 실행</button><span id="runst" class="note"></span></div>
  <p class="note" style="margin:8px 0 0">누르면 오아 맥이 순서대로 처리해요: 발송예정일 입력 → KSE 주문수집·통관점검·배송접수 → 송장 라벨 PDF → 전산 위탁 주문서 등록 → 마지막 주문에 작업지시서·PDF 첨부. 1분 안에 시작돼요. 맥이 켜져 있고 큐텐·전산이 로그인돼 있어야 해요.</p>
- <div id="otpbox" class="hide" style="margin-top:12px;padding:12px;border-radius:10px;background:#fff7ed"><b>KSE OTP 필요</b> — 동욱님 인증 앱의 6자리를 넣어 주세요 (30초마다 바뀌어요)<div class="row"><input id="otp" type="text" inputmode="numeric" maxlength="6" style="width:110px;font-size:18px;letter-spacing:3px"><button id="otpbtn">보내기</button></div></div>
+ <div id="otpbox" class="hide" style="margin-top:12px;padding:12px;border-radius:10px;background:#fff7ed"><b>KSE OTP 필요</b> — 경은님 휴대폰 인증 앱의 6자리를 넣어 주세요 (30초마다 바뀌어요)<div class="row"><input id="otp" type="text" inputmode="numeric" maxlength="6" style="width:110px;font-size:18px;letter-spacing:3px"><button id="otpbtn">보내기</button></div></div>
  <ol id="runsteps" class="note" style="margin:10px 0 0;padding-left:18px"></ol>
  <div id="runfiles" class="row"></div>
 </div>
@@ -72,7 +72,7 @@ code{background:var(--soft);padding:1px 6px;border-radius:5px;font-size:13px}
 <h2>4. 순서</h2>
 <ol class="steps">
  <li><b>큐텐 QSM</b> 배송관리 › 배송요청: 택배사 <b>KSE</b>, 수취인·주소·재고 확인 → <b>발송예정일</b> 입력 (KSE 입고·일본 출고까지 걸리니 넉넉하게, 한 번 넣으면 수정 불가) → 전체주문 엑셀다운 → 위 1번 칸에 넣기</li>
- <li><b>KSE</b> <a href="https://kseoms.com" target="_blank" rel="noreferrer">kseoms.com</a> (아이디 oaworld · OTP는 동욱님 인증 앱) → 배송접수(대기목록) › <b>주문수집(API)</b>: 마켓 qoo10_jp · 계정 큐텐일본 · 상태 배송준비 · 결제일 기간 → <b>주문서 가져오기(API)</b><br><span class="note">이미 가져온 주문은 다시 안 들어와요. 장바구니번호·주문번호·상품코드는 바꾸지 마세요 (중복 수집).</span></li>
+ <li><b>KSE</b> <a href="https://kseoms.com" target="_blank" rel="noreferrer">kseoms.com</a> (아이디 oaworld4 · OTP는 경은님 휴대폰 인증 앱) → 배송접수(대기목록) › <b>주문수집(API)</b>: 마켓 qoo10_jp · 계정 큐텐일본 · 상태 배송준비 · 결제일 기간 → <b>주문서 가져오기(API)</b><br><span class="note">이미 가져온 주문은 다시 안 들어와요. 장바구니번호·주문번호·상품코드는 바꾸지 마세요 (중복 수집).</span></li>
  <li><b>KSE</b> 수집된 주문 전체 체크 → <b>통관이슈예상점검</b> (1건 약 ¥16,666 초과·상업용 주소 경고) → 이상 없으면 <b>배송접수(국제)</b> → 배송관리 › <b>팩킹리스트</b> → 주문 체크 → 바코드 라벨(송장 PDF) 출력</li>
  <li><b>전산</b> 영업 › 주문 › <b>위탁 주문서 등록</b> › 등록: 내용 <code id="t2">YYMMDD_큐텐 발주</code> · 매출처 <code>큐텐 [795-81-01033]</code> · 정산명 <code>이베이재팬 유한회사(큐텐)</code> → <b>기본값</b> 클릭 → ① 파일 업로드 → 등록 → 확인창 <b>저장</b><br><span class="note">주문상품 칸은 <code>[M0156]오아아이케어-화이트</code> 형식이어야 전산이 상품을 찾아요 (① 파일은 이미 이 형식).</span></li>
  <li><b>전산</b> 영업 › 주문 › <b>위탁 주문</b>: 주문번호(B26…) ↔ 업체주문번호(큐텐 주문번호)·금액 맞는지 확인 → 목록 <b>맨 위(마지막) 주문 한 건</b>을 열어 주문 관련 파일 › 추가로 ② 작업지시서 + KSE 송장 PDF → <b>저장</b> (작업지시서 "우리 전산 이미지" 칸은 이 목록 캡처로 바꿔도 돼요). 송장 상태가 "배송 보류 [업체보류]" → "송장 신청"으로 바뀌면 창고 접수 완료</li>
