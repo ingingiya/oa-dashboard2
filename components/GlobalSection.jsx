@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import useShared, { me } from "./useShared";
 import { getSetting, setSetting } from "../lib/useSupabase";
+import GlobalBot from "./GlobalBot";
 
 const STAGES = ["조사", "후보 선정", "채널 개설", "상품 등록", "첫 판매", "운영 중"];
 const SEED = { countries: [
@@ -605,6 +606,7 @@ export default function GlobalSection({ C, Card }) {
   };
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+      <GlobalBot C={C} Card={Card} />
       <QooShipBar C={C} Card={Card} />
       {Goals()}
       <Card style={{ padding: "10px 12px" }}>
