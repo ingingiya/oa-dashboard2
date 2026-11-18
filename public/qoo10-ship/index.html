@@ -127,7 +127,7 @@ function save(wb,name){XLSX.writeFile(wb,name)}
 $("b1").onclick=()=>{
  const fx=num($("fx").value);if(!fx)return alert("환율을 넣어 주세요");
  const H=["주문번호","주문일시","주문자명","주문자 연락처","주문상품","옵션명","주문금액","단가","수수료","수량","수령인","연락처","우편번호","주소","상세주소","배송메시지","배송비"];
- const A=[H,...ORD.map(o=>{const amt=Math.round(o.pay*fx);return [o.no,o.dt,DEST.name,DEST.tel,`[${o.code}]${CODES[o.code]||""}`,"",amt,Math.round(amt/o.qty),"",o.qty,DEST.name,DEST.tel,DEST.zip,DEST.addr,"",o.no,""]})];
+ const A=[H,...ORD.map(o=>{const amt=Math.round(o.pay*fx);return [o.no,o.dt,DEST.name,DEST.tel,`[${o.code}]${CODES[o.code]||""}`,"",amt,Math.round(amt/o.qty),"",o.qty,DEST.name,DEST.tel,DEST.zip,DEST.addr,"50",o.no,""]})];
  const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(A),"Sheet1");
  save(wb,`${$("title").value}_전산업로드.xlsx`);
 };
