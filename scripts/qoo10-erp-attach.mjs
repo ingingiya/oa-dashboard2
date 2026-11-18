@@ -43,8 +43,14 @@ for (const f of rest) {
   await p.waitForTimeout(4000);
 }
 await p.getByRole('button',{name:'저장',exact:true}).last().click(); await p.waitForTimeout(2500);
-await p.getByRole('button',{name:/^(저장|확인|예)$/}).last().click(); await p.waitForTimeout(8000);
+await p.locator('.text_modal').getByRole('button',{name:/^(저장|확인|예)$/}).first().click(); await p.waitForTimeout(8000);
 const ok = p.getByRole('button',{name:'확인',exact:true}); if (await ok.count()) { await ok.last().click(); await p.waitForTimeout(1500); }
+// 저장 후 상세 창이 닫히므로 다시 열어서 첨부 목록 확인
+await p.reload({waitUntil:'domcontentloaded'}); await p.waitForTimeout(8000);
+{ const sels2=p.locator('select'); for(let i=0;i<await sels2.count();i++){const o=await sels2.nth(i).evaluate(s=>[...s.options].map(o=>o.text).join('/')); if(o.includes('주문서')&&o.includes('위탁 주문')) await sels2.nth(i).selectOption({label:'전체'});} }
+await p.fill('input[name=order_number_mall]',no);
+await p.getByRole('button',{name:'검색',exact:true}).click(); await p.waitForTimeout(12000);
+await p.getByText(bno,{exact:true}).first().click(); await p.waitForTimeout(8000);
 const files = await p.evaluate(()=>{const h=[...document.querySelectorAll('*')].find(e=>e.children.length<3&&e.innerText?.trim()=='주문 관련 파일');return h? h.parentElement.parentElement.innerText:''});
-const saved = rest.every(f=>files.includes(f.split('/').pop()) ) && /\d{4}-\d{2}-\d{2}T/.test(files);
+const saved = rest.every(f=>files.includes(f.split('/').pop()));
 out({ok:saved,order:bno,files:files.replace(/\s+/g,' ').slice(0,300)});
