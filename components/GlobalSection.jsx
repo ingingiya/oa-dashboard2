@@ -2,6 +2,7 @@
 // 해외 운영: 국가별 진행판 + 인증 진행·회신 대기·할 일(11-09) + 환율 반영 판매가 계산기
 import { useEffect, useState } from "react";
 import useShared, { me } from "./useShared";
+import { getSetting, setSetting } from "../lib/useSupabase";
 
 const STAGES = ["조사", "후보 선정", "채널 개설", "상품 등록", "첫 판매", "운영 중"];
 const SEED = { countries: [
@@ -87,6 +88,44 @@ const PROMO_TAG = {
 const ST_COLOR = { "진행": ["#dcfce7", "#166534"], "대기": ["#fef3c7", "#92400e"], "보류": ["#e5e7eb", "#374151"], "안 함": ["#f3f4f6", "#9ca3af"], "보낼 것": ["#fee2e2", "#991b1b"], "완료": ["#dcfce7", "#166534"], "회신": ["#dbeafe", "#1e40af"] };
 const TEAM = ["경은", "영서", "동욱"]; // 해외 담당: 김경은·조영서·차동욱
 const daysSince = (d) => d ? Math.floor((Date.now() - new Date(d + "T00:00:00+09:00")) / 864e5) : null;
+
+// 큐텐 발송 처리 버튼 — settings oa_qoo10_ship_job_v1 ↔ 오아 맥 run_ship.py (1분마다 확인)
+const SHIP_KEY = "oa_qoo10_ship_job_v1";
+function QooShipBar({ C, Card }) {
+  const [v, setV] = useState(null); const [otp, setOtp] = useState(""); const [open, setOpen] = useState(false);
+  const load = () => getSetting(SHIP_KEY).then((x) => setV(x || {})).catch(() => {});
+  useEffect(() => { load(); const t = setInterval(load, 5000); return () => clearInterval(t); }, []);
+  if (!v) return null;
+  const j = v.job || {}; const st = j.status || ""; const busy = ["요청됨", "진행 중", "OTP 필요"].includes(st);
+  const pend = v.pending || {}; const n = pend.count ?? null;
+  const run = async () => {
+    const cur = (await getSetting(SHIP_KEY)) || {};
+    if (["요청됨", "진행 중", "OTP 필요"].includes(cur.job?.status)) return alert("이미 처리 중이에요");
+    if (!confirm(`큐텐 주문${n ? " " + n + "건" : ""}을 KSE 배송접수 · 송장 출력 · 전산 등록까지 실제로 처리해요. 진행할까요?`)) return;
+    const hist = [...(cur.history || []), ...(cur.job?.id ? [cur.job] : [])].slice(-20);
+    const at = new Date(Date.now() + 9 * 3600e3).toISOString().replace("T", " ").slice(0, 16);
+    await setSetting(SHIP_KEY, { ...cur, history: hist, job: { id: Date.now().toString(36), status: "요청됨", by: me() || "대시보드", at, steps: [] } });
+    setOpen(true); load();
+  };
+  const sendOtp = async () => { if (!/^\d{6}$/.test(otp)) return alert("숫자 6자리"); const cur = (await getSetting(SHIP_KEY)) || {}; if (cur.job) { cur.job.otp = otp; await setSetting(SHIP_KEY, cur); setOtp(""); load(); } };
+  const col = st === "실패" ? "#dc2626" : st === "완료" ? "#16a34a" : st === "OTP 필요" ? "#d97706" : C.inkMid;
+  const r = j.result || {};
+  return (
+    <Card style={{ padding: "12px 14px", border: n ? `2px solid ${C.rose}` : undefined }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+        <div style={{ fontSize: 15, fontWeight: 900, color: C.ink }}>📦 큐텐 주문 발송</div>
+        <span style={{ fontSize: 13, color: C.inkMid }}>{n === null ? "처리할 주문 확인 중…" : n ? <>처리 안 한 주문 <b style={{ color: C.rose, fontSize: 16 }}>{n}건</b>{pend.items ? ` (${pend.items})` : ""}</> : "처리할 주문 없음"}{pend.at ? ` · ${pend.at.slice(11, 16)} 기준` : ""}</span>
+        <div style={{ flex: 1 }} />
+        {st && <span style={{ fontSize: 12.5, fontWeight: 800, color: col, cursor: "pointer" }} onClick={() => setOpen(!open)}>{st}{j.by ? ` · ${j.by}` : ""}{j.at ? ` ${j.at.slice(11)}` : ""} {open ? "▲" : "▼"}</span>}
+        <button onClick={run} disabled={busy} style={{ fontSize: 14, fontWeight: 900, padding: "8px 16px", borderRadius: 10, border: 0, background: busy ? "#cbd5e1" : C.ink, color: "#fff", cursor: busy ? "default" : "pointer" }}>{busy ? "처리 중…" : `주문${n ? " " + n + "건" : ""} 처리하기`}</button>
+        <a href="/qoo10-ship/index.html" target="_blank" rel="noreferrer" style={{ fontSize: 12, color: C.rose, fontWeight: 700 }}>수동·설명 ↗</a>
+      </div>
+      {st === "OTP 필요" && <div style={{ marginTop: 10, padding: 10, borderRadius: 10, background: "#fff7ed", display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}><b style={{ fontSize: 13 }}>KSE OTP</b><span style={{ fontSize: 12.5, color: C.inkMid }}>동욱님 인증 앱 6자리 (30초마다 바뀜)</span><input value={otp} onChange={(e) => setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))} inputMode="numeric" style={{ width: 100, fontSize: 17, letterSpacing: 3, padding: "4px 8px", borderRadius: 8, border: `1px solid ${C.border}` }} /><button onClick={sendOtp} style={{ fontSize: 13, fontWeight: 800, padding: "6px 12px", borderRadius: 8, border: 0, background: C.ink, color: "#fff" }}>보내기</button></div>}
+      {(open || busy) && (j.steps || []).length > 0 && <ol style={{ margin: "10px 0 0", paddingLeft: 20, fontSize: 12.5, color: C.inkMid, lineHeight: 1.7 }}>{j.steps.map((x, i) => <li key={i}>{x.t} {x.m}</li>)}</ol>}
+      {st === "완료" && (r.files || []).length > 0 && <div style={{ marginTop: 8, display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>{r.files.map((f) => <a key={f.url} href={f.url} target="_blank" rel="noreferrer" style={{ fontSize: 12.5, padding: "3px 10px", borderRadius: 999, background: "#f1f5f9", color: C.ink, textDecoration: "none", fontWeight: 700 }}>⬇ {f.name}</a>)}{r.erp_order && <span style={{ fontSize: 12, color: C.inkLt }}>전산 {r.erp_order} 첨부 · 발송 후 KSE에서 송장번호 전송</span>}</div>}
+    </Card>
+  );
+}
 
 export default function GlobalSection({ C, Card }) {
   const [b, setB] = useShared("oa_global_board_v1", SEED);
@@ -565,6 +604,7 @@ export default function GlobalSection({ C, Card }) {
   };
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+      <QooShipBar C={C} Card={Card} />
       {Goals()}
       <Card style={{ padding: "10px 12px" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
