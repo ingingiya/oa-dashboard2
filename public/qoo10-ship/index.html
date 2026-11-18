@@ -79,7 +79,7 @@ const pad=n=>String(n).padStart(2,"0");
 const today=new Date();const ymd=d=>`${String(d.getFullYear()).slice(2)}${pad(d.getMonth()+1)}${pad(d.getDate())}`;
 $("due").value=`${today.getFullYear()}-${pad(today.getMonth()+1)}-${pad(today.getDate())}`;
 $("title").value=ymd(today)+"_큐텐 발주";
-fetch("codes.json").then(r=>r.json()).then(j=>CODES=j).catch(()=>{});
+fetch("codes.json").then(r=>r.json()).then(j=>CODES=j).catch(()=>{document.querySelector(".sub").innerHTML+='<br><b style="color:#be123c">대시보드에 먼저 로그인한 뒤 이 페이지를 열어 주세요 (제품코드 표를 못 불러왔어요).</b> <a href="/login">로그인</a>'});
 fetch("/api/fx").then(r=>r.json()).then(j=>{if(j.JPY)$("fx").value=j.JPY}).catch(()=>{$("fx").value=8.4});
 const num=v=>+String(v??"").replace(/,/g,"")||0;
 const drop=$("drop");
