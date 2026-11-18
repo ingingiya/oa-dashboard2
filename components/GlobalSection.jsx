@@ -606,7 +606,6 @@ export default function GlobalSection({ C, Card }) {
   };
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-      <GlobalBot C={C} Card={Card} />
       <QooShipBar C={C} Card={Card} />
       {Goals()}
       <Card style={{ padding: "10px 12px" }}>
@@ -801,6 +800,7 @@ export default function GlobalSection({ C, Card }) {
           <div><div style={{ fontSize: 11, color: C.inkLt, fontWeight: 700 }}>수수료+광고</div><div style={{ fontSize: 22, fontWeight: 900, color: C.inkMid }}>{Math.round(krwNeed * (calc.fee + calc.ads) / 100).toLocaleString()}원</div></div>
         </div>
       </Card>
+      <GlobalBot C={C} Card={Card} />
     </div>
   );
 }
