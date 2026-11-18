@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>큐텐 발송 준비</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<style>
+:root{--ink:#1a1a1a;--mid:#666;--lt:#999;--line:#e6e6e6;--bg:#fff;--soft:#f6f7f9;--acc:#be123c;--ok:#15803d;--warn:#b45309}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:Pretendard,-apple-system,"Apple SD Gothic Neo",sans-serif;line-height:1.6;font-size:15px}
+.w{max-width:980px;margin:0 auto;padding:36px 16px 64px}
+h1{font-size:24px;margin:0 0 4px}
+.sub{color:var(--mid);font-size:13px;margin-bottom:24px}
+h2{font-size:16px;margin:28px 0 10px;padding-bottom:6px;border-bottom:1px solid var(--ink)}
+.drop{border:2px dashed #cbd5e1;border-radius:14px;padding:34px 16px;text-align:center;background:var(--soft);cursor:pointer}
+.drop.on{border-color:var(--acc);background:#fff1f2}
+.drop b{font-size:16px}
+.row{display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin:12px 0}
+label.f{font-size:13px;color:var(--mid)}
+input[type=text],input[type=number],input[type=date]{border:1px solid var(--line);border-radius:8px;padding:6px 8px;font-size:14px}
+button{border:0;border-radius:10px;padding:10px 16px;font-size:14px;font-weight:700;cursor:pointer;background:var(--ink);color:#fff}
+button.s{background:#fff;color:var(--ink);border:1px solid var(--line)}
+button:disabled{opacity:.35;cursor:default}
+.tw{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th,td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--line);white-space:nowrap}
+th{color:var(--mid);font-weight:600;font-size:12px}
+.bad td{background:#fff7ed}
+.pill{display:inline-block;border-radius:999px;padding:1px 9px;font-size:12px;font-weight:700;background:var(--soft)}
+.ok{color:var(--ok)}.warn{color:var(--warn)}
+ol.steps{padding-left:20px}ol.steps li{margin:8px 0}
+code{background:var(--soft);padding:1px 6px;border-radius:5px;font-size:13px}
+.note{font-size:13px;color:var(--mid)}
+.hide{display:none}
+</style></head><body><div class="w">
+<h1>큐텐 발송 준비 (KSE 배대지)</h1>
+<div class="sub">큐텐 주문 파일을 넣으면 전산 업로드 엑셀·작업지시서·KSE 제품 발송 양식을 만들어요. 파일은 이 브라우저 안에서만 처리돼요 (서버로 안 보냄).</div>
+
+<h2>1. 큐텐 주문 파일 넣기</h2>
+<p class="note">QSM → 배송관리 → <b>배송요청(상세보기)</b> → 신규주문 숫자 클릭 → <b>전체주문 엑셀다운</b> 한 파일 (csv·xlsx 모두 가능)</p>
+<div id="drop" class="drop"><b>여기에 파일을 끌어놓거나 클릭</b><div class="note">DeliveryManagement_detail_….csv</div><input id="file" type="file" accept=".csv,.xlsx,.xls" class="hide"></div>
+
+<div id="res" class="hide">
+<h2>2. 확인</h2>
+<div class="row">
+ <span id="sum"></span>
+</div>
+<div class="row">
+ <label class="f">환율 (원/엔) <input id="fx" type="number" step="0.01" style="width:80px"></label>
+ <label class="f">작업종료 요청일 <input id="due" type="date"></label>
+ <label class="f">주문서 이름 <input id="title" type="text" style="width:180px"></label>
+</div>
+<div class="tw"><table id="tbl"></table></div>
+<p class="note">주황색 줄 = 옵션에서 제품코드를 못 찾은 주문. 코드 칸에 전산 제품코드(예: M0156)를 직접 넣어 주세요.</p>
+
+<h2>3. 파일 받기</h2>
+<div class="row">
+ <button id="b1">① 전산 업로드 엑셀</button>
+ <button id="b2">② 작업지시서</button>
+ <button id="b3" class="s">③ KSE 제품 발송 양식</button>
+</div>
+
+<h2>4. 순서</h2>
+<ol class="steps">
+ <li><b>전산</b> 영업 › 주문 › <b>위탁 주문서 등록</b> › 등록<br>내용 <code id="t2">YYMMDD_큐텐 발주</code> · 매출처 <code>큐텐</code> · 정산명 <code>이베이재팬 유한회사(큐텐)</code> → <b>기본값</b> 클릭 → ① 파일 업로드 → 등록</li>
+ <li><b>KSE</b> <a href="https://kseoms.com" target="_blank" rel="noreferrer">kseoms.com</a> (아이디 oaworld · OTP는 동욱님 인증 앱) → 배송접수 › <b>주문수집(API)</b> → 오늘 주문 접수 → 배송관리 › <b>팩킹리스트</b>에서 송장 PDF(A3) 출력</li>
+ <li>전산 위탁 주문 목록 캡처 → 작업지시서 "우리 전산 이미지" 칸에 붙이기 (② 파일엔 주문 요약표가 임시로 들어가 있어요)</li>
+ <li>창고에 ② 작업지시서 + KSE 송장 PDF 전달 → 본품에 일본 송장, 아웃박스에 국내 송장 부착 → 양산 KSE 배대지로 발송</li>
+ <li>큐텐 송장번호는 KSE가 큐텐에 자동으로 넣어요 (택배사 KSE 연동)</li>
+</ol>
+</div>
+
+<p class="note" style="margin-top:40px">받는 곳(고정): 홍형석 차장 · 010-3143-3227 · (50591) 경상남도 양산시 어곡공단6길 50 KSE양산물류센터 · 제품코드→전산 상품명 표 codes.json (전산 상품 마스터, 11/18 기준)</p>
+</div>
+<script>
+const DEST={name:"홍형석 차장",tel:"01031433227",telDash:"010-3143-3227",zip:"50591",addr:"경상남도 양산시 어곡공단6길 50"};
+let CODES={},ORD=[];
+const $=id=>document.getElementById(id);
+const pad=n=>String(n).padStart(2,"0");
+const today=new Date();const ymd=d=>`${String(d.getFullYear()).slice(2)}${pad(d.getMonth()+1)}${pad(d.getDate())}`;
+$("due").value=`${today.getFullYear()}-${pad(today.getMonth()+1)}-${pad(today.getDate())}`;
+$("title").value=ymd(today)+"_큐텐 발주";
+fetch("codes.json").then(r=>r.json()).then(j=>CODES=j).catch(()=>{});
+fetch("/api/fx").then(r=>r.json()).then(j=>{if(j.JPY)$("fx").value=j.JPY}).catch(()=>{$("fx").value=8.4});
+const num=v=>+String(v??"").replace(/,/g,"")||0;
+const drop=$("drop");
+drop.onclick=()=>$("file").click();
+drop.ondragover=e=>{e.preventDefault();drop.classList.add("on")};
+drop.ondragleave=()=>drop.classList.remove("on");
+drop.ondrop=e=>{e.preventDefault();drop.classList.remove("on");if(e.dataTransfer.files[0])read(e.dataTransfer.files[0])};
+$("file").onchange=e=>e.target.files[0]&&read(e.target.files[0]);
+$("title").oninput=()=>$("t2").textContent=$("title").value;
+function read(f){
+ const r=new FileReader();
+ r.onload=()=>{
+  const wb=/\.csv$/i.test(f.name)?XLSX.read(new TextDecoder("utf-8").decode(r.result).replace(/^﻿/,""),{type:"string",raw:true}):XLSX.read(r.result,{type:"array",raw:true});
+  const rows=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{defval:"",raw:false});
+  if(!rows.length||!("주문번호" in rows[0])){alert("큐텐 배송관리 엑셀이 아니에요. '배송요청(상세보기)'에서 받은 파일을 넣어 주세요.");return}
+  ORD=rows.filter(x=>String(x["주문번호"]).trim()).map(x=>{
+   const m=String(x["옵션정보"]||"").match(/\b[A-Z]{1,3}\d{4,6}\b/g);
+   return {no:String(x["주문번호"]).trim(),pack:String(x["장바구니번호"]||""),dt:String(x["주문일"]||"").replace(/\//g,"-"),gd:x["상품명"]||"",opt:x["옵션정보"]||"",code:m?m[m.length-1]:"",qty:num(x["수량"])||1,pay:num(x["구매자결제금"]),buyer:x["수취인명"]||"",st:x["배송상태"]||""};
+  });
+  render();
+ };
+ r.readAsArrayBuffer(f);
+}
+function render(){
+ $("res").classList.remove("hide");$("t2").textContent=$("title").value;
+ const by={};ORD.forEach(o=>{const k=CODES[o.code]||o.code||"(코드 없음)";by[k]=(by[k]||0)+o.qty});
+ const bad=ORD.filter(o=>!CODES[o.code]).length;
+ $("sum").innerHTML=`<span class="pill">주문 ${ORD.length}건</span> `+Object.entries(by).map(([k,v])=>`<span class="pill">${k} ${v}개</span>`).join(" ")+(bad?` <span class="pill warn">확인 필요 ${bad}건</span>`:` <span class="pill ok">제품코드 모두 확인</span>`);
+ $("tbl").innerHTML="<tr><th>#</th><th>주문번호</th><th>주문일</th><th>코드</th><th>전산 상품명</th><th>수량</th><th>결제 ¥</th><th>큐텐 옵션</th></tr>"+ORD.map((o,i)=>`<tr class="${CODES[o.code]?"":"bad"}"><td>${i+1}</td><td>${o.no}</td><td>${o.dt.slice(5,16)}</td><td><input type="text" value="${o.code}" data-i="${i}" style="width:84px"></td><td>${CODES[o.code]||"<span class=warn>?</span>"}</td><td>${o.qty}</td><td>${o.pay.toLocaleString()}</td><td>${o.opt}</td></tr>`).join("");
+ $("tbl").querySelectorAll("input").forEach(el=>el.onchange=()=>{ORD[+el.dataset.i].code=el.value.trim().toUpperCase();render()});
+}
+function save(wb,name){XLSX.writeFile(wb,name)}
+$("b1").onclick=()=>{
+ const fx=num($("fx").value);if(!fx)return alert("환율을 넣어 주세요");
+ const H=["주문번호","주문일시","주문자명","주문자 연락처","주문상품","옵션명","주문금액","단가","수수료","수량","수령인","연락처","우편번호","주소","상세주소","배송메시지","배송비"];
+ const A=[H,...ORD.map(o=>{const amt=Math.round(o.pay*fx);return [o.no,o.dt,DEST.name,DEST.tel,o.code,CODES[o.code]||"",amt,Math.round(amt/o.qty),"",o.qty,DEST.name,DEST.tel,DEST.zip,DEST.addr,"",o.no,""]})];
+ const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(A),"Sheet1");
+ save(wb,`${$("title").value}_전산업로드.xlsx`);
+};
+$("b3").onclick=()=>{
+ const A=[["주문제품","수량","수령인","연락처","우편번호","주소","배송메시지"],...ORD.map(o=>[CODES[o.code]||o.code,o.qty,DEST.name,DEST.telDash,+DEST.zip,DEST.addr,o.no])];
+ const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(A),"Sheet1");
+ save(wb,`kse 제품 발송_${ymd(new Date($("due").value))}.xlsx`);
+};
+function summaryPng(){
+ const by={};ORD.forEach(o=>{const k=`[${o.code}] ${CODES[o.code]||""}`;by[k]=(by[k]||0)+o.qty});
+ const rows=Object.entries(by);const W=1600,H=90+rows.length*44+30;
+ const c=document.createElement("canvas");c.width=W;c.height=H;const g=c.getContext("2d");
+ g.fillStyle="#fff";g.fillRect(0,0,W,H);g.fillStyle="#111";g.font="bold 26px sans-serif";
+ g.fillText(`[ 총 ${ORD.length}건 ]  큐텐 → KSE 양산 배대지  ·  ${$("title").value}`,24,44);
+ g.font="22px sans-serif";g.fillStyle="#555";g.fillText("주문상품",24,84);g.fillText("수량",W-200,84);
+ rows.forEach(([k,v],i)=>{const y=126+i*44;g.strokeStyle="#ddd";g.beginPath();g.moveTo(16,y-30);g.lineTo(W-16,y-30);g.stroke();g.fillStyle="#111";g.fillText(k,24,y);g.fillText(v+"개",W-200,y)});
+ return new Promise(r=>c.toBlob(r,"image/png"));
+}
+$("b2").onclick=async()=>{
+ const z=await JSZip.loadAsync(await (await fetch("workorder_template.xlsx")).arrayBuffer());
+ const d=new Date($("due").value);const serial=Math.round((Date.UTC(d.getFullYear(),d.getMonth(),d.getDate())-Date.UTC(1899,11,30))/864e5);
+ let s=await z.file("xl/worksheets/sheet1.xml").async("string");
+ s=s.replace(/(<c r="C4" s="4"><v>)[^<]*(<\/v>)/,`$1${serial}$2`);z.file("xl/worksheets/sheet1.xml",s);
+ z.file("xl/media/image2.png",await summaryPng());
+ const blob=await z.generateAsync({type:"blob"});const a=document.createElement("a");a.href=URL.createObjectURL(blob);
+ a.download=`${ymd(d)}_큐텐_작업지시서_KSE 배대지.xlsx`;a.click();
+};
+</script>
+</body></html>
