@@ -6,7 +6,10 @@ import { useEffect, useState } from "react";
 import { me } from "./useShared";
 import { getSetting, setSetting, uploadAdImage } from "../lib/useSupabase";
 
-const KEY = "oa_global_bot_v1";
+const KEY_JUNIOR = "oa_global_bot_v1";
+const DEFAULT_RULES = `혼자 해도 됨: 조회·집계·보고서·초안·미리보기(dry run)·캡처·KSE/전산 로그인·발송 준비 자료 만들기
+물어보고 할 것: 가격·할인·쿠폰 변경, 광고 입찰·예산 변경, 상세·썸네일·상품명 교체, 고객에게 나가는 글(리뷰 답글·문의 답변·쿠폰 푸시), 전산 등록·발주, 메일·웍스·텔레그램 발송, 배포
+절대 금지: 삭제, NAS 원본 수정, 계정·비밀번호·키 출력이나 공유, 지어낸 숫자`;
 const ST = { "요청됨": ["#e0e7ff", "#3730a3"], "진행 중": ["#dbeafe", "#1d4ed8"], "실행 중": ["#dbeafe", "#1d4ed8"], "승인 대기": ["#fef3c7", "#92400e"], "승인됨": ["#e0e7ff", "#3730a3"], "질문": ["#fce7f3", "#9d174d"], "답변됨": ["#e0e7ff", "#3730a3"], "완료": ["#dcfce7", "#166534"], "실패": ["#fee2e2", "#991b1b"], "취소": ["#f3f4f6", "#6b7280"] };
 const ACTIVE = ["요청됨", "진행 중", "승인됨", "실행 중", "답변됨"];
 const kst = () => new Date(Date.now() + 9 * 36e5).toISOString().replace("T", " ").slice(0, 16);
@@ -21,7 +24,8 @@ const MENU = [
 ];
 const EVERY = [["daily", "매일 아침"], ["mon", "매주 월요일"], ["fri", "매주 금요일"], ["m1", "매달 1일"]];
 
-export default function GlobalBot({ C, Card }) {
+export default function GlobalBot({ C, Card, botKey = KEY_JUNIOR, title = "🤖 경은이 신입봇", desc = "해외 일을 문장으로 맡기면 경은님이 하던 방식대로 처리해요 · 밖으로 나가는 일은 승인 후에만", senior = false }) {
+  const KEY = botKey;
   const [v, setV] = useState(null);
   const [text, setText] = useState("");
   const [files, setFiles] = useState([]);
@@ -31,6 +35,8 @@ export default function GlobalBot({ C, Card }) {
   const [more, setMore] = useState(false);
   const [cat, setCat] = useState(0);
   const [every, setEvery] = useState("");
+  const [rules, setRules] = useState(null);
+  const [logMore, setLogMore] = useState(false);
   const load = () => getSetting(KEY).then((x) => setV(x || { jobs: [] })).catch(() => {});
   useEffect(() => { load(); const t = setInterval(load, 5000); return () => clearInterval(t); }, []);
   if (!v) return null;
@@ -69,8 +75,8 @@ export default function GlobalBot({ C, Card }) {
   return (
     <Card style={{ padding: "14px 16px", border: need.length ? `2px solid #f59e0b` : undefined }}>
       <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", marginBottom: 10 }}>
-        <div style={{ fontSize: 16, fontWeight: 900, color: C.ink }}>🤖 경은이복사봇</div>
-        <span style={{ fontSize: 12.5, color: C.inkMid }}>해외 일을 문장으로 맡기면 경은님이 하던 방식대로 처리해요 · 밖으로 나가는 일은 승인 후에만</span>
+        <div style={{ fontSize: 16, fontWeight: 900, color: C.ink }}>{title}</div>
+        <span style={{ fontSize: 12.5, color: C.inkMid }}>{desc}</span>
         <div style={{ flex: 1 }} />
         {need.length > 0 && <span style={{ fontSize: 12.5, fontWeight: 900, color: "#b45309" }}>확인 필요 {need.length}건</span>}
         <span title={v.beat ? `마지막 확인 ${v.beat}` : ""} style={{ fontSize: 12, fontWeight: 800, color: alive ? "#16a34a" : "#dc2626" }}>● {alive ? "근무 중" : beatMin === null ? "아직 출근 전" : `${beatMin}분째 응답 없음 (오아 맥 확인)`}</span>
@@ -103,6 +109,26 @@ export default function GlobalBot({ C, Card }) {
         </div>)}
       </div>}
 
+      {senior && <div style={{ marginTop: 12, display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: 10 }}>
+        <div style={{ padding: "10px 12px", borderRadius: 10, background: "#f8fafc" }}>
+          <div style={{ fontSize: 12.5, fontWeight: 900, color: C.ink, marginBottom: 4 }}>👀 지금 보고 있는 신호 <span style={{ fontWeight: 600, color: C.inkLt }}>· 5분마다 확인{v.scout ? ` · 최근 ${v.scout.slice(5)}` : ""}</span></div>
+          {(v.signals || []).length === 0 && <div style={{ fontSize: 12.5, color: C.inkLt }}>아직 확인 전 (08:30~22:30에 돌아요)</div>}
+          {(v.signals || []).map((s) => <div key={s.name} style={{ display: "flex", gap: 8, fontSize: 12.5, padding: "2px 0", color: C.ink }}><span style={{ flexShrink: 0, width: 92, fontWeight: 800, color: s.ok ? C.inkMid : "#b45309" }}>{s.ok ? "✓" : "!"} {s.name}</span><span style={{ flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={s.detail}>{s.detail}</span></div>)}
+        </div>
+        <div style={{ padding: "10px 12px", borderRadius: 10, background: "#f8fafc" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}><div style={{ fontSize: 12.5, fontWeight: 900, color: C.ink }}>📜 권한표</div><span style={{ fontSize: 11.5, color: C.inkLt }}>봇이 일할 때 최우선으로 따라요</span><div style={{ flex: 1 }} />
+            {rules !== null && <button onClick={async () => { const cur = (await getSetting(KEY)) || { jobs: [] }; cur.rules = rules; await setSetting(KEY, cur); setRules(null); load(); }} style={btn("#16a34a")}>저장</button>}
+            {rules !== null && <button onClick={() => setRules(null)} style={btn("#f1f5f9", C.ink)}>취소</button>}</div>
+          <textarea value={rules ?? (v.rules || DEFAULT_RULES)} onChange={(e) => setRules(e.target.value)} rows={5} style={{ width: "100%", fontSize: 12.5, lineHeight: 1.5, padding: "6px 8px", borderRadius: 8, border: `1px solid ${C.border}`, fontFamily: "inherit", resize: "vertical", boxSizing: "border-box" }} />
+          {!v.rules && rules === null && <button onClick={async () => { const cur = (await getSetting(KEY)) || { jobs: [] }; cur.rules = DEFAULT_RULES; await setSetting(KEY, cur); load(); }} style={{ ...btn("#eef2ff", "#3730a3"), marginTop: 4, fontSize: 12 }}>이 권한표로 시작</button>}
+        </div>
+        <div style={{ padding: "10px 12px", borderRadius: 10, background: "#f8fafc", gridColumn: "1 / -1" }}>
+          <div style={{ fontSize: 12.5, fontWeight: 900, color: C.ink, marginBottom: 4 }}>📓 업무일지 <span style={{ fontWeight: 600, color: C.inkLt }}>· 일이 끝날 때마다 한 줄</span></div>
+          {(v.log || []).length === 0 && <div style={{ fontSize: 12.5, color: C.inkLt }}>아직 없음</div>}
+          {[...(v.log || [])].reverse().slice(0, logMore ? 200 : 8).map((l, i) => <div key={i} style={{ fontSize: 12.5, padding: "2px 0", color: C.ink, lineHeight: 1.5 }}><span style={{ color: C.inkLt, marginRight: 6 }}>{l.at.slice(5)}</span><span style={{ fontWeight: 800, color: l.st === "완료" ? "#166534" : l.st === "승인 대기" ? "#92400e" : C.inkMid, marginRight: 6 }}>{l.st}</span>{l.text}</div>)}
+          {(v.log || []).length > 8 && <button onClick={() => setLogMore(!logMore)} style={{ fontSize: 12, border: 0, background: "none", color: C.rose, cursor: "pointer", fontWeight: 700 }}>{logMore ? "접기" : `지난 일지 ${v.log.length - 8}건 더`}</button>}
+        </div>
+      </div>}
       {shown.length > 0 && <div style={{ marginTop: 12, display: "flex", flexDirection: "column", gap: 8 }}>
         {shown.map((j) => {
           const [bg, fg] = ST[j.status] || ST["취소"]; const o = open[j.id] ?? (j.status === "승인 대기" || j.status === "질문" || ACTIVE.includes(j.status));

@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import useShared, { me } from "./useShared";
 import { getSetting, setSetting } from "../lib/useSupabase";
-import GlobalBot from "./GlobalBot";
 
 const STAGES = ["조사", "후보 선정", "채널 개설", "상품 등록", "첫 판매", "운영 중"];
 const SEED = { countries: [
@@ -912,7 +911,7 @@ export default function GlobalSection({ C, Card }) {
           <div><div style={{ fontSize: 11, color: C.inkLt, fontWeight: 700 }}>수수료+광고</div><div style={{ fontSize: 22, fontWeight: 900, color: C.inkMid }}>{Math.round(krwNeed * (calc.fee + calc.ads) / 100).toLocaleString()}원</div></div>
         </div>
       </Card>
-      <GlobalBot C={C} Card={Card} />
+      <Card style={{ padding: "12px 16px", fontSize: 13, color: C.inkMid }}>🤖 경은이복사봇은 왼쪽 <b style={{ color: C.ink }}>「봇」</b> 탭으로 옮겼어요 (신입봇·1년차봇)</Card>
     </div>
   );
 }

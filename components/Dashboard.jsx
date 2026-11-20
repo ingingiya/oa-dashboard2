@@ -5,7 +5,8 @@ import { getSetting, setSetting, getAdImages, saveAdImagesMeta, uploadAdImage, u
 import TrafficAdsSection from "./TrafficAdsSection"; // 광고관리(트래픽) — 카카오 선물하기 유입 캠페인 운영표 (09-21)
 import GongguInfluencerSection from "./GongguInfluencerSection";
 import PplSection from "./PplSection";           // PPL 협찬 진행판 (11-04)
-import GlobalSection from "./GlobalSection";     // 해외 진행판·판매가 계산 (11-04)
+import GlobalSection from "./GlobalSection";
+import BotSection from "./BotSection";          // 봇 탭: 경은이 신입봇·1년차봇 (11-20)     // 해외 진행판·판매가 계산 (11-04)
 import TeamSection from "./TeamSection";         // 요청함·회고·문서함·온보딩 (11-04)
 import AdChangeLog from "./AdChangeLog";         // 광고 변경 기록 (11-04)
 import { VerdictCard, GoalCard, PplBudgetCard, KakaoRankCard, ProductNowCard, ProfitCard, SearchInflowCard } from "./HomeExtraCards";
@@ -9942,6 +9943,7 @@ export default function OaDashboard(){
     {id:"ppl",       icon:"movie",          label:"PPL 협찬"},
     {id:"global",    icon:"public",         label:"해외"},
     {id:"team",      icon:"diversity_3",    label:"팀"},
+    {id:"bot",       icon:"smart_toy",      label:"봇"},
     {id:"simple",    icon:"smartphone",     label:"간단 보기"},
     {id:"meta",      icon:"campaign",       label:"메타광고"},
     {id:"guide",     icon:"menu_book",      label:"가이드"},
@@ -19329,6 +19331,7 @@ JSON: {"hookCopies":["후킹 카피 5개"],"differentiators":["소재 아이디�
           {sec==="ppl"         && <PplSection C={C} Card={Card}/>}
           {sec==="global"      && <GlobalSection C={C} Card={Card}/>}
           {sec==="team"        && <TeamSection C={C} Card={Card}/>}
+          {sec==="bot"         && <BotSection C={C} Card={Card}/>}
           {sec==="simple"      && SimpleSection}
           {sec==="schedule"    && ScheduleSection}
           {sec==="naver"       && <NaverSection/>}
