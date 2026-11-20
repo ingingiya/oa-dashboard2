@@ -86,6 +86,17 @@ const PROMO_TAG = {
   "리뷰이벤트": ["#dcfce7", "#15803d", "포토리뷰 300P·특가"],
   "자체특가": ["#dbeafe", "#1d4ed8", "QSM 셀러 할인(우리가 직접 건 할인가)"],
 };
+// 「행사」 일정 세부 구분 — 캘린더 kind=행사 가 한 색으로 섞여 보여서 제목으로 나눔(e.sub 있으면 그걸 우선)
+const EV_SUB = [
+  ["준비·작업", "#6b7280", "#f3f4f6", /제작|테스트|작성|유지 시작|신청 마감|마감/],
+  ["타임세일", "#c2410c", "#ffedd5", /타임세일/],
+  ["쿠폰·포인트", "#7c3aed", "#ede9fe", /쿠폰|포인트/],
+  ["리뷰이벤트", "#15803d", "#dcfce7", /리뷰이벤트|리뷰 이벤트/],
+  ["큐텐 대형행사", "#be123c", "#ffe4e6", /메가와리|메가포|연말세일|기획전|메가/],
+  ["자체할인", "#1d4ed8", "#dbeafe", /할인|특가|가격/],
+  ["기타", "#6b7280", "#f3f4f6", /.*/],
+];
+const evSub = (e) => (e.sub && EV_SUB.find((s) => s[0] === e.sub)) || EV_SUB.find((s) => s[3].test(e.title || ""));
 const ST_COLOR = { "진행": ["#dcfce7", "#166534"], "대기": ["#fef3c7", "#92400e"], "보류": ["#e5e7eb", "#374151"], "안 함": ["#f3f4f6", "#9ca3af"], "보낼 것": ["#fee2e2", "#991b1b"], "완료": ["#dcfce7", "#166534"], "회신": ["#dbeafe", "#1e40af"] };
 const TEAM = ["경은", "영서", "동욱"]; // 해외 담당: 김경은·조영서·차동욱
 const daysSince = (d) => d ? Math.floor((Date.now() - new Date(d + "T00:00:00+09:00")) / 864e5) : null;
@@ -182,6 +193,8 @@ export default function GlobalSection({ C, Card }) {
   const [qprod] = useShared("oa_global_qoo10_products_v1", { updated: "", items: [] });
   const [jobs, setJobs] = useShared("oa_global_price_jobs_v1", []);
   const [pf, setPf] = useState(null); // 가격·행사 입력 폼
+  const [evPast, setEvPast] = useState(false); // 행사 한눈에: 지난 행사 펼치기
+  const [evOnly, setEvOnly] = useState(""); // 행사 한눈에: 구분 필터
   const [pfErr, setPfErr] = useState("");
   const [pfAsk, setPfAsk] = useState("");
   const [offAsk, setOffAsk] = useState(""); // 화면 안 확인 문구 (브라우저 confirm은 자동화 크롬에서 자동 취소됨)
@@ -236,7 +249,7 @@ export default function GlobalSection({ C, Card }) {
     const first = new Date(y, mo, 1).getDay(), days = new Date(y, mo + 1, 0).getDate();
     const cells = []; for (let i = 0; i < first; i++) cells.push(null); for (let d = 1; d <= days; d++) cells.push(`${y}-${String(mo + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`); while (cells.length % 7) cells.push(null);
     const items = (d) => [
-      ...(cal || []).filter((e) => e.date <= d && d <= (e.end || e.date)).map((e) => ({ k: e.id, t: e.title, c: KIND_C[e.kind] || "#6b7280", note: e.note, start: e.date === d, own: e.owner })),
+      ...(cal || []).filter((e) => e.date <= d && d <= (e.end || e.date)).map((e) => ({ k: e.id, t: e.title, c: e.kind === "행사" ? evSub(e)[1] : KIND_C[e.kind] || "#6b7280", note: e.note, start: e.date === d, own: e.owner })),
       ...(ops.todos || []).filter((t) => t.due === d && !t.done).map((t) => ({ k: t.id, t: "☐ " + t.text, c: "#0f172a", todo: true, own: t.owner })),
     ];
     return (
@@ -418,6 +431,45 @@ export default function GlobalSection({ C, Card }) {
       </Card>
     );
   };
+  // 행사 한눈에 — 캘린더의 kind=행사 를 구분(큐텐 대형행사·타임세일·리뷰이벤트·쿠폰·자체할인·준비)별 줄로, 진행 중/다가오는/지난 순
+  const EvBoard = () => {
+    const evs = (cal || []).filter((e) => e.kind === "행사").map((e) => { const s = evSub(e); const end = e.end || e.date; const st = end < today ? "past" : e.date <= today ? "now" : "next"; return { ...e, s, end, st }; });
+    const subs = EV_SUB.filter((s) => evs.some((e) => e.s[0] === s[0]));
+    const rank = { now: 0, next: 1, past: 2 };
+    const rng = (e) => md(e.date) + (e.end && e.end !== e.date ? "~" + md(e.end) : "");
+    const dd = (e) => e.st === "now" ? (e.end === today ? "오늘 끝" : e.end !== e.date ? `진행 중 · ${-daysSince(e.end)}일 남음` : "오늘") : e.st === "next" ? `D-${-daysSince(e.date)}` : "";
+    const cnt = (st) => evs.filter((e) => e.st === st).length;
+    const chip = (on, bg, fg) => ({ fontSize: 11.5, fontWeight: 800, padding: "3px 10px", borderRadius: 20, cursor: "pointer", border: on ? `1.5px solid ${fg}` : "1.5px solid transparent", background: bg, color: fg });
+    return (
+      <Card style={{ padding: "14px 16px" }}>
+        <div style={{ display: "flex", alignItems: "baseline", gap: 8, flexWrap: "wrap" }}>
+          <div style={{ fontSize: 15, fontWeight: 900, color: C.ink }}>행사 한눈에</div>
+          <span style={{ fontSize: 12, color: C.inkLt }}>해외 캘린더의 「행사」를 종류별로 · 진행 중 {cnt("now")} · 다가오는 {cnt("next")} · 지난 {cnt("past")}</span>
+          <div style={{ flex: 1 }} />
+          <button onClick={() => setEvPast((v) => !v)} style={{ fontSize: 11.5, fontWeight: 700, border: `1px solid ${C.border}`, background: C.white, borderRadius: 20, padding: "3px 10px", cursor: "pointer", color: C.inkMid }}>{evPast ? "지난 행사 접기" : `지난 행사 보기 (${cnt("past")})`}</button>
+        </div>
+        <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 8 }}>
+          <button onClick={() => setEvOnly("")} style={chip(!evOnly, C.cream, C.ink)}>전체</button>
+          {subs.map(([k, fg, bg]) => <button key={k} onClick={() => setEvOnly(evOnly === k ? "" : k)} style={chip(evOnly === k, bg, fg)}>{k} {evs.filter((e) => e.s[0] === k && (evPast || e.st !== "past")).length}</button>)}
+        </div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 2, marginTop: 10 }}>
+          {subs.filter(([k]) => !evOnly || evOnly === k).map(([k, fg, bg]) => {
+            const L = evs.filter((e) => e.s[0] === k && (evPast || e.st !== "past")).sort((a, b) => rank[a.st] - rank[b.st] || (a.st === "past" ? b.date.localeCompare(a.date) : a.date.localeCompare(b.date)));
+            if (!L.length) return null;
+            return <div key={k} style={{ display: "grid", gridTemplateColumns: "110px 1fr", gap: 10, padding: "8px 0", borderTop: `1px solid ${C.border}` }}>
+              <div><span style={{ display: "inline-block", fontSize: 12, fontWeight: 900, padding: "2px 9px", borderRadius: 20, background: bg, color: fg }}>{k}</span></div>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>{L.map((e) => <div key={e.id} title={e.note || ""} style={{ minWidth: 200, maxWidth: 320, flex: "1 1 200px", padding: "7px 10px", borderRadius: 10, border: `1px solid ${e.st === "now" ? fg : C.border}`, background: e.st === "now" ? bg : C.white, opacity: e.st === "past" ? 0.55 : 1 }}>
+                <div style={{ display: "flex", gap: 6, alignItems: "baseline" }}><span style={{ fontSize: 11.5, fontWeight: 800, color: C.inkMid }}>{rng(e)}</span><div style={{ flex: 1 }} />{dd(e) && <span style={{ fontSize: 11, fontWeight: 900, color: e.st === "now" ? fg : -daysSince(e.date) <= 3 ? "#dc2626" : C.inkLt }}>{dd(e)}</span>}</div>
+                <div style={{ fontSize: 12.5, fontWeight: 700, color: C.ink, lineHeight: 1.4, marginTop: 2 }}>{(e.title || "").replace(/^큐텐\s*/, "")}</div>
+                {e.note && <div style={{ fontSize: 11, color: C.inkLt, lineHeight: 1.4, marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{e.note}</div>}
+              </div>)}</div>
+            </div>; })}
+          {!evs.length && <div style={{ fontSize: 13, color: C.inkLt, padding: 8 }}>캘린더에 「행사」 일정이 아직 없어요.</div>}
+        </div>
+        <div style={{ fontSize: 11, color: C.inkLt, marginTop: 6 }}>구분은 일정 제목으로 자동 분류(타임세일·리뷰이벤트·쿠폰·메가와리/연말세일·할인, 제작·신청 마감은 준비). 캘린더 일정은 「캘린더」 탭에서 고쳐요.</div>
+      </Card>
+    );
+  };
   const PriceView = () => {
     const items = (qprod.items || []).filter((x) => x.stat !== "S4");
     const f = pf;
@@ -445,6 +497,7 @@ export default function GlobalSection({ C, Card }) {
     const SJ = { "요청됨": ["#fef3c7", "#92400e"], "적용 중": ["#dbeafe", "#1e40af"], "적용 완료": ["#dcfce7", "#166534"], "확인 필요": ["#fee2e2", "#991b1b"], "실패": ["#fee2e2", "#991b1b"], "끝남": ["#f3f4f6", "#6b7280"] };
     return (
       <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+        {EvBoard()}
         {(mega.plans || [mega]).map((pl, pi) => <Card key={pl.id || pi} style={{ padding: "12px 14px", border: `1px solid ${pi === 0 && mega.plans ? C.rose : C.border}` }}>
           <div style={{ display: "flex", alignItems: "baseline", gap: 8, flexWrap: "wrap" }}><b style={{ fontSize: 14, color: C.ink }}>메가와리 행사안</b><span style={{ fontSize: 12, color: C.inkMid }}>{pl.title}</span>{pl.status && <span style={{ fontSize: 11, fontWeight: 800, padding: "2px 8px", borderRadius: 20, background: "#fef3c7", color: "#92400e" }}>{pl.status}</span>}<div style={{ flex: 1 }} />{pl.file && <span style={{ fontSize: 11, color: C.inkLt }}>📎 {pl.file}</span>}<a href="/qoo10-margin/channel-margins.html?channel=Qoo10" target="_blank" rel="noreferrer" style={{ fontSize: 12, color: C.rose, fontWeight: 700 }}>마진 계산기에서 원가 대조 ↗</a></div>
           <div style={{ fontSize: 12, color: C.inkLt, margin: "4px 0 8px", whiteSpace: "pre-wrap" }}>{pl.note}</div>
