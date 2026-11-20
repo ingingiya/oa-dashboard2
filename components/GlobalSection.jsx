@@ -795,6 +795,8 @@ export default function GlobalSection({ C, Card }) {
         <Card style={{ padding: "14px 16px", display: view === "inf" ? "block" : "none" }}>
           <details style={{ marginBottom: 14, border: `1px solid ${C.border}`, borderRadius: 12, padding: "10px 14px", background: "#fff7fa" }} open>
             <summary style={{ cursor: "pointer", fontSize: 14, fontWeight: 900, color: C.ink }}>📎 해외 광고계약 시 인플루언서에게 받을 서류</summary>
+            <a href="/overseas/OA_Advertising_Agreement_EN_JP.docx" download style={{ display: "inline-block", marginTop: 10, fontSize: 13, fontWeight: 800, color: "#fff", background: C.rose, padding: "6px 14px", borderRadius: 20, textDecoration: "none" }}>⬇ 일본용 광고계약서 (영·일) .docx</a>
+            <div style={{ fontSize: 12, color: C.inkLt, marginTop: 6 }}>[ ] 칸(계약번호·날짜·인플루언서 정보·제품·채널·광고비·계좌)을 채워서 사용 · 광고비 JPY 해외송금(OUR) · 성과 증빙(URL+캡처) 받은 뒤 30일 내 지급 · #PR 표기 · 콘텐츠 2차 활용 12개월</div>
             <div style={{ fontSize: 13, color: C.inkMid, lineHeight: 1.7, marginTop: 8 }}>
               <b style={{ color: C.ink }}>1. 은행 계좌 사본</b> (계좌 정보 확인용)
               <ul style={{ margin: "2px 0 8px", paddingLeft: 18 }}>
