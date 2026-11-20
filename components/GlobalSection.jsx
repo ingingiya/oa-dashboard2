@@ -129,6 +129,43 @@ function QooShipBar({ C, Card }) {
   );
 }
 
+// 큐텐 오아 상품별 패키지 박스(제품박스·택배박스·카톤) — public/qoo10-package.json (NAS 03_패키지 기준)
+function PkgView({ C, Card }) {
+  const [d, setD] = useState(null); const [f, setF] = useState("전체"); const [q, setQ] = useState("");
+  useEffect(() => { fetch("/qoo10-package.json").then((r) => r.json()).then(setD).catch(() => setD({ items: [] })); }, []);
+  if (!d) return <Card style={{ padding: 16 }}>불러오는 중…</Card>;
+  const items = d.items.filter((x) => (f === "전체" || x.type === f) && (!q || (x.nas + x.name + x.code + x.cat).toLowerCase().includes(q.toLowerCase())));
+  const cnt = (t) => d.items.filter((x) => x.type === t).length;
+  const OX = ({ v }) => <span style={{ fontWeight: 900, color: v === "O" ? "#16a34a" : "#c4c4c4" }}>{v || "-"}</span>;
+  const th = { textAlign: "left", fontSize: 12, color: C.inkLt, fontWeight: 700, padding: "6px 8px", borderBottom: `1px solid ${C.border}`, whiteSpace: "nowrap" };
+  const td = { fontSize: 13, color: C.ink, padding: "6px 8px", borderBottom: `1px solid ${C.border}`, verticalAlign: "top" };
+  return (
+    <Card style={{ padding: "14px 16px" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginBottom: 10 }}>
+        <b style={{ fontSize: 14, color: C.ink }}>큐텐 오아 패키지 박스</b>
+        <span style={{ fontSize: 12, color: C.inkLt }}>{d.basis} · {d.updated} 조회 · 카톤 = 공장 출고용 외박스</span>
+        <div style={{ flex: 1 }} />
+        <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="제품명·코드 검색" style={{ fontSize: 13, padding: "5px 10px", borderRadius: 8, border: `1px solid ${C.border}`, width: 170 }} />
+      </div>
+      <div style={{ display: "flex", gap: 6, marginBottom: 10, flexWrap: "wrap" }}>
+        {[["전체", d.items.length], ["제품박스만", cnt("제품박스만")], ["제품+택배", cnt("제품+택배")]].map(([k, n]) => <button key={k} onClick={() => setF(k)} style={{ fontSize: 12, fontWeight: 800, padding: "5px 12px", borderRadius: 20, cursor: "pointer", border: `1px solid ${C.border}`, background: f === k ? C.ink : C.white, color: f === k ? "#fff" : C.inkMid }}>{k === "제품박스만" ? "제품박스만(택배박스 없음)" : k === "제품+택배" ? "제품박스+택배박스" : k} {n}</button>)}
+      </div>
+      <div style={{ overflowX: "auto" }}>
+        <table style={{ borderCollapse: "collapse", width: "100%", minWidth: 760 }}>
+          <thead><tr>{["구분", "카테고리", "NAS 제품 폴더", "큐텐 상품", "제품박스", "택배박스", "카톤", "비고"].map((h) => <th key={h} style={th}>{h}</th>)}</tr></thead>
+          <tbody>{items.map((x, i) => <tr key={i}>
+            <td style={{ ...td, whiteSpace: "nowrap", color: x.type === "제품+택배" ? C.rose : C.inkMid, fontWeight: 700 }}>{x.type}</td>
+            <td style={{ ...td, whiteSpace: "nowrap" }}>{x.cat}</td>
+            <td style={td}>{x.nas}</td>
+            <td style={td}><a href={x.url} target="_blank" rel="noreferrer" style={{ color: C.ink }}>{x.name}</a><div style={{ fontSize: 11, color: C.inkLt }}>{x.code}</div></td>
+            <td style={{ ...td, textAlign: "center" }}><OX v={x.box} /></td><td style={{ ...td, textAlign: "center" }}><OX v={x.ship} /></td><td style={{ ...td, textAlign: "center" }}><OX v={x.carton} /></td>
+            <td style={{ ...td, fontSize: 12, color: C.inkMid }}>{x.note}</td></tr>)}</tbody>
+        </table>
+      </div>
+    </Card>
+  );
+}
+
 export default function GlobalSection({ C, Card }) {
   const [b, setB] = useShared("oa_global_board_v1", SEED);
   const [ops, setOps] = useShared("oa_global_ops_v1", OPS_SEED);
@@ -611,8 +648,8 @@ export default function GlobalSection({ C, Card }) {
       <Card style={{ padding: "10px 12px" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
           <div style={{ fontSize: 16, fontWeight: 900, color: C.ink, marginRight: 6 }}>🇯🇵 해외</div>
-          {[["glance", "한눈에"], ["jp", "일본 진행판"], ["ops", "인증·연락·할 일"], ["ads", "광고·순위"], ["price", "가격·행사"], ["margin", "마진 계산"], ["cal", "캘린더"], ["inf", "인플루언서"], ["seed", "시딩"], ["hist", "한 일 기록"], ["calc", "판매가 계산"]].map(([k, l]) => <button key={k} onClick={() => setView(k)} style={{ fontSize: 13, fontWeight: 800, padding: "6px 12px", borderRadius: 20, cursor: "pointer", border: 0, background: view === k ? C.ink : "transparent", color: view === k ? "#fff" : C.inkMid }}>{l}</button>)}
-          <div style={{ flex: 1 }} /><span style={{ fontSize: 12, color: C.inkLt }}>담당 김경은 · 조영서 · 차동욱</span>
+          {[["glance", "한눈에"], ["jp", "일본 진행판"], ["ops", "인증·연락·할 일"], ["ads", "광고·순위"], ["price", "가격·행사"], ["margin", "마진 계산"], ["cal", "캘린더"], ["inf", "인플루언서"], ["seed", "시딩"], ["hist", "한 일 기록"], ["calc", "판매가 계산"], ["pkg", "패키지 박스"]].map(([k, l]) => <button key={k} onClick={() => setView(k)} style={{ fontSize: 13, fontWeight: 800, padding: "6px 12px", borderRadius: 20, cursor: "pointer", border: 0, background: view === k ? C.ink : "transparent", color: view === k ? "#fff" : C.inkMid }}>{l}</button>)}
+          <div style={{ flex: 1 }} /><a href="https://qsm.qoo10.jp/GMKT.INC.Gsm.Web/AuthShare.aspx?ReturnUrl=https%3A%2F%2Fseller.qoo10.jp" target="_blank" rel="noreferrer" style={{ fontSize: 12, fontWeight: 800, color: "#fff", background: C.rose, padding: "5px 12px", borderRadius: 20, textDecoration: "none" }}>큐텐 셀러센터 ↗</a><span style={{ fontSize: 12, color: C.inkLt }}>담당 김경은 · 조영서 · 차동욱</span>
         </div>
       </Card>
       {view === "glance" && Glance()}
@@ -676,6 +713,7 @@ export default function GlobalSection({ C, Card }) {
             <div style={{ fontSize: 12, color: C.inkMid, marginTop: 8, lineHeight: 1.5 }}>규제: 2023.10부터 ステマ는 景表法 위반. 브리프에 "자연스럽게 써주세요" 금지, 「PR」「提供」 표기 필수, 큐텐 리뷰 작성 요구 금지. 발송은 KSE 시딩 양식·1인 1개·신고가액 1만엔 이하(포켓건은 리튬 배터리라 KSE 사전 확인).</div>
           </Sec>
         </div>; })()}
+      {view === "pkg" && <PkgView C={C} Card={Card} />}
       {view === "margin" && <Card style={{ padding: 0, overflow: "hidden" }}><div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 14px", borderBottom: `1px solid ${C.border}` }}><b style={{ fontSize: 14, color: C.ink }}>큐텐 마진 계산기</b><span style={{ fontSize: 12, color: C.inkLt }}>차동욱 님 제작 · 사내 마진계산기 엑셀 로직</span><div style={{ flex: 1 }} /><a href="/qoo10-margin/channel-margins.html?channel=Qoo10" target="_blank" rel="noreferrer" style={{ fontSize: 12, color: C.rose, fontWeight: 700 }}>새 창 ↗</a></div><iframe src="/qoo10-margin/channel-margins.html?channel=Qoo10" style={{ width: "100%", height: 1400, border: 0, display: "block" }} /></Card>}
       {view === "jp" && (
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(340px,1fr))", gap: 12 }}>
@@ -755,6 +793,24 @@ export default function GlobalSection({ C, Card }) {
           </div>
         </Card>
         <Card style={{ padding: "14px 16px", display: view === "inf" ? "block" : "none" }}>
+          <details style={{ marginBottom: 14, border: `1px solid ${C.border}`, borderRadius: 12, padding: "10px 14px", background: "#fff7fa" }} open>
+            <summary style={{ cursor: "pointer", fontSize: 14, fontWeight: 900, color: C.ink }}>📎 해외 광고계약 시 인플루언서에게 받을 서류</summary>
+            <div style={{ fontSize: 13, color: C.inkMid, lineHeight: 1.7, marginTop: 8 }}>
+              <b style={{ color: C.ink }}>1. 은행 계좌 사본</b> (계좌 정보 확인용)
+              <ul style={{ margin: "2px 0 8px", paddingLeft: 18 }}>
+                <li>통장 첫 장 또는 인터넷뱅킹 계좌 정보 화면</li>
+                <li>은행명, 지점명·지점번호, 예금 종류, 계좌번호, 예금주가 보이도록</li>
+                <li>예금주가 가타카나면 은행 등록 로마자 표기도 함께 (예: YAMADA HANAKO)</li>
+                <li>SWIFT 코드</li>
+              </ul>
+              <b style={{ color: C.ink }}>2. 신분증 사본</b> (본인 확인 · 일본 거주 확인용)
+              <ul style={{ margin: "2px 0 0", paddingLeft: 18 }}>
+                <li>운전면허증 또는 마이넘버 카드 앞면 (주소가 표시된 신분증)</li>
+                <li>성명, 사진, 주소가 보이도록</li>
+                <li><b style={{ color: C.rose }}>면허번호, 마이넘버(개인번호) 등 번호는 가리기</b></li>
+              </ul>
+            </div>
+          </details>
           <div style={{ display: "flex", alignItems: "center" }}><div style={{ fontSize: 15, fontWeight: 900, color: C.ink }}>해외 인플루언서</div><span style={{ fontSize: 12, color: C.inkLt, marginLeft: 8 }}>{(inf.people || []).length}명</span><div style={{ flex: 1 }} />
             <button onClick={() => { const name = prompt("인플루언서 이름 / 계정"); if (!name) return; const ch = prompt("채널·팔로워 (예: 인스타 3.2만)", "") || ""; setInf((p) => ({ ...p, people: [...(p.people || []), { id: "i" + Date.now(), name, ch, country: "일본", product: "", stage: 0, owner: me() || "", url: "", memo: "" }] })); }} style={{ fontSize: 12, fontWeight: 700, border: `1px solid ${C.border}`, background: C.white, borderRadius: 20, padding: "4px 10px", cursor: "pointer" }}>+ 인플루언서</button></div>
           <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 8 }}>{(inf.accounts || []).map(([a, n], i) => <span key={i} title={n} style={{ fontSize: 11, fontWeight: 700, padding: "3px 8px", borderRadius: 20, background: C.cream, border: `1px solid ${C.border}`, color: C.inkMid }}>우리 계정 · {a}</span>)}</div>
